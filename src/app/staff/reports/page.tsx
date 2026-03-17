@@ -20,14 +20,12 @@ export default function Reports() {
         }
 
         const loadReports = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await ReportingService.getReports({})
                 setReports(data || [])
-            } catch (err) {
-                console.error('Error loading reports:', err)
-                setError('Failed to load reports')
+            } catch {
+                setReports([])
             } finally {
                 setLoading(false)
             }

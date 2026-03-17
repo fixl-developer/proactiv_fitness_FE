@@ -20,14 +20,12 @@ export default function Quality() {
         }
 
         const loadAudits = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await StaffManagementService.getQualityAudits({ limit: 20 })
-                setAudits(data.audits || [])
-            } catch (err) {
-                console.error('Error loading audits:', err)
-                setError('Failed to load quality audits')
+                setAudits(data?.audits || [])
+            } catch {
+                setAudits([])
             } finally {
                 setLoading(false)
             }

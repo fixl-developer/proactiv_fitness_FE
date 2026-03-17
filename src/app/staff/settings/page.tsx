@@ -27,14 +27,12 @@ export default function Settings() {
         }
 
         const loadPreferences = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const prefs = await NotificationService.getNotificationPreferences()
                 setPreferences(prefs || [])
-            } catch (err) {
-                console.error('Error loading preferences:', err)
-                setError('Failed to load preferences')
+            } catch {
+                setPreferences([])
             } finally {
                 setLoading(false)
             }

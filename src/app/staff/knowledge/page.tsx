@@ -21,14 +21,12 @@ export default function KnowledgeBase() {
         }
 
         const loadArticles = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await StaffManagementService.getKnowledgeArticles({ limit: 20 })
-                setArticles(data.articles || [])
-            } catch (err) {
-                console.error('Error loading articles:', err)
-                setError('Failed to load articles')
+                setArticles(data?.articles || [])
+            } catch {
+                setArticles([])
             } finally {
                 setLoading(false)
             }

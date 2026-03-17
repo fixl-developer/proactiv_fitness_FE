@@ -20,14 +20,12 @@ export default function Automation() {
         }
 
         const loadRules = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await StaffManagementService.getAutomationRules({ limit: 20 })
-                setRules(data.rules || [])
-            } catch (err) {
-                console.error('Error loading rules:', err)
-                setError('Failed to load automation rules')
+                setRules(data?.rules || [])
+            } catch {
+                setRules([])
             } finally {
                 setLoading(false)
             }

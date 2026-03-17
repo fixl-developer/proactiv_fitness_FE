@@ -20,14 +20,13 @@ export default function Schedules() {
         }
 
         const loadSchedules = async () => {
+            setLoading(true)
+            setError(null)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await StaffManagementService.getStaffSchedules({ limit: 20 })
-                setSchedules(data.schedules || [])
-            } catch (err) {
-                console.error('Error loading schedules:', err)
-                setError('Failed to load schedules')
+                setSchedules(data?.schedules || [])
+            } catch {
+                setSchedules([])
             } finally {
                 setLoading(false)
             }

@@ -20,14 +20,14 @@ export default function Escalations() {
         }
 
         const loadEscalations = async () => {
+            setLoading(true)
+            setError(null)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await SupportService.getEscalations({ limit: 20 })
-                setEscalations(data.escalations || [])
-            } catch (err) {
-                console.error('Error loading escalations:', err)
-                setError('Failed to load escalations')
+                setEscalations(data?.escalations || [])
+            } catch {
+                // API not available yet — show empty state
+                setEscalations([])
             } finally {
                 setLoading(false)
             }

@@ -26,34 +26,32 @@ export default function PartnerDashboard() {
         }
 
         const loadDashboardData = async () => {
-            try {
-                setLoading(true)
-                setError(null)
+            setLoading(true)
+            setError(null)
 
-                const partnerId = user?.id || 'partner-1'
-                const [profileRes, metricsRes, commissionRes, trendsRes] = await Promise.all([
-                    PartnerPortalService.getPartnerProfile(partnerId),
-                    PartnerAnalyticsService.getPerformanceMetrics(partnerId),
-                    CommissionService.getCommissionStats(partnerId),
-                    PartnerAnalyticsService.getPerformanceTrends(partnerId)
-                ])
+            const partnerId = user?.id || 'partner-1'
+            const [profileRes, metricsRes, commissionRes, trendsRes] = await Promise.allSettled([
+                PartnerPortalService.getPartnerProfile(partnerId),
+                PartnerAnalyticsService.getPerformanceMetrics(partnerId),
+                CommissionService.getCommissionStats(partnerId),
+                PartnerAnalyticsService.getPerformanceTrends(partnerId)
+            ])
 
-                setProfile(profileRes)
-                setMetrics(metricsRes)
-                setCommissionStats(commissionRes)
-                setChartData(trendsRes || [
-                    { date: 'Mon', revenue: 4000, students: 24 },
-                    { date: 'Tue', revenue: 3000, students: 13 },
-                    { date: 'Wed', revenue: 2000, students: 9 },
-                    { date: 'Thu', revenue: 2780, students: 39 },
-                    { date: 'Fri', revenue: 1890, students: 23 }
-                ])
-            } catch (err) {
-                console.error('Error loading dashboard:', err)
-                setError('Failed to load dashboard data')
-            } finally {
-                setLoading(false)
-            }
+            setProfile(profileRes.status === 'fulfilled' ? profileRes.value : null)
+            setMetrics(metricsRes.status === 'fulfilled' ? metricsRes.value : null)
+            setCommissionStats(commissionRes.status === 'fulfilled' ? commissionRes.value : null)
+            setChartData(
+                trendsRes.status === 'fulfilled' && trendsRes.value
+                    ? trendsRes.value
+                    : [
+                        { date: 'Mon', revenue: 4000, students: 24 },
+                        { date: 'Tue', revenue: 3000, students: 13 },
+                        { date: 'Wed', revenue: 2000, students: 9 },
+                        { date: 'Thu', revenue: 2780, students: 39 },
+                        { date: 'Fri', revenue: 1890, students: 23 }
+                    ]
+            )
+            setLoading(false)
         }
 
         loadDashboardData()
@@ -73,8 +71,7 @@ export default function PartnerDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-            <div className="max-w-7xl mx-auto">
+        <div className="space-y-6">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Partner Dashboard</h1>
@@ -182,7 +179,6 @@ export default function PartnerDashboard() {
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     )
 }

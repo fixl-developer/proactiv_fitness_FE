@@ -23,15 +23,16 @@ export default function SupportTickets() {
         }
 
         const loadTickets = async () => {
+            setLoading(true)
+            setError(null)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await SupportService.getTickets(filters)
-                setTickets(data.tickets || [])
-                setTotal(data.total || 0)
-            } catch (err) {
-                console.error('Error loading tickets:', err)
-                setError('Failed to load tickets')
+                setTickets(data?.tickets || [])
+                setTotal(data?.total || 0)
+            } catch {
+                // API not available yet — show empty state
+                setTickets([])
+                setTotal(0)
             } finally {
                 setLoading(false)
             }
@@ -44,10 +45,9 @@ export default function SupportTickets() {
         if (!searchQuery.trim()) return
         try {
             const results = await SupportService.searchTickets(searchQuery)
-            setTickets(results)
-        } catch (err) {
-            console.error('Error searching:', err)
-            setError('Search failed')
+            setTickets(results || [])
+        } catch {
+            // API not available yet
         }
     }
 

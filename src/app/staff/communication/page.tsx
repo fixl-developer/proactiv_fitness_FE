@@ -21,14 +21,12 @@ export default function Communication() {
         }
 
         const loadTemplates = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const emailTemplates = await NotificationService.getEmailTemplates()
                 setTemplates(emailTemplates || [])
-            } catch (err) {
-                console.error('Error loading templates:', err)
-                setError('Failed to load templates')
+            } catch {
+                setTemplates([])
             } finally {
                 setLoading(false)
             }

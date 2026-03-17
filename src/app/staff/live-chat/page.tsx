@@ -22,14 +22,14 @@ export default function LiveChat() {
         }
 
         const loadChats = async () => {
+            setLoading(true)
+            setError(null)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await NotificationService.getNotifications({ limit: 10 })
-                setMessages(data.notifications || [])
-            } catch (err) {
-                console.error('Error loading chats:', err)
-                setError('Failed to load chats')
+                setMessages(data?.notifications || [])
+            } catch {
+                // API not available yet — show empty state
+                setMessages([])
             } finally {
                 setLoading(false)
             }

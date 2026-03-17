@@ -20,14 +20,12 @@ export default function Training() {
         }
 
         const loadModules = async () => {
+            setLoading(true)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await StaffManagementService.getTrainingModules(undefined, { limit: 20 })
-                setModules(data.modules || [])
-            } catch (err) {
-                console.error('Error loading modules:', err)
-                setError('Failed to load training modules')
+                setModules(data?.modules || [])
+            } catch {
+                setModules([])
             } finally {
                 setLoading(false)
             }

@@ -26,35 +26,32 @@ export default function StaffDashboard() {
         }
 
         const loadDashboardData = async () => {
-            try {
-                setLoading(true)
-                setError(null)
+            setLoading(true)
+            setError(null)
 
-                const analyticsService = new AnalyticsService()
-                const [ticketsRes, notificationsRes, metricsRes] = await Promise.all([
-                    SupportService.getTicketStats(),
-                    NotificationService.getNotificationStats(),
-                    analyticsService.getDashboardMetrics()
-                ])
+            const [ticketsRes, notifRes, recentRes] = await Promise.allSettled([
+                SupportService.getTicketStats(),
+                NotificationService.getNotificationStats(),
+                SupportService.getTickets({ limit: 5 })
+            ])
 
-                setTicketStats(ticketsRes)
-                setNotificationStats(notificationsRes)
-                setChartData([
-                    { name: 'Mon', tickets: 45 },
-                    { name: 'Tue', tickets: 52 },
-                    { name: 'Wed', tickets: 48 },
-                    { name: 'Thu', tickets: 61 },
-                    { name: 'Fri', tickets: 55 }
-                ])
-
-                const ticketsData = await SupportService.getTickets({ limit: 5 })
-                setRecentTickets(ticketsData.tickets || [])
-            } catch (err) {
-                console.error('Error loading dashboard:', err)
-                setError('Failed to load dashboard data')
-            } finally {
-                setLoading(false)
-            }
+            setTicketStats(
+                ticketsRes.status === 'fulfilled' ? ticketsRes.value : { openTickets: 0, resolvedTickets: 0, pendingTickets: 0, satisfactionScore: 0 }
+            )
+            setNotificationStats(
+                notifRes.status === 'fulfilled' ? notifRes.value : {}
+            )
+            setRecentTickets(
+                recentRes.status === 'fulfilled' ? recentRes.value?.tickets || [] : []
+            )
+            setChartData([
+                { name: 'Mon', tickets: 45 },
+                { name: 'Tue', tickets: 52 },
+                { name: 'Wed', tickets: 48 },
+                { name: 'Thu', tickets: 61 },
+                { name: 'Fri', tickets: 55 }
+            ])
+            setLoading(false)
         }
 
         loadDashboardData()

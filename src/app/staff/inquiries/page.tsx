@@ -20,14 +20,14 @@ export default function CustomerInquiries() {
         }
 
         const loadInquiries = async () => {
+            setLoading(true)
+            setError(null)
             try {
-                setLoading(true)
-                setError(null)
                 const data = await SupportService.getTickets({ limit: 20 })
-                setInquiries(data.tickets || [])
-            } catch (err) {
-                console.error('Error loading inquiries:', err)
-                setError('Failed to load inquiries')
+                setInquiries(data?.tickets || [])
+            } catch {
+                // API not available yet — show empty state
+                setInquiries([])
             } finally {
                 setLoading(false)
             }

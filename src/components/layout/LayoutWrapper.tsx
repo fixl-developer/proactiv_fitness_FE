@@ -16,6 +16,8 @@ const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
         pathname.startsWith('/manager') ||
         pathname.startsWith('/coach') ||
         pathname.startsWith('/parent') ||
+        pathname.startsWith('/partner') ||
+        pathname.startsWith('/staff') ||
         pathname.startsWith('/auth')
 
     // Define routes that should not show main header (booking routes)
