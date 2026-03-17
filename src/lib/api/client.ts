@@ -13,7 +13,7 @@ apiClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         // Get token from localStorage
         if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
             if (token && config.headers) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -50,6 +50,7 @@ apiClient.interceptors.response.use(
                         );
 
                         const { accessToken } = response.data.data;
+                        localStorage.setItem('token', accessToken);
                         localStorage.setItem('accessToken', accessToken);
 
                         if (originalRequest.headers) {
@@ -62,8 +63,10 @@ apiClient.interceptors.response.use(
             } catch (refreshError) {
                 // Refresh failed, logout user
                 if (typeof window !== 'undefined') {
+                    localStorage.removeItem('token');
                     localStorage.removeItem('accessToken');
                     localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('user');
                     window.location.href = '/login';
                 }
                 return Promise.reject(refreshError);

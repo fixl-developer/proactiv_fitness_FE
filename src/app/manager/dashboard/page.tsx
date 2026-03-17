@@ -13,22 +13,23 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useLocalStorage } from '@/hooks/useClientOnly'
 import { responsiveClasses } from '@/lib/responsiveClasses'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 
 const ManagerDashboard = () => {
+    const { isAuthenticated } = useAuth()
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today')
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const isAuthenticated = localStorage.getItem('isAuthenticated')
-            if (!isAuthenticated) {
-                window.location.href = '/login'
-                return
-            }
+        if (!isAuthenticated) {
+            router.push('/login')
+            return
         }
         setTimeout(() => setIsLoading(false), 1000)
-    }, [])
+    }, [isAuthenticated, router])
 
     // Manager's assigned location (single location only)
     const assignedLocation = {

@@ -42,7 +42,7 @@ const CoachDashboard = () => {
         }
 
         // Check if user is coach
-        if (!rbacManager.hasPermission('coach_dashboard')) {
+        if (!rbacManager.isCoach() && !rbacManager.isSuperAdmin()) {
             router.push('/parent/dashboard')
             return
         }

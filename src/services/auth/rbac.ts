@@ -283,6 +283,7 @@ class RBACManager {
             UserRole.HQ_ADMIN,
             UserRole.REGIONAL_ADMIN,
             UserRole.LOCATION_ADMIN,
+            UserRole.FRANCHISE_OWNER,
             UserRole.FRANCHISE_MANAGER
         ].includes(this.currentRole!)
     }
