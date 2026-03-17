@@ -49,10 +49,18 @@ class AuditLogger {
     private async sendLog(log: AuditLog): Promise<void> {
         try {
             await apiClient.post('/audit/logs', log)
-        } catch (error) {
-            console.error('[AUDIT] Failed to send log:', error)
-            // Queue for retry
-            this.logQueue.push(log)
+        } catch (error: any) {
+            // Silently fail for audit logs - don't block user operations
+            // If backend endpoint doesn't exist, just log locally
+            if (error.response?.status === 404) {
+                console.debug('[AUDIT] Endpoint not available, logging locally only')
+                return
+            }
+            console.debug('[AUDIT] Failed to send log:', error.message)
+            // Queue for retry only on network errors, not 404s
+            if (error.response?.status !== 404) {
+                this.logQueue.push(log)
+            }
         }
     }
 

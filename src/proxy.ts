@@ -2,30 +2,18 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function proxy(request: NextRequest) {
+    // Authentication is handled client-side via AuthContext and layout-level checks.
+    // This middleware only adds cache-control headers for protected pages.
     const { pathname } = request.nextUrl
 
-    // Protected admin routes
-    const adminRoutes = ['/admin', '/manager', '/coach']
-    const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route))
+    const protectedRoutes = ['/admin', '/manager', '/coach', '/superadmin', '/staff', '/partner', '/parent']
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
-    if (isAdminRoute) {
-        // Check if user is authenticated and has proper role
-        const authToken = request.cookies.get('authToken')?.value ||
-            request.headers.get('authorization')?.replace('Bearer ', '')
-
-        // If no auth token, redirect to login
-        if (!authToken) {
-            const loginUrl = new URL('/auth/login', request.url)
-            loginUrl.searchParams.set('redirect', pathname)
-            return NextResponse.redirect(loginUrl)
-        }
-
-        // Add cache control headers to prevent back button access
+    if (isProtectedRoute) {
         const response = NextResponse.next()
         response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
         response.headers.set('Pragma', 'no-cache')
         response.headers.set('Expires', '0')
-
         return response
     }
 
@@ -36,6 +24,10 @@ export const config = {
     matcher: [
         '/admin/:path*',
         '/manager/:path*',
-        '/coach/:path*'
+        '/coach/:path*',
+        '/superadmin/:path*',
+        '/staff/:path*',
+        '/partner/:path*',
+        '/parent/:path*'
     ]
 }

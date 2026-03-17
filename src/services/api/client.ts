@@ -22,7 +22,7 @@ class ApiClient {
     private circuitBreakers: Map<string, CircuitBreakerState> = new Map()
     private requestTimeout = 30000 // 30 seconds
 
-    constructor(baseURL: string = process.env.NEXT_PUBLIC_API_BASE_URL) {
+    constructor(baseURL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api') {
         this.client = axios.create({
             baseURL,
             timeout: this.requestTimeout,
@@ -92,7 +92,28 @@ class ApiClient {
                     }
                 }
 
-                console.error(`[API] Error ${error.response?.status}:`, error.message)
+                // Suppress non-critical errors
+                const status = error.response?.status
+                const url = error.config?.url || ''
+
+                // Suppress 404 errors for audit endpoints
+                if (status === 404 && url.includes('/audit')) {
+                    console.debug(`[API] Audit endpoint not available: ${url}`)
+                }
+                // Suppress 401 errors (handled by token refresh above)
+                else if (status === 401) {
+                    console.debug(`[API] Unauthorized - redirecting to login`)
+                }
+                // Suppress network errors during logout
+                else if (!error.response && url.includes('/auth/logout')) {
+                    console.debug(`[API] Logout completed (network error suppressed)`)
+                }
+                // Log other errors
+                else if (status) {
+                    console.error(`[API] Error ${status}:`, error.message)
+                } else {
+                    console.debug(`[API] Network error:`, error.message)
+                }
                 return Promise.reject(error)
             }
         )

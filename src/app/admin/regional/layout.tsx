@@ -63,7 +63,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         <div className="min-h-screen bg-gray-50">
             {/* Top Header */}
             <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center justify-between px-4 py-2">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -121,8 +121,8 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
             </aside>
 
             {/* Main Content */}
-            <main className={`pt-16 transition-all duration-300 ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-0'}`}>
-                <div className="p-6">
+            <main className={`pt-14 transition-all duration-300 ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-0'}`}>
+                <div className="p-4">
                     {children}
                 </div>
             </main>

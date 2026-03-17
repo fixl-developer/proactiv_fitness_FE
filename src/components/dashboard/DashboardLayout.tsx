@@ -253,11 +253,11 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
             {/* Sidebar - Fixed Position */}
             <div
-                className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200/50 z-50 overflow-y-auto"
+                className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200/50 z-50 flex flex-col"
                 style={{ width: '280px' }}
             >
                 {/* Sidebar Header */}
-                <div className="p-4 border-b border-gray-200/50">
+                <div className="p-4 border-b border-gray-200/50 flex-shrink-0">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -276,7 +276,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 </div>
 
                 {/* Sidebar Menu */}
-                <div className="p-2">
+                <div className="p-2 flex-1 overflow-y-auto">
                     <nav className="space-y-1">
                         {menuItems.map((item, index) => (
                             <motion.div
@@ -354,7 +354,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 </div>
 
                 {/* Sidebar Footer */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/50 bg-white">
+                <div className="flex-shrink-0 p-4 border-t border-gray-200/50 bg-white">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

@@ -384,11 +384,11 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/50">
             {/* Sidebar - Fixed Position */}
             <div
-                className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200/50 z-50 flex flex-col shadow-xl"
-                style={{ width: '300px' }}
+                className="bg-white border-r border-gray-200/50 z-50 shadow-xl"
+                style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '300px', display: 'flex', flexDirection: 'column' as any }}
             >
                 {/* Sidebar Header */}
-                <div className="p-4 border-b border-gray-200/50 flex-shrink-0">
+                <div className="p-4 border-b border-gray-200/50" style={{ flexShrink: 0 }}>
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -408,7 +408,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                 </div>
 
                 {/* Sidebar Menu - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-2">
+                <div className="p-2" style={{ flex: 1, overflowY: 'auto' as any, minHeight: 0 }}>
                     <nav className="space-y-1">
                         {superAdminMenuItems.map((item, index) => (
                             <motion.div
@@ -495,17 +495,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     </nav>
                 </div>
 
-                {/* Sidebar Footer - Always at bottom */}
-                <div className="mt-auto flex-shrink-0 border-t border-gray-200/50 bg-white w-full">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="space-y-3 p-4"
-                    >
+                {/* Sidebar Footer */}
+                <div className="border-t border-gray-200/50 bg-white" style={{ flexShrink: 0 }}>
+                    <div className="px-3 py-3 space-y-2.5">
                         {/* User Info */}
-                        <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
-                            <div className="flex items-center space-x-3">
+                        <div className={`px-3 py-2.5 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
+                            <div className="flex items-center gap-2.5">
                                 <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
                                     <Crown className="w-4 h-4 text-white" />
                                 </div>
@@ -521,26 +516,26 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-2 -mx-4 px-4">
+                        <div className="flex gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 text-gray-600 hover:text-gray-900"
+                                className="flex-1 text-gray-600 hover:text-gray-900 text-xs"
                             >
-                                <Bell className="w-4 h-4 mr-2" />
+                                <Bell className="w-3.5 h-3.5 mr-1.5" />
                                 Alerts
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleLogout}
-                                className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
                             >
-                                <LogOut className="w-4 h-4 mr-2" />
+                                <LogOut className="w-3.5 h-3.5 mr-1.5" />
                                 Logout
                             </Button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 

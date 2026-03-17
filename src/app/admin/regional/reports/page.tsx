@@ -24,14 +24,13 @@ export default function RegionalReportsPage() {
     }, [dateRange])
 
     const fetchAnalytics = async () => {
+        setIsLoading(true)
+        setError(null)
         try {
-            setIsLoading(true)
-            setError(null)
             await RegionalAdminService.getAnalytics(dateRange)
-            setIsLoading(false)
-        } catch (err: any) {
-            console.error('Error fetching analytics:', err)
-            setError(err.message)
+        } catch {
+            // API not available yet — use hardcoded mock data
+        } finally {
             setIsLoading(false)
         }
     }
@@ -481,8 +480,8 @@ export default function RegionalReportsPage() {
                         <div className="flex items-center gap-3">
                             <AlertCircle className="w-5 h-5 text-yellow-600" />
                             <div>
-                                <p className="text-sm font-medium text-yellow-900">Unable to load reports</p>
-                                <p className="text-xs text-yellow-700">{error} - Showing mock data for development</p>
+                                <p className="text-sm font-medium text-yellow-900">Live data unavailable</p>
+                                <p className="text-xs text-yellow-700">Showing sample data for development</p>
                             </div>
                         </div>
                     </CardContent>

@@ -51,39 +51,44 @@ const CoachDashboard = () => {
     }, [isAuthenticated, router])
 
     const loadDashboardData = async () => {
-        try {
-            setIsLoading(true)
+        setIsLoading(true)
 
-            // Load today's classes - getSchedules(page, limit, filters)
-            const schedulesResponse = await schedulingService.getSchedules(1, 10, {
+        // Run all API calls independently so one failure doesn't block others
+        const [schedulesResult, programsResult, attendanceResult, analyticsResult] = await Promise.allSettled([
+            schedulingService.getSchedules(1, 10, {
                 coachId: user?.id,
                 date: new Date().toISOString().split('T')[0]
-            })
-            setTodayClasses(schedulesResponse.data.schedules.length)
+            }),
+            programService.getPrograms({ limit: 5 }),
+            attendanceService.getAttendance({ limit: 10 }),
+            analyticsService.getDashboardMetrics()
+        ])
 
-            // Load programs
-            const programsResponse = await programService.getPrograms({ limit: 5 })
-            setPrograms(programsResponse.data.programs)
+        setTodayClasses(
+            schedulesResult.status === 'fulfilled'
+                ? schedulesResult.value?.data?.schedules?.length ?? 0
+                : 0
+        )
+        setPrograms(
+            programsResult.status === 'fulfilled'
+                ? programsResult.value?.data?.programs ?? []
+                : []
+        )
+        setRecentAttendance(
+            attendanceResult.status === 'fulfilled'
+                ? attendanceResult.value?.data?.records ?? []
+                : []
+        )
+        setAnalytics(
+            analyticsResult.status === 'fulfilled'
+                ? analyticsResult.value?.data ?? null
+                : null
+        )
 
-            // Load attendance stats
-            const attendanceResponse = await attendanceService.getAttendance({
-                limit: 10
-            })
-            setRecentAttendance(attendanceResponse.data.records)
-
-            // Load analytics via getDashboardMetrics
-            const analyticsResponse = await analyticsService.getDashboardMetrics()
-            setAnalytics(analyticsResponse.data)
-
-            // Set mock data for demo
-            setTotalStudents(45)
-            setAttendanceRate(92)
-
-            setIsLoading(false)
-        } catch (error) {
-            console.error('Error loading dashboard data:', error)
-            setIsLoading(false)
-        }
+        // Set mock data for demo
+        setTotalStudents(45)
+        setAttendanceRate(92)
+        setIsLoading(false)
     }
 
     const handleRefresh = async () => {

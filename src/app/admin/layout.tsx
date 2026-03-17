@@ -161,6 +161,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const [userName] = useState('Admin User')
     const [userEmail] = useState('admin@progym.hk')
 
+    // Sub-admin routes have their own layout — skip parent chrome
+    if (pathname?.startsWith('/admin/hq') || pathname?.startsWith('/admin/regional') || pathname?.startsWith('/admin/franchise')) {
+        return <>{children}</>
+    }
+
     // Auto-expand menus based on current path
     useEffect(() => {
         const currentPath = pathname
