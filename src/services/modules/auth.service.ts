@@ -136,7 +136,7 @@ class AuthService {
     async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
         try {
             const response = await apiClient.post<RefreshTokenResponse>(
-                '/auth/refresh',
+                '/auth/refresh-token',
                 { refreshToken }
             )
 

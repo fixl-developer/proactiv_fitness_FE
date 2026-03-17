@@ -71,7 +71,7 @@ class ApiClient {
                         const refreshToken = localStorage.getItem('refreshToken')
                         if (refreshToken) {
                             const response = await axios.post(
-                                `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh`,
+                                `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh-token`,
                                 { refreshToken }
                             )
 

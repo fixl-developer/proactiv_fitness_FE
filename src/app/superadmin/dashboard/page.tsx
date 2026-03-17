@@ -96,8 +96,8 @@ export default function SuperAdminDashboard() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <Badge className={`${systemHealth?.status === 'healthy' ? 'bg-green-100 text-green-800' :
-                                            systemHealth?.status === 'degraded' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-red-100 text-red-800'
+                                        systemHealth?.status === 'degraded' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
                                         }`}>
                                         {systemHealth?.status?.toUpperCase() || 'UNKNOWN'}
                                     </Badge>
@@ -202,8 +202,8 @@ export default function SuperAdminDashboard() {
                                         <div key={alert.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                             <div className="flex items-center gap-3">
                                                 <AlertTriangle className={`w-5 h-5 ${alert.type === 'critical' ? 'text-red-600' :
-                                                        alert.type === 'warning' ? 'text-yellow-600' :
-                                                            'text-blue-600'
+                                                    alert.type === 'warning' ? 'text-yellow-600' :
+                                                        'text-blue-600'
                                                     }`} />
                                                 <div>
                                                     <p className="font-medium text-gray-900">{alert.title}</p>
@@ -211,8 +211,8 @@ export default function SuperAdminDashboard() {
                                                 </div>
                                             </div>
                                             <Badge className={`${alert.type === 'critical' ? 'bg-red-100 text-red-800' :
-                                                    alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                                                        'bg-blue-100 text-blue-800'
+                                                alert.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-blue-100 text-blue-800'
                                                 }`}>
                                                 {alert.type}
                                             </Badge>
@@ -232,20 +232,26 @@ export default function SuperAdminDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {(systemHealth?.services || []).map((service: any, idx: number) => (
-                                    <div key={idx} className="p-4 border border-gray-200 rounded-lg">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <p className="font-medium text-gray-900">{service.name}</p>
-                                            <Badge className={`${service.status === 'up' ? 'bg-green-100 text-green-800' :
+                                {Array.isArray(systemHealth?.services) && systemHealth.services.length > 0 ? (
+                                    systemHealth.services.map((service: any, idx: number) => (
+                                        <div key={idx} className="p-4 border border-gray-200 rounded-lg">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="font-medium text-gray-900">{service.name}</p>
+                                                <Badge className={`${service.status === 'up' ? 'bg-green-100 text-green-800' :
                                                     service.status === 'degraded' ? 'bg-yellow-100 text-yellow-800' :
                                                         'bg-red-100 text-red-800'
-                                                }`}>
-                                                {service.status}
-                                            </Badge>
+                                                    }`}>
+                                                    {service.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-gray-600">Response: {service.responseTime}ms</p>
                                         </div>
-                                        <p className="text-sm text-gray-600">Response: {service.responseTime}ms</p>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full p-4 text-center text-gray-500">
+                                        <p>No services data available</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>

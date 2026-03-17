@@ -76,7 +76,7 @@ class StaffService {
     }): Promise<StaffListResponse> {
         try {
             const response = await apiClient.get<StaffListResponse>(
-                '/staff',
+                '/staff/staff',
                 { params: filters }
             )
             return response
@@ -90,7 +90,7 @@ class StaffService {
     async getStaffById(id: string): Promise<StaffDetailResponse> {
         try {
             const response = await apiClient.get<StaffDetailResponse>(
-                `/staff/${id}`
+                `/staff/staff/${id}`
             )
             return response
         } catch (error) {
@@ -103,7 +103,7 @@ class StaffService {
     async createStaff(data: CreateStaffDTO): Promise<StaffDetailResponse> {
         try {
             const response = await apiClient.post<StaffDetailResponse>(
-                '/staff',
+                '/staff/staff',
                 data
             )
             return response
@@ -117,7 +117,7 @@ class StaffService {
     async updateStaff(id: string, data: UpdateStaffDTO): Promise<StaffDetailResponse> {
         try {
             const response = await apiClient.put<StaffDetailResponse>(
-                `/staff/${id}`,
+                `/staff/staff/${id}`,
                 data
             )
             return response
@@ -131,7 +131,7 @@ class StaffService {
     async deleteStaff(id: string): Promise<{ success: boolean; message: string }> {
         try {
             const response = await apiClient.delete<{ success: boolean; message: string }>(
-                `/staff/${id}`
+                `/staff/staff/${id}`
             )
             return response
         } catch (error) {
@@ -144,7 +144,7 @@ class StaffService {
     async getStaffByRole(role: string): Promise<StaffListResponse> {
         try {
             const response = await apiClient.get<StaffListResponse>(
-                '/staff',
+                '/staff/staff',
                 { params: { role } }
             )
             return response
@@ -158,7 +158,7 @@ class StaffService {
     async getStaffAvailability(id: string): Promise<{ success: boolean; data: Staff['availability'] }> {
         try {
             const response = await apiClient.get<{ success: boolean; data: Staff['availability'] }>(
-                `/staff/${id}/availability`
+                `/staff/staff/${id}/availability`
             )
             return response
         } catch (error) {
@@ -171,7 +171,7 @@ class StaffService {
     async updateStaffAvailability(id: string, availability: Staff['availability']): Promise<StaffDetailResponse> {
         try {
             const response = await apiClient.put<StaffDetailResponse>(
-                `/staff/${id}/availability`,
+                `/staff/staff/availability`,
                 { availability }
             )
             return response
@@ -185,7 +185,7 @@ class StaffService {
     async getStaffPerformance(id: string): Promise<{ success: boolean; data: Staff['performance'] }> {
         try {
             const response = await apiClient.get<{ success: boolean; data: Staff['performance'] }>(
-                `/staff/${id}/performance`
+                `/staff/staff/${id}/performance`
             )
             return response
         } catch (error) {
@@ -206,7 +206,7 @@ class StaffService {
     }> {
         try {
             const response = await apiClient.get<any>(
-                '/staff/stats'
+                '/staff/staff/statistics/overview'
             )
             return response
         } catch (error) {

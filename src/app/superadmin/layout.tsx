@@ -217,15 +217,15 @@ const superAdminMenuItems: MenuItem[] = [
     },
     {
         icon: Gauge,
-        label: 'Real-time Monitoring',
-        href: '/superadmin/monitoring',
+        label: 'Real-time Dashboard',
+        href: '/superadmin/realtime',
         badge: 'Live',
         badgeColor: 'bg-green-500',
         submenu: [
-            { label: 'Live Dashboard', href: '/superadmin/monitoring/live' },
-            { label: 'System Metrics', href: '/superadmin/monitoring/metrics' },
-            { label: 'Network Traffic', href: '/superadmin/monitoring/network' },
-            { label: 'Service Health', href: '/superadmin/monitoring/health' }
+            { label: 'Live Dashboard', href: '/superadmin/realtime/live' },
+            { label: 'System Metrics', href: '/superadmin/realtime/metrics' },
+            { label: 'Network Traffic', href: '/superadmin/realtime/network' },
+            { label: 'Service Health', href: '/superadmin/realtime/health' }
         ]
     },
     {
@@ -496,17 +496,17 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                 </div>
 
                 {/* Sidebar Footer - Always at bottom */}
-                <div className="flex-shrink-0 p-4 border-t border-gray-200/50 bg-white">
+                <div className="mt-auto flex-shrink-0 border-t border-gray-200/50 bg-white w-full">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="space-y-3"
+                        className="space-y-3 p-4"
                     >
                         {/* User Info */}
                         <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
                             <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center`}>
+                                <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
                                     <Crown className="w-4 h-4 text-white" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -521,7 +521,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex space-x-2">
+                        <div className="flex gap-2 -mx-4 px-4">
                             <Button
                                 variant="outline"
                                 size="sm"

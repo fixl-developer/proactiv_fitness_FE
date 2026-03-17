@@ -116,7 +116,44 @@ export default function LoginPage() {
                     </motion.div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Login Form */}
+                        {/* Demo Accounts - Left Side */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.3 }}
+                            className="lg:col-span-2"
+                        >
+                            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Demo Accounts</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {DEMO_ACCOUNTS.map((account) => {
+                                        const Icon = account.icon;
+                                        return (
+                                            <motion.button
+                                                key={account.email}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => handleDemoAccountClick(account.email, account.password)}
+                                                className={`p-4 rounded-xl bg-gradient-to-br ${account.color} text-white shadow-lg hover:shadow-xl transition-all duration-300 text-left group`}
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <Icon className="w-6 h-6" />
+                                                    <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                                <h3 className="font-semibold text-sm mb-1">{account.label}</h3>
+                                                <p className="text-xs opacity-90 mb-2">{account.description}</p>
+                                                <p className="text-xs opacity-75 truncate">{account.email}</p>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-6 text-center">
+                                    Click any demo account to auto-fill credentials
+                                </p>
+                            </div>
+                        </motion.div>
+
+                        {/* Login Form - Right Side */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -224,17 +261,17 @@ export default function LoginPage() {
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-black py-3.5 rounded-lg shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6 hover:scale-105 active:scale-95"
+                                    className="w-full bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white py-3.5 rounded-lg shadow-lg shadow-blue-400/25 hover:shadow-xl hover:shadow-blue-400/30 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6 hover:scale-105 active:scale-95"
                                 >
                                     {isLoading ? (
                                         <>
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-black font-bold text-base">Signing in...</span>
+                                            <span className="text-white font-bold text-base">Signing in...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <LogIn className="w-5 h-5 text-black" />
-                                            <span className="text-black font-bold text-base">Sign In</span>
+                                            <LogIn className="w-5 h-5 text-white" />
+                                            <span className="text-white font-bold text-base">Sign In</span>
                                         </>
                                     )}
                                 </button>
@@ -272,43 +309,6 @@ export default function LoginPage() {
                                     >
                                         Create Account
                                     </button>
-                                </p>
-                            </div>
-                        </motion.div>
-
-                        {/* Demo Accounts */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.3 }}
-                            className="lg:col-span-2"
-                        >
-                            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Demo Accounts</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {DEMO_ACCOUNTS.map((account) => {
-                                        const Icon = account.icon;
-                                        return (
-                                            <motion.button
-                                                key={account.email}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                                onClick={() => handleDemoAccountClick(account.email, account.password)}
-                                                className={`p-4 rounded-xl bg-gradient-to-br ${account.color} text-white shadow-lg hover:shadow-xl transition-all duration-300 text-left group`}
-                                            >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <Icon className="w-6 h-6" />
-                                                    <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </div>
-                                                <h3 className="font-semibold text-sm mb-1">{account.label}</h3>
-                                                <p className="text-xs opacity-90 mb-2">{account.description}</p>
-                                                <p className="text-xs opacity-75 truncate">{account.email}</p>
-                                            </motion.button>
-                                        );
-                                    })}
-                                </div>
-                                <p className="text-xs text-gray-500 mt-6 text-center">
-                                    Click any demo account to auto-fill credentials
                                 </p>
                             </div>
                         </motion.div>

@@ -72,7 +72,7 @@ class BillingService {
     async getInvoices(page: number = 1, limit: number = 10, filters?: any): Promise<InvoiceListResponse> {
         try {
             const response = await apiClient.get<InvoiceListResponse>(
-                '/invoices',
+                '/billing',
                 { params: { page, limit, ...filters } }
             )
             return response
@@ -85,7 +85,7 @@ class BillingService {
 
     async getInvoiceById(id: string): Promise<InvoiceResponse> {
         try {
-            const response = await apiClient.get<InvoiceResponse>(`/invoices/${id}`)
+            const response = await apiClient.get<InvoiceResponse>(`/billing/${id}`)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -96,7 +96,7 @@ class BillingService {
 
     async createInvoice(data: CreateInvoiceDTO): Promise<InvoiceResponse> {
         try {
-            const response = await apiClient.post<InvoiceResponse>('/invoices', data)
+            const response = await apiClient.post<InvoiceResponse>('/billing', data)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -107,7 +107,7 @@ class BillingService {
 
     async updateInvoice(id: string, data: UpdateInvoiceDTO): Promise<InvoiceResponse> {
         try {
-            const response = await apiClient.put<InvoiceResponse>(`/invoices/${id}`, data)
+            const response = await apiClient.put<InvoiceResponse>(`/billing/${id}`, data)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -118,7 +118,7 @@ class BillingService {
 
     async sendInvoice(id: string): Promise<InvoiceResponse> {
         try {
-            const response = await apiClient.post<InvoiceResponse>(`/invoices/${id}/send`, {})
+            const response = await apiClient.post<InvoiceResponse>(`/billing/${id}/send`, {})
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -129,7 +129,7 @@ class BillingService {
 
     async markAsPaid(id: string): Promise<InvoiceResponse> {
         try {
-            const response = await apiClient.post<InvoiceResponse>(`/invoices/${id}/mark-paid`, {})
+            const response = await apiClient.post<InvoiceResponse>(`/billing/${id}/mark-paid`, {})
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -141,7 +141,7 @@ class BillingService {
     async getStudentInvoices(studentId: string): Promise<InvoiceListResponse> {
         try {
             const response = await apiClient.get<InvoiceListResponse>(
-                `/invoices/student/${studentId}`
+                `/billing/student/${studentId}`
             )
             return response
         } catch (error) {
@@ -153,7 +153,7 @@ class BillingService {
 
     async getBillingStats(): Promise<BillingStatsResponse> {
         try {
-            const response = await apiClient.get<BillingStatsResponse>('/invoices/stats')
+            const response = await apiClient.get<BillingStatsResponse>('/billing/stats')
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -164,7 +164,7 @@ class BillingService {
 
     async downloadInvoice(id: string): Promise<Blob> {
         try {
-            const response = await apiClient.get<Blob>(`/invoices/${id}/download`)
+            const response = await apiClient.get<Blob>(`/billing/${id}/download`)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)

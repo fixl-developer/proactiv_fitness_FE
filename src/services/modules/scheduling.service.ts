@@ -66,7 +66,7 @@ class SchedulingService {
     async getSchedules(page: number = 1, limit: number = 10, filters?: any): Promise<ScheduleListResponse> {
         try {
             const response = await apiClient.get<ScheduleListResponse>(
-                '/schedules',
+                '/scheduling',
                 { params: { page, limit, ...filters } }
             )
             return response
@@ -79,7 +79,7 @@ class SchedulingService {
 
     async getScheduleById(id: string): Promise<ScheduleResponse> {
         try {
-            const response = await apiClient.get<ScheduleResponse>(`/schedules/${id}`)
+            const response = await apiClient.get<ScheduleResponse>(`/scheduling/${id}`)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -90,7 +90,7 @@ class SchedulingService {
 
     async createSchedule(data: CreateScheduleDTO): Promise<ScheduleResponse> {
         try {
-            const response = await apiClient.post<ScheduleResponse>('/schedules', data)
+            const response = await apiClient.post<ScheduleResponse>('/scheduling', data)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -101,7 +101,7 @@ class SchedulingService {
 
     async updateSchedule(id: string, data: UpdateScheduleDTO): Promise<ScheduleResponse> {
         try {
-            const response = await apiClient.put<ScheduleResponse>(`/schedules/${id}`, data)
+            const response = await apiClient.put<ScheduleResponse>(`/scheduling/${id}`, data)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -112,7 +112,7 @@ class SchedulingService {
 
     async deleteSchedule(id: string): Promise<{ success: boolean; message: string }> {
         try {
-            const response = await apiClient.delete<{ success: boolean; message: string }>(`/schedules/${id}`)
+            const response = await apiClient.delete<{ success: boolean; message: string }>(`/scheduling/${id}`)
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
@@ -124,7 +124,7 @@ class SchedulingService {
     async getCoachSchedules(coachId: string): Promise<ScheduleListResponse> {
         try {
             const response = await apiClient.get<ScheduleListResponse>(
-                `/schedules/coach/${coachId}`
+                `/scheduling/coaches/${coachId}/schedule`
             )
             return response
         } catch (error) {
@@ -137,7 +137,7 @@ class SchedulingService {
     async getSchedulesByDay(dayOfWeek: string): Promise<ScheduleListResponse> {
         try {
             const response = await apiClient.get<ScheduleListResponse>(
-                '/schedules/day',
+                '/scheduling/day',
                 { params: { dayOfWeek } }
             )
             return response
@@ -151,7 +151,7 @@ class SchedulingService {
     async getSchedulesByLevel(level: string): Promise<ScheduleListResponse> {
         try {
             const response = await apiClient.get<ScheduleListResponse>(
-                '/schedules/level',
+                '/scheduling/level',
                 { params: { level } }
             )
             return response
@@ -165,7 +165,7 @@ class SchedulingService {
     async getAvailableSlots(classId: string): Promise<{ success: boolean; data: { available: number; total: number } }> {
         try {
             const response = await apiClient.get<{ success: boolean; data: { available: number; total: number } }>(
-                `/schedules/${classId}/available-slots`
+                `/scheduling/${classId}/available-slots`
             )
             return response
         } catch (error) {
