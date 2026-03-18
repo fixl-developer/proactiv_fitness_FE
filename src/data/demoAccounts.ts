@@ -25,22 +25,12 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     {
         email: 'admin@proactiv.com',
         password: 'Admin@123456',
-        label: 'Super Admin',
+        label: 'Admin',
         icon: Crown,
-        color: 'from-yellow-500 to-orange-500',
-        description: 'Full system access',
-        dashboard: '/superadmin/dashboard',
-        role: 'SUPER_ADMIN'
-    },
-    {
-        email: 'hq@proactiv.com',
-        password: 'HqAdmin@123456',
-        label: 'HQ Admin',
-        icon: Building2,
-        color: 'from-teal-600 to-teal-800',
-        description: 'HQ operations',
-        dashboard: '/admin/hq/dashboard',
-        role: 'HQ_ADMIN'
+        color: 'from-blue-600 to-indigo-600',
+        description: 'Business owner - Full access',
+        dashboard: '/admin/dashboard',
+        role: 'ADMIN'
     },
     {
         email: 'regional@proactiv.com',

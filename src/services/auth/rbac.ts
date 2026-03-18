@@ -1,7 +1,5 @@
 export enum UserRole {
-    SUPER_ADMIN = 'SUPER_ADMIN',
     ADMIN = 'ADMIN',
-    HQ_ADMIN = 'HQ_ADMIN',
     REGIONAL_ADMIN = 'REGIONAL_ADMIN',
     LOCATION_ADMIN = 'LOCATION_ADMIN',
     FRANCHISE_MANAGER = 'FRANCHISE_MANAGER',
@@ -22,51 +20,10 @@ export interface RoleConfig {
 }
 
 export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
-    [UserRole.SUPER_ADMIN]: {
-        dashboard: '/superadmin/dashboard',
-        modules: ['all'],
-        permissions: ['all']
-    },
     [UserRole.ADMIN]: {
         dashboard: '/admin/dashboard',
-        modules: [
-            'staff',
-            'booking',
-            'scheduling',
-            'payments',
-            'billing',
-            'financial-ledger',
-            'reporting',
-            'advanced-analytics',
-            'facility-management',
-            'attendance',
-            'programs',
-            'workforce-management'
-        ],
-        permissions: [
-            'view_dashboard',
-            'manage_staff',
-            'manage_bookings',
-            'manage_payments',
-            'view_reports',
-            'manage_facilities'
-        ]
-    },
-    [UserRole.HQ_ADMIN]: {
-        dashboard: '/admin/hq/dashboard',
-        modules: [
-            'franchise-management',
-            'reporting',
-            'advanced-analytics',
-            'financial-ledger',
-            'staff'
-        ],
-        permissions: [
-            'view_dashboard',
-            'manage_franchises',
-            'view_reports',
-            'view_analytics'
-        ]
+        modules: ['all'],
+        permissions: ['all']
     },
     [UserRole.REGIONAL_ADMIN]: {
         dashboard: '/admin/regional/dashboard',
@@ -250,7 +207,7 @@ class RBACManager {
 
     hasModule(module: string): boolean {
         if (!this.currentRole) return false
-        if (this.currentRole === UserRole.SUPER_ADMIN) return true
+        if (this.currentRole === UserRole.ADMIN) return true
 
         const modules = ROLE_CONFIG[this.currentRole].modules
         return modules.includes(module)
@@ -258,7 +215,7 @@ class RBACManager {
 
     hasPermission(permission: string): boolean {
         if (!this.currentRole) return false
-        if (this.currentRole === UserRole.SUPER_ADMIN) return true
+        if (this.currentRole === UserRole.ADMIN) return true
 
         const permissions = ROLE_CONFIG[this.currentRole].permissions
         return permissions.includes(permission)
@@ -274,7 +231,7 @@ class RBACManager {
 
     canAccessPage(pagePath: string): boolean {
         if (!this.currentRole) return false
-        if (this.currentRole === UserRole.SUPER_ADMIN) return true
+        if (this.currentRole === UserRole.ADMIN) return true
 
         // Check if page path matches role's dashboard
         const dashboard = ROLE_CONFIG[this.currentRole].dashboard
@@ -283,27 +240,25 @@ class RBACManager {
 
     getAccessibleModules(): string[] {
         if (!this.currentRole) return []
-        if (this.currentRole === UserRole.SUPER_ADMIN) return ['all']
+        if (this.currentRole === UserRole.ADMIN) return ['all']
 
         return ROLE_CONFIG[this.currentRole].modules
     }
 
     getAccessiblePermissions(): string[] {
         if (!this.currentRole) return []
-        if (this.currentRole === UserRole.SUPER_ADMIN) return ['all']
+        if (this.currentRole === UserRole.ADMIN) return ['all']
 
         return ROLE_CONFIG[this.currentRole].permissions
     }
 
     isSuperAdmin(): boolean {
-        return this.currentRole === UserRole.SUPER_ADMIN
+        return this.currentRole === UserRole.ADMIN
     }
 
     isAdmin(): boolean {
         return [
-            UserRole.SUPER_ADMIN,
             UserRole.ADMIN,
-            UserRole.HQ_ADMIN,
             UserRole.REGIONAL_ADMIN,
             UserRole.LOCATION_ADMIN,
             UserRole.FRANCHISE_OWNER,
