@@ -15,7 +15,7 @@ import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { rbacManager } from '@/services/auth/rbac'
 import { attendanceService } from '@/services/modules/attendance.service'
-import { programService } from '@/services/modules/program.service'
+import programService from '@/services/modules/program.service'
 import { schedulingService } from '@/services/modules/scheduling.service'
 import { analyticsService } from '@/services/modules/analytics.service'
 
