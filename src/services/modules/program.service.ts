@@ -1,297 +1,266 @@
-import { apiClient } from '../api/client'
-import ErrorHandler from '../api/errorHandler'
+import apiClient from '../api/client'
 
-export interface Program {
+interface Program {
     id: string
     name: string
     description: string
     category: string
     ageGroup: string
-    level: 'beginner' | 'intermediate' | 'advanced' | 'elite'
-    duration: number // in weeks
-    capacity: number
-    currentEnrollment: number
-    instructor: string
-    schedule: {
-        days: string[]
-        time: string
-        duration: number // in minutes
-    }
-    price: number
-    curriculum?: string[]
-    skills?: string[]
-    prerequisites?: string[]
-    status: 'active' | 'inactive' | 'archived'
-    createdAt: string
-    updatedAt: string
-}
-
-export interface CreateProgramDTO {
-    name: string
-    description: string
-    category: string
-    ageGroup: string
-    level: 'beginner' | 'intermediate' | 'advanced' | 'elite'
+    level: 'beginner' | 'intermediate' | 'advanced'
     duration: number
     capacity: number
-    instructor: string
-    schedule: {
-        days: string[]
-        time: string
-        duration: number
-    }
     price: number
-    curriculum?: string[]
-    skills?: string[]
-    prerequisites?: string[]
+    status: 'active' | 'inactive'
 }
 
-export interface UpdateProgramDTO {
-    name?: string
-    description?: string
-    level?: 'beginner' | 'intermediate' | 'advanced' | 'elite'
-    capacity?: number
-    instructor?: string
-    schedule?: {
-        days: string[]
-        time: string
-        duration: number
-    }
-    price?: number
-    curriculum?: string[]
-    skills?: string[]
-    status?: 'active' | 'inactive' | 'archived'
+interface Schedule {
+    id: string
+    programId: string
+    locationId: string
+    roomId: string
+    coachId: string
+    dayOfWeek: number
+    startTime: string
+    endTime: string
+    startDate: string
+    endDate: string
+    status: 'active' | 'inactive'
 }
 
-export interface ProgramListResponse {
-    success: boolean
-    data: {
-        programs: Program[]
-        total: number
-        page: number
-        limit: number
-    }
-}
-
-export interface ProgramDetailResponse {
-    success: boolean
-    data: Program
-}
-
-export interface ProgramEnrollmentResponse {
-    success: boolean
-    data: {
-        programId: string
-        studentId: string
-        enrollmentDate: string
-        status: 'active' | 'completed' | 'dropped'
-        progress: number
-    }
+interface Rule {
+    id: string
+    name: string
+    type: 'enrollment' | 'scheduling' | 'payment' | 'attendance'
+    condition: string
+    action: string
+    priority: number
+    status: 'active' | 'inactive'
 }
 
 class ProgramService {
-    private readonly MODULE_NAME = 'programs'
+    // ==================== PROGRAMS ====================
 
-    async getPrograms(filters?: {
-        page?: number
-        limit?: number
-        category?: string
-        level?: string
-        ageGroup?: string
-        status?: string
-    }): Promise<ProgramListResponse> {
+    /**
+     * Get all programs
+     */
+    async getAllPrograms(filters?: any): Promise<Program[]> {
         try {
-            const response = await apiClient.get<ProgramListResponse>(
-                '/programs',
-                { params: filters }
-            )
-            return response
+            const response = await apiClient.get('/admin/programs/catalog', { params: filters })
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error fetching programs:', error)
             throw error
         }
     }
 
-    async getProgramById(id: string): Promise<ProgramDetailResponse> {
+    /**
+     * Get program by ID
+     */
+    async getProgramById(programId: string): Promise<Program> {
         try {
-            const response = await apiClient.get<ProgramDetailResponse>(
-                `/programs/${id}`
-            )
-            return response
+            const response = await apiClient.get(`/admin/programs/catalog/${programId}`)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error fetching program:', error)
             throw error
         }
     }
 
-    async createProgram(data: CreateProgramDTO): Promise<ProgramDetailResponse> {
+    /**
+     * Create program
+     */
+    async createProgram(programData: Omit<Program, 'id'>): Promise<Program> {
         try {
-            const response = await apiClient.post<ProgramDetailResponse>(
-                '/programs',
-                data
-            )
-            return response
+            const response = await apiClient.post('/admin/programs/catalog', programData)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error creating program:', error)
             throw error
         }
     }
 
-    async updateProgram(id: string, data: UpdateProgramDTO): Promise<ProgramDetailResponse> {
+    /**
+     * Update program
+     */
+    async updateProgram(programId: string, programData: Partial<Program>): Promise<Program> {
         try {
-            const response = await apiClient.put<ProgramDetailResponse>(
-                `/programs/${id}`,
-                data
-            )
-            return response
+            const response = await apiClient.put(`/admin/programs/catalog/${programId}`, programData)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error updating program:', error)
             throw error
         }
     }
 
-    async deleteProgram(id: string): Promise<{ success: boolean; message: string }> {
+    /**
+     * Delete program
+     */
+    async deleteProgram(programId: string): Promise<void> {
         try {
-            const response = await apiClient.delete<{ success: boolean; message: string }>(
-                `/programs/${id}`
-            )
-            return response
+            await apiClient.delete(`/admin/programs/catalog/${programId}`)
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error deleting program:', error)
             throw error
         }
     }
 
-    async getProgramsByCategory(category: string, filters?: {
-        page?: number
-        limit?: number
-        level?: string
-    }): Promise<ProgramListResponse> {
+    // ==================== SCHEDULES ====================
+
+    /**
+     * Get all schedules
+     */
+    async getAllSchedules(filters?: any): Promise<Schedule[]> {
         try {
-            const response = await apiClient.get<ProgramListResponse>(
-                `/programs/category/${category}`,
-                { params: filters }
-            )
-            return response
+            const response = await apiClient.get('/admin/programs/schedule', { params: filters })
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error fetching schedules:', error)
             throw error
         }
     }
 
-    async getProgramsByLevel(level: string, filters?: {
-        page?: number
-        limit?: number
-    }): Promise<ProgramListResponse> {
+    /**
+     * Get schedule by ID
+     */
+    async getScheduleById(scheduleId: string): Promise<Schedule> {
         try {
-            const response = await apiClient.get<ProgramListResponse>(
-                `/programs/level/${level}`,
-                { params: filters }
-            )
-            return response
+            const response = await apiClient.get(`/admin/programs/schedule/${scheduleId}`)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error fetching schedule:', error)
             throw error
         }
     }
 
-    async enrollStudent(programId: string, studentId: string): Promise<ProgramEnrollmentResponse> {
+    /**
+     * Create schedule
+     */
+    async createSchedule(scheduleData: Omit<Schedule, 'id'>): Promise<Schedule> {
         try {
-            const response = await apiClient.post<ProgramEnrollmentResponse>(
-                `/programs/${programId}/enroll`,
-                { studentId }
-            )
-            return response
+            const response = await apiClient.post('/admin/programs/schedule', scheduleData)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error creating schedule:', error)
             throw error
         }
     }
 
-    async getEnrolledStudents(programId: string, filters?: {
-        page?: number
-        limit?: number
-        status?: string
-    }): Promise<{
-        success: boolean
-        data: {
-            students: Array<{
-                studentId: string
-                name: string
-                enrollmentDate: string
-                status: string
-                progress: number
-            }>
-            total: number
-        }
-    }> {
+    /**
+     * Update schedule
+     */
+    async updateSchedule(scheduleId: string, scheduleData: Partial<Schedule>): Promise<Schedule> {
         try {
-            const response = await apiClient.get<any>(
-                `/programs/${programId}/students`,
-                { params: filters }
-            )
-            return response
+            const response = await apiClient.put(`/admin/programs/schedule/${scheduleId}`, scheduleData)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error updating schedule:', error)
             throw error
         }
     }
 
-    async getProgramStats(): Promise<{
-        success: boolean
-        data: {
-            totalPrograms: number
-            activePrograms: number
-            totalEnrollments: number
-            byCategory: Record<string, number>
-            byLevel: Record<string, number>
-        }
-    }> {
+    /**
+     * Delete schedule
+     */
+    async deleteSchedule(scheduleId: string): Promise<void> {
         try {
-            const response = await apiClient.get<any>(
-                '/programs/stats'
-            )
-            return response
+            await apiClient.delete(`/admin/programs/schedule/${scheduleId}`)
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error deleting schedule:', error)
             throw error
         }
     }
 
-    async getCurriculum(programId: string): Promise<{
-        success: boolean
-        data: {
-            programId: string
-            curriculum: Array<{
-                week: number
-                topic: string
-                skills: string[]
-                objectives: string[]
-            }>
-        }
-    }> {
+    /**
+     * Check schedule conflicts
+     */
+    async checkScheduleConflicts(scheduleData: Partial<Schedule>): Promise<any> {
         try {
-            const response = await apiClient.get<any>(
-                `/programs/${programId}/curriculum`
-            )
-            return response
+            const response = await apiClient.post('/admin/programs/schedule/check-conflicts', scheduleData)
+            return response.data
         } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
+            console.error('Error checking schedule conflicts:', error)
+            throw error
+        }
+    }
+
+    // ==================== RULES ENGINE ====================
+
+    /**
+     * Get all rules
+     */
+    async getAllRules(type?: string): Promise<Rule[]> {
+        try {
+            const response = await apiClient.get('/admin/programs/rules', { params: { type } })
+            return response.data
+        } catch (error) {
+            console.error('Error fetching rules:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get rule by ID
+     */
+    async getRuleById(ruleId: string): Promise<Rule> {
+        try {
+            const response = await apiClient.get(`/admin/programs/rules/${ruleId}`)
+            return response.data
+        } catch (error) {
+            console.error('Error fetching rule:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Create rule
+     */
+    async createRule(ruleData: Omit<Rule, 'id'>): Promise<Rule> {
+        try {
+            const response = await apiClient.post('/admin/programs/rules', ruleData)
+            return response.data
+        } catch (error) {
+            console.error('Error creating rule:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Update rule
+     */
+    async updateRule(ruleId: string, ruleData: Partial<Rule>): Promise<Rule> {
+        try {
+            const response = await apiClient.put(`/admin/programs/rules/${ruleId}`, ruleData)
+            return response.data
+        } catch (error) {
+            console.error('Error updating rule:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Delete rule
+     */
+    async deleteRule(ruleId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/programs/rules/${ruleId}`)
+        } catch (error) {
+            console.error('Error deleting rule:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Test rule
+     */
+    async testRule(ruleId: string, testData: any): Promise<any> {
+        try {
+            const response = await apiClient.post(`/admin/programs/rules/${ruleId}/test`, testData)
+            return response.data
+        } catch (error) {
+            console.error('Error testing rule:', error)
             throw error
         }
     }
 }
 
-export const programService = new ProgramService()
-export default ProgramService
+export default new ProgramService()

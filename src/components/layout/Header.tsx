@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { FiMenu, FiX, FiChevronDown, FiLogOut } from 'react-icons/fi'
+import { FiMenu, FiX, FiChevronDown, FiLogOut, FiGrid } from 'react-icons/fi'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authService } from '@/services/modules/auth.service'
+import LogoutModal from '@/components/ui/LogoutModal'
 
 const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }) => {
     const router = useRouter()
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -58,14 +60,46 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const handleLogout = async () => {
+    const handleLogoutClick = () => {
         setIsProfileOpen(false)
-        await authService.logout()
-        setLoggedInUser(null)
-        router.push('/')
+        setShowLogoutModal(true)
     }
 
-    const getInitials = (name: string) => {
+    const handleSaveAndLogout = () => {
+        // Save session for quick re-login
+        const user = localStorage.getItem('user')
+        const token = localStorage.getItem('token')
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (user && token) {
+            localStorage.setItem('savedSession', JSON.stringify({ user, token, refreshToken }))
+        }
+        // Clear active session
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        setLoggedInUser(null)
+        setShowLogoutModal(false)
+        router.push('/login')
+    }
+
+    const handlePermanentLogout = async () => {
+        await authService.logout()
+        localStorage.removeItem('savedSession')
+        setLoggedInUser(null)
+        setShowLogoutModal(false)
+        router.push('/login')
+    }
+
+    const getInitials = (userObj: any) => {
+        if (!userObj) return 'U'
+        // Use firstName + lastName if available
+        const firstName = userObj.firstName || ''
+        const lastName = userObj.lastName || ''
+        if (firstName && lastName) {
+            return (firstName[0] + lastName[0]).toUpperCase()
+        }
+        // Fallback to name split
+        const name = userObj.name || userObj.email || ''
         if (!name) return 'U'
         const parts = name.trim().split(' ')
         if (parts.length >= 2) {
@@ -180,20 +214,18 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
 
                         {loggedInUser ? (
                             <div className="relative" ref={profileRef}>
-                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-                                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md">
-                                        {getInitials(loggedInUser.name || loggedInUser.email)}
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-1.5 py-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                                    <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                        {getInitials(loggedInUser)}
                                     </div>
-                                    <span className="text-sm font-medium text-gray-700 max-w-[100px] truncate">{loggedInUser.name?.split(' ')[0] || 'User'}</span>
-                                    <FiChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                                 </motion.button>
                                 <AnimatePresence>
                                     {isProfileOpen && (
-                                        <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.2 }} className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 overflow-hidden">
+                                        <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} transition={{ duration: 0.2 }} className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-1 z-50 overflow-hidden">
                                             <div className="px-4 py-3 border-b border-gray-100">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                                        {getInitials(loggedInUser.name || loggedInUser.email)}
+                                                        {getInitials(loggedInUser)}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-semibold text-gray-900 truncate">{loggedInUser.name || 'User'}</p>
@@ -201,7 +233,11 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                            <button onClick={() => { setIsProfileOpen(false); router.push('/user/dashboard'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                                <FiGrid className="w-4 h-4 text-blue-600" />
+                                                <span className="font-medium">My Dashboard</span>
+                                            </button>
+                                            <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                                 <FiLogOut className="w-4 h-4" />
                                                 <span className="font-medium">Logout</span>
                                             </button>
@@ -211,7 +247,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                             </div>
                         ) : (
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link href="/account/login" className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
+                                <Link href="/login" className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
                                     <span className="relative z-10">Login</span>
                                     <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
                                 </Link>
@@ -309,22 +345,25 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                     </Link>
                                     <div className="border-t border-gray-200 pt-4 mt-4">
                                         {loggedInUser ? (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 <div className="flex items-center gap-3 px-2">
                                                     <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                                        {getInitials(loggedInUser.name || loggedInUser.email)}
+                                                        {getInitials(loggedInUser)}
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-900">{loggedInUser.name || 'User'}</p>
                                                         <p className="text-xs text-gray-500">{loggedInUser.email}</p>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="block w-full text-center bg-red-50 text-red-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-red-100">
+                                                <button onClick={() => { router.push('/user/dashboard'); setIsMenuOpen(false); }} className="block w-full text-center bg-blue-50 text-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-blue-100">
+                                                    My Dashboard
+                                                </button>
+                                                <button onClick={() => { handleLogoutClick(); setIsMenuOpen(false); }} className="block w-full text-center bg-red-50 text-red-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-red-100">
                                                     Logout
                                                 </button>
                                             </div>
                                         ) : (
-                                            <Link href="/account/login" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
+                                            <Link href="/login" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
                                                 Login
                                             </Link>
                                         )}
@@ -335,6 +374,15 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                     )}
                 </AnimatePresence>
             </nav>
+
+            {/* Logout Modal */}
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={loggedInUser?.name?.split(' ')[0] || loggedInUser?.firstName}
+            />
         </header>
     )
 }

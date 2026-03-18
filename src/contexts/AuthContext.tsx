@@ -23,6 +23,7 @@ export interface AuthContextType {
     role: UserRole | null
     login: (email: string, password: string) => Promise<void>
     logout: () => Promise<void>
+    softLogout: () => void
     register: (email: string, password: string, name: string) => Promise<void>
     clearError: () => void
     refreshToken: () => Promise<void>
@@ -128,6 +129,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             rbacManager.setRole('')
             tokenManager.clearTokens()
             useAuthStore.getState().clearAuth()
+            // Clear saved session too
+            localStorage.removeItem('savedSession')
         } catch (err) {
             console.error('Logout error:', err)
         } finally {
@@ -135,12 +138,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }
 
+    // Soft logout - keeps session saved so user can continue later
+    const softLogout = () => {
+        // Save session info before clearing state
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({
+                user: savedUser,
+                token: savedToken,
+                refreshToken: savedRefreshToken
+            }))
+        }
+        // Clear active auth state but keep savedSession
+        setUser(null)
+        setRole(null)
+        rbacManager.setRole('')
+        tokenManager.clearTokens()
+        useAuthStore.getState().clearAuth()
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+    }
+
     const register = async (email: string, password: string, name: string) => {
         setIsLoading(true)
         setError(null)
 
         try {
-            const response = await authService.register({ email, password, name })
+            // Split name into firstName/lastName for backend
+            const parts = name.trim().split(' ')
+            const firstName = parts[0] || name
+            const lastName = parts.slice(1).join(' ') || parts[0]
+            const response = await authService.register({ email, password, confirmPassword: password, firstName, lastName })
 
             if (response.success) {
                 await auditLogger.logRegistration(email, true)
@@ -183,6 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role,
         login,
         logout,
+        softLogout,
         register,
         clearError,
         refreshToken

@@ -38,111 +38,97 @@ interface AdminLayoutProps {
 const adminMenuItems: MenuItem[] = [
     { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
     {
-        icon: Building2,
-        label: 'Organization',
-        href: '/admin/organization',
-        submenu: [
-            { label: 'Business Units', href: '/admin/organization/business-units' },
-            { label: 'Outlets', href: '/admin/organization/outlets' },
-            { label: 'Locations', href: '/admin/locations' }
-        ]
-    },
-    {
         icon: Users,
-        label: 'Users & Roles',
+        label: 'User Management',
         href: '/admin/users',
         submenu: [
             { label: 'All Users', href: '/admin/users' },
-            { label: 'Role Management', href: '/admin/users/roles' },
-            { label: 'Permissions', href: '/admin/users/permissions' }
+            { label: 'Create User (any role)', href: '/admin/users/create' },
+            { label: 'Role & Permissions', href: '/admin/users/roles' }
         ]
     },
     {
-        icon: UserCheck,
-        label: 'Coaches & Staff',
-        href: '/admin/staff',
+        icon: Settings,
+        label: 'Business Config (BCMS)',
+        href: '/admin/business-config',
         submenu: [
-            { label: 'All Staff', href: '/admin/staff' },
-            { label: 'Coach Profiles', href: '/admin/staff/coaches' },
-            { label: 'Utilization', href: '/admin/staff/utilization' },
-            { label: 'Performance', href: '/admin/staff/performance' }
+            { label: 'Countries & Regions', href: '/admin/business-config/regions' },
+            { label: 'Business Units', href: '/admin/business-config/units' },
+            { label: 'Locations & Rooms', href: '/admin/business-config/locations' },
+            { label: 'Terms & Holidays', href: '/admin/business-config/terms' },
+            { label: 'Payment Gateways', href: '/admin/business-config/payments' }
         ]
     },
     {
         icon: Calendar,
-        label: 'Scheduling & Classes',
-        href: '/admin/schedule',
+        label: 'Programs & Scheduling',
+        href: '/admin/programs',
         submenu: [
-            { label: 'Master Schedule', href: '/admin/schedule' },
-            { label: 'Class Management', href: '/admin/schedule/classes' },
-            { label: 'Scheduling Rules', href: '/admin/schedule/rules' },
-            { label: 'Conflicts', href: '/admin/schedule/conflicts' }
+            { label: 'Program Catalog', href: '/admin/programs/catalog' },
+            { label: 'Schedule Management', href: '/admin/programs/schedule' },
+            { label: 'Rules Engine', href: '/admin/programs/rules' }
         ]
     },
     {
-        icon: Users,
-        label: 'Customers',
-        href: '/admin/customers',
+        icon: UserCheck,
+        label: 'Operations',
+        href: '/admin/operations',
         submenu: [
-            { label: 'Customer Database', href: '/admin/customers' },
-            { label: 'Assessments', href: '/admin/customers/assessments' },
-            { label: 'Student Profiles', href: '/admin/students' },
-            { label: 'Parent Accounts', href: '/admin/customers/parents' }
+            { label: 'Staff Management', href: '/admin/operations/staff' },
+            { label: 'Attendance', href: '/admin/operations/attendance' },
+            { label: 'Bookings', href: '/admin/operations/bookings' }
         ]
     },
     {
         icon: CreditCard,
-        label: 'Payments & Finance',
-        href: '/admin/payments',
+        label: 'Finance',
+        href: '/admin/finance',
         submenu: [
-            { label: 'Payment Dashboard', href: '/admin/payments' },
-            { label: 'Invoices & Refunds', href: '/admin/payments/invoices' },
-            { label: 'Gateway Management', href: '/admin/payments/gateways' },
-            { label: 'Financial Reports', href: '/admin/payments/reports' }
+            { label: 'Payments & Billing', href: '/admin/finance/payments' },
+            { label: 'Revenue Reports', href: '/admin/finance/revenue' },
+            { label: 'Financial Ledger', href: '/admin/finance/ledger' }
         ]
     },
     {
         icon: BarChart3,
         label: 'Reports & Analytics',
-        href: '/admin/analytics',
+        href: '/admin/reports',
         submenu: [
-            { label: 'Business Intelligence', href: '/admin/analytics' },
-            { label: 'Conversion Reports', href: '/admin/analytics/conversion' },
-            { label: 'Revenue Analysis', href: '/admin/analytics/revenue' },
-            { label: 'Performance Metrics', href: '/admin/analytics/performance' }
+            { label: 'Enrollment Reports', href: '/admin/reports/enrollment' },
+            { label: 'Performance Analytics', href: '/admin/reports/performance' },
+            { label: 'Audit Logs', href: '/admin/reports/audit' }
         ]
     },
     {
         icon: MessageSquare,
-        label: 'AI & SOP Hub',
-        href: '/admin/ai',
+        label: 'Communications',
+        href: '/admin/communications',
         submenu: [
-            { label: 'Chatbot Management', href: '/admin/ai/chatbot' },
-            { label: 'SOP Documents', href: '/admin/ai/sop' },
-            { label: 'Knowledge Base', href: '/admin/ai/knowledge' },
-            { label: 'AI Analytics', href: '/admin/ai/analytics' }
-        ]
-    },
-    {
-        icon: Settings,
-        label: 'System Settings',
-        href: '/admin/settings',
-        submenu: [
-            { label: 'General Settings', href: '/admin/settings' },
-            { label: 'Payment Gateways', href: '/admin/settings/payments' },
-            { label: 'Notifications', href: '/admin/settings/notifications' },
-            { label: 'Integrations', href: '/admin/settings/integrations' }
+            { label: 'Notifications', href: '/admin/communications/notifications' },
+            { label: 'Templates', href: '/admin/communications/templates' },
+            { label: 'CRM', href: '/admin/communications/crm' }
         ]
     },
     {
         icon: Shield,
-        label: 'Audit Logs',
-        href: '/admin/audit',
+        label: 'System',
+        href: '/admin/system',
         submenu: [
-            { label: 'System Logs', href: '/admin/audit/system' },
-            { label: 'User Activity', href: '/admin/audit/users' },
-            { label: 'Data Changes', href: '/admin/audit/data' },
-            { label: 'Security Events', href: '/admin/audit/security' }
+            { label: 'Security Center', href: '/admin/system/security' },
+            { label: 'API Monitoring', href: '/admin/system/api' },
+            { label: 'Database Health', href: '/admin/system/database' },
+            { label: 'Feature Flags', href: '/admin/system/features' },
+            { label: 'Integration Gateway', href: '/admin/system/integrations' },
+            { label: 'System Logs', href: '/admin/system/logs' }
+        ]
+    },
+    {
+        icon: Bell,
+        label: 'Support',
+        href: '/admin/support',
+        submenu: [
+            { label: 'Tickets', href: '/admin/support/tickets' },
+            { label: 'Knowledge Base', href: '/admin/support/knowledge' }
         ]
     }
 ]

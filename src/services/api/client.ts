@@ -187,9 +187,17 @@ class ApiClient {
                 const response = await this.client.get<T>(url, config)
                 this.recordSuccess(url)
                 return response.data
-            } catch (error) {
+            } catch (error: any) {
                 lastError = error
-                this.recordFailure(url)
+                const status = error?.response?.status
+                // Don't count auth errors (401/403) or client errors (4xx) in circuit breaker
+                if (!status || status >= 500) {
+                    this.recordFailure(url)
+                }
+                // Don't retry auth errors - fail immediately
+                if (status === 401 || status === 403) {
+                    throw error
+                }
 
                 if (attempt < this.retryConfig.maxRetries) {
                     const delayMs = this.retryConfig.initialDelayMs *

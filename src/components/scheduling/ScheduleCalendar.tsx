@@ -118,37 +118,21 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
         const loadTimeSlots = async () => {
             setIsLoading(true)
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/schedules/available?${new URLSearchParams({
-                    ...(filters.location !== 'all' && { location: filters.location }),
-                    ...(filters.program !== 'all' && { programType: filters.program }),
-                    ...(filters.ageGroup !== 'all' && { ageGroup: filters.ageGroup }),
-                    ...(filters.coach !== 'all' && { coach: filters.coach })
-                })}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(localStorage.getItem('authToken') && {
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                        })
-                    }
-                })
+                const { apiClient } = await import('@/services/api/client')
+                const params: Record<string, string> = {}
+                if (filters.location !== 'all') params.location = filters.location
+                if (filters.program !== 'all') params.programType = filters.program
+                if (filters.ageGroup !== 'all') params.ageGroup = filters.ageGroup
+                if (filters.coach !== 'all') params.coach = filters.coach
 
-                if (response.ok) {
-                    const result = await response.json()
-                    if (result.success) {
-                        setTimeSlots(result.data)
-                    } else {
-                        console.error('Failed to load time slots:', result.message)
-                        // Fallback to mock data if API fails
-                        setTimeSlots(mockSlots)
-                    }
+                const result = await apiClient.get('/scheduling/schedules/available', { params })
+                if (result.success) {
+                    setTimeSlots(result.data)
                 } else {
-                    console.error('API request failed:', response.status)
-                    // Fallback to mock data if API fails
                     setTimeSlots(mockSlots)
                 }
             } catch (error) {
                 console.error('Error loading time slots:', error)
-                // Fallback to mock data if API fails
                 setTimeSlots(mockSlots)
             } finally {
                 setIsLoading(false)

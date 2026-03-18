@@ -11,7 +11,8 @@ export enum UserRole {
     MANAGER = 'MANAGER',
     SUPPORT_STAFF = 'SUPPORT_STAFF',
     PARTNER_ADMIN = 'PARTNER_ADMIN',
-    PARENT = 'PARENT'
+    PARENT = 'PARENT',
+    USER = 'USER'
 }
 
 export interface RoleConfig {
@@ -201,6 +202,28 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
             'manage_bookings',
             'view_payments'
         ]
+    },
+    [UserRole.USER]: {
+        dashboard: '/user/dashboard',
+        modules: [
+            'booking',
+            'scheduling',
+            'payments',
+            'user-profile',
+            'user-progress',
+            'user-classes',
+            'user-achievements',
+            'gamification',
+            'notifications'
+        ],
+        permissions: [
+            'view_dashboard',
+            'browse_classes',
+            'manage_bookings',
+            'view_payments',
+            'view_progress',
+            'view_achievements'
+        ]
     }
 }
 
@@ -294,6 +317,10 @@ class RBACManager {
 
     isParent(): boolean {
         return this.currentRole === UserRole.PARENT
+    }
+
+    isUser(): boolean {
+        return this.currentRole === UserRole.USER
     }
 
     isSupportStaff(): boolean {
