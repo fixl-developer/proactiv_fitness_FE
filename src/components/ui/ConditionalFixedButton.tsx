@@ -11,7 +11,15 @@ const ConditionalFixedButton = () => {
         pathname.startsWith('/manager') ||
         pathname.startsWith('/coach') ||
         pathname.startsWith('/parent') ||
+        pathname.startsWith('/user') ||
+        pathname.startsWith('/staff') ||
+        pathname.startsWith('/partner') ||
+        pathname.startsWith('/superadmin') ||
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/register') ||
+        pathname.startsWith('/account') ||
         pathname.startsWith('/auth') ||
+        pathname.startsWith('/forgot-password') ||
         pathname === '/book-now'
 
     if (shouldHideButton) {
