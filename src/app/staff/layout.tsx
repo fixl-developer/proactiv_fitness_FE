@@ -31,8 +31,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        // Only SUPPORT_STAFF and SUPER_ADMIN can access
-        if (roleStr !== 'SUPPORT_STAFF' && roleStr !== 'SUPER_ADMIN') {
+        // Only SUPPORT_STAFF and ADMIN can access
+        if (roleStr !== 'SUPPORT_STAFF' && roleStr !== 'ADMIN') {
             router.push('/unauthorized')
             return
         }
@@ -56,17 +56,20 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        window.location.href = '/login/staff'
     }
 
-    const handlePermanentLogout = async () => {
-        await authService.logout()
+    const handlePermanentLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         localStorage.removeItem('savedSession')
         localStorage.removeItem('lastActivity')
         localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        window.location.href = '/login/staff'
     }
 
     const navigation = [

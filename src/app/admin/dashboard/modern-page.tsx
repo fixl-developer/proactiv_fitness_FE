@@ -13,7 +13,7 @@ export default function ModernAdminDashboard() {
 
     useEffect(() => {
         const userRole = typeof user?.role === 'object' ? (user?.role as any)?.name : user?.role
-        if (!isLoading && (!user || !['SUPER_ADMIN', 'ADMIN'].includes(userRole))) {
+        if (!isLoading && (!user || !['ADMIN'].includes(userRole))) {
             router.push('/login')
         }
     }, [user, isLoading, router])

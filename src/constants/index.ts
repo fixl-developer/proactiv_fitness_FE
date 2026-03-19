@@ -8,7 +8,7 @@ export const API_TIMEOUT = 30000;
 
 // User Roles
 export const USER_ROLES = {
-    SUPER_ADMIN: 'super_admin',
+    ADMIN: 'admin',
     REGIONAL_MANAGER: 'regional_manager',
     FRANCHISE_OWNER: 'franchise_owner',
     LOCATION_MANAGER: 'location_manager',
@@ -19,7 +19,7 @@ export const USER_ROLES = {
 
 // Role Display Names
 export const ROLE_NAMES = {
-    [USER_ROLES.SUPER_ADMIN]: 'Super Admin',
+    [USER_ROLES.ADMIN]: 'Admin',
     [USER_ROLES.REGIONAL_MANAGER]: 'Regional Manager',
     [USER_ROLES.FRANCHISE_OWNER]: 'Franchise Owner',
     [USER_ROLES.LOCATION_MANAGER]: 'Location Manager',

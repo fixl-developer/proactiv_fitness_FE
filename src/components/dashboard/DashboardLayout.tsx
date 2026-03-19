@@ -253,18 +253,30 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     }
 
     const handleSaveAndLogout = () => {
-        softLogout()
+        // Save session FIRST before clearing anything
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
+        }
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        window.location.href = '/login/staff'
     }
 
-    const handlePermanentLogout = async () => {
-        await logout()
+    const handlePermanentLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         localStorage.removeItem('savedSession')
         localStorage.removeItem('lastActivity')
         localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        window.location.href = '/login/staff'
     }
 
     return (
@@ -372,7 +384,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 </div>
 
                 {/* Sidebar Footer */}
-                <div className="flex-shrink-0 p-4 border-t border-gray-200/50 bg-white">
+                <div className="flex-shrink-0 px-4 pt-4 pb-2 border-t border-gray-200/50 bg-white mt-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}

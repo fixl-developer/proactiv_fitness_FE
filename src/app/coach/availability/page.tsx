@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import { Clock, Save, AlertCircle, CheckCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 
 const CoachAvailabilityPage = () => {
-    const router = useRouter()
     const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
@@ -27,18 +24,10 @@ const CoachAvailabilityPage = () => {
     })
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_availability')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadAvailability()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadAvailability = async () => {
         try {

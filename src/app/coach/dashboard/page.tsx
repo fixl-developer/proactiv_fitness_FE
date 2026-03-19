@@ -15,7 +15,7 @@ import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { rbacManager } from '@/services/auth/rbac'
 import { attendanceService } from '@/services/modules/attendance.service'
-import programService from '@/services/modules/program.service'
+import { programService } from '@/services/modules/program.service'
 import { schedulingService } from '@/services/modules/scheduling.service'
 import { analyticsService } from '@/services/modules/analytics.service'
 
@@ -35,20 +35,10 @@ const CoachDashboard = () => {
     const [analytics, setAnalytics] = useState<any>(null)
 
     useEffect(() => {
-        // Check authentication
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        // Check if user is coach
-        if (!rbacManager.isCoach() && !rbacManager.isSuperAdmin()) {
-            router.push('/parent/dashboard')
-            return
-        }
-
+        // Don't redirect - layout handles auth. Just load data if authenticated.
+        if (!isAuthenticated && !localStorage.getItem('token')) return
         loadDashboardData()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadDashboardData = async () => {
         setIsLoading(true)

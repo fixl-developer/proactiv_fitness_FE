@@ -61,7 +61,7 @@ function getMenuItemsByRole(role: string) {
     ];
 
     const roleSpecificItems: Record<string, any[]> = {
-        super_admin: [
+        admin: [
             ...commonItems,
             { href: '/dashboard/regions', label: 'Regions', icon: Building2 },
             { href: '/dashboard/franchises', label: 'Franchises', icon: Building2 },

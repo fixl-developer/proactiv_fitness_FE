@@ -27,8 +27,8 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        // Only REGIONAL_ADMIN and SUPER_ADMIN can access
-        if (roleStr !== 'REGIONAL_ADMIN' && roleStr !== 'SUPER_ADMIN') {
+        // Only REGIONAL_ADMIN and ADMIN can access
+        if (roleStr !== 'REGIONAL_ADMIN' && roleStr !== 'ADMIN') {
             router.push('/unauthorized')
             return
         }

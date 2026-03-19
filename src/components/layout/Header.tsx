@@ -77,19 +77,23 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         setLoggedInUser(null)
         setShowLogoutModal(false)
-        router.push('/login')
+        window.location.href = '/login'
     }
 
     const handlePermanentLogout = async () => {
-        await authService.logout()
+        try { await authService.logout() } catch {}
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         localStorage.removeItem('savedSession')
         localStorage.removeItem('lastActivity')
         localStorage.removeItem('auth-storage')
         setLoggedInUser(null)
         setShowLogoutModal(false)
-        router.push('/login')
+        window.location.href = '/login'
     }
 
     const getInitials = (userObj: any) => {

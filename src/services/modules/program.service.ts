@@ -1,4 +1,4 @@
-import apiClient from '../api/client'
+import { apiClient } from '../api/client'
 
 interface Program {
     id: string
@@ -263,4 +263,5 @@ class ProgramService {
     }
 }
 
-export default new ProgramService()
+export const programService = new ProgramService()
+export default programService

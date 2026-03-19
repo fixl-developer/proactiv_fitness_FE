@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import {
     MessageSquare, Send, Star, User, Calendar, TrendingUp,
     AlertCircle, CheckCircle, Filter
@@ -13,10 +12,8 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 
 const CoachFeedbackPage = () => {
-    const router = useRouter()
     const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
@@ -35,18 +32,10 @@ const CoachFeedbackPage = () => {
     ]
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_feedback')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadFeedback()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadFeedback = async () => {
         try {

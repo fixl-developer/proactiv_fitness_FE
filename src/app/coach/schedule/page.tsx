@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 import { schedulingService } from '@/services/modules/scheduling.service'
 
 const CoachSchedulePage = () => {
@@ -24,18 +23,10 @@ const CoachSchedulePage = () => {
     const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_schedule')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadSchedules()
-    }, [isAuthenticated, router, currentDate])
+    }, [isAuthenticated, currentDate])
 
     const loadSchedules = async () => {
         try {

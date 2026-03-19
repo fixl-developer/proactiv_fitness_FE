@@ -25,8 +25,8 @@ export default function LocationManagerLayout({ children }: { children: React.Re
 
         const parsedUser = JSON.parse(userData)
 
-        // Only LOCATION_MANAGER and SUPER_ADMIN can access
-        if (parsedUser.role !== 'LOCATION_MANAGER' && parsedUser.role !== 'SUPER_ADMIN') {
+        // Only LOCATION_MANAGER and ADMIN can access
+        if (parsedUser.role !== 'LOCATION_MANAGER' && parsedUser.role !== 'ADMIN') {
             router.push('/unauthorized')
             return
         }

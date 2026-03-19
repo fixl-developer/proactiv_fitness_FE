@@ -47,15 +47,30 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
 
     const handleSaveAndLogout = () => {
-        softLogout()
+        // Save session FIRST
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
+        }
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login')
+        window.location.href = '/login'
     }
 
-    const handlePermanentLogout = async () => {
-        await logout()
+    const handlePermanentLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login')
+        window.location.href = '/login'
     }
 
     const getInitials = () => {

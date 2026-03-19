@@ -179,8 +179,23 @@ export default function StaffLoginPage() {
                                                 }));
                                                 localStorage.removeItem('savedSession');
                                                 localStorage.setItem('lastActivity', Date.now().toString());
-                                                const demoAccount = DEMO_ACCOUNTS.find(a => a.email === userData.email);
-                                                const dashboard = demoAccount?.dashboard || '/staff/dashboard';
+
+                                                // Map role to correct dashboard
+                                                const roleUpper = roleName?.toUpperCase() || '';
+                                                const roleDashboardMap: Record<string, string> = {
+                                                    'ADMIN': '/admin/dashboard',
+                                                    'REGIONAL_ADMIN': '/admin/regional/dashboard',
+                                                    'FRANCHISE_OWNER': '/admin/franchise/dashboard',
+                                                    'LOCATION_MANAGER': '/manager/dashboard',
+                                                    'MANAGER': '/manager/dashboard',
+                                                    'COACH': '/coach/dashboard',
+                                                    'PARTNER_ADMIN': '/partner/dashboard',
+                                                    'SUPPORT_STAFF': '/staff/dashboard',
+                                                };
+                                                // Try role mapping first, then demo accounts, then fallback
+                                                const dashboard = roleDashboardMap[roleUpper]
+                                                    || DEMO_ACCOUNTS.find(a => a.email === userData.email)?.dashboard
+                                                    || '/staff/dashboard';
                                                 window.location.href = dashboard;
                                             } catch { window.location.href = '/staff/dashboard'; }
                                         }}
@@ -306,11 +321,10 @@ export default function StaffLoginPage() {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: 0.25 + index * 0.04 }}
                                                 onClick={() => handleDemoAccountClick(account.email, account.password)}
-                                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all duration-200 group ${
-                                                    isSelected
+                                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all duration-200 group ${isSelected
                                                         ? 'bg-white/15 ring-1 ring-white/20'
                                                         : 'hover:bg-white/8'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${account.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
                                                     <Icon className="w-3.5 h-3.5 text-white" />
@@ -319,9 +333,8 @@ export default function StaffLoginPage() {
                                                     <div className="text-xs font-medium text-white">{account.label}</div>
                                                     <div className="text-[10px] text-slate-400">{account.description}</div>
                                                 </div>
-                                                <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-200 ${
-                                                    isSelected ? 'text-white translate-x-0.5' : 'text-slate-600 group-hover:text-slate-400'
-                                                }`} />
+                                                <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-200 ${isSelected ? 'text-white translate-x-0.5' : 'text-slate-600 group-hover:text-slate-400'
+                                                    }`} />
                                             </motion.button>
                                         );
                                     })}

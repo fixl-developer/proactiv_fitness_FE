@@ -146,8 +146,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const { logout, softLogout } = useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
     const [showLogoutModal, setShowLogoutModal] = useState(false)
-    const [userName] = useState('Admin User')
-    const [userEmail] = useState('admin@progym.hk')
+    const [userName, setUserName] = useState('Admin User')
+    const [userEmail, setUserEmail] = useState('admin@proactiv.com')
+
+    // Load user data from localStorage
+    useEffect(() => {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+            try {
+                const user = JSON.parse(userData)
+                setUserName(user.name || user.fullName || user.firstName + ' ' + user.lastName || 'Admin User')
+                setUserEmail(user.email || 'admin@proactiv.com')
+            } catch (error) {
+                console.error('Error parsing user data:', error)
+            }
+        }
+    }, [])
 
     // Sub-admin routes have their own layout — skip parent chrome
     if (pathname?.startsWith('/admin/hq') || pathname?.startsWith('/admin/regional') || pathname?.startsWith('/admin/franchise')) {
@@ -189,18 +203,33 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
 
     const handleSaveAndLogout = () => {
-        softLogout()
+        // Save session FIRST before clearing anything
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
+        }
+        // Clear auth tokens
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        // Full page redirect BEFORE React state changes trigger other redirects
+        window.location.href = '/login/staff'
     }
 
-    const handlePermanentLogout = async () => {
-        await logout()
+    const handlePermanentLogout = () => {
+        // Clear everything including saved session
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         localStorage.removeItem('savedSession')
         localStorage.removeItem('lastActivity')
         localStorage.removeItem('auth-storage')
         setShowLogoutModal(false)
-        router.push('/login/staff')
+        window.location.href = '/login/staff'
     }
 
     return (

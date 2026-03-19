@@ -28,8 +28,8 @@ export default function FranchiseOwnerLayout({ children }: { children: React.Rea
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        // Only FRANCHISE_OWNER and SUPER_ADMIN can access
-        if (roleStr !== 'FRANCHISE_OWNER' && roleStr !== 'SUPER_ADMIN') {
+        // Only FRANCHISE_OWNER and ADMIN can access
+        if (roleStr !== 'FRANCHISE_OWNER' && roleStr !== 'ADMIN') {
             router.push('/unauthorized')
             return
         }

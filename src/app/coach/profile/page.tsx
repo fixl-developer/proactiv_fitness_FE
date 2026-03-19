@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import {
     User, Mail, Phone, MapPin, Award, BookOpen, Target,
     Edit2, Save, AlertCircle, CheckCircle, Star, Users
@@ -14,10 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 
 const CoachProfilePage = () => {
-    const router = useRouter()
     const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
@@ -39,18 +36,10 @@ const CoachProfilePage = () => {
     const [editedProfile, setEditedProfile] = useState(profile)
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_profile')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadProfile()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadProfile = async () => {
         try {

@@ -44,7 +44,7 @@ interface ScheduleSlot {
 }
 
 interface AdminScheduleManagerProps {
-    userRole: 'SUPER_ADMIN' | 'ADMIN' | 'OUTLET_MANAGER';
+    userRole: 'ADMIN' | 'OUTLET_MANAGER';
     locationAccess?: string[];
 }
 
@@ -222,8 +222,8 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         <div className="w-full bg-gray-200 rounded-full h-2">
                             <motion.div
                                 className={`h-2 rounded-full ${schedule.booked / schedule.capacity >= 0.9 ? 'bg-red-500' :
-                                        schedule.booked / schedule.capacity >= 0.7 ? 'bg-yellow-500' :
-                                            'bg-green-500'
+                                    schedule.booked / schedule.capacity >= 0.7 ? 'bg-yellow-500' :
+                                        'bg-green-500'
                                     }`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${(schedule.booked / schedule.capacity) * 100}%` }}
@@ -249,7 +249,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                             <Button size="sm" variant="outline" onClick={() => setSelectedSlot(schedule)}>
                                 <Edit className="w-4 h-4" />
                             </Button>
-                            {(userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') && (
+                            {(userRole === 'ADMIN') && (
                                 <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                     <Trash2 className="w-4 h-4" />
                                 </Button>

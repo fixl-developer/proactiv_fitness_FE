@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 
 const CoachStudentsPage = () => {
     const router = useRouter()
@@ -24,18 +23,10 @@ const CoachStudentsPage = () => {
     const [students, setStudents] = useState<any[]>([])
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_students')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadStudents()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadStudents = async () => {
         try {

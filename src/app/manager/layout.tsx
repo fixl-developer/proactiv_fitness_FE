@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,28 +12,31 @@ export default function ManagerLayout({
 }) {
     const { user, isAuthenticated, isLoading } = useAuth()
     const router = useRouter()
-
-    const roleStr = typeof user?.role === 'object' ? (user?.role as any)?.name : user?.role
-    const allowed = roleStr === 'MANAGER' || roleStr === 'LOCATION_MANAGER'
+    const [hasToken, setHasToken] = useState(true)
 
     useEffect(() => {
-        if (!isLoading && (!isAuthenticated || !allowed)) {
-            router.push('/login')
-        }
-    }, [isAuthenticated, isLoading, allowed, router])
+        setHasToken(!!localStorage.getItem('token'))
+    }, [])
 
-    if (isLoading) {
+    useEffect(() => {
+        if (isLoading) return
+        if (!isAuthenticated && !localStorage.getItem('token')) {
+            router.push('/login/staff')
+        }
+    }, [isAuthenticated, isLoading, router])
+
+    if (isLoading && !hasToken) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
             </div>
         )
     }
 
-    if (!isAuthenticated || !allowed) {
+    if (!isAuthenticated && !hasToken) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
             </div>
         )
     }

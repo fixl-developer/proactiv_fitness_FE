@@ -85,7 +85,7 @@ export interface User {
 }
 
 export type UserRole =
-    | 'super_admin'
+    | 'admin'
     | 'regional_manager'
     | 'franchise_owner'
     | 'location_manager'

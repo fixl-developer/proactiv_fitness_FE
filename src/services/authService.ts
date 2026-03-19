@@ -46,7 +46,7 @@ export interface User {
     lastName: string
     fullName: string
     phone?: string
-    role: 'PARENT' | 'COACH' | 'ADMIN' | 'MANAGER' | 'SUPER_ADMIN' | 'HQ_ADMIN' | 'REGIONAL_ADMIN' | 'FRANCHISE_OWNER' | 'LOCATION_MANAGER' | 'PARTNER_ADMIN' | 'SUPPORT_STAFF'
+    role: 'PARENT' | 'COACH' | 'ADMIN' | 'MANAGER' | 'REGIONAL_ADMIN' | 'FRANCHISE_OWNER' | 'LOCATION_MANAGER' | 'PARTNER_ADMIN' | 'SUPPORT_STAFF'
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
     profileImage?: string
     language?: string

@@ -58,11 +58,11 @@ interface NavItem {
 }
 
 interface AppSidebarProps {
-    role: "SUPER_ADMIN" | "ADMIN" | "OUTLET_MANAGER" | "COACH" | "PARENT"
+    role: "ADMIN" | "OUTLET_MANAGER" | "COACH" | "PARENT"
 }
 
 const navItems: Record<string, NavItem[]> = {
-    SUPER_ADMIN: [
+    ADMIN: [
         { title: "Dashboard", href: "/admin/dashboard", icon: Home },
         { title: "Real-time Analytics", href: "/admin/analytics", icon: BarChart3 },
         { title: "Outlet Management", href: "/admin/outlets", icon: Building2 },
@@ -78,23 +78,6 @@ const navItems: Record<string, NavItem[]> = {
         { title: "Communication Hub", href: "/admin/communications", icon: MessageSquare },
         { title: "Alert Management", href: "/admin/alerts", icon: AlertTriangle },
         { title: "System Health", href: "/admin/system", icon: Database },
-        { title: "Reports & Insights", href: "/admin/reports", icon: FileText },
-        { title: "Settings", href: "/admin/settings", icon: Settings },
-    ],
-    ADMIN: [
-        { title: "Dashboard", href: "/admin/dashboard", icon: Home },
-        { title: "Real-time Analytics", href: "/admin/analytics", icon: BarChart3 },
-        { title: "Outlet Management", href: "/admin/outlets", icon: Building2 },
-        { title: "Member Management", href: "/admin/members", icon: Users },
-        { title: "Staff Management", href: "/admin/staff", icon: UserCheck },
-        { title: "Program Management", href: "/admin/programs", icon: GraduationCap },
-        { title: "Schedule Manager", href: "/admin/schedule", icon: Calendar },
-        { title: "Financial Reports", href: "/admin/finance", icon: DollarSign },
-        { title: "Payment Gateway", href: "/admin/payments", icon: CreditCard },
-        { title: "Equipment & Maintenance", href: "/admin/equipment", icon: Wrench },
-        { title: "Performance Tracking", href: "/admin/performance", icon: Target },
-        { title: "Communication Hub", href: "/admin/communications", icon: MessageSquare },
-        { title: "Alert Management", href: "/admin/alerts", icon: AlertTriangle },
         { title: "Reports & Insights", href: "/admin/reports", icon: FileText },
         { title: "Settings", href: "/admin/settings", icon: Settings },
     ],

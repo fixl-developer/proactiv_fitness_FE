@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,25 +12,31 @@ export default function ParentLayout({
 }) {
     const { user, isAuthenticated, isLoading } = useAuth()
     const router = useRouter()
+    const [hasToken, setHasToken] = useState(true)
 
     useEffect(() => {
-        if (!isLoading && (!isAuthenticated || user?.role !== 'PARENT')) {
+        setHasToken(!!localStorage.getItem('token'))
+    }, [])
+
+    useEffect(() => {
+        if (isLoading) return
+        if (!isAuthenticated && !localStorage.getItem('token')) {
             router.push('/login')
         }
-    }, [isAuthenticated, isLoading, user, router])
+    }, [isAuthenticated, isLoading, router])
 
-    if (isLoading) {
+    if (isLoading && !hasToken) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         )
     }
 
-    if (!isAuthenticated || user?.role !== 'PARENT') {
+    if (!isAuthenticated && !hasToken) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         )
     }

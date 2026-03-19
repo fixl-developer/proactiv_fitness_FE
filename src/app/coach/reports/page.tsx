@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import {
     BarChart3, Download, Filter, TrendingUp, Users, Calendar,
     Award, Target, AlertCircle, CheckCircle
@@ -13,28 +12,18 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 
 const CoachReportsPage = () => {
-    const router = useRouter()
     const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [reportType, setReportType] = useState('overview')
     const [dateRange, setDateRange] = useState('month')
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-
-        if (!rbacManager.hasPermission('coach_reports')) {
-            router.push('/parent/dashboard')
-            return
-        }
+        if (!isAuthenticated && !localStorage.getItem('token')) return
 
         loadReports()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated])
 
     const loadReports = async () => {
         try {
