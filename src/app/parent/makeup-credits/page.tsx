@@ -71,12 +71,10 @@ const MakeupCreditsPage = () => {
 
     if (isLoading) {
         return (
-            <DashboardLayout userRole="parent" userName={userName} userEmail={userEmail}>
-                <div className="flex flex-col items-center justify-center py-12">
-                    <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-                    <p className="text-gray-600 font-medium">Loading makeup credits...</p>
-                </div>
-            </DashboardLayout>
+            <div className="flex flex-col items-center justify-center py-12">
+                <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                <p className="text-gray-600 font-medium">Loading makeup credits...</p>
+            </div>
         )
     }
 
@@ -85,8 +83,7 @@ const MakeupCreditsPage = () => {
     const expiredCredits = credits.filter(c => !c.usedAt && isExpired(c.expiryDate))
 
     return (
-        <DashboardLayout userRole="parent" userName={userName} userEmail={userEmail}>
-            <div className="space-y-6">
+        <div className="space-y-6">
                 {/* Header */}
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Makeup Credits</h1>
@@ -298,7 +295,6 @@ const MakeupCreditsPage = () => {
                     </Card>
                 )}
             </div>
-        </DashboardLayout>
     )
 }
 
