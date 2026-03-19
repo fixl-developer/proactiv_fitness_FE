@@ -44,8 +44,8 @@ export default function ParentLayout({
     return (
         <DashboardLayout
             userRole="parent"
-            userName={user.name}
-            userEmail={user.email}
+            userName={user?.name || ''}
+            userEmail={user?.email || ''}
         >
             {children}
         </DashboardLayout>
