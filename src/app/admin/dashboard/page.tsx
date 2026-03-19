@@ -12,6 +12,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { analyticsService } from '@/services/modules/analytics.service'
+import { staffService } from '@/services/staffService'
+import { bookingService } from '@/services/bookingService'
+
+const FALLBACK_DATA = {
+    totalLocations: 0,
+    totalStudents: 0,
+    totalRevenue: 0,
+    staffMembers: 0,
+    activeClasses: 0,
+    revenueGrowth: 0,
+    studentGrowth: 0,
+    occupancyRate: 0,
+    staffUtilization: 0,
+    customerSatisfaction: 0
+}
 
 export default function AdminDashboard() {
     const router = useRouter()
@@ -32,23 +48,32 @@ export default function AdminDashboard() {
     const loadDashboardData = async () => {
         try {
             setIsLoading(true)
-            setTimeout(() => {
-                setDashboardData({
-                    totalLocations: 3,
-                    totalStudents: 1200,
-                    totalRevenue: 450000,
-                    staffMembers: 45,
-                    activeClasses: 89,
-                    revenueGrowth: 12.5,
-                    studentGrowth: 8.3,
-                    occupancyRate: 82.5,
-                    staffUtilization: 85.0,
-                    customerSatisfaction: 4.7
-                })
-                setIsLoading(false)
-            }, 1000)
+            const [metricsRes, staffRes, bookingRes] = await Promise.allSettled([
+                analyticsService.getDashboardMetrics(),
+                staffService.getStaffStatistics(),
+                bookingService.getBookingStatistics()
+            ])
+
+            const metrics = metricsRes.status === 'fulfilled' ? metricsRes.value?.data : null
+            const staffStats = staffRes.status === 'fulfilled' ? staffRes.value?.data : null
+            const bookingStats = bookingRes.status === 'fulfilled' ? bookingRes.value?.data : null
+
+            setDashboardData({
+                totalLocations: metrics?.totalLocations || bookingStats?.totalLocations || FALLBACK_DATA.totalLocations,
+                totalStudents: metrics?.totalStudents ?? FALLBACK_DATA.totalStudents,
+                totalRevenue: metrics?.totalRevenue ?? FALLBACK_DATA.totalRevenue,
+                staffMembers: staffStats?.totalStaff ?? FALLBACK_DATA.staffMembers,
+                activeClasses: metrics?.activeClasses ?? FALLBACK_DATA.activeClasses,
+                revenueGrowth: metrics?.revenueGrowth ?? FALLBACK_DATA.revenueGrowth,
+                studentGrowth: metrics?.enrollmentTrend ?? FALLBACK_DATA.studentGrowth,
+                occupancyRate: metrics?.attendanceRate ?? FALLBACK_DATA.occupancyRate,
+                staffUtilization: staffStats?.utilization ?? FALLBACK_DATA.staffUtilization,
+                customerSatisfaction: metrics?.customerSatisfaction ?? FALLBACK_DATA.customerSatisfaction
+            })
         } catch (error) {
             console.error('Error loading dashboard:', error)
+            setDashboardData(FALLBACK_DATA)
+        } finally {
             setIsLoading(false)
         }
     }

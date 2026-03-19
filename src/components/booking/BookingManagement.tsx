@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { bookingService } from '@/services/bookingService'
 import {
     Search,
     Filter,
@@ -70,80 +71,29 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
         dateRange: 'all'
     })
 
-    // Mock data - Replace with actual API calls
-    useEffect(() => {
-        const mockBookings: BookingDetails[] = [
-            {
-                id: '1',
-                bookingNumber: 'BK-2024-001',
-                childName: 'Emma Chen',
-                childAge: 6,
-                parentName: 'David Chen',
-                parentEmail: 'david.chen@email.com',
-                parentPhone: '+852 9123 4567',
-                programName: 'Beginner Gymnastics',
-                programType: 'class',
-                date: '2024-01-20',
-                startTime: '10:00',
-                endTime: '11:00',
-                coach: 'Sarah Chen',
-                location: 'Cyberport',
-                status: 'confirmed',
-                paymentStatus: 'paid',
-                price: 350,
-                bookingDate: '2024-01-15',
-                specialRequests: 'Please ensure Emma has water breaks',
-                medicalNotes: 'No known allergies'
-            },
-            {
-                id: '2',
-                bookingNumber: 'BK-2024-002',
-                childName: 'Lucas Wong',
-                childAge: 8,
-                parentName: 'Michelle Wong',
-                parentEmail: 'michelle.wong@email.com',
-                parentPhone: '+852 9234 5678',
-                programName: 'Skills Assessment',
-                programType: 'assessment',
-                date: '2024-01-18',
-                startTime: '14:00',
-                endTime: '14:30',
-                coach: 'Will Murray',
-                location: 'Cyberport',
-                status: 'completed',
-                paymentStatus: 'paid',
-                price: 0,
-                bookingDate: '2024-01-10'
-            },
-            {
-                id: '3',
-                bookingNumber: 'BK-2024-003',
-                childName: 'Sophia Li',
-                childAge: 5,
-                parentName: 'Jennifer Li',
-                parentEmail: 'jennifer.li@email.com',
-                parentPhone: '+852 9345 6789',
-                programName: 'Intermediate Gymnastics',
-                programType: 'class',
-                date: '2024-01-22',
-                startTime: '15:30',
-                endTime: '16:30',
-                coach: 'Monica',
-                location: 'Wan Chai',
-                status: 'waitlist',
-                paymentStatus: 'pending',
-                price: 350,
-                bookingDate: '2024-01-16',
-                waitlistPosition: 2,
-                medicalNotes: 'Mild asthma - inhaler available'
-            }
-        ]
+    const fetchBookings = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const params: Record<string, string> = {}
+            if (filters.status !== 'all') params.status = filters.status
+            if (filters.programType !== 'all') params.programType = filters.programType
+            if (filters.location !== 'all') params.location = filters.location
+            if (filters.paymentStatus !== 'all') params.paymentStatus = filters.paymentStatus
+            if (filters.dateRange !== 'all') params.dateRange = filters.dateRange
 
-        setTimeout(() => {
-            setBookings(mockBookings)
+            const response = await bookingService.getBookings(params)
+            setBookings(response?.data ?? response ?? [])
+        } catch (error) {
+            console.error('Failed to fetch bookings:', error)
+            setBookings([])
+        } finally {
             setIsLoading(false)
-        }, 1000)
+        }
     }, [filters])
+
+    useEffect(() => {
+        fetchBookings()
+    }, [fetchBookings])
 
     const getStatusColor = (status: string) => {
         const colors = {

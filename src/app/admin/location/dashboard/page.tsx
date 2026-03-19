@@ -11,6 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LocationManagerService } from '@/services/locationManagerService'
+
+const FALLBACK_LOCATION = {
+    locationName: 'My Location', totalClasses: 0, totalStaff: 0, totalStudents: 0,
+    monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0, staffUtilization: 0,
+    customerSatisfaction: 0, todayClasses: 0, todayAttendance: 0,
+    pendingApprovals: 0, criticalAlerts: 0, warnings: 0
+}
 
 export default function LocationManagerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
@@ -18,27 +26,39 @@ export default function LocationManagerDashboard() {
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
-        // Simulate API call to fetch Location dashboard data
-        setTimeout(() => {
-            setDashboardData({
-                locationName: 'Boston Downtown',
-                totalClasses: 24,
-                totalStaff: 8,
-                totalStudents: 320,
-                monthlyRevenue: 185000,
-                revenueGrowth: 8.5,
-                occupancyRate: 85.0,
-                staffUtilization: 88.0,
-                customerSatisfaction: 4.8,
-                todayClasses: 6,
-                todayAttendance: 145,
-                pendingApprovals: 2,
-                criticalAlerts: 0,
-                warnings: 1
-            })
-            setIsLoading(false)
-        }, 1000)
-    }, [])
+        const loadData = async () => {
+            try {
+                const [overview, analytics] = await Promise.allSettled([
+                    LocationManagerService.getDashboardOverview(),
+                    LocationManagerService.getAnalytics(timeRange)
+                ])
+                const data = overview.status === 'fulfilled' ? overview.value : {}
+                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+                setDashboardData({
+                    locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
+                    totalClasses: data?.totalClasses ?? stats?.totalClasses ?? FALLBACK_LOCATION.totalClasses,
+                    totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
+                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
+                    monthlyRevenue: data?.monthlyRevenue ?? stats?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
+                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
+                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
+                    staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
+                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
+                    todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
+                    todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
+                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
+                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
+                    warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
+                })
+            } catch (error) {
+                console.error('Error loading location dashboard:', error)
+                setDashboardData(FALLBACK_LOCATION)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadData()
+    }, [timeRange])
 
     // Daily revenue data
     const revenueData = [

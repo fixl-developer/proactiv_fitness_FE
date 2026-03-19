@@ -11,6 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, PieChart as PieChartComponent, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { HQAdminService } from '@/services/hqAdminService'
+
+const FALLBACK_HQ = {
+    totalLocations: 0, totalFranchises: 0, totalUsers: 0, totalRevenue: 0,
+    monthlyRevenue: 0, revenueGrowth: 0, activeStudents: 0, conversionRate: 0,
+    systemHealth: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0
+}
 
 export default function HQAdminDashboard() {
     const [isLoading, setIsLoading] = useState(true)
@@ -18,24 +25,36 @@ export default function HQAdminDashboard() {
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
-        // Simulate API call to fetch HQ dashboard data
-        setTimeout(() => {
-            setDashboardData({
-                totalLocations: 16,
-                totalFranchises: 8,
-                totalUsers: 245,
-                totalRevenue: 2850000,
-                monthlyRevenue: 485000,
-                revenueGrowth: 18.5,
-                activeStudents: 3420,
-                conversionRate: 68.5,
-                systemHealth: 98.5,
-                pendingApprovals: 12,
-                criticalAlerts: 3,
-                warnings: 8
-            })
-            setIsLoading(false)
-        }, 1000)
+        const loadData = async () => {
+            try {
+                const [overview, health] = await Promise.allSettled([
+                    HQAdminService.getDashboardOverview(),
+                    HQAdminService.getSystemHealth()
+                ])
+                const data = overview.status === 'fulfilled' ? overview.value : {}
+                const healthData = health.status === 'fulfilled' ? health.value : {}
+                setDashboardData({
+                    totalLocations: data?.totalLocations ?? FALLBACK_HQ.totalLocations,
+                    totalFranchises: data?.totalFranchises ?? FALLBACK_HQ.totalFranchises,
+                    totalUsers: data?.totalUsers ?? FALLBACK_HQ.totalUsers,
+                    totalRevenue: data?.totalRevenue ?? FALLBACK_HQ.totalRevenue,
+                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_HQ.monthlyRevenue,
+                    revenueGrowth: data?.revenueGrowth ?? FALLBACK_HQ.revenueGrowth,
+                    activeStudents: data?.activeStudents ?? FALLBACK_HQ.activeStudents,
+                    conversionRate: data?.conversionRate ?? FALLBACK_HQ.conversionRate,
+                    systemHealth: healthData?.uptime ?? FALLBACK_HQ.systemHealth,
+                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_HQ.pendingApprovals,
+                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_HQ.criticalAlerts,
+                    warnings: data?.warnings ?? FALLBACK_HQ.warnings
+                })
+            } catch (error) {
+                console.error('Error loading HQ dashboard:', error)
+                setDashboardData(FALLBACK_HQ)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadData()
     }, [])
 
     // Revenue trend data

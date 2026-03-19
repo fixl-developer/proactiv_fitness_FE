@@ -7,6 +7,7 @@ import {
     Eye, CheckCircle, AlertTriangle, Clock, RefreshCw, ArrowUp, ArrowDown,
     MoreHorizontal, Edit, Trash2, Plus, FileText, Mail, Phone
 } from 'lucide-react'
+import { paymentService } from '@/services/modules/payment.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +19,44 @@ const AdminPaymentsPage = () => {
     const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | '7d' | '30d'>('30d')
     const [selectedStatus, setSelectedStatus] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
 
+    const [paymentStats, setPaymentStats] = useState({
+        totalRevenue: 0,
+        monthlyRevenue: 0,
+        pendingPayments: 0,
+        completedPayments: 0,
+        pendingCount: 0,
+        failedCount: 0,
+        averagePayment: 0,
+        growthRate: 0
+    })
+    const [recentPayments, setRecentPayments] = useState<any[]>([])
+    const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+
+    const fetchPaymentData = async () => {
+        try {
+            const [paymentsRes, statsRes] = await Promise.all([
+                paymentService.getPayments(1, 50, { timeRange: selectedTimeRange }),
+                paymentService.getPaymentStats()
+            ])
+
+            if (statsRes) {
+                setPaymentStats(statsRes)
+            }
+
+            if (paymentsRes) {
+                setRecentPayments(paymentsRes.payments || paymentsRes.data || paymentsRes)
+                if (paymentsRes.paymentMethods) {
+                    setPaymentMethods(paymentsRes.paymentMethods)
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch payment data:', error)
+        } finally {
+            setIsLoading(false)
+            setRefreshing(false)
+        }
+    }
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const isAuthenticated = localStorage.getItem('isAuthenticated')
@@ -28,101 +67,20 @@ const AdminPaymentsPage = () => {
             }
         }
 
-        setTimeout(() => setIsLoading(false), 1000)
+        fetchPaymentData()
     }, [])
 
-    // Payment Statistics
-    const paymentStats = {
-        totalRevenue: 2850000,
-        monthlyRevenue: 485000,
-        pendingPayments: 125000,
-        completedPayments: 156,
-        pendingCount: 23,
-        failedCount: 8,
-        averagePayment: 1850,
-        growthRate: 12.5
-    }
-
-    // Recent Payments Data
-    const recentPayments = [
-        {
-            id: 'PAY-001',
-            student: 'Emma Chen',
-            parent: 'David Chen',
-            program: 'Advanced Gymnastics',
-            amount: 2400,
-            date: '2024-01-22',
-            status: 'completed',
-            method: 'Credit Card',
-            location: 'Cyberport Center',
-            coach: 'Sarah Johnson',
-            email: 'david.chen@email.com',
-            phone: '+852 9876 5432'
-        },
-        {
-            id: 'PAY-002',
-            student: 'Lucas Wong',
-            parent: 'Michelle Wong',
-            program: 'Beginner Gymnastics',
-            amount: 1800,
-            date: '2024-01-22',
-            status: 'pending',
-            method: 'Bank Transfer',
-            location: 'Wan Chai Center',
-            coach: 'Mike Chen',
-            email: 'michelle.wong@email.com',
-            phone: '+852 9876 5433'
-        },
-        {
-            id: 'PAY-003',
-            student: 'Sophia Li',
-            parent: 'James Li',
-            program: 'Private Coaching',
-            amount: 3200,
-            date: '2024-01-21',
-            status: 'completed',
-            method: 'Credit Card',
-            location: 'Cyberport Center',
-            coach: 'Lisa Zhang',
-            email: 'james.li@email.com',
-            phone: '+852 9876 5434'
-        },
-        {
-            id: 'PAY-004',
-            student: 'Ryan Kumar',
-            parent: 'Priya Kumar',
-            program: 'Intermediate Gymnastics',
-            amount: 2100,
-            date: '2024-01-21',
-            status: 'failed',
-            method: 'Credit Card',
-            location: 'Wan Chai Center',
-            coach: 'Tom Wilson',
-            email: 'priya.kumar@email.com',
-            phone: '+852 9876 5435'
-        },
-        {
-            id: 'PAY-005',
-            student: 'Zoe Park',
-            parent: 'Kevin Park',
-            program: 'Assessment Session',
-            amount: 800,
-            date: '2024-01-20',
-            status: 'completed',
-            method: 'Bank Transfer',
-            location: 'Cyberport Center',
-            coach: 'Sarah Johnson',
-            email: 'kevin.park@email.com',
-            phone: '+852 9876 5436'
+    useEffect(() => {
+        if (!isLoading) {
+            fetchPaymentData()
         }
-    ]
+    }, [selectedTimeRange])
 
-    // Payment Methods Distribution
-    const paymentMethods = [
-        { method: 'Credit Card', count: 89, percentage: 65, amount: 185400 },
-        { method: 'Bank Transfer', count: 34, percentage: 25, amount: 71200 },
-        { method: 'Cash', count: 14, percentage: 10, amount: 28400 }
-    ]
+    useEffect(() => {
+        if (refreshing) {
+            fetchPaymentData()
+        }
+    }, [refreshing])
 
     const getStatusColor = (status: string) => {
         const colors = {

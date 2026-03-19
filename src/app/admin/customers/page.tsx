@@ -16,6 +16,71 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { responsiveClasses } from '@/lib/responsiveClasses'
+import { familyService, FamilyProfile, FamilyStatistics, FamilyStatus } from '@/services/crmService'
+
+interface CustomerDisplay {
+    id: string
+    name: string
+    email: string
+    phone: string
+    children: number
+    childrenNames: string[]
+    joinDate: string
+    status: string
+    type: string
+    location: string
+    totalSpent: string
+    lastActivity: string
+    rating: number
+}
+
+const formatRelativeTime = (date: Date | string | undefined): string => {
+    if (!date) return 'N/A'
+    const now = new Date()
+    const then = new Date(date)
+    const diffMs = now.getTime() - then.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    const diffMonths = Math.floor(diffDays / 30)
+
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffDays < 30) return `${diffDays} days ago`
+    return `${diffMonths} months ago`
+}
+
+const mapFamilyToCustomer = (family: FamilyProfile): CustomerDisplay => {
+    const statusMap: Record<string, string> = {
+        active: 'Active',
+        inactive: 'Inactive',
+        suspended: 'Suspended',
+        archived: 'Inactive'
+    }
+
+    const type = family.accountBalance > 10000 ? 'Premium' :
+        family.status === FamilyStatus.ACTIVE ? 'Standard' : 'Trial'
+
+    return {
+        id: family._id,
+        name: family.familyName,
+        email: family.primaryEmail,
+        phone: family.primaryPhone,
+        children: family.children?.length || 0,
+        childrenNames: family.children?.map((c: any) =>
+            typeof c === 'string' ? c : `${c.firstName || ''} ${c.lastName || ''}`.trim()
+        ) || [],
+        joinDate: family.firstEnrollmentDate
+            ? new Date(family.firstEnrollmentDate).toISOString().split('T')[0]
+            : new Date(family.createdAt).toISOString().split('T')[0],
+        status: statusMap[family.status] || 'Active',
+        type,
+        location: family.addresses?.[0]?.city || 'N/A',
+        totalSpent: `HK$${Math.abs(family.accountBalance || 0).toLocaleString()}`,
+        lastActivity: formatRelativeTime(family.lastActivityDate),
+        rating: 0
+    }
+}
 
 const AdminCustomersPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -23,6 +88,41 @@ const AdminCustomersPage = () => {
     const [filterStatus, setFilterStatus] = useState('all')
     const [filterType, setFilterType] = useState('all')
     const [sortBy, setSortBy] = useState('name')
+    const [customers, setCustomers] = useState<CustomerDisplay[]>([])
+    const [customerMetrics, setCustomerMetrics] = useState([
+        {
+            title: 'Total Customers',
+            value: '0',
+            growth: '--',
+            icon: Users,
+            color: 'text-blue-600',
+            bgColor: 'bg-blue-50'
+        },
+        {
+            title: 'Active Students',
+            value: '0',
+            growth: '--',
+            icon: Target,
+            color: 'text-green-600',
+            bgColor: 'bg-green-50'
+        },
+        {
+            title: 'New This Month',
+            value: '0',
+            growth: '--',
+            icon: UserPlus,
+            color: 'text-purple-600',
+            bgColor: 'bg-purple-50'
+        },
+        {
+            title: 'Retention Rate',
+            value: '0%',
+            growth: '--',
+            icon: Award,
+            color: 'text-orange-600',
+            bgColor: 'bg-orange-50'
+        }
+    ])
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -32,123 +132,67 @@ const AdminCustomersPage = () => {
                 return
             }
         }
-        setTimeout(() => setIsLoading(false), 1000)
+
+        const fetchData = async () => {
+            try {
+                const [familiesResponse, stats] = await Promise.all([
+                    familyService.getFamilies(),
+                    familyService.getFamilyStatistics()
+                ])
+
+                const families = familiesResponse.data || []
+                const mappedCustomers = families.map(mapFamilyToCustomer)
+                setCustomers(mappedCustomers)
+
+                if (stats) {
+                    const retentionRate = stats.totalFamilies > 0
+                        ? ((stats.activeFamilies / stats.totalFamilies) * 100).toFixed(1)
+                        : '0'
+
+                    setCustomerMetrics([
+                        {
+                            title: 'Total Customers',
+                            value: stats.totalFamilies.toLocaleString(),
+                            growth: '--',
+                            icon: Users,
+                            color: 'text-blue-600',
+                            bgColor: 'bg-blue-50'
+                        },
+                        {
+                            title: 'Active Students',
+                            value: stats.activeChildren.toLocaleString(),
+                            growth: '--',
+                            icon: Target,
+                            color: 'text-green-600',
+                            bgColor: 'bg-green-50'
+                        },
+                        {
+                            title: 'New This Month',
+                            value: stats.newFamiliesThisMonth.toLocaleString(),
+                            growth: '--',
+                            icon: UserPlus,
+                            color: 'text-purple-600',
+                            bgColor: 'bg-purple-50'
+                        },
+                        {
+                            title: 'Retention Rate',
+                            value: `${retentionRate}%`,
+                            growth: '--',
+                            icon: Award,
+                            color: 'text-orange-600',
+                            bgColor: 'bg-orange-50'
+                        }
+                    ])
+                }
+            } catch (error) {
+                console.error('Failed to fetch customer data:', error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchData()
     }, [])
-
-    // Customer Metrics
-    const customerMetrics = [
-        {
-            title: 'Total Customers',
-            value: '1,247',
-            growth: '+8.2%',
-            icon: Users,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50'
-        },
-        {
-            title: 'Active Students',
-            value: '3,420',
-            growth: '+12.5%',
-            icon: Target,
-            color: 'text-green-600',
-            bgColor: 'bg-green-50'
-        },
-        {
-            title: 'New This Month',
-            value: '89',
-            growth: '+15.3%',
-            icon: UserPlus,
-            color: 'text-purple-600',
-            bgColor: 'bg-purple-50'
-        },
-        {
-            title: 'Retention Rate',
-            value: '87.3%',
-            growth: '+2.1%',
-            icon: Award,
-            color: 'text-orange-600',
-            bgColor: 'bg-orange-50'
-        }
-    ]
-
-    // Sample Customer Data
-    const customers = [
-        {
-            id: 1,
-            name: 'Sarah Johnson',
-            email: 'sarah.johnson@email.com',
-            phone: '+852 9123 4567',
-            children: 2,
-            childrenNames: ['Emma (7)', 'Liam (5)'],
-            joinDate: '2023-09-15',
-            status: 'Active',
-            type: 'Premium',
-            location: 'Cyberport',
-            totalSpent: 'HK$12,450',
-            lastActivity: '2 days ago',
-            rating: 4.9
-        },
-        {
-            id: 2,
-            name: 'Michael Chen',
-            email: 'michael.chen@email.com',
-            phone: '+852 9234 5678',
-            children: 1,
-            childrenNames: ['Sophie (6)'],
-            joinDate: '2023-11-20',
-            status: 'Active',
-            type: 'Standard',
-            location: 'Wan Chai',
-            totalSpent: 'HK$8,200',
-            lastActivity: '1 day ago',
-            rating: 4.7
-        },
-        {
-            id: 3,
-            name: 'Lisa Wong',
-            email: 'lisa.wong@email.com',
-            phone: '+852 9345 6789',
-            children: 3,
-            childrenNames: ['Alex (8)', 'Maya (6)', 'Ryan (4)'],
-            joinDate: '2023-08-10',
-            status: 'Active',
-            type: 'Premium',
-            location: 'Cyberport',
-            totalSpent: 'HK$18,900',
-            lastActivity: '3 hours ago',
-            rating: 5.0
-        },
-        {
-            id: 4,
-            name: 'David Kim',
-            email: 'david.kim@email.com',
-            phone: '+852 9456 7890',
-            children: 1,
-            childrenNames: ['Jason (9)'],
-            joinDate: '2024-01-05',
-            status: 'Trial',
-            type: 'Trial',
-            location: 'Wan Chai',
-            totalSpent: 'HK$450',
-            lastActivity: '1 week ago',
-            rating: 4.5
-        },
-        {
-            id: 5,
-            name: 'Amanda Lee',
-            email: 'amanda.lee@email.com',
-            phone: '+852 9567 8901',
-            children: 2,
-            childrenNames: ['Grace (7)', 'Ethan (5)'],
-            joinDate: '2023-10-30',
-            status: 'Inactive',
-            type: 'Standard',
-            location: 'Cyberport',
-            totalSpent: 'HK$6,750',
-            lastActivity: '2 months ago',
-            rating: 4.2
-        }
-    ]
 
     // Filter customers based on search and filters
     const filteredCustomers = customers.filter(customer => {

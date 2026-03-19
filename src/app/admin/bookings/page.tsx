@@ -1,18 +1,12 @@
 'use client'
 
-import BookingManagement from '@/components/booking/BookingManagement'
-
-const AdminBookingsPage = () => {
+export default function BookingsPage() {
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto p-6">
-                <BookingManagement
-                    userRole="ADMIN"
-                    locationAccess={['Cyberport', 'Wan Chai']}
-                />
+        <div className="p-6">
+            <h1 className="text-3xl font-bold mb-6">All Bookings</h1>
+            <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-gray-600">Bookings overview coming soon...</p>
             </div>
         </div>
     )
 }
-
-export default AdminBookingsPage

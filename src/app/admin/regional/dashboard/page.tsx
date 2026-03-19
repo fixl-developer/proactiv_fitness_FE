@@ -11,6 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { RegionalAdminService } from '@/services/regionalAdminService'
+
+const FALLBACK_REGIONAL = {
+    regionName: 'My Region', totalLocations: 0, totalStaff: 0, totalStudents: 0,
+    totalRevenue: 0, monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0,
+    staffUtilization: 0, customerSatisfaction: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0
+}
 
 export default function RegionalAdminDashboard() {
     const [isLoading, setIsLoading] = useState(true)
@@ -18,26 +25,38 @@ export default function RegionalAdminDashboard() {
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
-        // Simulate API call to fetch Regional dashboard data
-        setTimeout(() => {
-            setDashboardData({
-                regionName: 'Northeast Region',
-                totalLocations: 5,
-                totalStaff: 45,
-                totalStudents: 1250,
-                totalRevenue: 850000,
-                monthlyRevenue: 142000,
-                revenueGrowth: 12.3,
-                occupancyRate: 78.5,
-                staffUtilization: 82.0,
-                customerSatisfaction: 4.6,
-                pendingApprovals: 5,
-                criticalAlerts: 1,
-                warnings: 3
-            })
-            setIsLoading(false)
-        }, 1000)
-    }, [])
+        const loadData = async () => {
+            try {
+                const [overview, analytics] = await Promise.allSettled([
+                    RegionalAdminService.getDashboardOverview(),
+                    RegionalAdminService.getAnalytics(timeRange)
+                ])
+                const data = overview.status === 'fulfilled' ? overview.value : {}
+                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+                setDashboardData({
+                    regionName: data?.regionName ?? FALLBACK_REGIONAL.regionName,
+                    totalLocations: data?.totalLocations ?? FALLBACK_REGIONAL.totalLocations,
+                    totalStaff: data?.totalStaff ?? FALLBACK_REGIONAL.totalStaff,
+                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_REGIONAL.totalStudents,
+                    totalRevenue: data?.totalRevenue ?? stats?.totalRevenue ?? FALLBACK_REGIONAL.totalRevenue,
+                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_REGIONAL.monthlyRevenue,
+                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_REGIONAL.revenueGrowth,
+                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_REGIONAL.occupancyRate,
+                    staffUtilization: data?.staffUtilization ?? FALLBACK_REGIONAL.staffUtilization,
+                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_REGIONAL.customerSatisfaction,
+                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_REGIONAL.pendingApprovals,
+                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_REGIONAL.criticalAlerts,
+                    warnings: data?.warnings ?? FALLBACK_REGIONAL.warnings
+                })
+            } catch (error) {
+                console.error('Error loading regional dashboard:', error)
+                setDashboardData(FALLBACK_REGIONAL)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadData()
+    }, [timeRange])
 
     // Revenue trend data
     const revenueData = [

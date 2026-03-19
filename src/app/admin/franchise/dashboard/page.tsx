@@ -11,6 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
+
+const FALLBACK_FRANCHISE = {
+    franchiseName: 'My Franchise', totalLocations: 0, totalStaff: 0, totalStudents: 0,
+    totalRevenue: 0, monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0,
+    staffUtilization: 0, customerSatisfaction: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0
+}
 
 export default function FranchiseOwnerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
@@ -18,26 +25,38 @@ export default function FranchiseOwnerDashboard() {
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
-        // Simulate API call to fetch Franchise dashboard data
-        setTimeout(() => {
-            setDashboardData({
-                franchiseName: 'NYC Franchise',
-                totalLocations: 4,
-                totalStaff: 32,
-                totalStudents: 980,
-                totalRevenue: 1200000,
-                monthlyRevenue: 200000,
-                revenueGrowth: 15.2,
-                occupancyRate: 82.0,
-                staffUtilization: 85.0,
-                customerSatisfaction: 4.7,
-                pendingApprovals: 3,
-                criticalAlerts: 0,
-                warnings: 2
-            })
-            setIsLoading(false)
-        }, 1000)
-    }, [])
+        const loadData = async () => {
+            try {
+                const [overview, analytics] = await Promise.allSettled([
+                    FranchiseOwnerService.getDashboardOverview(),
+                    FranchiseOwnerService.getAnalytics(timeRange)
+                ])
+                const data = overview.status === 'fulfilled' ? overview.value : {}
+                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+                setDashboardData({
+                    franchiseName: data?.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
+                    totalLocations: data?.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
+                    totalStaff: data?.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
+                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
+                    totalRevenue: data?.totalRevenue ?? stats?.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
+                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
+                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
+                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
+                    staffUtilization: data?.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
+                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
+                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
+                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
+                    warnings: data?.warnings ?? FALLBACK_FRANCHISE.warnings
+                })
+            } catch (error) {
+                console.error('Error loading franchise dashboard:', error)
+                setDashboardData(FALLBACK_FRANCHISE)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadData()
+    }, [timeRange])
 
     // Revenue trend data
     const revenueData = [
