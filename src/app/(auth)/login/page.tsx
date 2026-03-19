@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, LogIn, Users, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, LogIn, Users, UserPlus, Home } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,14 +26,24 @@ function LoginContent() {
     const [successMessage, setSuccessMessage] = useState('');
     const [formData, setFormData] = useState({ email: '', password: '' });
     const justLoggedIn = useRef(false);
+    const [mounted, setMounted] = useState(false);
     const [savedSession, setSavedSession] = useState<any>(null);
 
-    // Check for saved session on mount
+    useEffect(() => { setMounted(true); }, []);
+
+    // Check for saved session on mount (expires after 15 minutes)
     useEffect(() => {
         try {
             const saved = localStorage.getItem('savedSession');
             if (saved) {
                 const parsed = JSON.parse(saved);
+                const SAVED_SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+                if (parsed.savedAt && (Date.now() - parsed.savedAt) > SAVED_SESSION_TIMEOUT) {
+                    // Saved session expired
+                    localStorage.removeItem('savedSession');
+                    setSavedSession(null);
+                    return;
+                }
                 const userData = JSON.parse(parsed.user);
                 setSavedSession(userData);
             }
@@ -102,6 +112,15 @@ function LoginContent() {
 
     return (
         <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-auto">
+            {/* Back to Home Button */}
+            <Link
+                href="/"
+                className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-sm hover:bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 group"
+            >
+                <Home className="w-5 h-5 text-blue-600 group-hover:text-blue-700 transition-colors" />
+                <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">Back to Home</span>
+            </Link>
+
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <motion.div
@@ -143,7 +162,7 @@ function LoginContent() {
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-t-2xl"></div>
 
                         {/* Already logged in */}
-                        {isAuthenticated && !justLoggedIn.current && (
+                        {mounted && isAuthenticated && !justLoggedIn.current && (
                             <div className="mb-5 p-3.5 bg-blue-50 border border-blue-100 rounded-xl text-sm">
                                 <p className="text-blue-800 font-medium mb-2.5">You&apos;re already signed in.</p>
                                 <div className="flex gap-2">
@@ -186,15 +205,37 @@ function LoginContent() {
                                 </div>
                                 <div className="flex gap-2">
                                     <button type="button" onClick={() => {
-                                        // Restore session and do full page navigation so AuthContext reinitializes
                                         try {
                                             const saved = JSON.parse(localStorage.getItem('savedSession') || '{}');
+                                            // Restore tokens and user to localStorage
                                             localStorage.setItem('token', saved.token);
                                             if (saved.refreshToken) localStorage.setItem('refreshToken', saved.refreshToken);
                                             localStorage.setItem('user', saved.user);
+
+                                            // Also restore Zustand persisted auth store so it rehydrates correctly
+                                            const userData = JSON.parse(saved.user);
+                                            const roleName = typeof userData.role === 'object' ? userData.role?.name : userData.role;
+                                            localStorage.setItem('auth-storage', JSON.stringify({
+                                                state: {
+                                                    user: {
+                                                        userId: userData.id || userData._id || '',
+                                                        email: userData.email || '',
+                                                        firstName: userData.firstName || '',
+                                                        lastName: userData.lastName || '',
+                                                        role: roleName || '',
+                                                        permissions: []
+                                                    },
+                                                    accessToken: saved.token,
+                                                    refreshToken: saved.refreshToken || null,
+                                                    isAuthenticated: true
+                                                },
+                                                version: 0
+                                            }));
+
                                             localStorage.removeItem('savedSession');
-                                            // Full page redirect - AuthContext will pick up token from localStorage on mount
-                                            const userRole = savedSession.role?.toUpperCase?.() || (typeof savedSession.role === 'object' ? savedSession.role?.name?.toUpperCase() : '');
+
+                                            // Full page redirect
+                                            const userRole = roleName?.toUpperCase?.() || '';
                                             if (userRole === 'USER') window.location.href = '/user/dashboard';
                                             else if (userRole === 'PARENT') window.location.href = '/parent/dashboard';
                                             else window.location.href = '/';

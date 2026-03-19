@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LogOut, Save, X } from 'lucide-react'
 
@@ -12,12 +14,18 @@ interface LogoutModalProps {
 }
 
 export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPermanentLogout, userName }: LogoutModalProps) {
-    if (!isOpen) return null
+    const [mounted, setMounted] = useState(false)
 
-    return (
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    if (!isOpen || !mounted) return null
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -95,6 +103,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     )
 }

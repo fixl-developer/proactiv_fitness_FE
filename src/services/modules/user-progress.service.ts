@@ -36,42 +36,58 @@ class UserProgressService {
     private baseUrl = '/user/progress';
 
     async getProgress(userId?: string): Promise<ProgressData> {
-        const url = userId ? `${this.baseUrl}/${userId}` : this.baseUrl;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}` : this.baseUrl;
+            const response = await apiClient.get<any>(url);
+            return response.data;
+        } catch {
+            throw new Error('Progress data not available');
+        }
     }
 
     async updateProgress(data: { skillName: string; progress: number }): Promise<ProgressData> {
-        const response = await apiClient.put(this.baseUrl, data);
+        const response = await apiClient.put<any>(this.baseUrl, data);
         return response.data;
     }
 
     async getMilestones(userId?: string): Promise<Milestone[]> {
-        const url = userId ? `${this.baseUrl}/${userId}/milestones` : `${this.baseUrl}/milestones`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}/milestones` : `${this.baseUrl}/milestones`;
+            const response = await apiClient.get<any>(url);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
     async addMilestone(data: { title: string; description: string }): Promise<Milestone> {
-        const response = await apiClient.post(`${this.baseUrl}/milestones`, data);
+        const response = await apiClient.post<any>(`${this.baseUrl}/milestones`, data);
         return response.data;
     }
 
     async achieveMilestone(milestoneId: string): Promise<Milestone> {
-        const response = await apiClient.patch(`${this.baseUrl}/milestones/${milestoneId}/achieve`);
+        const response = await apiClient.patch<any>(`${this.baseUrl}/milestones/${milestoneId}/achieve`);
         return response.data;
     }
 
     async getTimeline(userId?: string): Promise<any[]> {
-        const url = userId ? `${this.baseUrl}/${userId}/timeline` : `${this.baseUrl}/timeline`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}/timeline` : `${this.baseUrl}/timeline`;
+            const response = await apiClient.get<any>(url);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
     async getSkills(userId?: string): Promise<any[]> {
-        const url = userId ? `${this.baseUrl}/${userId}/skills` : `${this.baseUrl}/skills`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}/skills` : `${this.baseUrl}/skills`;
+            const response = await apiClient.get<any>(url);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 }
 

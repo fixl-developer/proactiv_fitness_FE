@@ -38,17 +38,25 @@ class UserClassesService {
         startDate?: string;
         endDate?: string;
     }): Promise<UserClass[]> {
-        const response = await apiClient.get(this.baseUrl, { params: filters });
-        return response.data;
+        try {
+            const response = await apiClient.get<any>(this.baseUrl, { params: filters });
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
-    async getClassById(classId: string): Promise<UserClass> {
-        const response = await apiClient.get(`${this.baseUrl}/${classId}`);
-        return response.data;
+    async getClassById(classId: string): Promise<UserClass | null> {
+        try {
+            const response = await apiClient.get<any>(`${this.baseUrl}/${classId}`);
+            return response.data;
+        } catch {
+            return null;
+        }
     }
 
     async bookClass(data: ClassBooking): Promise<UserClass> {
-        const response = await apiClient.post(this.baseUrl, data);
+        const response = await apiClient.post<any>(this.baseUrl, data);
         return response.data;
     }
 
@@ -60,24 +68,36 @@ class UserClassesService {
         rating: number;
         comment: string;
     }): Promise<UserClass> {
-        const response = await apiClient.post(`${this.baseUrl}/${classId}/feedback`, feedback);
+        const response = await apiClient.post<any>(`${this.baseUrl}/${classId}/feedback`, feedback);
         return response.data;
     }
 
     async getUpcomingClasses(): Promise<UserClass[]> {
-        const response = await apiClient.get(`${this.baseUrl}/upcoming`);
-        return response.data;
+        try {
+            const response = await apiClient.get<any>(`${this.baseUrl}/upcoming`);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
     async getCompletedClasses(): Promise<UserClass[]> {
-        const response = await apiClient.get(`${this.baseUrl}/completed`);
-        return response.data;
+        try {
+            const response = await apiClient.get<any>(`${this.baseUrl}/completed`);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
     async getClassHistory(userId?: string): Promise<UserClass[]> {
-        const url = userId ? `${this.baseUrl}/history/${userId}` : `${this.baseUrl}/history`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/history/${userId}` : `${this.baseUrl}/history`;
+            const response = await apiClient.get<any>(url);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 }
 

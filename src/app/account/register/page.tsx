@@ -292,7 +292,7 @@ function UserRegisterContent() {
                                         value={formData.password}
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                         onBlur={(e) => validateField('password', e.target.value)}
-                                        className={`w-full pl-10 pr-12 py-3 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="e.g. Test@1234"
                                     />
                                     <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -317,7 +317,7 @@ function UserRegisterContent() {
                                         value={formData.confirmPassword}
                                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                                         onBlur={(e) => validateField('confirmPassword', e.target.value)}
-                                        className={`w-full pl-10 pr-12 py-3 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="Re-enter password"
                                     />
                                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -334,7 +334,7 @@ function UserRegisterContent() {
 
                             {/* Submit */}
                             <button type="submit" disabled={isLoading}
-                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-3.5 rounded-lg shadow-lg text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 mt-6 hover:scale-105 active:scale-95 transition-all">
+                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-2.5 rounded-lg shadow-lg text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 mt-3 hover:scale-105 active:scale-95 transition-all text-sm">
                                 {isLoading ? (
                                     <>
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -350,7 +350,7 @@ function UserRegisterContent() {
                         </form>
 
                         {/* Login Link */}
-                        <div className="text-center mt-6">
+                        <div className="text-center mt-3">
                             <p className="text-sm text-gray-600">
                                 Already have an account?{' '}
                                 <Link href="/login" className="text-emerald-600 font-medium hover:underline">

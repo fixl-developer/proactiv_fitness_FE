@@ -27,25 +27,37 @@ class UserAchievementsService {
     private baseUrl = '/user/achievements';
 
     async getAchievements(userId?: string): Promise<Achievement[]> {
-        const url = userId ? `${this.baseUrl}/${userId}` : this.baseUrl;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}` : this.baseUrl;
+            const response = await apiClient.get<{ data: Achievement[] }>(url);
+            return response.data || [];
+        } catch {
+            throw new Error('Achievements not available');
+        }
     }
 
-    async getAchievementById(achievementId: string): Promise<Achievement> {
-        const response = await apiClient.get(`${this.baseUrl}/${achievementId}`);
-        return response.data;
+    async getAchievementById(achievementId: string): Promise<Achievement | null> {
+        try {
+            const response = await apiClient.get<{ data: Achievement }>(`${this.baseUrl}/${achievementId}`);
+            return response.data;
+        } catch {
+            return null;
+        }
     }
 
     async unlockAchievement(achievementId: string): Promise<Achievement> {
-        const response = await apiClient.post(`${this.baseUrl}/${achievementId}/unlock`);
+        const response = await apiClient.post<{ data: Achievement }>(`${this.baseUrl}/${achievementId}/unlock`);
         return response.data;
     }
 
     async getBadges(userId?: string): Promise<Badge[]> {
-        const url = userId ? `${this.baseUrl}/${userId}/badges` : `${this.baseUrl}/badges`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}/badges` : `${this.baseUrl}/badges`;
+            const response = await apiClient.get<{ data: Badge[] }>(url);
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 
     async getStats(userId?: string): Promise<{
@@ -54,9 +66,13 @@ class UserAchievementsService {
         totalPoints: number;
         badges: number;
     }> {
-        const url = userId ? `${this.baseUrl}/${userId}/stats` : `${this.baseUrl}/stats`;
-        const response = await apiClient.get(url);
-        return response.data;
+        try {
+            const url = userId ? `${this.baseUrl}/${userId}/stats` : `${this.baseUrl}/stats`;
+            const response = await apiClient.get<{ data: { totalAchievements: number; unlockedAchievements: number; totalPoints: number; badges: number } }>(url);
+            return response.data;
+        } catch {
+            throw new Error('Stats not available');
+        }
     }
 
     async getLeaderboard(category?: string): Promise<{
@@ -66,10 +82,14 @@ class UserAchievementsService {
         points: number;
         achievements: number;
     }[]> {
-        const response = await apiClient.get(`${this.baseUrl}/leaderboard`, {
-            params: { category }
-        });
-        return response.data;
+        try {
+            const response = await apiClient.get<{ data: { rank: number; userId: string; userName: string; points: number; achievements: number }[] }>(`${this.baseUrl}/leaderboard`, {
+                params: { category }
+            });
+            return response.data || [];
+        } catch {
+            return [];
+        }
     }
 }
 

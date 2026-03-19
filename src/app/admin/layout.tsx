@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import LogoutModal from '@/components/ui/LogoutModal'
 import {
     Home,
     Calendar,
@@ -142,8 +143,9 @@ const colors = {
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const { logout } = useAuth()
+    const { logout, softLogout } = useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
     const [userName] = useState('Admin User')
     const [userEmail] = useState('admin@progym.hk')
 
@@ -182,19 +184,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         router.push(href)
     }
 
-    const handleLogout = () => {
-        logout()
+    const handleLogoutClick = () => {
+        setShowLogoutModal(true)
+    }
+
+    const handleSaveAndLogout = () => {
+        softLogout()
+        setShowLogoutModal(false)
+        router.push('/login/staff')
+    }
+
+    const handlePermanentLogout = async () => {
+        await logout()
+        localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
+        setShowLogoutModal(false)
+        router.push('/login/staff')
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
             {/* Sidebar - Fixed Position */}
             <div
-                className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200/50 z-50 flex flex-col"
-                style={{ width: '280px' }}
+                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50"
+                style={{ width: '280px', display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
-                <div className="p-4 border-b border-gray-200/50 flex-shrink-0">
+                <div className="p-4 border-b border-gray-200/50">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -212,7 +229,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </motion.div>
                 </div>
 
-                {/* Sidebar Menu - Scrollable */}
+                {/* Sidebar Menu - Scrollable, takes remaining space */}
                 <div className="flex-1 overflow-y-auto p-2">
                     <nav className="space-y-1">
                         {adminMenuItems.map((item, index) => (
@@ -288,18 +305,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </nav>
                 </div>
 
-                {/* Sidebar Footer - Always at bottom */}
-                <div className="flex-shrink-0 p-4 border-t border-gray-200/50 bg-white">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="space-y-3"
-                    >
+                {/* Sidebar Footer - pinned to bottom */}
+                <div className="flex-shrink-0 border-t border-gray-200/50 bg-white px-3 pt-3 pb-2">
+                    <div className="space-y-2">
                         {/* User Info */}
                         <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
                             <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center`}>
+                                <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
                                     <User className="w-4 h-4 text-white" />
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -326,14 +338,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleLogout}
+                                onClick={handleLogoutClick}
                                 className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                                 <LogOut className="w-4 h-4 mr-2" />
                                 Logout
                             </Button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
 
@@ -385,6 +397,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </motion.div>
                 </main>
             </div>
+
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={userName.split(' ')[0]}
+            />
         </div>
     )
 }

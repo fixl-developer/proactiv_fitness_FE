@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import LogoutModal from '@/components/ui/LogoutModal'
+import { authService } from '@/services/modules/auth.service'
 import {
     LayoutDashboard, Ticket, Users, Settings, BarChart3,
     HelpCircle, MessageSquare, Bell, LogOut, Menu, X,
@@ -38,9 +40,33 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         setUser(parsedUser)
     }, [router])
 
-    const handleLogout = () => {
-        localStorage.clear()
-        router.push('/login')
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
+
+    const handleLogoutClick = () => {
+        setShowLogoutModal(true)
+    }
+
+    const handleSaveAndLogout = () => {
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
+        }
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        setShowLogoutModal(false)
+        router.push('/login/staff')
+    }
+
+    const handlePermanentLogout = async () => {
+        await authService.logout()
+        localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
+        setShowLogoutModal(false)
+        router.push('/login/staff')
     }
 
     const navigation = [
@@ -100,7 +126,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                             <button
-                                onClick={handleLogout}
+                                onClick={handleLogoutClick}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
                                 <LogOut className="w-5 h-5" />
@@ -135,6 +161,14 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     {children}
                 </div>
             </main>
+
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={user?.name?.split(' ')[0]}
+            />
         </div>
     )
 }

@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
-    AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    Zap, Activity, Target, BarChart3, Bell
+    Clock, Activity, BarChart3, Bell
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,25 +15,23 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 export default function AdminDashboard() {
     const router = useRouter()
-    const { user, isAuthenticated } = useAuth()
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
+        if (authLoading) return
         if (!isAuthenticated) {
             router.push('/login')
             return
         }
-
         loadDashboardData()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, authLoading, router])
 
     const loadDashboardData = async () => {
         try {
             setIsLoading(true)
-
-            // Simulate API call - Replace with actual API
             setTimeout(() => {
                 setDashboardData({
                     totalLocations: 3,
@@ -56,7 +53,6 @@ export default function AdminDashboard() {
         }
     }
 
-    // Revenue trend data
     const revenueData = [
         { month: 'Jan', revenue: 380000, target: 400000 },
         { month: 'Feb', revenue: 395000, target: 410000 },
@@ -66,7 +62,6 @@ export default function AdminDashboard() {
         { month: 'Jun', revenue: 450000, target: 450000 },
     ]
 
-    // Student growth data
     const studentData = [
         { month: 'Jan', students: 1050 },
         { month: 'Feb', students: 1080 },
@@ -76,7 +71,6 @@ export default function AdminDashboard() {
         { month: 'Jun', students: 1200 },
     ]
 
-    // Recent activities
     const recentActivities = [
         { type: 'enrollment', title: 'New Student Enrolled', description: 'Sarah Johnson - Beginner Class', time: '5 min ago', icon: Users, color: 'text-green-600' },
         { type: 'payment', title: 'Payment Received', description: '$250 from John Smith', time: '15 min ago', icon: DollarSign, color: 'text-blue-600' },
@@ -84,18 +78,17 @@ export default function AdminDashboard() {
         { type: 'booking', title: 'Class Booking', description: '3 students booked for Saturday', time: '2 hours ago', icon: Calendar, color: 'text-orange-600' },
     ]
 
-    // Alerts
     const alerts = [
         { type: 'warning', title: 'Low Occupancy Alert', description: 'Boston Suburbs location at 65% capacity', priority: 'medium' },
         { type: 'info', title: 'Upcoming Holiday', description: 'Memorial Day - May 27th', priority: 'low' },
         { type: 'success', title: 'Revenue Target Met', description: 'June revenue target achieved', priority: 'low' },
     ]
 
-    if (!isAuthenticated) return null
+    if (!isAuthenticated && !authLoading) return null
 
-    if (isLoading) {
+    if (isLoading || authLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading dashboard...</p>
@@ -118,8 +111,8 @@ export default function AdminDashboard() {
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             {range}
@@ -129,66 +122,28 @@ export default function AdminDashboard() {
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                    {
-                        title: 'Total Locations',
-                        value: dashboardData?.totalLocations,
-                        icon: Building2,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50',
-                        change: '+1 this year'
-                    },
-                    {
-                        title: 'Total Students',
-                        value: dashboardData?.totalStudents?.toLocaleString(),
-                        icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50',
-                        change: `+${dashboardData?.studentGrowth}%`
-                    },
-                    {
-                        title: 'Total Revenue',
-                        value: `$${(dashboardData?.totalRevenue / 1000).toFixed(0)}K`,
-                        icon: DollarSign,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50',
-                        change: `+${dashboardData?.revenueGrowth}%`
-                    },
-                    {
-                        title: 'Staff Members',
-                        value: dashboardData?.staffMembers,
-                        icon: Users,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50',
-                        change: '+3 this month'
-                    },
-                    {
-                        title: 'Active Classes',
-                        value: dashboardData?.activeClasses,
-                        icon: Calendar,
-                        color: 'text-pink-600',
-                        bgColor: 'bg-pink-50',
-                        change: '+5 this month'
-                    },
+                    { title: 'Total Locations', value: dashboardData?.totalLocations, icon: Building2, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: '+1 this year' },
+                    { title: 'Total Students', value: dashboardData?.totalStudents?.toLocaleString(), icon: Users, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `+${dashboardData?.studentGrowth}%` },
+                    { title: 'Total Revenue', value: `$${((dashboardData?.totalRevenue || 0) / 1000).toFixed(0)}K`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `+${dashboardData?.revenueGrowth}%` },
+                    { title: 'Staff Members', value: dashboardData?.staffMembers, icon: Users, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: '+3 this month' },
+                    { title: 'Active Classes', value: dashboardData?.activeClasses, icon: Calendar, gradient: 'from-pink-500 to-pink-600', bgGradient: 'from-pink-50 to-pink-100', change: '+5 this month' },
                 ].map((metric, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
+                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
                                 </div>
                                 <div>
-                                    <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                    <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
-                                    <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -196,7 +151,7 @@ export default function AdminDashboard() {
                 ))}
             </div>
 
-            {/* Business Metrics */}
+            {/* Business Metrics, Recent Activities, Alerts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card>
                     <CardHeader>
@@ -226,7 +181,7 @@ export default function AdminDashboard() {
                                     <span className="text-sm font-medium text-gray-700">Customer Satisfaction</span>
                                     <span className="text-lg font-bold text-purple-600">{dashboardData?.customerSatisfaction}/5.0</span>
                                 </div>
-                                <Progress value={(dashboardData?.customerSatisfaction / 5) * 100} className="h-2" />
+                                <Progress value={((dashboardData?.customerSatisfaction || 0) / 5) * 100} className="h-2" />
                             </div>
                         </div>
                     </CardContent>
@@ -241,7 +196,7 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            {recentActivities.slice(0, 4).map((activity, idx) => (
+                            {recentActivities.map((activity, idx) => (
                                 <div key={idx} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
                                     <div className={`${activity.color} mt-1`}>
                                         <activity.icon className="w-4 h-4" />
@@ -268,8 +223,8 @@ export default function AdminDashboard() {
                         <div className="space-y-3">
                             {alerts.map((alert, idx) => (
                                 <div key={idx} className={`p-3 rounded-lg border ${alert.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-                                        alert.type === 'info' ? 'bg-blue-50 border-blue-200' :
-                                            'bg-green-50 border-green-200'
+                                    alert.type === 'info' ? 'bg-blue-50 border-blue-200' :
+                                        'bg-green-50 border-green-200'
                                     }`}>
                                     <div className="flex items-center gap-2 mb-1">
                                         <Badge variant={alert.priority === 'medium' ? 'secondary' : 'outline'} className="text-xs">

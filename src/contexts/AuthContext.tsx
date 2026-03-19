@@ -45,6 +45,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const token = authService.getStoredToken()
 
                 if (storedUser && token && tokenManager.isTokenValid(token)) {
+                    // Check if session is stale (no activity for 24 hours)
+                    const lastActivity = localStorage.getItem('lastActivity')
+                    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
+                    if (lastActivity && (Date.now() - parseInt(lastActivity)) > SESSION_TIMEOUT) {
+                        // Session expired due to inactivity
+                        tokenManager.clearTokens()
+                        localStorage.removeItem('user')
+                        localStorage.removeItem('lastActivity')
+                        localStorage.removeItem('auth-storage')
+                        setIsLoading(false)
+                        return
+                    }
+
+                    // Update last activity
+                    localStorage.setItem('lastActivity', Date.now().toString())
+
                     // Normalize role to string in case old session has object
                     const rawRole = storedUser.role
                     const roleName = typeof rawRole === 'object' ? (rawRole as any)?.name : rawRole as string
@@ -56,6 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // Clear invalid tokens
                     tokenManager.clearTokens()
                     localStorage.removeItem('user')
+                    localStorage.removeItem('lastActivity')
                 }
             } catch (err) {
                 console.error('Auth initialization error:', err)
@@ -98,6 +115,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // Log login event
                 await auditLogger.logLogin(email, true)
 
+                // Track session activity
+                localStorage.setItem('lastActivity', Date.now().toString())
+
                 // Publish login event
                 eventBus.publishUserLogin(userData.id, userData.email)
             } else {
@@ -129,8 +149,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             rbacManager.setRole('')
             tokenManager.clearTokens()
             useAuthStore.getState().clearAuth()
-            // Clear saved session too
             localStorage.removeItem('savedSession')
+            localStorage.removeItem('lastActivity')
+            localStorage.removeItem('auth-storage')
         } catch (err) {
             console.error('Logout error:', err)
         } finally {
@@ -138,9 +159,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }
 
-    // Soft logout - keeps session saved so user can continue later
+    // Soft logout - keeps session saved for 15 minutes
     const softLogout = () => {
-        // Save session info before clearing state
         const savedUser = localStorage.getItem('user')
         const savedToken = localStorage.getItem('token')
         const savedRefreshToken = localStorage.getItem('refreshToken')
@@ -148,7 +168,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             localStorage.setItem('savedSession', JSON.stringify({
                 user: savedUser,
                 token: savedToken,
-                refreshToken: savedRefreshToken
+                refreshToken: savedRefreshToken,
+                savedAt: Date.now()
             }))
         }
         // Clear active auth state but keep savedSession
@@ -206,9 +227,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null)
     }
 
+    // While loading, check localStorage directly to prevent flash redirect
+    const hasStoredSession = typeof window !== 'undefined' && !!localStorage.getItem('token') && !!localStorage.getItem('user')
+
     const value: AuthContextType = {
         user,
-        isAuthenticated: !!user && tokenManager.isAuthenticated(),
+        isAuthenticated: isLoading ? hasStoredSession : (!!user && tokenManager.isAuthenticated()),
         isLoading,
         error,
         role,

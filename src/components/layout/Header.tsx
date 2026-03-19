@@ -71,7 +71,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         const token = localStorage.getItem('token')
         const refreshToken = localStorage.getItem('refreshToken')
         if (user && token) {
-            localStorage.setItem('savedSession', JSON.stringify({ user, token, refreshToken }))
+            localStorage.setItem('savedSession', JSON.stringify({ user, token, refreshToken, savedAt: Date.now() }))
         }
         // Clear active session
         localStorage.removeItem('token')
@@ -85,6 +85,8 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
     const handlePermanentLogout = async () => {
         await authService.logout()
         localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
         setLoggedInUser(null)
         setShowLogoutModal(false)
         router.push('/login')

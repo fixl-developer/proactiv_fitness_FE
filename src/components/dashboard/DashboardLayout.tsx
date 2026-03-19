@@ -3,9 +3,10 @@
 import { ReactNode, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import LogoutModal from '@/components/ui/LogoutModal'
 import {
     Home,
     Calendar,
@@ -211,8 +212,10 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     const menuItems = roleMenuItems[userRole]
     const colors = roleColors[userRole]
     const pathname = usePathname()
-    const { logout } = useAuth()
+    const { logout, softLogout } = useAuth()
+    const router = useRouter()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
 
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {
@@ -245,8 +248,23 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
         return pathname === href
     }
 
-    const handleLogout = () => {
-        logout()
+    const handleLogoutClick = () => {
+        setShowLogoutModal(true)
+    }
+
+    const handleSaveAndLogout = () => {
+        softLogout()
+        setShowLogoutModal(false)
+        router.push('/login/staff')
+    }
+
+    const handlePermanentLogout = async () => {
+        await logout()
+        localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
+        setShowLogoutModal(false)
+        router.push('/login/staff')
     }
 
     return (
@@ -391,7 +409,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleLogout}
+                                onClick={handleLogoutClick}
                                 className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                                 <LogOut className="w-4 h-4 mr-2" />
@@ -448,6 +466,14 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                     </motion.div>
                 </main>
             </div>
+
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={userName?.split(' ')[0]}
+            />
         </div>
     )
 }

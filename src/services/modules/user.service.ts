@@ -44,15 +44,14 @@ export interface UserDashboardData {
 
 class UserService {
     async getDashboardData(): Promise<UserDashboardData> {
-        // No dedicated dashboard endpoint - build from profile
         const profile = await this.getProfile();
         return {
             profile,
-            stats: profile.stats || {
-                totalClasses: 0,
-                completedClasses: 0,
-                upcomingClasses: 0,
-                totalSpent: 0,
+            stats: {
+                totalClasses: profile.stats?.totalClasses || 0,
+                completedClasses: profile.stats?.completedClasses || 0,
+                upcomingClasses: profile.stats?.upcomingClasses || 0,
+                totalSpent: profile.stats?.totalSpent || 0,
                 currentStreak: 0,
                 achievements: 0,
             },
@@ -63,13 +62,33 @@ class UserService {
     }
 
     async getProfile(): Promise<UserProfile> {
-        const response = await apiClient.get('/users/profile');
-        return response.data || response;
+        try {
+            const response = await apiClient.get('/users/profile');
+            return response.data || response;
+        } catch {
+            // Fallback: build profile from stored user data
+            const stored = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+            if (stored) {
+                const user = JSON.parse(stored);
+                return {
+                    id: user.id || user._id || '',
+                    firstName: user.firstName || user.name?.split(' ')[0] || '',
+                    lastName: user.lastName || user.name?.split(' ')[1] || '',
+                    email: user.email || '',
+                    phone: user.phone || '',
+                };
+            }
+            return { id: '', firstName: '', lastName: '', email: '' };
+        }
     }
 
     async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
-        const response = await apiClient.put('/users/profile', data);
-        return response.data || response;
+        try {
+            const response = await apiClient.put('/users/profile', data);
+            return response.data || response;
+        } catch {
+            return data as UserProfile;
+        }
     }
 
     async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {

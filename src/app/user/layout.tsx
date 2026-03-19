@@ -9,16 +9,16 @@ import LogoutModal from '@/components/ui/LogoutModal'
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
-    const { isAuthenticated, user, logout, softLogout } = useAuth()
+    const { isAuthenticated, isLoading, user, logout, softLogout } = useAuth()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [showLogoutModal, setShowLogoutModal] = useState(false)
     const profileRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!isLoading && !isAuthenticated) {
             router.push('/login')
         }
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, isLoading, router])
 
     // Close dropdown on outside click
     useEffect(() => {
