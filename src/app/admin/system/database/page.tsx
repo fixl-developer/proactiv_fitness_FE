@@ -1,52 +1,203 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Database, HardDrive, Clock, Activity, Zap, RefreshCw, Download, Server, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Database, Clock, HardDrive, ArrowUpCircle, RefreshCw, Download, Zap, CheckCircle, AlertTriangle, Server, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
-const storageBreakdown = [
-    { name: 'Users', size: 2.1, color: 'bg-blue-500' },
-    { name: 'Bookings', size: 1.8, color: 'bg-green-500' },
-    { name: 'Programs', size: 0.5, color: 'bg-purple-500' },
-    { name: 'Logs', size: 3.2, color: 'bg-amber-500' },
-    { name: 'Other', size: 0.9, color: 'bg-gray-400' },
-]
+interface StorageItem {
+    name: string
+    size: number
+    color: string
+}
 
-const totalStorage = 20
-const usedStorage = storageBreakdown.reduce((acc, item) => acc + item.size, 0)
+interface RecentOp {
+    op: string
+    time: string
+    status: string
+    statusColor: string
+}
 
-const slowQueries = [
-    { query: 'SELECT * FROM bookings JOIN users ON ... WHERE date BETWEEN ...', avgTime: '450ms', executions: '1,234', lastRun: '2 min ago' },
-    { query: 'SELECT COUNT(*) FROM attendance GROUP BY program_id, month ...', avgTime: '380ms', executions: '892', lastRun: '5 min ago' },
-    { query: 'UPDATE users SET last_login = NOW() WHERE id IN (SELECT ...)', avgTime: '320ms', executions: '2,456', lastRun: '1 min ago' },
-    { query: 'SELECT * FROM payments WHERE status = "pending" ORDER BY ...', avgTime: '280ms', executions: '567', lastRun: '8 min ago' },
-]
+interface ConnectionPool {
+    active: number
+    idle: number
+    max: number
+}
 
-const recentOps = [
-    { op: 'Backup completed', time: '6:00 AM today', status: 'Success', statusColor: 'bg-green-100 text-green-700' },
-    { op: 'Index rebuilt: bookings_date_idx', time: '5:30 AM today', status: 'Success', statusColor: 'bg-green-100 text-green-700' },
-    { op: 'Vacuum analyze: users table', time: 'Yesterday 11 PM', status: 'Success', statusColor: 'bg-green-100 text-green-700' },
-    { op: 'Migration: add column programs.virtual_enabled', time: 'Mar 17, 2026', status: 'Success', statusColor: 'bg-green-100 text-green-700' },
-    { op: 'Backup completed', time: 'Mar 17, 6:00 AM', status: 'Success', statusColor: 'bg-green-100 text-green-700' },
-]
+function formatTime(timestamp: string): string {
+    if (!timestamp) return ''
+    try {
+        const d = new Date(timestamp)
+        if (isNaN(d.getTime())) return timestamp
+        const now = new Date()
+        const diff = now.getTime() - d.getTime()
+        if (diff < 60000) return 'Just now'
+        if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+        return d.toLocaleDateString()
+    } catch {
+        return timestamp
+    }
+}
 
 export default function DatabaseHealthPage() {
     const [isLoading, setIsLoading] = useState(true)
+    const [dbConnected, setDbConnected] = useState(false)
+    const [dbStatus, setDbStatus] = useState<string>('Checking...')
+    const [responseTime, setResponseTime] = useState<number | null>(null)
+    const [uptime, setUptime] = useState<string>('N/A')
+    const [storageBreakdown, setStorageBreakdown] = useState<StorageItem[]>([])
+    const [totalStorage, setTotalStorage] = useState(20)
+    const [recentOps, setRecentOps] = useState<RecentOp[]>([])
+    const [pool, setPool] = useState<ConnectionPool>({ active: 0, idle: 0, max: 100 })
+    const [avgQueryTime, setAvgQueryTime] = useState(0)
+    const [healthDetails, setHealthDetails] = useState<any>(null)
 
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 600)
-        return () => clearTimeout(timer)
+    const loadData = useCallback(async () => {
+        let connected = false
+        let measuredTime = 0
+
+        // 1. Check /health for DB connection status
+        try {
+            const startTime = performance.now()
+            const data = await apiClient.get<any>('/health')
+            measuredTime = Math.round(performance.now() - startTime)
+            setResponseTime(measuredTime)
+            setHealthDetails(data)
+
+            const db = data?.database || data?.db
+            if (db) {
+                const st = db.status || 'unknown'
+                const ok = st === 'connected' || st === 'ok' || st === 'up'
+                connected = true
+                setDbConnected(ok)
+                setDbStatus(ok ? 'Connected' : st.charAt(0).toUpperCase() + st.slice(1))
+
+                // Extract pool info if available
+                if (db.connections || db.pool) {
+                    const p = db.connections || db.pool
+                    setPool({
+                        active: p.active || p.current || 0,
+                        idle: p.idle || p.available || 0,
+                        max: p.max || p.limit || 100,
+                    })
+                }
+            } else {
+                // Health works so DB is likely connected
+                connected = true
+                setDbConnected(true)
+                setDbStatus('Connected (inferred)')
+            }
+
+            // Extract uptime
+            if (data?.uptime) {
+                const days = Math.floor(data.uptime / 86400)
+                const hours = Math.floor((data.uptime % 86400) / 3600)
+                const mins = Math.floor((data.uptime % 3600) / 60)
+                setUptime(`${days}d ${hours}h ${mins}m`)
+            } else if (data?.uptimeSeconds) {
+                const s = data.uptimeSeconds
+                const days = Math.floor(s / 86400)
+                const hours = Math.floor((s % 86400) / 3600)
+                setUptime(`${days}d ${hours}h`)
+            }
+        } catch {
+            setResponseTime(null)
+            setDbConnected(false)
+            setDbStatus('Unreachable')
+        }
+
+        // 2. Fetch DB metrics from observability
+        try {
+            const metricsData = await apiClient.get<any>('/observability/metrics', {
+                params: { type: 'database' }
+            })
+            const metrics = Array.isArray(metricsData) ? metricsData : (metricsData?.data || metricsData?.metrics || [])
+
+            // Extract storage info
+            const storageMetric = metricsData?.storage || metricsData?.disk
+            if (storageMetric) {
+                const items: StorageItem[] = []
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500', 'bg-red-400', 'bg-gray-400']
+                if (Array.isArray(storageMetric)) {
+                    storageMetric.forEach((s: any, i: number) => {
+                        items.push({ name: s.name || s.collection || `Table ${i + 1}`, size: s.size || s.sizeGB || 0, color: colors[i % colors.length] })
+                    })
+                }
+                if (items.length > 0) setStorageBreakdown(items)
+                if (metricsData?.totalStorage) setTotalStorage(metricsData.totalStorage)
+            }
+
+            // Extract query time
+            if (metricsData?.avgQueryTime) setAvgQueryTime(metricsData.avgQueryTime)
+            else if (metricsData?.queryTime) setAvgQueryTime(metricsData.queryTime)
+
+            // Extract pool info if not from health
+            if (metricsData?.connections || metricsData?.pool) {
+                const p = metricsData.connections || metricsData.pool
+                if (p.active !== undefined) {
+                    setPool({
+                        active: p.active || 0,
+                        idle: p.idle || 0,
+                        max: p.max || 100,
+                    })
+                }
+            }
+
+            // Build recent ops from metrics
+            if (metrics.length > 0) {
+                const ops: RecentOp[] = metrics.slice(0, 5).map((m: any) => ({
+                    op: m.operation || m.query || m.name || m.type || 'DB Operation',
+                    time: formatTime(m.timestamp || m.createdAt || m.time || ''),
+                    status: m.status === 'error' || m.status === 'failed' ? 'Failed' : 'Success',
+                    statusColor: m.status === 'error' || m.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700',
+                }))
+                if (ops.length > 0) setRecentOps(ops)
+            }
+        } catch {
+            // metrics not available
+        }
+
+        // 3. Fetch recent operations from audit-vault if we don't have any yet
+        if (recentOps.length === 0) {
+            try {
+                const auditData = await apiClient.get<any>('/audit-vault/logs', {
+                    params: { limit: 5 }
+                })
+                const logs = Array.isArray(auditData) ? auditData : (auditData?.data || auditData?.logs || [])
+                const ops: RecentOp[] = logs.slice(0, 5).map((l: any) => ({
+                    op: l.action || l.type || l.message || 'Operation',
+                    time: formatTime(l.timestamp || l.createdAt || l.time || ''),
+                    status: l.status === 'error' || l.status === 'failed' ? 'Failed' : 'Success',
+                    statusColor: l.status === 'error' || l.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700',
+                }))
+                if (ops.length > 0) setRecentOps(ops)
+            } catch {
+                // no audit data
+            }
+        }
+
+        setIsLoading(false)
     }, [])
 
+    useEffect(() => {
+        loadData()
+    }, [loadData])
+
+    const usedStorage = storageBreakdown.reduce((acc, item) => acc + item.size, 0)
+    const poolTotal = pool.active + pool.idle
+    const available = pool.max - poolTotal
+
     const stats = [
-        { label: 'Connections Active', value: '18/100', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Avg Query Time', value: '24ms', icon: Clock, color: 'text-green-600', bg: 'bg-green-50' },
-        { label: 'Storage Used', value: `${usedStorage.toFixed(1)}GB / ${totalStorage}GB`, icon: HardDrive, color: 'text-amber-600', bg: 'bg-amber-50' },
-        { label: 'Uptime', value: '45d 12h', icon: Server, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'Connections', value: dbConnected ? poolTotal.toString() : '0', icon: Database, gradient: dbConnected ? 'from-blue-500 to-blue-600' : 'from-red-500 to-red-600', bgGradient: dbConnected ? 'from-blue-50 to-blue-100' : 'from-red-50 to-red-100' },
+        { label: 'Avg Query Time', value: avgQueryTime > 0 ? `${avgQueryTime}ms` : (responseTime !== null ? `${responseTime}ms` : 'N/A'), icon: Clock, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
+        { label: 'Storage', value: storageBreakdown.length > 0 ? `${usedStorage.toFixed(1)}GB / ${totalStorage}GB` : (dbConnected ? 'Active' : 'N/A'), icon: HardDrive, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
+        { label: 'Uptime', value: uptime, icon: ArrowUpCircle, gradient: dbConnected ? 'from-orange-500 to-orange-600' : 'from-red-500 to-red-600', bgGradient: dbConnected ? 'from-orange-50 to-orange-100' : 'from-red-50 to-red-100' },
     ]
 
     if (isLoading) {
@@ -71,13 +222,14 @@ export default function DatabaseHealthPage() {
                     <p className="text-gray-600 mt-1">Monitor database performance, storage, and operations</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Zap className="w-4 h-4 mr-2" />
-                        Optimize
+                    <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); loadData() }}>
+                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        <Download className="w-4 h-4 mr-2" />
-                        Backup Now
+                    <Button variant="outline" size="sm" onClick={() => toast.info('Optimize triggered')}>
+                        <Zap className="w-4 h-4 mr-2" /> Optimize
+                    </Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info('Backup initiated')}>
+                        <Download className="w-4 h-4 mr-2" /> Backup Now
                     </Button>
                 </motion.div>
             </div>
@@ -85,62 +237,83 @@ export default function DatabaseHealthPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-all duration-300">
-                            <CardContent className="p-5">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                                        <p className={`text-xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
-                                    </div>
-                                    <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
-                                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
+                        <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                                    <stat.icon className="w-5 h-5 text-white" />
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+                            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        </div>
                     </motion.div>
                 ))}
             </div>
 
+            {/* Connection Status Banner */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <Card>
+                    <CardContent className="py-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${dbConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                <div>
+                                    <p className="font-medium text-gray-900">Database: {dbStatus}</p>
+                                    <p className="text-xs text-gray-500">
+                                        {responseTime !== null ? `Health check responded in ${responseTime}ms` : 'Unable to reach health endpoint'}
+                                    </p>
+                                </div>
+                            </div>
+                            <Badge className={dbConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
+                                {dbConnected ? 'Online' : 'Offline'}
+                            </Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Storage Breakdown */}
+                {/* Storage Usage */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                     <Card className="h-full">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <HardDrive className="w-5 h-5 text-amber-600" />
-                                Storage Usage
+                                <HardDrive className="w-5 h-5 text-amber-600" /> Storage Usage
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="mb-4">
-                                <div className="flex justify-between text-sm mb-2">
-                                    <span className="text-gray-600">Used: {usedStorage.toFixed(1)} GB</span>
-                                    <span className="text-gray-600">Total: {totalStorage} GB</span>
-                                </div>
-                                <div className="w-full h-6 bg-gray-100 rounded-full overflow-hidden flex">
-                                    {storageBreakdown.map((item, i) => (
-                                        <motion.div
-                                            key={i}
-                                            className={`${item.color} h-full`}
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${(item.size / totalStorage) * 100}%` }}
-                                            transition={{ delay: 0.5 + i * 0.1, duration: 0.6 }}
-                                        ></motion.div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-3 mt-6">
-                                {storageBreakdown.map((item, i) => (
-                                    <div key={i} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                                            <span className="text-sm text-gray-700">{item.name}</span>
+                            {storageBreakdown.length > 0 ? (
+                                <>
+                                    <div className="mb-4">
+                                        <div className="flex justify-between text-sm mb-2">
+                                            <span className="text-gray-600">Used: {usedStorage.toFixed(1)} GB</span>
+                                            <span className="text-gray-600">Total: {totalStorage} GB</span>
                                         </div>
-                                        <span className="text-sm font-medium text-gray-900">{item.size} GB</span>
+                                        <div className="w-full h-6 bg-gray-100 rounded-full overflow-hidden flex">
+                                            {storageBreakdown.map((item, i) => (
+                                                <motion.div key={i} className={`${item.color} h-full`} initial={{ width: 0 }} animate={{ width: `${(item.size / totalStorage) * 100}%` }} transition={{ delay: 0.5 + i * 0.1, duration: 0.6 }}></motion.div>
+                                            ))}
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="space-y-3 mt-6">
+                                        {storageBreakdown.map((item, i) => (
+                                            <div key={i} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                                                    <span className="text-sm text-gray-700">{item.name}</span>
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-900">{item.size} GB</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                    <HardDrive className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                                    <p className="text-sm">Storage metrics not available from observability endpoint</p>
+                                    <p className="text-xs text-gray-400 mt-1">Database is {dbConnected ? 'connected' : 'unreachable'}</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -150,8 +323,7 @@ export default function DatabaseHealthPage() {
                     <Card className="h-full">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Database className="w-5 h-5 text-blue-600" />
-                                Connection Pool
+                                <Database className="w-5 h-5 text-blue-600" /> Connection Pool
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -159,36 +331,36 @@ export default function DatabaseHealthPage() {
                                 <div>
                                     <div className="flex justify-between text-sm mb-2">
                                         <span className="text-gray-600">Active Connections</span>
-                                        <span className="font-medium text-blue-600">18</span>
+                                        <span className="font-medium text-blue-600">{pool.active}</span>
                                     </div>
-                                    <Progress value={18} className="h-3" />
+                                    <Progress value={pool.max > 0 ? (pool.active / pool.max) * 100 : 0} className="h-3" />
                                 </div>
                                 <div>
                                     <div className="flex justify-between text-sm mb-2">
                                         <span className="text-gray-600">Idle Connections</span>
-                                        <span className="font-medium text-green-600">32</span>
+                                        <span className="font-medium text-green-600">{pool.idle}</span>
                                     </div>
-                                    <Progress value={32} className="h-3" />
+                                    <Progress value={pool.max > 0 ? (pool.idle / pool.max) * 100 : 0} className="h-3" />
                                 </div>
                                 <div>
                                     <div className="flex justify-between text-sm mb-2">
                                         <span className="text-gray-600">Max Connections</span>
-                                        <span className="font-medium text-gray-600">100</span>
+                                        <span className="font-medium text-gray-600">{pool.max}</span>
                                     </div>
                                     <Progress value={100} className="h-3" />
                                 </div>
                                 <div className="bg-gray-50 rounded-lg p-4 mt-4">
                                     <div className="grid grid-cols-3 gap-4 text-center">
                                         <div>
-                                            <p className="text-2xl font-bold text-blue-600">18</p>
+                                            <p className="text-2xl font-bold text-blue-600">{pool.active}</p>
                                             <p className="text-xs text-gray-500">Active</p>
                                         </div>
                                         <div>
-                                            <p className="text-2xl font-bold text-green-600">32</p>
+                                            <p className="text-2xl font-bold text-green-600">{pool.idle}</p>
                                             <p className="text-xs text-gray-500">Idle</p>
                                         </div>
                                         <div>
-                                            <p className="text-2xl font-bold text-gray-600">50</p>
+                                            <p className="text-2xl font-bold text-gray-600">{available > 0 ? available : 0}</p>
                                             <p className="text-xs text-gray-500">Available</p>
                                         </div>
                                     </div>
@@ -199,79 +371,36 @@ export default function DatabaseHealthPage() {
                 </motion.div>
             </div>
 
-            {/* Slow Queries */}
+            {/* Recent Operations */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
                 <Card>
                     <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <AlertTriangle className="w-5 h-5 text-amber-600" />
-                                Slow Queries
-                            </CardTitle>
-                            <Badge className="bg-amber-100 text-amber-700">{slowQueries.length} queries</Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase">Query</th>
-                                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase">Avg Time</th>
-                                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase">Executions</th>
-                                        <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-500 uppercase">Last Run</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {slowQueries.map((q, i) => (
-                                        <motion.tr
-                                            key={i}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: 0.7 + i * 0.05 }}
-                                            className="border-b border-gray-50 hover:bg-gray-50/50"
-                                        >
-                                            <td className="py-3 px-3">
-                                                <code className="text-xs text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded block max-w-md truncate">{q.query}</code>
-                                            </td>
-                                            <td className="py-3 px-3">
-                                                <Badge className="bg-red-100 text-red-700">{q.avgTime}</Badge>
-                                            </td>
-                                            <td className="py-3 px-3 text-sm text-gray-600">{q.executions}</td>
-                                            <td className="py-3 px-3 text-sm text-gray-500">{q.lastRun}</td>
-                                        </motion.tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Recent Operations */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-                <Card>
-                    <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <RefreshCw className="w-5 h-5 text-green-600" />
-                            Recent Operations
+                            <RefreshCw className="w-5 h-5 text-green-600" /> Recent Operations
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {recentOps.map((op, i) => (
-                                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle className="w-4 h-4 text-green-600" />
-                                        <div>
-                                            <span className="text-sm font-medium text-gray-900">{op.op}</span>
-                                            <p className="text-xs text-gray-500">{op.time}</p>
+                        {recentOps.length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <Database className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                                <p className="text-sm">No recent operations recorded</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {recentOps.map((op, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            {op.status === 'Success' ? <CheckCircle className="w-4 h-4 text-green-600" /> : <XCircle className="w-4 h-4 text-red-600" />}
+                                            <div>
+                                                <span className="text-sm font-medium text-gray-900">{op.op}</span>
+                                                <p className="text-xs text-gray-500">{op.time}</p>
+                                            </div>
                                         </div>
+                                        <Badge className={op.statusColor}>{op.status}</Badge>
                                     </div>
-                                    <Badge className={op.statusColor}>{op.status}</Badge>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </motion.div>

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { apiClient } from '@/services/api/client';
+import { toast } from 'sonner';
 import {
   LineChart,
   Line,
@@ -29,53 +31,235 @@ import {
   Download,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
+  RotateCcw,
+  AlertCircle,
 } from 'lucide-react';
 
-const monthlyRevenueData = [
-  { month: 'Jan', actual: 52000, target: 50000 },
-  { month: 'Feb', actual: 48000, target: 52000 },
-  { month: 'Mar', actual: 61000, target: 55000 },
-  { month: 'Apr', actual: 58000, target: 57000 },
-  { month: 'May', actual: 67000, target: 60000 },
-  { month: 'Jun', actual: 72000, target: 62000 },
-];
+interface MonthlyRevenue {
+  month: string;
+  actual: number;
+  target: number;
+}
 
-const programRevenueData = [
-  { program: 'Regular Classes', revenue: 185000, fill: '#3b82f6' },
-  { program: 'Camps', revenue: 95000, fill: '#10b981' },
-  { program: 'Events', revenue: 42000, fill: '#f59e0b' },
-  { program: 'Private Lessons', revenue: 36000, fill: '#8b5cf6' },
-];
+interface ProgramRevenue {
+  program: string;
+  revenue: number;
+  fill: string;
+}
 
-const locationData = [
-  { name: 'Cyberport', value: 55, revenue: 196900, fill: '#3b82f6' },
-  { name: 'Wan Chai', value: 35, revenue: 125300, fill: '#10b981' },
-  { name: 'School Programs', value: 10, revenue: 35800, fill: '#f59e0b' },
-];
+interface LocationRevenue {
+  name: string;
+  value: number;
+  revenue: number;
+  fill: string;
+}
 
-const breakdownTable = [
-  { program: 'GYMTOTS', students: 45, revenue: 54000, avg: 1200, growth: 15.2 },
-  { program: 'Junior Gymnastics', students: 62, revenue: 86800, avg: 1400, growth: 8.5 },
-  { program: 'Advanced Training', students: 28, revenue: 50400, avg: 1800, growth: 22.1 },
-  { program: 'Holiday Camps', students: 85, revenue: 95000, avg: 1118, growth: -3.2 },
-  { program: 'Private Lessons', students: 18, revenue: 36000, avg: 2000, growth: 12.0 },
-  { program: 'Birthday Events', students: 32, revenue: 42000, avg: 1313, growth: 5.8 },
-];
+interface BreakdownRow {
+  program: string;
+  students: number;
+  revenue: number;
+  avg: number;
+  growth: number;
+}
 
-const stats = [
-  { label: 'Total Revenue (YTD)', value: 'HK$358,000', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', change: '+18.5%', up: true },
-  { label: 'Monthly Average', value: 'HK$59,667', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50', change: '+12.3%', up: true },
-  { label: 'Growth Rate', value: '18.5%', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50', change: '+3.2pp', up: true },
-  { label: 'Projected Annual', value: 'HK$716,000', icon: Target, color: 'text-amber-600', bg: 'bg-amber-50', change: 'On track', up: true },
-];
+interface RevenueStat {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  bgGradient: string;
+  change: string;
+  up: boolean;
+}
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+const PROGRAM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
 export default function RevenueReportsPage() {
   const [period, setPeriod] = useState<'6m' | '1y' | 'all'>('6m');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState<MonthlyRevenue[]>([]);
+  const [programRevenueData, setProgramRevenueData] = useState<ProgramRevenue[]>([]);
+  const [locationData, setLocationData] = useState<LocationRevenue[]>([]);
+  const [breakdownTable, setBreakdownTable] = useState<BreakdownRow[]>([]);
+  const [stats, setStats] = useState<RevenueStat[]>([]);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params: Record<string, string> = {};
+      if (dateFrom) params.startDate = dateFrom;
+      if (dateTo) params.endDate = dateTo;
+      if (!dateFrom && !dateTo) params.period = period;
+
+      const result: any = await apiClient.get('/analytics/revenue', { params });
+      const data = result?.data || result;
+
+      if (data && typeof data === 'object') {
+        // Monthly revenue
+        if (Array.isArray(data.monthly)) {
+          setMonthlyRevenueData(data.monthly.map((m: any) => ({
+            month: m.month || '',
+            actual: Number(m.actual || m.revenue) || 0,
+            target: Number(m.target) || 0,
+          })));
+        } else {
+          setMonthlyRevenueData([]);
+        }
+
+        // Program revenue
+        if (Array.isArray(data.byProgram)) {
+          setProgramRevenueData(data.byProgram.map((p: any, i: number) => ({
+            program: p.program || p.name || 'Other',
+            revenue: Number(p.revenue) || 0,
+            fill: PROGRAM_COLORS[i % PROGRAM_COLORS.length],
+          })));
+        } else {
+          setProgramRevenueData([]);
+        }
+
+        // Location revenue
+        if (Array.isArray(data.byLocation)) {
+          setLocationData(data.byLocation.map((l: any, i: number) => ({
+            name: l.name || l.location || 'Unknown',
+            value: Number(l.value || l.percentage) || 0,
+            revenue: Number(l.revenue) || 0,
+            fill: COLORS[i % COLORS.length],
+          })));
+        } else {
+          setLocationData([]);
+        }
+
+        // Breakdown table
+        if (Array.isArray(data.breakdown)) {
+          setBreakdownTable(data.breakdown.map((b: any) => ({
+            program: b.program || b.name || '',
+            students: Number(b.students) || 0,
+            revenue: Number(b.revenue) || 0,
+            avg: Number(b.avg || b.averagePerStudent) || 0,
+            growth: Number(b.growth) || 0,
+          })));
+        } else {
+          setBreakdownTable([]);
+        }
+
+        // Summary stats
+        if (data.summary) {
+          const s = data.summary;
+          setStats([
+            {
+              label: 'Total Revenue (YTD)',
+              value: s.totalRevenue || 'HK$0',
+              icon: DollarSign,
+              gradient: 'from-blue-500 to-blue-600',
+              bgGradient: 'from-blue-50 to-blue-100',
+              change: s.totalRevenueChange || '0%',
+              up: !(s.totalRevenueChange || '').startsWith('-'),
+            },
+            {
+              label: 'Monthly Average',
+              value: s.monthlyAverage || 'HK$0',
+              icon: Calendar,
+              gradient: 'from-green-500 to-emerald-600',
+              bgGradient: 'from-green-50 to-emerald-100',
+              change: s.monthlyAverageChange || '0%',
+              up: !(s.monthlyAverageChange || '').startsWith('-'),
+            },
+            {
+              label: 'Growth Rate',
+              value: s.growthRate || '0%',
+              icon: TrendingUp,
+              gradient: 'from-purple-500 to-purple-600',
+              bgGradient: 'from-purple-50 to-purple-100',
+              change: s.growthRateChange || '0%',
+              up: !(s.growthRateChange || '').startsWith('-'),
+            },
+            {
+              label: 'Projected Annual',
+              value: s.projectedAnnual || 'HK$0',
+              icon: Target,
+              gradient: 'from-orange-500 to-orange-600',
+              bgGradient: 'from-orange-50 to-orange-100',
+              change: s.projectedStatus || '-',
+              up: (s.projectedStatus || '').includes('track'),
+            },
+          ]);
+        } else {
+          setStats([]);
+        }
+      }
+    } catch (err: any) {
+      console.error('Revenue fetch error:', err);
+      setError('Failed to load revenue data. Please ensure the backend server is running.');
+    }
+
+    setLoading(false);
+  }, [period, dateFrom, dateTo]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleExport = () => {
+    if (breakdownTable.length === 0 && monthlyRevenueData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    const headers = ['Program', 'Students', 'Revenue (HK$)', 'Avg/Student', 'Growth %'];
+    const rows = breakdownTable.map((row) => [
+      row.program, row.students, row.revenue, row.avg, row.growth,
+    ]);
+    const monthHeaders = ['', '', 'Month', 'Actual Revenue', 'Target'];
+    const monthRows = monthlyRevenueData.map((m) => ['', '', m.month, m.actual, m.target]);
+    const allRows = [headers, ...rows, [], monthHeaders, ...monthRows];
+    const csv = allRows.map((row) => (row as (string | number)[]).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `revenue_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Revenue report exported to CSV');
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm text-gray-500">Loading revenue data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Find max revenue for progress bar scaling
+  const maxRevenue = breakdownTable.length > 0 ? Math.max(...breakdownTable.map((r) => r.revenue)) : 1;
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3"
+        >
+          <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800">{error}</p>
+          <Button variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
+            <RotateCcw className="h-3.5 w-3.5" /> Retry
+          </Button>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -85,61 +269,73 @@ export default function RevenueReportsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Revenue Reports</h1>
           <p className="text-gray-500 text-sm mt-1">Financial performance and revenue analytics</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
           <div className="flex border rounded-lg p-0.5">
             {(['6m', '1y', 'all'] as const).map((p) => (
               <button
                 key={p}
-                onClick={() => setPeriod(p)}
+                onClick={() => { setPeriod(p); setDateFrom(''); setDateTo(''); }}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  period === p ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                  period === p && !dateFrom && !dateTo ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 {p === '6m' ? '6 Months' : p === '1y' ? '1 Year' : 'All Time'}
               </button>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
+            <RotateCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-          >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                    <p className="text-2xl font-bold mt-1 text-gray-900">{stat.value}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      {stat.up ? (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
-                      )}
-                      <span className={`text-xs font-medium ${stat.up ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {stat.change}
-                      </span>
+      {stats.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, i) => {
+            const IconComp = stat.icon;
+            return (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08 }}
+              >
+                <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                      <IconComp className="w-5 h-5 text-white" />
                     </div>
+                    <Badge className={`text-[10px] ${stat.up ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                      {stat.change}
+                    </Badge>
                   </div>
-                  <div className={`p-2.5 rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                  </div>
+                  <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Monthly Revenue Line Chart */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
@@ -148,36 +344,27 @@ export default function RevenueReportsPage() {
             <CardTitle className="text-lg">Monthly Revenue Trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={monthlyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
-                <Tooltip
-                  formatter={(value: number) => [`HK$${value.toLocaleString()}`, '']}
-                  labelStyle={{ fontWeight: 600 }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="actual"
-                  stroke="#3b82f6"
-                  strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#3b82f6' }}
-                  name="Actual Revenue"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="target"
-                  stroke="#d1d5db"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ r: 3, fill: '#d1d5db' }}
-                  name="Target"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {monthlyRevenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={monthlyRevenueData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
+                  <Tooltip
+                    formatter={(value: number) => [`HK$${value.toLocaleString()}`, '']}
+                    labelStyle={{ fontWeight: 600 }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: '#3b82f6' }} name="Actual Revenue" />
+                  <Line type="monotone" dataKey="target" stroke="#d1d5db" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3, fill: '#d1d5db' }} name="Previous Period" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[350px] text-gray-400 text-sm">
+                No monthly revenue data available
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -187,25 +374,31 @@ export default function RevenueReportsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Card className="h-full">
             <CardHeader>
-              <CardTitle className="text-lg">Revenue by Program Type</CardTitle>
+              <CardTitle className="text-lg">Revenue by Program</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={programRevenueData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
-                  <YAxis type="category" dataKey="program" tick={{ fontSize: 11 }} width={120} />
-                  <Tooltip
-                    formatter={(value: number) => [`HK$${value.toLocaleString()}`, 'Revenue']}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  />
-                  <Bar dataKey="revenue" radius={[0, 6, 6, 0]} barSize={28}>
-                    {programRevenueData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {programRevenueData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={programRevenueData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
+                    <YAxis type="category" dataKey="program" tick={{ fontSize: 11 }} width={120} />
+                    <Tooltip
+                      formatter={(value: number) => [`HK$${value.toLocaleString()}`, 'Revenue']}
+                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    />
+                    <Bar dataKey="revenue" radius={[0, 6, 6, 0]} barSize={28}>
+                      {programRevenueData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                  No program revenue data available
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -216,39 +409,47 @@ export default function RevenueReportsPage() {
               <CardTitle className="text-lg">Revenue by Location</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={locationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={110}
-                    paddingAngle={4}
-                    dataKey="value"
-                    label={({ name, value }) => `${name} ${value}%`}
-                  >
-                    {locationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index]} />
+              {locationData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={locationData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={110}
+                        paddingAngle={4}
+                        dataKey="value"
+                        label={({ name, value }) => `${name} ${value}%`}
+                      >
+                        {locationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number, _name: string, props: any) => [
+                          `${value}% (HK$${(props.payload.revenue || 0).toLocaleString()})`,
+                          'Share',
+                        ]}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-6 mt-2">
+                    {locationData.map((loc) => (
+                      <div key={loc.name} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: loc.fill }} />
+                        <span className="text-xs text-gray-600">{loc.name}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number, _name: string, props: { payload: { revenue: number } }) => [
-                      `${value}% (HK$${props.payload.revenue.toLocaleString()})`,
-                      'Share',
-                    ]}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex justify-center gap-6 mt-2">
-                {locationData.map((loc, i) => (
-                  <div key={loc.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                    <span className="text-xs text-gray-600">{loc.name}</span>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
+                  No location revenue data available
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -274,7 +475,7 @@ export default function RevenueReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {breakdownTable.map((row, i) => (
+                  {breakdownTable.length > 0 ? breakdownTable.map((row, i) => (
                     <motion.tr
                       key={row.program}
                       initial={{ opacity: 0 }}
@@ -299,10 +500,17 @@ export default function RevenueReportsPage() {
                         </div>
                       </td>
                       <td className="p-3 w-32">
-                        <Progress value={Math.min(100, (row.revenue / 100000) * 100)} className="h-1.5" />
+                        <Progress value={maxRevenue > 0 ? Math.round((row.revenue / maxRevenue) * 100) : 0} className="h-1.5" />
                       </td>
                     </motion.tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="text-center py-10 text-gray-400">
+                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">No revenue breakdown data available yet</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

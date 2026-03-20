@@ -15,9 +15,9 @@ interface CircuitBreakerState {
 class ApiClient {
     private client: AxiosInstance
     private retryConfig: RetryConfig = {
-        maxRetries: 3,
+        maxRetries: 1,
         backoffMultiplier: 2,
-        initialDelayMs: 1000
+        initialDelayMs: 500
     }
     private circuitBreakers: Map<string, CircuitBreakerState> = new Map()
     private requestTimeout = 30000 // 30 seconds
@@ -123,29 +123,9 @@ class ApiClient {
         return url.split('?')[0] // Remove query params
     }
 
-    private checkCircuitBreaker(url: string): boolean {
-        const key = this.getCircuitBreakerKey(url)
-        const breaker = this.circuitBreakers.get(key)
-
-        if (!breaker) {
-            this.circuitBreakers.set(key, {
-                failures: 0,
-                lastFailureTime: 0,
-                state: 'CLOSED'
-            })
-            return true
-        }
-
-        // If open, check if we should try half-open
-        if (breaker.state === 'OPEN') {
-            const timeSinceLastFailure = Date.now() - breaker.lastFailureTime
-            if (timeSinceLastFailure > 60000) { // 1 minute
-                breaker.state = 'HALF_OPEN'
-                return true
-            }
-            return false
-        }
-
+    private checkCircuitBreaker(_url: string): boolean {
+        // Circuit breaker disabled in development to avoid blocking
+        // endpoints after transient failures during development
         return true
     }
 

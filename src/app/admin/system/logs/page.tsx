@@ -1,59 +1,156 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Monitor, Search, Download, RefreshCw, AlertCircle, AlertTriangle, Info, Bug, Clock } from 'lucide-react'
+import { FileText, Search, Download, RefreshCw, AlertOctagon, AlertTriangle, Info, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
+import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG'
 
 interface LogEntry {
-    id: number
+    id: string
     level: LogLevel
     timestamp: string
-    service: string
+    source: string
     message: string
+    service?: string
+    action?: string
 }
 
-const logEntries: LogEntry[] = [
-    { id: 1, level: 'ERROR', timestamp: '10:30:15', service: 'auth-service', message: 'Failed login attempt from 103.25.67.89' },
-    { id: 2, level: 'WARN', timestamp: '10:28:42', service: 'booking-service', message: 'Slow query detected (450ms)' },
-    { id: 3, level: 'INFO', timestamp: '10:25:00', service: 'scheduler', message: 'Cron job completed: daily-attendance-report' },
-    { id: 4, level: 'INFO', timestamp: '10:20:15', service: 'payment-service', message: 'Stripe webhook processed: pi_1234' },
-    { id: 5, level: 'ERROR', timestamp: '10:15:30', service: 'notification-service', message: 'SMS delivery failed: +852****1234' },
-    { id: 6, level: 'DEBUG', timestamp: '10:10:00', service: 'cache-service', message: 'Cache miss for key: programs_list' },
-    { id: 7, level: 'INFO', timestamp: '10:05:22', service: 'auth-service', message: 'User session renewed: admin@proactiv.com' },
-    { id: 8, level: 'WARN', timestamp: '10:02:18', service: 'payment-service', message: 'Payment retry scheduled for invoice INV-2024-089' },
-    { id: 9, level: 'INFO', timestamp: '09:58:45', service: 'booking-service', message: 'Booking confirmed: BK-20260319-042' },
-    { id: 10, level: 'ERROR', timestamp: '09:55:10', service: 'email-service', message: 'SMTP connection timeout after 30s' },
-    { id: 11, level: 'DEBUG', timestamp: '09:50:00', service: 'api-gateway', message: 'Rate limit check passed for IP 203.12.45.67' },
-    { id: 12, level: 'INFO', timestamp: '09:45:30', service: 'scheduler', message: 'Background job started: sync-attendance' },
-]
+const levelConfig: Record<LogLevel, { termBg: string; termText: string }> = {
+    ERROR: { termBg: 'bg-red-900/50', termText: 'text-red-400' },
+    WARN: { termBg: 'bg-yellow-900/50', termText: 'text-yellow-400' },
+    INFO: { termBg: 'bg-blue-900/50', termText: 'text-blue-400' },
+    DEBUG: { termBg: 'bg-gray-800', termText: 'text-gray-400' },
+}
 
-const levelConfig: Record<LogLevel, { color: string; bgColor: string; icon: typeof AlertCircle }> = {
-    ERROR: { color: 'text-red-600', bgColor: 'bg-red-100 text-red-700', icon: AlertCircle },
-    WARN: { color: 'text-yellow-600', bgColor: 'bg-yellow-100 text-yellow-700', icon: AlertTriangle },
-    INFO: { color: 'text-blue-600', bgColor: 'bg-blue-100 text-blue-700', icon: Info },
-    DEBUG: { color: 'text-gray-500', bgColor: 'bg-gray-100 text-gray-600', icon: Bug },
+function normalizeLevel(level: string): LogLevel {
+    const l = level?.toUpperCase() || 'INFO'
+    if (l === 'ERROR' || l === 'ERR') return 'ERROR'
+    if (l === 'WARN' || l === 'WARNING') return 'WARN'
+    if (l === 'DEBUG' || l === 'TRACE') return 'DEBUG'
+    return 'INFO'
+}
+
+function formatTimestamp(ts: string): string {
+    if (!ts) return ''
+    try {
+        const d = new Date(ts)
+        if (isNaN(d.getTime())) return ts
+        return d.toLocaleTimeString('en-US', { hour12: false })
+    } catch {
+        return ts
+    }
+}
+
+function formatDateForApi(date: Date): string {
+    return date.toISOString().split('T')[0]
 }
 
 export default function SystemLogsPage() {
     const [isLoading, setIsLoading] = useState(true)
+    const [logEntries, setLogEntries] = useState<LogEntry[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [activeLevel, setActiveLevel] = useState<string>('All')
     const [autoRefresh, setAutoRefresh] = useState(false)
+    const [startDate, setStartDate] = useState('')
+    const [endDate, setEndDate] = useState('')
+    const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+    const loadLogs = useCallback(async () => {
+        const allLogs: LogEntry[] = []
+
+        // Fetch observability logs
+        try {
+            const params: Record<string, string> = { limit: '200' }
+            if (activeLevel !== 'All') params.level = activeLevel.toLowerCase()
+            if (startDate) params.startDate = startDate
+            if (endDate) params.endDate = endDate
+
+            const query = new URLSearchParams(params).toString()
+            const data = await apiClient.get<any>(`/observability/logs?${query}`)
+            const items = Array.isArray(data) ? data : (data?.data || data?.logs || [])
+            items.forEach((l: any, i: number) => {
+                allLogs.push({
+                    id: `obs-${l.id || l._id || i}`,
+                    level: normalizeLevel(l.level || l.severity || 'INFO'),
+                    timestamp: l.timestamp || l.time || l.createdAt || '',
+                    source: l.service || l.source || l.module || 'system',
+                    message: l.message || l.description || l.details || '',
+                    service: l.service || l.source || 'observability',
+                })
+            })
+        } catch {
+            // Observability logs not available
+        }
+
+        // Fetch audit logs
+        try {
+            const params: Record<string, string> = { limit: '200', page: '1' }
+            if (searchQuery) params.search = searchQuery
+            if (startDate) params.startDate = startDate
+            if (endDate) params.endDate = endDate
+
+            const query = new URLSearchParams(params).toString()
+            const data = await apiClient.get<any>(`/audit-vault/logs?${query}`)
+            const items = Array.isArray(data) ? data : (data?.data || data?.logs || [])
+            items.forEach((l: any, i: number) => {
+                allLogs.push({
+                    id: `audit-${l.id || l._id || i}`,
+                    level: normalizeLevel(l.level || l.severity || 'INFO'),
+                    timestamp: l.timestamp || l.time || l.createdAt || '',
+                    source: l.service || l.source || l.module || 'audit',
+                    message: l.message || l.action || l.description || l.details || '',
+                    service: l.service || 'audit-vault',
+                    action: l.action,
+                })
+            })
+        } catch {
+            // Audit logs not available
+        }
+
+        // Sort by timestamp descending
+        allLogs.sort((a, b) => {
+            try {
+                return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            } catch {
+                return 0
+            }
+        })
+
+        setLogEntries(allLogs)
+        setIsLoading(false)
+    }, [activeLevel, startDate, endDate, searchQuery])
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 600)
-        return () => clearTimeout(timer)
-    }, [])
+        loadLogs()
+    }, [loadLogs])
+
+    // Auto-refresh polling
+    useEffect(() => {
+        if (autoRefresh) {
+            intervalRef.current = setInterval(() => {
+                loadLogs()
+            }, 5000)
+        } else {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
+            }
+        }
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current)
+        }
+    }, [autoRefresh, loadLogs])
 
     const filtered = logEntries.filter(log => {
-        const matchesSearch = log.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            log.service.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesSearch = !searchQuery ||
+            log.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            log.source.toLowerCase().includes(searchQuery.toLowerCase())
         const matchesLevel = activeLevel === 'All' || log.level === activeLevel
         return matchesSearch && matchesLevel
     })
@@ -61,12 +158,13 @@ export default function SystemLogsPage() {
     const errorCount = logEntries.filter(l => l.level === 'ERROR').length
     const warnCount = logEntries.filter(l => l.level === 'WARN').length
     const infoCount = logEntries.filter(l => l.level === 'INFO').length
+    const debugCount = logEntries.filter(l => l.level === 'DEBUG').length
 
     const stats = [
-        { label: 'Total Logs (24h)', value: '4,521', icon: Monitor, color: 'text-blue-600', bg: 'bg-blue-50' },
-        { label: 'Errors', value: '23', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
-        { label: 'Warnings', value: '89', icon: AlertTriangle, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-        { label: 'Info', value: '4,409', icon: Info, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { label: 'Total Logs 24h', value: logEntries.length.toString(), icon: FileText, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
+        { label: 'Errors', value: errorCount.toString(), icon: AlertOctagon, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
+        { label: 'Warnings', value: warnCount.toString(), icon: AlertTriangle, gradient: 'from-yellow-500 to-yellow-600', bgGradient: 'from-yellow-50 to-yellow-100' },
+        { label: 'Info', value: infoCount.toString(), icon: Info, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
     ]
 
     const levels = [
@@ -74,8 +172,33 @@ export default function SystemLogsPage() {
         { key: 'ERROR', label: 'Error', count: errorCount, color: 'text-red-600' },
         { key: 'WARN', label: 'Warning', count: warnCount, color: 'text-yellow-600' },
         { key: 'INFO', label: 'Info', count: infoCount, color: 'text-blue-600' },
-        { key: 'DEBUG', label: 'Debug', count: logEntries.filter(l => l.level === 'DEBUG').length, color: 'text-gray-500' },
+        { key: 'DEBUG', label: 'Debug', count: debugCount, color: 'text-gray-500' },
     ]
+
+    const exportToCsv = () => {
+        if (filtered.length === 0) {
+            toast.error('No logs to export')
+            return
+        }
+        const headers = ['Timestamp', 'Level', 'Source', 'Message']
+        const rows = filtered.map(log => [
+            log.timestamp,
+            log.level,
+            log.source,
+            `"${log.message.replace(/"/g, '""')}"`,
+        ])
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `system-logs-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        toast.success(`Exported ${filtered.length} log entries`)
+    }
 
     if (isLoading) {
         return (
@@ -93,6 +216,7 @@ export default function SystemLogsPage() {
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                     <h1 className="text-3xl font-bold text-gray-900">System Logs</h1>
@@ -108,29 +232,28 @@ export default function SystemLogsPage() {
                             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoRefresh ? 'translate-x-5' : ''}`}></span>
                         </button>
                     </div>
-                    <Button variant="outline" size="sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
+                    <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); loadLogs() }}>
+                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToCsv}>
+                        <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
                 </motion.div>
             </div>
 
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {stats.map((stat, i) => (
                     <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-all duration-300">
-                            <CardContent className="p-5">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                                        <p className={`text-2xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
-                                    </div>
-                                    <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
-                                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
+                        <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                                    <stat.icon className="w-5 h-5 text-white" />
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+                            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        </div>
                     </motion.div>
                 ))}
             </div>
@@ -142,41 +265,44 @@ export default function SystemLogsPage() {
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input type="text" placeholder="Search logs by message or service..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-mono text-sm" />
+                            </div>
+                            <div className="flex gap-2">
                                 <input
-                                    type="text"
-                                    placeholder="Search logs by message or service..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-mono text-sm"
+                                    type="date"
+                                    value={startDate}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                                    placeholder="Start date"
+                                />
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                                    placeholder="End date"
                                 />
                             </div>
-                            <div className="flex gap-1.5">
-                                {levels.map(l => (
-                                    <Button
-                                        key={l.key}
-                                        variant={activeLevel === l.key ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setActiveLevel(l.key)}
-                                        className="gap-1"
-                                    >
-                                        <span className={activeLevel !== l.key ? l.color : ''}>{l.label}</span>
-                                        <span className="text-xs opacity-60">({l.count})</span>
-                                    </Button>
-                                ))}
-                            </div>
+                        </div>
+                        <div className="flex gap-1.5 mt-3">
+                            {levels.map(l => (
+                                <Button key={l.key} variant={activeLevel === l.key ? 'default' : 'outline'} size="sm" onClick={() => setActiveLevel(l.key)} className="gap-1">
+                                    <span className={activeLevel !== l.key ? l.color : ''}>{l.label}</span>
+                                    <span className="text-xs opacity-60">({l.count})</span>
+                                </Button>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
             </motion.div>
 
-            {/* Log Entries */}
+            {/* Log Stream */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
                 <Card>
                     <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                             <CardTitle className="flex items-center gap-2">
-                                <Monitor className="w-5 h-5 text-gray-600" />
-                                Log Stream
+                                <FileText className="w-5 h-5 text-gray-600" /> Log Stream
                             </CardTitle>
                             {autoRefresh && (
                                 <div className="flex items-center gap-2">
@@ -188,28 +314,24 @@ export default function SystemLogsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="bg-gray-950 rounded-lg p-4 font-mono text-sm space-y-0.5 max-h-[600px] overflow-y-auto">
-                            {filtered.map((log, i) => {
-                                const config = levelConfig[log.level]
-                                return (
-                                    <motion.div
-                                        key={log.id}
-                                        initial={{ opacity: 0, x: -5 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.6 + i * 0.03 }}
-                                        className="flex items-start gap-3 py-2 px-3 rounded hover:bg-gray-900/50 transition-colors group"
-                                    >
-                                        <span className="text-gray-500 text-xs shrink-0 pt-0.5">{log.timestamp}</span>
-                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                                            log.level === 'ERROR' ? 'bg-red-900/50 text-red-400' :
-                                            log.level === 'WARN' ? 'bg-yellow-900/50 text-yellow-400' :
-                                            log.level === 'INFO' ? 'bg-blue-900/50 text-blue-400' :
-                                            'bg-gray-800 text-gray-400'
-                                        }`}>{log.level.padEnd(5)}</span>
-                                        <span className="text-cyan-400 shrink-0">{log.service}</span>
-                                        <span className="text-gray-300">{log.message}</span>
-                                    </motion.div>
-                                )
-                            })}
+                            {filtered.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500">
+                                    <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                                    <p>No logs match your filters</p>
+                                </div>
+                            ) : (
+                                filtered.map((log, i) => {
+                                    const config = levelConfig[log.level] || levelConfig.INFO
+                                    return (
+                                        <motion.div key={log.id} initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i * 0.02, 1) }} className="flex items-start gap-3 py-2 px-3 rounded hover:bg-gray-900/50 transition-colors group">
+                                            <span className="text-gray-500 text-xs shrink-0 pt-0.5">{formatTimestamp(log.timestamp)}</span>
+                                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ${config.termBg} ${config.termText}`}>{log.level.padEnd(5)}</span>
+                                            <span className="text-cyan-400 shrink-0">{log.source}</span>
+                                            <span className="text-gray-300">{log.message}</span>
+                                        </motion.div>
+                                    )
+                                })
+                            )}
                         </div>
                     </CardContent>
                 </Card>

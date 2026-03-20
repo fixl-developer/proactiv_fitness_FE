@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { apiClient } from '@/services/api/client';
+import { toast } from 'sonner';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -18,6 +20,9 @@ import {
   Scale,
   Hash,
   Calendar,
+  Loader2,
+  WifiOff,
+  RotateCcw,
 } from 'lucide-react';
 
 interface LedgerEntry {
@@ -31,7 +36,7 @@ interface LedgerEntry {
   category: 'Revenue' | 'Expense' | 'Refund' | 'Salary';
 }
 
-const ledgerEntries: LedgerEntry[] = [
+const fallbackLedgerEntries: LedgerEntry[] = [
   { id: 'TXN-001', date: '2026-03-01', reference: 'REF-2601', description: 'Term Fees Collected - Spring 2026', account: 'Accounts Receivable', debit: 0, credit: 45000, category: 'Revenue' },
   { id: 'TXN-002', date: '2026-03-05', reference: 'REF-2602', description: 'Coach Salaries - March', account: 'Payroll Expense', debit: 28000, credit: 0, category: 'Salary' },
   { id: 'TXN-003', date: '2026-03-08', reference: 'REF-2603', description: 'Equipment Purchase - Mats & Bars', account: 'Equipment', debit: 5200, credit: 0, category: 'Expense' },
@@ -48,10 +53,48 @@ const categoryConfig: Record<string, { className: string }> = {
 };
 
 export default function FinancialLedgerPage() {
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (dateFrom) params.startDate = dateFrom;
+      if (dateTo) params.endDate = dateTo;
+      if (categoryFilter !== 'All') params.category = categoryFilter;
+
+      const response = await apiClient.get('/financial-ledger/entries', { params });
+      const raw = response?.data?.data ?? response?.data ?? response;
+      const data = Array.isArray(raw) ? raw : raw?.entries ?? raw?.data ?? [];
+
+      const categoryMap: Record<string, string> = { payment: 'Revenue', refund: 'Refund', fee: 'Expense', adjustment: 'Expense', commission: 'Expense' };
+      setLedgerEntries(data.map((item: Record<string, unknown>) => ({
+        id: (item.entryId as string) || (item.id as string) || (item._id as string) || `TXN-${Math.random().toString(36).slice(2, 6)}`,
+        date: (item.createdAt as string) || (item.date as string) || new Date().toISOString().slice(0, 10),
+        reference: (item.transactionId as string) || (item.reference as string) || '',
+        description: (item.description as string) || '',
+        account: (item.account as string) || (item.category as string) || '',
+        debit: (item.type === 'debit' ? Number(item.amount) : Number(item.debit)) || 0,
+        credit: (item.type === 'credit' ? Number(item.amount) : Number(item.credit)) || 0,
+        category: (categoryMap[(item.category as string)] || (item.category as string) || 'Expense') as LedgerEntry['category'],
+      })));
+      setUsingFallback(false);
+    } catch {
+      setLedgerEntries(fallbackLedgerEntries);
+      setUsingFallback(true);
+    }
+    setLoading(false);
+  }, [dateFrom, dateTo, categoryFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredEntries = useMemo(() => {
     return ledgerEntries.filter((entry) => {
@@ -64,7 +107,7 @@ export default function FinancialLedgerPage() {
       const matchesDateTo = !dateTo || entry.date <= dateTo;
       return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
     });
-  }, [searchTerm, categoryFilter, dateFrom, dateTo]);
+  }, [ledgerEntries, searchTerm, categoryFilter, dateFrom, dateTo]);
 
   const runningBalances = useMemo(() => {
     let balance = 0;
@@ -79,10 +122,10 @@ export default function FinancialLedgerPage() {
   const netBalance = totalCredit - totalDebit;
 
   const stats = [
-    { label: 'Total Debit', value: `HK$${totalDebit.toLocaleString()}`, icon: TrendingDown, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Total Credit', value: `HK$${totalCredit.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Net Balance', value: `HK$${netBalance.toLocaleString()}`, icon: Scale, color: netBalance >= 0 ? 'text-emerald-600' : 'text-red-600', bg: netBalance >= 0 ? 'bg-emerald-50' : 'bg-red-50' },
-    { label: 'Entries (MTD)', value: ledgerEntries.length.toString(), icon: Hash, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Total Debit', value: `HK$${totalDebit.toLocaleString()}`, icon: TrendingDown, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
+    { label: 'Total Credit', value: `HK$${totalCredit.toLocaleString()}`, icon: TrendingUp, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
+    { label: 'Net Balance', value: `HK$${netBalance.toLocaleString()}`, icon: Scale, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
+    { label: 'Entries (MTD)', value: ledgerEntries.length.toString(), icon: Hash, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
   ];
 
   const handleExportCSV = () => {
@@ -105,12 +148,40 @@ export default function FinancialLedgerPage() {
     a.download = `ledger_export_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success('Ledger exported to CSV');
   };
 
   const expenseRatio = totalDebit > 0 && totalCredit > 0 ? Math.round((totalDebit / totalCredit) * 100) : 0;
 
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm text-gray-500">Loading ledger data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+      {usingFallback && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-3"
+        >
+          <WifiOff className="h-4 w-4 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-800">
+            Backend endpoint not available - showing sample data. Connect the backend for live ledger entries.
+          </p>
+          <Button variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
+            <RotateCcw className="h-3.5 w-3.5" /> Retry
+          </Button>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -134,19 +205,15 @@ export default function FinancialLedgerPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                    <p className="text-2xl font-bold mt-1 text-gray-900">{stat.value}</p>
-                  </div>
-                  <div className={`p-2.5 rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                  </div>
+            <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                  <stat.icon className="w-5 h-5 text-white" />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -278,7 +345,7 @@ export default function FinancialLedgerPage() {
                         </span>
                       </td>
                       <td className="p-3">
-                        <Badge className={categoryConfig[entry.category].className}>
+                        <Badge className={(categoryConfig[entry.category] || categoryConfig['Expense']).className}>
                           {entry.category}
                         </Badge>
                       </td>

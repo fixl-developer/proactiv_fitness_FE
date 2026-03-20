@@ -17,6 +17,41 @@ export interface DashboardMetrics {
     attendanceRate: number
     enrollmentTrend: number
     revenueGrowth: number
+    totalLocations: number
+    staffMembers: number
+    customerSatisfaction: number
+    staffUtilization: number
+}
+
+export interface RevenueDataPoint {
+    month: string
+    revenue: number
+    target: number
+    bookingCount: number
+}
+
+export interface StudentDataPoint {
+    month: string
+    students: number
+}
+
+export interface ActivityItem {
+    id: string
+    type: string
+    action: string
+    title: string
+    description: string
+    time: string
+    userId?: string
+}
+
+export interface AlertItem {
+    id: string
+    type: 'warning' | 'info' | 'success'
+    title: string
+    description: string
+    priority: 'high' | 'medium' | 'low'
+    createdAt: string
 }
 
 export interface ChartData {
@@ -47,9 +82,64 @@ export interface ChartResponse {
 class AnalyticsService {
     private readonly MODULE_NAME = 'advanced-analytics'
 
-    async getDashboardMetrics(): Promise<MetricsResponse> {
+    async getDashboardMetrics(timeRange: string = '30d'): Promise<MetricsResponse> {
         try {
-            const response = await apiClient.get<MetricsResponse>('/analytics/dashboard')
+            const response = await apiClient.get<MetricsResponse>('/analytics/dashboard', {
+                params: { timeRange }
+            })
+            return response
+        } catch (error) {
+            const appError = ErrorHandler.classifyError(error)
+            ErrorHandler.logError(appError, this.MODULE_NAME)
+            throw error
+        }
+    }
+
+    async getRevenueTrend(months: number = 6): Promise<{ success: boolean; data: RevenueDataPoint[] }> {
+        try {
+            const response = await apiClient.get<{ success: boolean; data: RevenueDataPoint[] }>(
+                '/analytics/revenue-trend',
+                { params: { months } }
+            )
+            return response
+        } catch (error) {
+            const appError = ErrorHandler.classifyError(error)
+            ErrorHandler.logError(appError, this.MODULE_NAME)
+            throw error
+        }
+    }
+
+    async getStudentGrowth(months: number = 6): Promise<{ success: boolean; data: StudentDataPoint[] }> {
+        try {
+            const response = await apiClient.get<{ success: boolean; data: StudentDataPoint[] }>(
+                '/analytics/student-growth',
+                { params: { months } }
+            )
+            return response
+        } catch (error) {
+            const appError = ErrorHandler.classifyError(error)
+            ErrorHandler.logError(appError, this.MODULE_NAME)
+            throw error
+        }
+    }
+
+    async getRecentActivities(limit: number = 10): Promise<{ success: boolean; data: ActivityItem[] }> {
+        try {
+            const response = await apiClient.get<{ success: boolean; data: ActivityItem[] }>(
+                '/analytics/recent-activities',
+                { params: { limit } }
+            )
+            return response
+        } catch (error) {
+            const appError = ErrorHandler.classifyError(error)
+            ErrorHandler.logError(appError, this.MODULE_NAME)
+            throw error
+        }
+    }
+
+    async getAlerts(): Promise<{ success: boolean; data: AlertItem[] }> {
+        try {
+            const response = await apiClient.get<{ success: boolean; data: AlertItem[] }>('/analytics/alerts')
             return response
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)

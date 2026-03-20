@@ -1,22 +1,22 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
     LayoutDashboard, Building2, Users, Settings, BarChart3,
-    MapPin, Shield, TrendingUp, Bell, LogOut, Menu, X
+    MapPin, Shield, TrendingUp, Bell, LogOut, Menu
 } from 'lucide-react'
+import LogoutModal from '@/components/ui/LogoutModal'
 
 export default function RegionalAdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
+    const pathname = usePathname()
     const [user, setUser] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [showLogoutModal, setShowLogoutModal] = useState(false)
 
     useEffect(() => {
-        // Check authentication and role
         const userData = localStorage.getItem('user')
         if (!userData) {
             window.location.href = '/login/staff'
@@ -27,7 +27,6 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        // Only REGIONAL_ADMIN and ADMIN can access
         if (roleStr !== 'REGIONAL_ADMIN' && roleStr !== 'ADMIN') {
             router.push('/unauthorized')
             return
@@ -36,8 +35,29 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         setUser(parsedUser)
     }, [router])
 
-    const handleLogout = () => {
-        localStorage.clear()
+    const handleSaveAndLogout = () => {
+        const savedUser = localStorage.getItem('user')
+        const savedToken = localStorage.getItem('token')
+        const savedRefreshToken = localStorage.getItem('refreshToken')
+        if (savedUser && savedToken) {
+            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
+        }
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('auth-storage')
+        setShowLogoutModal(false)
+        window.location.href = '/login/staff'
+    }
+
+    const handlePermanentLogout = () => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
+        localStorage.removeItem('savedSession')
+        localStorage.removeItem('lastActivity')
+        localStorage.removeItem('auth-storage')
+        setShowLogoutModal(false)
         window.location.href = '/login/staff'
     }
 
@@ -91,7 +111,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                             <button
-                                onClick={handleLogout}
+                                onClick={() => setShowLogoutModal(true)}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
                                 <LogOut className="w-5 h-5" />
@@ -107,16 +127,22 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
                     } lg:translate-x-0`}
             >
                 <nav className="p-4 space-y-2">
-                    {navigation.map((item) => (
-                        <Link
-                            key={item.name}
-                            href={item.href}
-                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
-                        >
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.name}</span>
-                        </Link>
-                    ))}
+                    {navigation.map((item) => {
+                        const isActive = pathname === item.href
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                                    : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600'
+                                    }`}
+                            >
+                                <item.icon className="w-5 h-5" />
+                                <span className="font-medium">{item.name}</span>
+                            </Link>
+                        )
+                    })}
                 </nav>
             </aside>
 
@@ -126,6 +152,15 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
                     {children}
                 </div>
             </main>
+
+            {/* Logout Modal */}
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={user.name?.split(' ')[0]}
+            />
         </div>
     )
 }

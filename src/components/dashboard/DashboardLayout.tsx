@@ -63,8 +63,7 @@ const roleMenuItems: Record<string, MenuItem[]> = {
             href: '/admin/users',
             submenu: [
                 { label: 'All Users', href: '/admin/users' },
-                { label: 'Role Management', href: '/admin/users/roles' },
-                { label: 'Permissions', href: '/admin/users/permissions' }
+                { label: 'Roles & Permissions', href: '/admin/users/roles' }
             ]
         },
         {
