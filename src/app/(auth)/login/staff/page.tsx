@@ -186,7 +186,7 @@ export default function StaffLoginPage() {
                                                     'ADMIN': '/admin/dashboard',
                                                     'REGIONAL_ADMIN': '/admin/regional/dashboard',
                                                     'FRANCHISE_OWNER': '/admin/franchise/dashboard',
-                                                    'LOCATION_MANAGER': '/manager/dashboard',
+                                                    'LOCATION_MANAGER': '/admin/location/dashboard',
                                                     'MANAGER': '/manager/dashboard',
                                                     'COACH': '/coach/dashboard',
                                                     'PARTNER_ADMIN': '/partner/dashboard',
@@ -322,8 +322,8 @@ export default function StaffLoginPage() {
                                                 transition={{ delay: 0.25 + index * 0.04 }}
                                                 onClick={() => handleDemoAccountClick(account.email, account.password)}
                                                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all duration-200 group ${isSelected
-                                                        ? 'bg-white/15 ring-1 ring-white/20'
-                                                        : 'hover:bg-white/8'
+                                                    ? 'bg-white/15 ring-1 ring-white/20'
+                                                    : 'hover:bg-white/8'
                                                     }`}
                                             >
                                                 <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${account.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>

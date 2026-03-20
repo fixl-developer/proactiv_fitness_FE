@@ -59,7 +59,7 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
         icon: Users,
         color: 'from-blue-500 to-indigo-500',
         description: 'Location operations',
-        dashboard: '/manager/dashboard',
+        dashboard: '/admin/location/dashboard',
         role: 'LOCATION_MANAGER'
     },
     {

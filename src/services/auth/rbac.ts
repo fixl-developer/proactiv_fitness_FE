@@ -62,7 +62,7 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
         permissions: ['view_dashboard', 'manage_franchise', 'manage_programs', 'view_reports']
     },
     [UserRole.LOCATION_MANAGER]: {
-        dashboard: '/manager/dashboard',
+        dashboard: '/admin/location/dashboard',
         modules: ['staff', 'scheduling', 'reporting', 'attendance'],
         permissions: ['view_dashboard', 'manage_staff', 'view_schedule', 'view_reports']
     },

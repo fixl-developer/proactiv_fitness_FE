@@ -13,11 +13,9 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { rbacManager } from '@/services/auth/rbac'
 import { attendanceService } from '@/services/modules/attendance.service'
 import { programService } from '@/services/modules/program.service'
 import { schedulingService } from '@/services/modules/scheduling.service'
-import { analyticsService } from '@/services/modules/analytics.service'
 
 const CoachDashboard = () => {
     const router = useRouter()
@@ -43,39 +41,57 @@ const CoachDashboard = () => {
     const loadDashboardData = async () => {
         setIsLoading(true)
 
-        // Run all API calls independently so one failure doesn't block others
-        const [schedulesResult, programsResult, attendanceResult, analyticsResult] = await Promise.allSettled([
-            schedulingService.getSchedules(1, 10, {
-                coachId: user?.id,
-                date: new Date().toISOString().split('T')[0]
-            }),
-            programService.getPrograms({ limit: 5 }),
-            attendanceService.getAttendance({ limit: 10 }),
-            analyticsService.getDashboardMetrics()
-        ])
+        // Try to load from API with a short timeout, fallback to mock data
+        try {
+            const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
 
-        setTodayClasses(
-            schedulesResult.status === 'fulfilled'
-                ? schedulesResult.value?.data?.schedules?.length ?? 0
-                : 0
-        )
-        setPrograms(
-            programsResult.status === 'fulfilled'
-                ? programsResult.value?.data?.programs ?? []
-                : []
-        )
-        setRecentAttendance(
-            attendanceResult.status === 'fulfilled'
-                ? attendanceResult.value?.data?.records ?? []
-                : []
-        )
-        setAnalytics(
-            analyticsResult.status === 'fulfilled'
-                ? analyticsResult.value?.data ?? null
-                : null
-        )
+            const [schedulesResult, programsResult, attendanceResult] = await Promise.allSettled([
+                Promise.race([
+                    schedulingService.getSchedules(1, 10, {
+                        coachId: user?.id,
+                        date: new Date().toISOString().split('T')[0]
+                    }),
+                    timeout(3000)
+                ]),
+                Promise.race([
+                    programService.getPrograms({ limit: 5 }),
+                    timeout(3000)
+                ]),
+                Promise.race([
+                    attendanceService.getAttendance({ limit: 10 }),
+                    timeout(3000)
+                ])
+            ])
 
-        // Set mock data for demo
+            setTodayClasses(
+                schedulesResult.status === 'fulfilled'
+                    ? (schedulesResult.value as any)?.data?.schedules?.length ?? 4
+                    : 4
+            )
+            setPrograms(
+                programsResult.status === 'fulfilled' && (programsResult.value as any)?.data?.programs?.length > 0
+                    ? (programsResult.value as any).data.programs
+                    : [
+                        { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
+                        { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
+                        { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 }
+                    ]
+            )
+            setRecentAttendance(
+                attendanceResult.status === 'fulfilled'
+                    ? (attendanceResult.value as any)?.data?.records ?? []
+                    : []
+            )
+        } catch {
+            // Use mock data on any error
+            setTodayClasses(4)
+            setPrograms([
+                { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
+                { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
+                { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 }
+            ])
+        }
+
         setTotalStudents(45)
         setAttendanceRate(92)
         setIsLoading(false)
