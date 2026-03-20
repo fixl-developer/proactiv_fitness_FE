@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter, useParams } from 'next/navigation'
-import DashboardLayout from '@/components/dashboard/DashboardLayout'
+
 import { useLocalStorage } from '@/hooks/useClientOnly'
 import { enhancedBookingService, Booking, BookingStatus, PaymentStatus } from '@/services/enhancedBookingService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -115,18 +115,18 @@ const BookingDetailsPage = () => {
 
     if (isLoading) {
         return (
-            <DashboardLayout userRole="parent" userName={userName} userEmail={userEmail}>
+            
                 <div className="flex flex-col items-center justify-center py-12">
                     <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
                     <p className="text-gray-600 font-medium">Loading booking details...</p>
                 </div>
-            </DashboardLayout>
+            
         )
     }
 
     if (!booking) {
         return (
-            <DashboardLayout userRole="parent" userName={userName} userEmail={userEmail}>
+            
                 <Card className="border-red-200 bg-red-50">
                     <CardContent className="p-6">
                         <div className="flex items-start space-x-3">
@@ -141,7 +141,7 @@ const BookingDetailsPage = () => {
                         </div>
                     </CardContent>
                 </Card>
-            </DashboardLayout>
+            
         )
     }
 
@@ -150,7 +150,7 @@ const BookingDetailsPage = () => {
     const canReschedule = booking.status === BookingStatus.CONFIRMED && !isPastSession
 
     return (
-        <DashboardLayout userRole="parent" userName={userName} userEmail={userEmail}>
+        
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex justify-between items-start">
@@ -418,7 +418,7 @@ const BookingDetailsPage = () => {
                     </motion.div>
                 )}
             </div>
-        </DashboardLayout>
+        
     )
 }
 

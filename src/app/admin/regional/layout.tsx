@@ -19,7 +19,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         // Check authentication and role
         const userData = localStorage.getItem('user')
         if (!userData) {
-            router.push('/login')
+            window.location.href = '/login/staff'
             return
         }
 
@@ -38,7 +38,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
 
     const handleLogout = () => {
         localStorage.clear()
-        router.push('/login')
+        window.location.href = '/login/staff'
     }
 
     const navigation = [

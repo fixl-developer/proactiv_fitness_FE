@@ -23,7 +23,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         // Check authentication and role
         const userData = localStorage.getItem('user')
         if (!userData) {
-            router.push('/login')
+            window.location.href = '/login/staff'
             return
         }
 
