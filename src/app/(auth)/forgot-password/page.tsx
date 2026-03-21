@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
                         {/* Decorative top bar */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-t-2xl"></div>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                        <form data-testid="form-forgot-password" onSubmit={handleSubmit} className="space-y-5">
                             {/* Error Message */}
                             {error && (
                                 <motion.div

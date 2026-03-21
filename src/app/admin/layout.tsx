@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }, [])
 
     // Sub-admin routes have their own layout — skip parent chrome
-    if (pathname?.startsWith('/admin/hq') || pathname?.startsWith('/admin/regional') || pathname?.startsWith('/admin/franchise')) {
+    if (pathname?.startsWith('/admin/hq') || pathname?.startsWith('/admin/regional') || pathname?.startsWith('/admin/franchise') || pathname?.startsWith('/admin/location')) {
         return <>{children}</>
     }
 

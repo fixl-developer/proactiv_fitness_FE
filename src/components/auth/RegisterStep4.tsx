@@ -62,7 +62,7 @@ export function RegisterStep4({
     };
 
     return (
-        <form onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form data-testid="form-components-auth-RegisterStep4" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Student Information</h2>
                 <p className="text-gray-600 mt-2">
@@ -169,7 +169,7 @@ export function RegisterStep4({
                                 </label>
                                 <div className="relative">
                                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <select
+                                    <select data-testid="select-components-auth-RegisterStep4-1"
                                         {...register(`students.${index}.gender`)}
                                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                                     >

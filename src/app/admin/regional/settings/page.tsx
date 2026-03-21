@@ -190,7 +190,7 @@ export default function RegionalSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                                    <select
+                                    <select data-testid="select-admin-regional-settings-2"
                                         value={settings.timezone}
                                         onChange={(e) => handleInputChange('timezone', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -206,7 +206,7 @@ export default function RegionalSettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                                    <select
+                                    <select data-testid="select-admin-regional-settings-3"
                                         value={settings.currency}
                                         onChange={(e) => handleInputChange('currency', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -218,7 +218,7 @@ export default function RegionalSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                                    <select
+                                    <select data-testid="select-admin-regional-settings-4"
                                         value={settings.language}
                                         onChange={(e) => handleInputChange('language', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -500,7 +500,7 @@ export default function RegionalSettingsPage() {
                                 <div className="space-y-2">
                                     {['student.enrolled', 'student.unenrolled', 'payment.received', 'staff.added', 'location.updated'].map((event) => (
                                         <label key={event} className="flex items-center gap-3">
-                                            <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
+                                            <input data-testid="input-checkbox-admin-regional-settings" type="checkbox" defaultChecked className="w-4 h-4 rounded" />
                                             <span className="text-sm text-gray-700">{event}</span>
                                         </label>
                                     ))}

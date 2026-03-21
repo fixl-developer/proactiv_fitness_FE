@@ -119,17 +119,17 @@ export default function ProfilePage() {
                     <p className="text-gray-600 mt-2">Manage your personal information</p>
                 </div>
                 {!isEditing ? (
-                    <Button onClick={() => setIsEditing(true)}>
+                    <Button data-testid="btn-set-is-editing-user-profile" onClick={() => setIsEditing(true)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit Profile
                     </Button>
                 ) : (
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+                        <Button data-testid="btn-set-is-editing-user-profile" variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                             <X className="w-4 h-4 mr-2" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
+                        <Button data-testid="btn-save-user-profile" onClick={handleSave} disabled={isSaving}>
                             <Save className="w-4 h-4 mr-2" />
                             {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>

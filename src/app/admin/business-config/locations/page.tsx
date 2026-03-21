@@ -222,11 +222,11 @@ export default function LocationsRoomsPage() {
           <p className="text-gray-600 mt-2">Manage physical locations and room configurations</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => openRoomForm()}>
+          <Button data-testid="btn-open-room-form-admin-business-config-locations" variant="outline" onClick={() => openRoomForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Room
           </Button>
-          <Button onClick={() => openLocationForm()}>
+          <Button data-testid="btn-open-location-form-admin-business-config-locations" onClick={() => openLocationForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Location
           </Button>
@@ -260,7 +260,7 @@ export default function LocationsRoomsPage() {
         <CardContent className="p-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
+            <input data-testid="input-text-admin-business-config-locations"
               type="text"
               placeholder="Search locations..."
               value={searchTerm}
@@ -291,7 +291,7 @@ export default function LocationsRoomsPage() {
                 {searchTerm ? 'Try a different search term' : 'Add your first location to get started'}
               </p>
               {!searchTerm && (
-                <Button className="mt-4" onClick={() => openLocationForm()}>
+                <Button data-testid="btn-open-location-form-admin-business-config-locations" className="mt-4" onClick={() => openLocationForm()}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Location
                 </Button>
@@ -348,7 +348,7 @@ export default function LocationsRoomsPage() {
                       {/* Expandable Rooms */}
                       {locationRooms.length > 0 && (
                         <div>
-                          <button
+                          <button data-testid="btn-admin-business-config-locations-10"
                             onClick={() => toggleExpand(location.id)}
                             className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium w-full"
                           >
@@ -373,7 +373,7 @@ export default function LocationsRoomsPage() {
                                     </p>
                                   </div>
                                   <div className="flex gap-1">
-                                    <Button variant="ghost" size="sm" onClick={() => openRoomForm(room)}>
+                                    <Button data-testid="btn-open-room-form-admin-business-config-locations" variant="ghost" size="sm" onClick={() => openRoomForm(room)}>
                                       <Edit className="w-3 h-3" />
                                     </Button>
                                     <Button
@@ -402,7 +402,7 @@ export default function LocationsRoomsPage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" onClick={() => openLocationForm(location)}>
+                        <Button data-testid="btn-open-location-form-admin-business-config-locations" variant="outline" className="flex-1" onClick={() => openLocationForm(location)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </Button>
@@ -432,10 +432,10 @@ export default function LocationsRoomsPage() {
               {editingLocation ? 'Update the location details below.' : 'Fill in the details to create a new location.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleLocationSubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-locations" onSubmit={handleLocationSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Location Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-locations"
                 type="text"
                 value={locationForm.name}
                 onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
@@ -446,7 +446,7 @@ export default function LocationsRoomsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Address</label>
-              <input
+              <input data-testid="input-text-admin-business-config-locations"
                 type="text"
                 value={locationForm.address}
                 onChange={(e) => setLocationForm({ ...locationForm, address: e.target.value })}
@@ -460,7 +460,7 @@ export default function LocationsRoomsPage() {
               {businessUnits.length === 0 ? (
                 <p className="text-sm text-gray-500">No business units available.</p>
               ) : (
-                <select
+                <select data-testid="select-admin-business-config-locations-16"
                   value={locationForm.businessUnitId}
                   onChange={(e) => setLocationForm({ ...locationForm, businessUnitId: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -476,7 +476,7 @@ export default function LocationsRoomsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select
+              <select data-testid="select-admin-business-config-locations-17"
                 value={locationForm.status}
                 onChange={(e) => setLocationForm({ ...locationForm, status: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -486,7 +486,7 @@ export default function LocationsRoomsPage() {
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowLocationForm(false)}>
+              <Button data-testid="btn-set-show-location-form-admin-business-config-locations" type="button" variant="outline" onClick={() => setShowLocationForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={savingLocation}>
@@ -507,10 +507,10 @@ export default function LocationsRoomsPage() {
               {editingRoom ? 'Update the room details below.' : 'Fill in the details to create a new room.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleRoomSubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-locations" onSubmit={handleRoomSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Room Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-locations"
                 type="text"
                 value={roomForm.name}
                 onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })}
@@ -524,7 +524,7 @@ export default function LocationsRoomsPage() {
               {locations.length === 0 ? (
                 <p className="text-sm text-gray-500">No locations available. Please create a location first.</p>
               ) : (
-                <select
+                <select data-testid="select-admin-business-config-locations-18"
                   value={roomForm.locationId}
                   onChange={(e) => setRoomForm({ ...roomForm, locationId: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -541,7 +541,7 @@ export default function LocationsRoomsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Room Type</label>
-              <select
+              <select data-testid="select-admin-business-config-locations-19"
                 value={roomForm.type}
                 onChange={(e) => setRoomForm({ ...roomForm, type: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -555,7 +555,7 @@ export default function LocationsRoomsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Capacity</label>
-              <input
+              <input data-testid="input-number-admin-business-config-locations"
                 type="number"
                 value={roomForm.capacity}
                 onChange={(e) => setRoomForm({ ...roomForm, capacity: parseInt(e.target.value) || 0 })}
@@ -565,7 +565,7 @@ export default function LocationsRoomsPage() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowRoomForm(false)}>
+              <Button data-testid="btn-set-show-room-form-admin-business-config-locations" type="button" variant="outline" onClick={() => setShowRoomForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={savingRoom || locations.length === 0}>
@@ -589,10 +589,10 @@ export default function LocationsRoomsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button data-testid="btn-set-delete-target-admin-business-config-locations" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button data-testid="btn-delete-admin-business-config-locations" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

@@ -199,7 +199,7 @@ export default function RegionalApprovalsPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select
+                        <select data-testid="select-admin-regional-approvals-1"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -209,7 +209,7 @@ export default function RegionalApprovalsPage() {
                             <option value="APPROVED">Approved</option>
                             <option value="REJECTED">Rejected</option>
                         </select>
-                        <select
+                        <select data-testid="select-admin-regional-approvals-2"
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

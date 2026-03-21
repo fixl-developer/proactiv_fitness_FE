@@ -96,7 +96,7 @@ export default function WorkflowBuilderPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Trigger Type</label>
-                                <select
+                                <select data-testid="select-advanced-workflows-builder-3"
                                     value={triggerType}
                                     onChange={(e) => setTriggerType(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -109,11 +109,11 @@ export default function WorkflowBuilderPage() {
                             </div>
 
                             <div className="flex gap-3">
-                                <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button data-testid="btn-save-advanced-workflows-builder" onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
                                     <Save className="w-4 h-4 mr-2" />
                                     {saving ? 'Saving...' : 'Save Workflow'}
                                 </Button>
-                                <Button variant="outline" onClick={() => router.push('/advanced/workflows')}>
+                                <Button data-testid="btn-router-advanced-workflows-builder" variant="outline" onClick={() => router.push('/advanced/workflows')}>
                                     Cancel
                                 </Button>
                             </div>

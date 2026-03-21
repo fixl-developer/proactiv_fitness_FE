@@ -136,7 +136,7 @@ export default function BusinessUnitsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Business Units</h1>
           <p className="text-gray-600 mt-2">Manage your organization's business units</p>
         </div>
-        <Button onClick={() => openForm()}>
+        <Button data-testid="btn-open-form-admin-business-config-units" onClick={() => openForm()}>
           <Plus className="w-4 h-4 mr-2" />
           Add Business Unit
         </Button>
@@ -169,7 +169,7 @@ export default function BusinessUnitsPage() {
         <CardContent className="p-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
+            <input data-testid="input-text-admin-business-config-units"
               type="text"
               placeholder="Search business units..."
               value={searchTerm}
@@ -200,7 +200,7 @@ export default function BusinessUnitsPage() {
                 {searchTerm ? 'Try a different search term' : 'Add your first business unit to get started'}
               </p>
               {!searchTerm && (
-                <Button className="mt-4" onClick={() => openForm()}>
+                <Button data-testid="btn-open-form-admin-business-config-units" className="mt-4" onClick={() => openForm()}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Business Unit
                 </Button>
@@ -237,7 +237,7 @@ export default function BusinessUnitsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openForm(unit)}>
+                          <Button data-testid="btn-open-form-admin-business-config-units" variant="ghost" size="sm" onClick={() => openForm(unit)}>
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
@@ -268,10 +268,10 @@ export default function BusinessUnitsPage() {
               {editingUnit ? 'Update the business unit details below.' : 'Fill in the details to create a new business unit.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-units" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Unit Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-units"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -282,7 +282,7 @@ export default function BusinessUnitsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Type</label>
-              <select
+              <select data-testid="select-admin-business-config-units-9"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -304,7 +304,7 @@ export default function BusinessUnitsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select
+              <select data-testid="select-admin-business-config-units-10"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -314,7 +314,7 @@ export default function BusinessUnitsPage() {
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button data-testid="btn-set-show-form-admin-business-config-units" type="button" variant="outline" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>
@@ -336,10 +336,10 @@ export default function BusinessUnitsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button data-testid="btn-set-delete-target-admin-business-config-units" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button data-testid="btn-delete-admin-business-config-units" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

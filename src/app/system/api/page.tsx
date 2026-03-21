@@ -82,7 +82,7 @@ export default function APIPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">API Optimization</h1>
                         <p className="text-gray-600">Monitor and optimize API performance</p>
                     </div>
-                    <Button onClick={handleOptimize} disabled={optimizing} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button data-testid="btn-optimize-system-api" onClick={handleOptimize} disabled={optimizing} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Zap className="w-4 h-4 mr-2" />
                         {optimizing ? 'Optimizing...' : 'Optimize API'}
                     </Button>

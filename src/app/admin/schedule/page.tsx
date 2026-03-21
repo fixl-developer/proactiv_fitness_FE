@@ -27,19 +27,19 @@ export default function SchedulePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Link href="/admin/schedule/classes" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                <Link data-testid="link-admin-schedule-classes" href="/admin/schedule/classes" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                     <h3 className="text-lg font-semibold mb-2">Classes</h3>
                     <p className="text-gray-600">Manage class schedules</p>
                 </Link>
-                <Link href="/admin/schedule/assign-coaches" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                <Link data-testid="link-admin-schedule-assign-coaches" href="/admin/schedule/assign-coaches" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                     <h3 className="text-lg font-semibold mb-2">Assign Coaches</h3>
                     <p className="text-gray-600">Assign coaches to classes</p>
                 </Link>
-                <Link href="/admin/schedule/assign-rooms" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                <Link data-testid="link-admin-schedule-assign-rooms" href="/admin/schedule/assign-rooms" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                     <h3 className="text-lg font-semibold mb-2">Assign Rooms</h3>
                     <p className="text-gray-600">Assign rooms to classes</p>
                 </Link>
-                <Link href="/admin/schedule/conflicts" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                <Link data-testid="link-admin-schedule-conflicts" href="/admin/schedule/conflicts" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                     <h3 className="text-lg font-semibold mb-2">Conflicts</h3>
                     <p className="text-gray-600">View scheduling conflicts</p>
                 </Link>

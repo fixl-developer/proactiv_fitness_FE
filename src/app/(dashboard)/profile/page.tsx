@@ -131,7 +131,7 @@ function ProfilePageContent() {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
+                <form data-testid="form-(dashboard)-profile" onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -231,7 +231,7 @@ function ProfilePageContent() {
                 </div>
 
                 {isEditingPassword && (
-                    <form
+                    <form data-testid="form-(dashboard)-profile"
                         onSubmit={handleSubmitPassword(onSubmitPassword)}
                         className="space-y-4"
                     >

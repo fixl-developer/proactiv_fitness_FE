@@ -62,7 +62,7 @@ export default function IntegrationAnalyticsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration Analytics</h1>
                         <p className="text-gray-600">Performance and usage metrics</p>
                     </div>
-                    <Button onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
+                    <Button data-testid="btn-router-integrations-id-analytics" onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
                         Back to Integration
                     </Button>
                 </div>

@@ -113,7 +113,7 @@ function LoginContent() {
     return (
         <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 overflow-auto">
             {/* Back to Home Button */}
-            <Link
+            <Link data-testid="link-home"
                 href="/"
                 className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-sm hover:bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 group"
             >
@@ -166,7 +166,7 @@ function LoginContent() {
                             <div className="mb-5 p-3.5 bg-blue-50 border border-blue-100 rounded-xl text-sm">
                                 <p className="text-blue-800 font-medium mb-2.5">You&apos;re already signed in.</p>
                                 <div className="flex gap-2">
-                                    <button type="button" onClick={() => {
+                                    <button data-testid="btn-login-1" type="button" onClick={() => {
                                         const userRole = role?.toUpperCase();
                                         if (userRole === 'PARENT') router.push('/parent/dashboard');
                                         else if (userRole === 'USER') router.push('/user/dashboard');
@@ -176,7 +176,7 @@ function LoginContent() {
                                         className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors">
                                         Continue
                                     </button>
-                                    <button type="button" onClick={() => logout()}
+                                    <button data-testid="btn-login-2" type="button" onClick={() => logout()}
                                         className="flex-1 bg-white text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors border border-gray-200">
                                         Switch Account
                                     </button>
@@ -204,7 +204,7 @@ function LoginContent() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button type="button" onClick={() => {
+                                    <button data-testid="btn-login-3" type="button" onClick={() => {
                                         try {
                                             const saved = JSON.parse(localStorage.getItem('savedSession') || '{}');
                                             // Restore tokens and user to localStorage
@@ -244,7 +244,7 @@ function LoginContent() {
                                         className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
                                         Continue to Dashboard
                                     </button>
-                                    <button type="button" onClick={() => {
+                                    <button data-testid="btn-login-4" type="button" onClick={() => {
                                         localStorage.removeItem('savedSession');
                                         setSavedSession(null);
                                     }}
@@ -270,7 +270,7 @@ function LoginContent() {
                             )}
                         </AnimatePresence>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                        <form data-testid="form-login" onSubmit={handleSubmit} className="space-y-5">
                             {/* Error Message */}
                             {formErrors.general && (
                                 <motion.div
@@ -287,7 +287,7 @@ function LoginContent() {
                                 <label className="block text-sm font-semibold text-gray-700">Email Address</label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
-                                    <input
+                                    <input data-testid="input-email-login"
                                         type="email"
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -311,7 +311,7 @@ function LoginContent() {
                                         placeholder="Enter your password"
                                         disabled={isLoading}
                                     />
-                                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    <button data-testid="btn-login-5" type="button" onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                         disabled={isLoading}>
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -321,7 +321,7 @@ function LoginContent() {
 
                             {/* Forgot Password */}
                             <div className="flex justify-end pt-2">
-                                <button type="button" onClick={() => router.push('/forgot-password')}
+                                <button data-testid="btn-login-6" type="button" onClick={() => router.push('/forgot-password')}
                                     className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
                                     Forgot password?
                                 </button>
@@ -355,14 +355,14 @@ function LoginContent() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <Link
+                            <Link data-testid="link-register"
                                 href="/register"
                                 className="flex items-center justify-center gap-2 py-3 border-2 border-blue-500 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors text-sm"
                             >
                                 <Users className="w-4 h-4" />
                                 Parent Account
                             </Link>
-                            <Link
+                            <Link data-testid="link-account-register"
                                 href="/account/register"
                                 className="flex items-center justify-center gap-2 py-3 border-2 border-emerald-500 text-emerald-600 rounded-lg font-semibold hover:bg-emerald-50 transition-colors text-sm"
                             >
@@ -376,7 +376,7 @@ function LoginContent() {
                     <div className="text-center mt-6">
                         <p className="text-sm text-gray-600">
                             Staff member?{' '}
-                            <Link href="/login/staff" className="text-blue-600 font-medium hover:underline">
+                            <Link data-testid="link-login-staff" href="/login/staff" className="text-blue-600 font-medium hover:underline">
                                 Staff Login
                             </Link>
                         </p>

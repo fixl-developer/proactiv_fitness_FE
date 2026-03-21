@@ -103,7 +103,7 @@ export default function RegionalLocationsPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select
+                        <select data-testid="select-admin-regional-locations-1"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

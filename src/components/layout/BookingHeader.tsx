@@ -64,7 +64,7 @@ const BookingHeader = () => {
                                 />
                             </div>
                         ) : (
-                            <Link href="/" className="flex items-center">
+                            <Link data-testid="link-home" href="/" className="flex items-center">
                                 <Image
                                     src="/images/colorlogo.webp"
                                     alt="ProActive Sports"

@@ -484,11 +484,11 @@ const AdminCustomersPage = () => {
 
             {/* Quick Actions */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/parents'}>
+                <Button data-testid="btn-window-admin-customers" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/parents'}>
                     <Users className="w-5 h-5" />
                     <span className="text-sm">Manage Parents</span>
                 </Button>
-                <Button variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/assessments'}>
+                <Button data-testid="btn-window-admin-customers" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/assessments'}>
                     <Target className="w-5 h-5" />
                     <span className="text-sm">View Assessments</span>
                 </Button>

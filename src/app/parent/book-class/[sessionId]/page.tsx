@@ -254,7 +254,7 @@ const BookClassPage = () => {
                             {/* Payment Method */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                                <select
+                                <select data-testid="select-parent-book-class-id-1"
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

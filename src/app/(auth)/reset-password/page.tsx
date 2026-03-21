@@ -78,7 +78,7 @@ function ResetPasswordForm() {
 
                 {/* Form Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <form data-testid="form-reset-password" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                         {/* New Password */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -172,7 +172,7 @@ function ResetPasswordForm() {
 
                     {/* Back to Login */}
                     <div className="mt-6 text-center">
-                        <Link href="/login" className="text-primary hover:underline">
+                        <Link data-testid="link-login" href="/login" className="text-primary hover:underline">
                             Back to Login
                         </Link>
                     </div>

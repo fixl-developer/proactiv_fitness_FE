@@ -202,7 +202,7 @@ export default function InventoryManagementPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select
+                        <select data-testid="select-admin-franchise-inventory-1"
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -213,7 +213,7 @@ export default function InventoryManagementPage() {
                                 </option>
                             ))}
                         </select>
-                        <select
+                        <select data-testid="select-admin-franchise-inventory-2"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

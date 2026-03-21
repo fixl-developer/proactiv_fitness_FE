@@ -260,7 +260,7 @@ const BookPartyPage = () => {
 
                             {/* Booking Form */}
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Party Details</h3>
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                            <form data-testid="form-book-party" onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -295,7 +295,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Child's Age *
                                         </label>
-                                        <select
+                                        <select data-testid="select-book-party-1"
                                             name="childAge"
                                             value={formData.childAge}
                                             onChange={handleInputChange}
@@ -312,7 +312,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Number of Children *
                                         </label>
-                                        <select
+                                        <select data-testid="select-book-party-2"
                                             name="numberOfChildren"
                                             value={formData.numberOfChildren}
                                             onChange={handleInputChange}
@@ -374,7 +374,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Preferred Time *
                                         </label>
-                                        <select
+                                        <select data-testid="select-book-party-3"
                                             name="partyTime"
                                             value={formData.partyTime}
                                             onChange={handleInputChange}
@@ -392,7 +392,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Location *
                                         </label>
-                                        <select
+                                        <select data-testid="select-book-party-4"
                                             name="location"
                                             value={formData.location}
                                             onChange={handleInputChange}
@@ -471,7 +471,7 @@ const BookPartyPage = () => {
                                 <p className="text-sm text-gray-600 mb-2">
                                     Need help choosing?
                                 </p>
-                                <Link href="/contact" className="text-purple-600 hover:text-purple-700 font-medium">
+                                <Link data-testid="link-contact" href="/contact" className="text-purple-600 hover:text-purple-700 font-medium">
                                     Contact us for assistance
                                 </Link>
                             </div>

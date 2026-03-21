@@ -254,7 +254,7 @@ const SecurityEventsPage = () => {
                         </div>
 
                         {/* Event Type Filter */}
-                        <select
+                        <select data-testid="select-admin-audit-security-1"
                             value={selectedEventType}
                             onChange={(e) => setSelectedEventType(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +267,7 @@ const SecurityEventsPage = () => {
                         </select>
 
                         {/* Severity Filter */}
-                        <select
+                        <select data-testid="select-admin-audit-security-2"
                             value={selectedSeverity}
                             onChange={(e) => setSelectedSeverity(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -64,7 +64,7 @@ export default function AIAnalyticsPage() {
                                 <Settings className="h-4 w-4 mr-2" />
                                 Settings
                             </Button>
-                            <Button variant="outline" size="sm" onClick={handleLogout}>
+                            <Button data-testid="btn-logout-admin-ai-analytics" variant="outline" size="sm" onClick={handleLogout}>
                                 <LogOut className="h-4 w-4 mr-2" />
                                 Logout
                             </Button>

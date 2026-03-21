@@ -260,7 +260,7 @@ const UserActivityLogsPage = () => {
                         </div>
 
                         {/* Date Range */}
-                        <select
+                        <select data-testid="select-admin-audit-users-1"
                             value={dateRange}
                             onChange={(e) => setDateRange(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

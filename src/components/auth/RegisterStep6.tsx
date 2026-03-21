@@ -33,7 +33,7 @@ export function RegisterStep6({
     });
 
     return (
-        <form onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form data-testid="form-components-auth-RegisterStep6" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900">Almost Done!</h2>

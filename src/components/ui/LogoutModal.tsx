@@ -25,7 +25,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                <div data-testid="modal-logout" className="fixed inset-0 z-[9999] flex items-center justify-center">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -45,6 +45,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
                     >
                         {/* Close button */}
                         <button
+                            data-testid="btn-close-logout-modal"
                             onClick={onClose}
                             className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-10"
                         >
@@ -66,6 +67,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
                         <div className="px-6 pb-6 space-y-2.5">
                             {/* Save & Logout */}
                             <button
+                                data-testid="btn-save-logout"
                                 onClick={onSaveAndLogout}
                                 className="w-full flex items-center gap-3 px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors group"
                             >
@@ -80,6 +82,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
 
                             {/* Permanent Logout */}
                             <button
+                                data-testid="btn-permanent-logout"
                                 onClick={onPermanentLogout}
                                 className="w-full flex items-center gap-3 px-4 py-3 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors group"
                             >
@@ -94,6 +97,7 @@ export default function LogoutModal({ isOpen, onClose, onSaveAndLogout, onPerman
 
                             {/* Cancel */}
                             <button
+                                data-testid="btn-cancel-logout"
                                 onClick={onClose}
                                 className="w-full py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                             >

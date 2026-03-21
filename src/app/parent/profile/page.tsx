@@ -175,17 +175,17 @@ const ProfilePage = () => {
                     <p className="text-gray-600">Manage your account information and preferences</p>
                 </div>
                 {!isEditing ? (
-                    <Button onClick={handleEdit} className="flex items-center gap-2">
+                    <Button data-testid="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">
                         <Edit className="w-4 h-4" />
                         Edit Profile
                     </Button>
                 ) : (
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleCancel} className="flex items-center gap-2">
+                        <Button data-testid="btn-cancel-parent-profile" variant="outline" onClick={handleCancel} className="flex items-center gap-2">
                             <X className="w-4 h-4" />
                             Cancel
                         </Button>
-                        <Button onClick={handleSave} className="flex items-center gap-2">
+                        <Button data-testid="btn-save-parent-profile" onClick={handleSave} className="flex items-center gap-2">
                             <Save className="w-4 h-4" />
                             Save Changes
                         </Button>

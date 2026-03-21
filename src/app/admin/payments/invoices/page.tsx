@@ -280,7 +280,7 @@ const InvoicesRefundsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <select
+                            <select data-testid="select-admin-payments-invoices-1"
                                 value={selectedType}
                                 onChange={(e) => setSelectedType(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -289,7 +289,7 @@ const InvoicesRefundsPage = () => {
                                 <option value="invoice">Invoices</option>
                                 <option value="refund">Refunds</option>
                             </select>
-                            <select
+                            <select data-testid="select-admin-payments-invoices-2"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"

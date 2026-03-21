@@ -215,7 +215,7 @@ export default function FranchiseSettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                                    <select
+                                    <select data-testid="select-admin-franchise-settings-1"
                                         value={settings.timezone}
                                         onChange={(e) => handleInputChange('timezone', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -228,7 +228,7 @@ export default function FranchiseSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                                    <select
+                                    <select data-testid="select-admin-franchise-settings-2"
                                         value={settings.currency}
                                         onChange={(e) => handleInputChange('currency', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

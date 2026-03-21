@@ -168,7 +168,7 @@ const CoachStudentsPage = () => {
                             />
                         </div>
                         <div className="flex gap-2">
-                            <select
+                            <select data-testid="select-coach-students-1"
                                 value={filterLevel}
                                 onChange={(e) => setFilterLevel(e.target.value)}
                                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

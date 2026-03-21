@@ -106,7 +106,7 @@ export default function MyClassesPage() {
                     <p className="text-gray-600 mt-2">View and manage your class schedule</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                    <Button data-testid="btn-refresh-user-my-classes" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>

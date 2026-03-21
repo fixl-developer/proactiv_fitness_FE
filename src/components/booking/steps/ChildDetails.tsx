@@ -40,7 +40,7 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                     <label htmlFor="childAge" className="block text-sm font-medium text-gray-700 mb-2">
                         Child's Age *
                     </label>
-                    <select
+                    <select data-testid="select-components-booking-steps-ChildDetails-1"
                         id="childAge"
                         value={childAge}
                         onChange={(e) => onUpdate({ childAge: e.target.value })}

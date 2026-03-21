@@ -193,7 +193,7 @@ export default function PaymentGatewaysPage() {
           <h1 className="text-3xl font-bold text-gray-900">Payment Gateways</h1>
           <p className="text-gray-600 mt-2">Configure and manage payment gateway integrations</p>
         </div>
-        <Button onClick={() => openForm()}>
+        <Button data-testid="btn-open-form-admin-business-config-payments" onClick={() => openForm()}>
           <Plus className="w-4 h-4 mr-2" />
           Add Gateway
         </Button>
@@ -239,7 +239,7 @@ export default function PaymentGatewaysPage() {
               <p className="text-gray-500 text-lg">No payment gateways configured</p>
               <p className="text-gray-400 mt-1">Payment gateways are typically configured via environment variables.</p>
               <p className="text-gray-400">You can add gateway records here for tracking and management.</p>
-              <Button className="mt-4" onClick={() => openForm()}>
+              <Button data-testid="btn-open-form-admin-business-config-payments" className="mt-4" onClick={() => openForm()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Gateway
               </Button>
@@ -316,12 +316,12 @@ export default function PaymentGatewaysPage() {
                     </Button>
                     <div className="flex gap-2">
                       {!gateway.isDefault && (
-                        <Button variant="outline" size="sm" className="flex-1" onClick={() => handleSetDefault(gateway.id)}>
+                        <Button data-testid="btn-set-default-admin-business-config-payments" variant="outline" size="sm" className="flex-1" onClick={() => handleSetDefault(gateway.id)}>
                           <Star className="w-4 h-4 mr-1" />
                           Set Default
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => openForm(gateway)}>
+                      <Button data-testid="btn-open-form-admin-business-config-payments" variant="outline" size="sm" onClick={() => openForm(gateway)}>
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
@@ -382,10 +382,10 @@ export default function PaymentGatewaysPage() {
                 : 'Configure a new payment gateway integration.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-payments" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Gateway Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-payments"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -396,7 +396,7 @@ export default function PaymentGatewaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Provider</label>
-              <select
+              <select data-testid="select-admin-business-config-payments-11"
                 value={formData.provider}
                 onChange={(e) => setFormData({ ...formData, provider: e.target.value as 'stripe' | 'paypal' | 'square' })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -410,7 +410,7 @@ export default function PaymentGatewaysPage() {
               <label className="block text-sm font-medium mb-2">
                 Webhook URL <span className="text-gray-400 font-normal">(optional)</span>
               </label>
-              <input
+              <input data-testid="input-url-admin-business-config-payments"
                 type="url"
                 value={formData.webhookUrl}
                 onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
@@ -420,7 +420,7 @@ export default function PaymentGatewaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select
+              <select data-testid="select-admin-business-config-payments-12"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -430,7 +430,7 @@ export default function PaymentGatewaysPage() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <input
+              <input data-testid="input-checkbox-admin-business-config-payments"
                 type="checkbox"
                 id="isDefault"
                 checked={formData.isDefault}
@@ -442,7 +442,7 @@ export default function PaymentGatewaysPage() {
               </label>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button data-testid="btn-set-show-form-admin-business-config-payments" type="button" variant="outline" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={saving}>
@@ -464,10 +464,10 @@ export default function PaymentGatewaysPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button data-testid="btn-set-delete-target-admin-business-config-payments" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button data-testid="btn-delete-admin-business-config-payments" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

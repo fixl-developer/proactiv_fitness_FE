@@ -763,10 +763,10 @@ const TeamPage = () => {
                             transition={{ delay: 0.4, duration: 0.8 }}
                             className="flex flex-col sm:flex-row gap-4 justify-center"
                         >
-                            <Link href="/careers" className="btn-secondary hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                            <Link data-testid="link-careers" href="/careers" className="btn-secondary hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                                 View Open Positions
                             </Link>
-                            <Link href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
+                            <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
                                 Contact Us
                             </Link>
                         </motion.div>

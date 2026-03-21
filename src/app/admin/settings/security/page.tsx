@@ -466,7 +466,7 @@ export default function SecuritySettingsPage() {
                     <TabsContent value="api" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">API Keys</h3>
-                            <Button onClick={handleGenerateApiKey}>
+                            <Button data-testid="btn-generate-api-key-admin-settings-security" onClick={handleGenerateApiKey}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Generate API Key
                             </Button>

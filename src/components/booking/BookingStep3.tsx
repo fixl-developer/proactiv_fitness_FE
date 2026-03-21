@@ -52,7 +52,7 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form data-testid="form-components-booking-BookingStep3" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Payment Method Selection */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">

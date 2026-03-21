@@ -118,7 +118,7 @@ const WaitlistPage = () => {
                             <p className="text-gray-600 mb-4">
                                 You're not on any waitlists. When a class is full, you can join the waitlist to be notified when a spot opens up.
                             </p>
-                            <Button onClick={() => router.push('/parent/browse-classes')}>
+                            <Button data-testid="btn-router-parent-waitlist" onClick={() => router.push('/parent/browse-classes')}>
                                 Browse Classes
                             </Button>
                         </CardContent>

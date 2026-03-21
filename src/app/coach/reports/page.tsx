@@ -69,7 +69,7 @@ const CoachReportsPage = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Report Type
                             </label>
-                            <select
+                            <select data-testid="select-coach-reports-1"
                                 value={reportType}
                                 onChange={(e) => setReportType(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -84,7 +84,7 @@ const CoachReportsPage = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Date Range
                             </label>
-                            <select
+                            <select data-testid="select-coach-reports-2"
                                 value={dateRange}
                                 onChange={(e) => setDateRange(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

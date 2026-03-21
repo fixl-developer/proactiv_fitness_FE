@@ -149,7 +149,7 @@ export default function LocationAttendancePage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select
+                        <select data-testid="select-admin-location-attendance-1"
                             value={filterClass}
                             onChange={(e) => setFilterClass(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -177,11 +177,11 @@ const BrowseClassesPage = () => {
                         </div>
                     </div>
                     <div className="flex gap-3 mt-4">
-                        <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
+                        <Button data-testid="btn-search-parent-browse-classes" onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
                             <Search className="w-4 h-4 mr-2" />
                             Search
                         </Button>
-                        <Button onClick={handleReset} variant="outline">
+                        <Button data-testid="btn-reset-parent-browse-classes" onClick={handleReset} variant="outline">
                             Reset
                         </Button>
                     </div>

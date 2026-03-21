@@ -176,7 +176,7 @@ export default function FinancialLedgerPage() {
           <p className="text-sm text-amber-800">
             Backend endpoint not available - showing sample data. Connect the backend for live ledger entries.
           </p>
-          <Button variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
+          <Button data-testid="btn-fetch-data-admin-finance-ledger" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
             <RotateCcw className="h-3.5 w-3.5" /> Retry
           </Button>
         </motion.div>
@@ -191,7 +191,7 @@ export default function FinancialLedgerPage() {
           <h1 className="text-2xl font-bold text-gray-900">Financial Ledger</h1>
           <p className="text-gray-500 text-sm mt-1">Double-entry bookkeeping and transaction records</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
+        <Button data-testid="btn-export-c-s-v-admin-finance-ledger" variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
           <Download className="h-4 w-4" /> Export to CSV
         </Button>
       </motion.div>
@@ -248,7 +248,7 @@ export default function FinancialLedgerPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
+                  <input data-testid="input-text-admin-finance-ledger"
                     type="text"
                     placeholder="Search entries..."
                     className="pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-[200px]"
@@ -272,14 +272,14 @@ export default function FinancialLedgerPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <input
+                  <input data-testid="input-date-admin-finance-ledger"
                     type="date"
                     className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
                   <span className="text-gray-400 text-sm">to</span>
-                  <input
+                  <input data-testid="input-date-admin-finance-ledger"
                     type="date"
                     className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={dateTo}

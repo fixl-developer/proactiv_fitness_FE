@@ -95,7 +95,7 @@ export default function ReportBuilderPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-                                <select
+                                <select data-testid="select-advanced-reports-builder-3"
                                     value={reportType}
                                     onChange={(e) => setReportType(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -108,11 +108,11 @@ export default function ReportBuilderPage() {
                             </div>
 
                             <div className="flex gap-3">
-                                <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button data-testid="btn-save-advanced-reports-builder" onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
                                     <Save className="w-4 h-4 mr-2" />
                                     {saving ? 'Saving...' : 'Save Report'}
                                 </Button>
-                                <Button variant="outline" onClick={() => router.push('/advanced/reports')}>
+                                <Button data-testid="btn-router-advanced-reports-builder" variant="outline" onClick={() => router.push('/advanced/reports')}>
                                     Cancel
                                 </Button>
                             </div>

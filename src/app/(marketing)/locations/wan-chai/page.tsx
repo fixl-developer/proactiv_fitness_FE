@@ -506,18 +506,18 @@ const WanChaiLocationPage = () => {
                             className="bg-white rounded-2xl p-8 text-gray-900"
                         >
                             <h3 className="text-2xl font-bold mb-6">Book Your Free Trial</h3>
-                            <form className="space-y-4">
+                            <form data-testid="form-(marketing)-locations-wan-chai" className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Parent Name</label>
-                                    <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input data-testid="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Child Name</label>
-                                    <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input data-testid="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Child Age</label>
-                                    <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent">
+                                    <select data-testid="select-(marketing)-locations-wan-chai-4" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent">
                                         <option>2-3 years</option>
                                         <option>4-6 years</option>
                                         <option>7-10 years</option>
@@ -526,7 +526,7 @@ const WanChaiLocationPage = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Phone Number</label>
-                                    <input type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input data-testid="input-tel-(marketing)-locations-wan-chai" type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
                                 <button type="submit" className="w-full bg-secondary-600 text-white py-3 rounded-lg font-semibold hover:bg-secondary-700 transition-colors duration-300">
                                     Book Free Trial

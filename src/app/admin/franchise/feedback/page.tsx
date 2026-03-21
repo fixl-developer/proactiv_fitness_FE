@@ -261,7 +261,7 @@ export default function CustomerFeedbackPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select
+                        <select data-testid="select-admin-franchise-feedback-1"
                             value={filterRating}
                             onChange={(e) => setFilterRating(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -273,7 +273,7 @@ export default function CustomerFeedbackPage() {
                             <option value="2">2 Stars</option>
                             <option value="1">1 Star</option>
                         </select>
-                        <select
+                        <select data-testid="select-admin-franchise-feedback-2"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

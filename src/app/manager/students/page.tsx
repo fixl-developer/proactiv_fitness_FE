@@ -196,7 +196,7 @@ const ManagerStudentsPage = () => {
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
                             </div>
-                            <select
+                            <select data-testid="select-manager-students-1"
                                 value={selectedFilter}
                                 onChange={(e) => setSelectedFilter(e.target.value as any)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"

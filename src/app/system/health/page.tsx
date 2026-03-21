@@ -96,7 +96,7 @@ export default function HealthPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">System Health Dashboard</h1>
                         <p className="text-gray-600">Monitor overall system status</p>
                     </div>
-                    <Button onClick={loadHealthData} variant="outline">
+                    <Button data-testid="btn-load-health-data-system-health" onClick={loadHealthData} variant="outline">
                         <Clock className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>

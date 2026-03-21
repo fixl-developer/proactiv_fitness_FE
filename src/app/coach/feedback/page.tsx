@@ -238,7 +238,7 @@ const CoachFeedbackPage = () => {
                     <div className="flex items-center justify-between">
                         <CardTitle>Feedback History</CardTitle>
                         <div className="flex gap-2">
-                            <select
+                            <select data-testid="select-coach-feedback-1"
                                 value={filterType}
                                 onChange={(e) => setFilterType(e.target.value)}
                                 className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

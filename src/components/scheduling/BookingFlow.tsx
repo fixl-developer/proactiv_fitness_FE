@@ -225,7 +225,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return (
         <div className="max-w-2xl mx-auto p-6">
             <div className="flex items-center justify-between mb-6">
-                <Button variant="ghost" onClick={onCancel}>
+                <Button data-testid="btn-on-cancel-components-scheduling-BookingFlow" variant="ghost" onClick={onCancel}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Schedule
                 </Button>
@@ -604,7 +604,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                         <p><strong>Coach:</strong> {selectedSlot.coach}</p>
                                     </div>
                                 </div>
-                                <Button onClick={() => window.location.href = '/parent/dashboard'} className="w-full">
+                                <Button data-testid="btn-window-components-scheduling-BookingFlow" onClick={() => window.location.href = '/parent/dashboard'} className="w-full">
                                     Go to My Bookings
                                 </Button>
                             </CardContent>
@@ -626,7 +626,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                     </Button>
 
                     {currentStep < 3 ? (
-                        <Button onClick={nextStep}>
+                        <Button data-testid="btn-next-step-components-scheduling-BookingFlow" onClick={nextStep}>
                             Next
                             <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>

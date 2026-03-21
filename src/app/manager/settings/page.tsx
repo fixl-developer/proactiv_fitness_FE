@@ -147,7 +147,7 @@ const ManagerSettingsPage = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <select data-testid="select-manager-settings-7" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
                                         <option value="active">Active</option>
                                         <option value="maintenance">Maintenance</option>
                                         <option value="closed">Closed</option>
@@ -322,21 +322,21 @@ const ManagerSettingsPage = () => {
                                         <h4 className="font-medium">Email Notifications</h4>
                                         <p className="text-sm text-gray-600">Receive updates via email</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">SMS Notifications</h4>
                                         <p className="text-sm text-gray-600">Receive updates via SMS</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Class Reminders</h4>
                                         <p className="text-sm text-gray-600">Send reminders to students</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                             </div>
                         </CardContent>
@@ -362,21 +362,21 @@ const ManagerSettingsPage = () => {
                                         <h4 className="font-medium">Schedule Management</h4>
                                         <p className="text-sm text-gray-600">Allow staff to modify schedules</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Student Records</h4>
                                         <p className="text-sm text-gray-600">Access to student information</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Payment Processing</h4>
                                         <p className="text-sm text-gray-600">Handle payment transactions</p>
                                     </div>
-                                    <input type="checkbox" className="w-4 h-4" />
+                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" />
                                 </div>
                             </div>
                         </CardContent>

@@ -321,7 +321,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                            <select
+                            <select data-testid="select-components-booking-BookingManagement-2"
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -336,7 +336,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Program Type</label>
-                            <select
+                            <select data-testid="select-components-booking-BookingManagement-3"
                                 value={filters.programType}
                                 onChange={(e) => setFilters({ ...filters, programType: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -351,7 +351,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            <select
+                            <select data-testid="select-components-booking-BookingManagement-4"
                                 value={filters.location}
                                 onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -363,7 +363,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Payment</label>
-                            <select
+                            <select data-testid="select-components-booking-BookingManagement-5"
                                 value={filters.paymentStatus}
                                 onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -432,7 +432,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                                         <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
                                         <p className="text-gray-600">{selectedBooking.bookingNumber}</p>
                                     </div>
-                                    <Button variant="outline" onClick={() => setShowDetails(false)}>
+                                    <Button data-testid="btn-set-show-details-components-booking-BookingManagement" variant="outline" onClick={() => setShowDetails(false)}>
                                         <XCircle className="w-4 h-4" />
                                     </Button>
                                 </div>

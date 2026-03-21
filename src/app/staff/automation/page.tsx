@@ -91,7 +91,7 @@ export default function Automation() {
                                             }`}>
                                             {rule.isActive ? 'Active' : 'Inactive'}
                                         </button>
-                                        <button onClick={() => handleToggle(rule.id)} className="text-gray-400 hover:text-gray-600">
+                                        <button data-testid="btn-staff-automation-1" onClick={() => handleToggle(rule.id)} className="text-gray-400 hover:text-gray-600">
                                             <ToggleRight className="w-5 h-5" />
                                         </button>
                                     </div>

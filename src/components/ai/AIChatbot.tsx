@@ -379,7 +379,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Program</label>
-                                            <select
+                                            <select data-testid="select-components-ai-AIChatbot-1"
                                                 value={bookingData.program || ''}
                                                 onChange={(e) => handleBookingInput('program', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -393,7 +393,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Location</label>
-                                            <select
+                                            <select data-testid="select-components-ai-AIChatbot-2"
                                                 value={bookingData.location || ''}
                                                 onChange={(e) => handleBookingInput('location', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -417,7 +417,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Time Slot</label>
-                                            <select
+                                            <select data-testid="select-components-ai-AIChatbot-3"
                                                 value={bookingData.timeSlot || ''}
                                                 onChange={(e) => handleBookingInput('timeSlot', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"

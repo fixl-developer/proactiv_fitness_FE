@@ -135,7 +135,7 @@ const UserDashboard = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                    <Button data-testid="btn-refresh-user-dashboard" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
@@ -228,7 +228,7 @@ const UserDashboard = () => {
                             <CardTitle>Upcoming Classes</CardTitle>
                             <Badge>{upcomingClasses.length} classes</Badge>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => router.push('/user/my-classes')}>
+                        <Button data-testid="btn-router-user-dashboard" variant="outline" size="sm" onClick={() => router.push('/user/my-classes')}>
                             View All
                             <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
@@ -291,7 +291,7 @@ const UserDashboard = () => {
                                 <Activity className="w-5 h-5 text-blue-600" />
                                 <CardTitle>Skills Progress</CardTitle>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => router.push('/user/progress')}>
+                            <Button data-testid="btn-router-user-dashboard" variant="ghost" size="sm" onClick={() => router.push('/user/progress')}>
                                 View All
                             </Button>
                         </div>

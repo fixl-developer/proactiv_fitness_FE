@@ -254,7 +254,7 @@ export default function RevenueReportsPage() {
         >
           <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800">{error}</p>
-          <Button variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
+          <Button data-testid="btn-fetch-data-admin-finance-revenue" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
             <RotateCcw className="h-3.5 w-3.5" /> Retry
           </Button>
         </motion.div>
@@ -271,14 +271,14 @@ export default function RevenueReportsPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <input
+            <input data-testid="input-date-admin-finance-revenue"
               type="date"
               className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
             <span className="text-gray-400 text-sm">to</span>
-            <input
+            <input data-testid="input-date-admin-finance-revenue"
               type="date"
               className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={dateTo}
@@ -298,10 +298,10 @@ export default function RevenueReportsPage() {
               </button>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+          <Button data-testid="btn-export-admin-finance-revenue" variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
+          <Button data-testid="btn-fetch-data-admin-finance-revenue" variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
             <RotateCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>

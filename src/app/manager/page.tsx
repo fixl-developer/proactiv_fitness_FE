@@ -146,7 +146,7 @@ const ManagerHomePage = () => {
                         <Building2 className="w-3 h-3 mr-1" />
                         Cyberport Location
                     </Badge>
-                    <Button onClick={() => window.location.href = '/manager/dashboard'}>
+                    <Button data-testid="btn-window-manager" onClick={() => window.location.href = '/manager/dashboard'}>
                         <LayoutDashboard className="w-4 h-4 mr-2" />
                         Dashboard
                     </Button>

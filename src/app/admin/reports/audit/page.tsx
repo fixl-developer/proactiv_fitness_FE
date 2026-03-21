@@ -223,7 +223,7 @@ export default function AuditLogsPage() {
         >
           <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800">{error}</p>
-          <Button variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
+          <Button data-testid="btn-fetch-data-admin-reports-audit" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
             <RotateCcw className="h-3.5 w-3.5" /> Retry
           </Button>
         </motion.div>
@@ -248,7 +248,7 @@ export default function AuditLogsPage() {
             <span className={`text-xs font-medium ${isLive ? 'text-emerald-600' : 'text-gray-500'}`}>
               {isLive ? 'Live' : 'Paused'}
             </span>
-            <button
+            <button data-testid="btn-admin-reports-audit-6"
               onClick={() => setIsLive(!isLive)}
               className={`text-xs px-2 py-0.5 rounded border transition-colors ${
                 isLive ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
@@ -259,10 +259,10 @@ export default function AuditLogsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+          <Button data-testid="btn-export-admin-reports-audit" variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export Audit Log
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
+          <Button data-testid="btn-fetch-data-admin-reports-audit" variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
             <RotateCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
@@ -324,7 +324,7 @@ export default function AuditLogsPage() {
                   <Badge className="bg-gray-100 text-gray-600 ml-2">{filteredLogs.length} entries</Badge>
                 </CardTitle>
                 {(searchTerm || actionFilter !== 'All' || statusFilter !== 'All' || dateFrom || dateTo) && (
-                  <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs text-gray-500">
+                  <Button data-testid="btn-clear-filters-admin-reports-audit" variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs text-gray-500">
                     Clear Filters
                   </Button>
                 )}
@@ -332,7 +332,7 @@ export default function AuditLogsPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
+                  <input data-testid="input-text-admin-reports-audit"
                     type="text"
                     placeholder="Search logs..."
                     className="pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-[200px]"
@@ -369,14 +369,14 @@ export default function AuditLogsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <input
+                  <input data-testid="input-date-admin-reports-audit"
                     type="date"
                     className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
                   <span className="text-gray-400 text-sm">to</span>
-                  <input
+                  <input data-testid="input-date-admin-reports-audit"
                     type="date"
                     className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={dateTo}
@@ -487,7 +487,7 @@ export default function AuditLogsPage() {
                       : 'No audit events match the selected filters'}
                   </p>
                   {auditLogs.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={handleClearFilters} className="mt-2 text-blue-600">
+                    <Button data-testid="btn-clear-filters-admin-reports-audit" variant="ghost" size="sm" onClick={handleClearFilters} className="mt-2 text-blue-600">
                       Clear all filters
                     </Button>
                   )}

@@ -73,7 +73,7 @@ export default function FinancialReportsPage() {
                     <p className="text-gray-600 mt-1">Detailed financial analysis and insights</p>
                 </div>
                 <div className="flex gap-2">
-                    <select
+                    <select data-testid="select-admin-franchise-financial-reports-1"
                         value={timeRange}
                         onChange={(e) => setTimeRange(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

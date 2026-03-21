@@ -98,7 +98,7 @@ export default function CampaignBuilderPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Type</label>
-                                <select
+                                <select data-testid="select-marketing-campaigns-builder-3"
                                     value={campaignType}
                                     onChange={(e) => setCampaignType(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -111,11 +111,11 @@ export default function CampaignBuilderPage() {
                             </div>
 
                             <div className="flex gap-3">
-                                <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button data-testid="btn-save-marketing-campaigns-builder" onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white">
                                     <Save className="w-4 h-4 mr-2" />
                                     {saving ? 'Saving...' : 'Save Campaign'}
                                 </Button>
-                                <Button variant="outline" onClick={() => router.push('/marketing/campaigns')}>
+                                <Button data-testid="btn-router-marketing-campaigns-builder" variant="outline" onClick={() => router.push('/marketing/campaigns')}>
                                     Cancel
                                 </Button>
                             </div>

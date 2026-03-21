@@ -174,10 +174,10 @@ const PartiesPage = () => {
                             Professional hosting, exciting activities, and stress-free celebration for the whole family.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                            <Link href="#packages" className="btn-secondary">
+                            <Link data-testid="link-packages" href="#packages" className="btn-secondary">
                                 View Packages
                             </Link>
-                            <Link href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-pink-600">
+                            <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-pink-600">
                                 Book Your Party
                             </Link>
                         </div>
@@ -503,10 +503,10 @@ const PartiesPage = () => {
                         className="text-center"
                     >
                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                            <Link href="/contact" className="btn-primary">
+                            <Link data-testid="link-contact" href="/contact" className="btn-primary">
                                 Book Your Party
                             </Link>
-                            <Link href="/book-trial" className="btn-outline">
+                            <Link data-testid="link-book-trial" href="/book-trial" className="btn-outline">
                                 Try a Class First
                             </Link>
                         </div>
@@ -531,7 +531,7 @@ const PartiesPage = () => {
                             will create an unforgettable celebration that your family will treasure forever.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                            <Link href="/contact" className="bg-white text-pink-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                            <Link data-testid="link-contact" href="/contact" className="bg-white text-pink-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                 Book Now
                             </Link>
                             <a href="tel:+85212345678" className="border-2 border-white text-white hover:bg-white hover:text-pink-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">

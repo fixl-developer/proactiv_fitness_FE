@@ -289,7 +289,7 @@ const SOPDocumentsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <select
+                            <select data-testid="select-admin-ai-sop-1"
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -299,7 +299,7 @@ const SOPDocumentsPage = () => {
                                     <option key={category} value={category}>{category}</option>
                                 ))}
                             </select>
-                            <select
+                            <select data-testid="select-admin-ai-sop-2"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"

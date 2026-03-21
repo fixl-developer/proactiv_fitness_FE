@@ -254,7 +254,7 @@ const DataChangesPage = () => {
                         </div>
 
                         {/* Table Filter */}
-                        <select
+                        <select data-testid="select-admin-audit-data-1"
                             value={selectedTable}
                             onChange={(e) => setSelectedTable(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +267,7 @@ const DataChangesPage = () => {
                         </select>
 
                         {/* Operation Filter */}
-                        <select
+                        <select data-testid="select-admin-audit-data-2"
                             value={selectedOperation}
                             onChange={(e) => setSelectedOperation(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

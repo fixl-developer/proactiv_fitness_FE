@@ -219,7 +219,7 @@ const ManagerDashboard = () => {
                         <span className="text-xs sm:text-sm font-medium text-green-700">Live Data</span>
                     </div>
 
-                    <Button variant="outline" size="sm" onClick={() => setRefreshing(true)} disabled={refreshing}>
+                    <Button data-testid="btn-set-refreshing-manager-dashboard" variant="outline" size="sm" onClick={() => setRefreshing(true)} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>

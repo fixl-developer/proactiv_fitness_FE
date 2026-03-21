@@ -262,7 +262,7 @@ const SmartBookingForm = ({
                     </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form data-testid="form-components-ai-SmartBookingForm" onSubmit={handleSubmit} className="space-y-6">
                     {/* Basic Information */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
@@ -306,7 +306,7 @@ const SmartBookingForm = ({
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Child's Age *
                             </label>
-                            <select
+                            <select data-testid="select-components-ai-SmartBookingForm-1"
                                 name="childAge"
                                 value={formData.childAge}
                                 onChange={handleInputChange}
@@ -323,7 +323,7 @@ const SmartBookingForm = ({
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Experience Level
                             </label>
-                            <select
+                            <select data-testid="select-components-ai-SmartBookingForm-2"
                                 name="experience"
                                 value={formData.experience}
                                 onChange={handleInputChange}
@@ -405,7 +405,7 @@ const SmartBookingForm = ({
                             </label>
                             <div className="relative">
                                 <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                <select
+                                <select data-testid="select-components-ai-SmartBookingForm-3"
                                     name="location"
                                     value={formData.location}
                                     onChange={handleInputChange}
@@ -487,7 +487,7 @@ const SmartBookingForm = ({
                             </label>
                             <div className="relative">
                                 <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                <select
+                                <select data-testid="select-components-ai-SmartBookingForm-4"
                                     name="preferredTime"
                                     value={formData.preferredTime}
                                     onChange={handleInputChange}

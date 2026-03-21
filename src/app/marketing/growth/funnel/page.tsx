@@ -61,7 +61,7 @@ export default function FunnelAnalysisPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Funnel Analysis</h1>
                         <p className="text-gray-600">Track user progression through your conversion funnel</p>
                     </div>
-                    <Button onClick={() => router.push('/marketing/growth')} variant="outline">
+                    <Button data-testid="btn-router-marketing-growth-funnel" onClick={() => router.push('/marketing/growth')} variant="outline">
                         Back to Overview
                     </Button>
                 </div>

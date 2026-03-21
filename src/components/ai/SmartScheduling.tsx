@@ -203,7 +203,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">Experience Level</label>
-                                    <select
+                                    <select data-testid="select-components-ai-SmartScheduling-1"
                                         value={filters.experienceLevel || ''}
                                         onChange={(e) => setFilters(prev => ({
                                             ...prev,
@@ -219,7 +219,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">Location</label>
-                                    <select
+                                    <select data-testid="select-components-ai-SmartScheduling-2"
                                         value={filters.location || ''}
                                         onChange={(e) => setFilters(prev => ({
                                             ...prev,

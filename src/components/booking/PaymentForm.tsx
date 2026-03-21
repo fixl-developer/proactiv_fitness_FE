@@ -112,7 +112,7 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form data-testid="form-components-booking-PaymentForm" onSubmit={handleSubmit} className="space-y-6">
             {/* Amount Display */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
                 <p className="text-sm opacity-90 mb-1">Total Amount</p>
@@ -248,7 +248,7 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Month
                             </label>
-                            <select
+                            <select data-testid="select-components-booking-PaymentForm-1"
                                 value={expiryMonth}
                                 onChange={(e) => setExpiryMonth(e.target.value)}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -266,7 +266,7 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Year
                             </label>
-                            <select
+                            <select data-testid="select-components-booking-PaymentForm-2"
                                 value={expiryYear}
                                 onChange={(e) => setExpiryYear(e.target.value)}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

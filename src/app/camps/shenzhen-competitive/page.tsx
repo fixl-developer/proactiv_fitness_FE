@@ -156,10 +156,10 @@ const ShenzhenCompetitivePage = () => {
                 Experience world-class facilities, international coaching standards, and intensive skill development.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link href="#programs" className="btn-secondary">
+                <Link data-testid="link-programs" href="#programs" className="btn-secondary">
                   View Programs
                 </Link>
-                <Link href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-red-600">
+                <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-red-600">
                   Apply Now
                 </Link>
               </div>
@@ -354,7 +354,7 @@ const ShenzhenCompetitivePage = () => {
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-red-200">
-                  <Link href="/contact" className="btn-primary w-full text-center block">
+                  <Link data-testid="link-contact" href="/contact" className="btn-primary w-full text-center block">
                     Start Application
                   </Link>
                 </div>
@@ -547,10 +547,10 @@ const ShenzhenCompetitivePage = () => {
                 the best gymnasts in the region. Limited spots available for serious athletes only.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <Link href="/contact" className="bg-white text-red-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                <Link data-testid="link-contact" href="/contact" className="bg-white text-red-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                   Apply Today
                 </Link>
-                <Link href="/book-assessment" className="border-2 border-white text-white hover:bg-white hover:text-red-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                <Link data-testid="link-book-assessment" href="/book-assessment" className="border-2 border-white text-white hover:bg-white hover:text-red-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                   Schedule Assessment
                 </Link>
               </div>

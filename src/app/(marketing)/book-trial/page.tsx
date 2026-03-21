@@ -78,7 +78,7 @@ export default function BookTrialPage() {
                                 </p>
                             </div>
 
-                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <form data-testid="form-(marketing)-book-trial" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                                 {/* Parent Information */}
                                 <div>
                                     <h3 className="text-xl font-semibold text-gray-900 mb-4">
@@ -177,7 +177,7 @@ export default function BookTrialPage() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Child's Age
                                             </label>
-                                            <select
+                                            <select data-testid="select-(marketing)-book-trial-1"
                                                 {...register('childAge')}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             >
@@ -209,7 +209,7 @@ export default function BookTrialPage() {
                                             </label>
                                             <div className="relative">
                                                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                                <select
+                                                <select data-testid="select-(marketing)-book-trial-2"
                                                     {...register('location')}
                                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                                                 >
@@ -231,7 +231,7 @@ export default function BookTrialPage() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Program
                                             </label>
-                                            <select
+                                            <select data-testid="select-(marketing)-book-trial-3"
                                                 {...register('program')}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             >
@@ -270,7 +270,7 @@ export default function BookTrialPage() {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Preferred Time
                                             </label>
-                                            <select
+                                            <select data-testid="select-(marketing)-book-trial-4"
                                                 {...register('preferredTime')}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             >

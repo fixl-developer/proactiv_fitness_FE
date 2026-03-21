@@ -70,7 +70,7 @@ export default function WorkflowsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Workflows</h1>
                         <p className="text-gray-600">Manage automation workflows</p>
                     </div>
-                    <Button onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button data-testid="btn-router-advanced-workflows" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Workflow
                     </Button>
@@ -135,7 +135,7 @@ export default function WorkflowsPage() {
                     <div className="text-center py-12">
                         <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">No workflows yet</p>
-                        <Button onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button data-testid="btn-router-advanced-workflows" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus className="w-4 h-4 mr-2" />
                             Create Your First Workflow
                         </Button>

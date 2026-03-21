@@ -172,7 +172,7 @@ const TermsPage = () => {
                         <h1 className="text-3xl font-bold text-gray-900">Term Management</h1>
                         <p className="text-gray-600 mt-2">Create and manage academic terms</p>
                     </div>
-                    <Button onClick={() => setShowForm(true)} className="bg-gradient-to-r from-blue-600 to-purple-600">
+                    <Button data-testid="btn-set-show-form-admin-terms" onClick={() => setShowForm(true)} className="bg-gradient-to-r from-blue-600 to-purple-600">
                         <Plus className="w-4 h-4 mr-2" />
                         New Term
                     </Button>
@@ -199,7 +199,7 @@ const TermsPage = () => {
                         <h2 className="text-xl font-bold text-gray-900 mb-4">
                             {editingId ? 'Edit Term' : 'Create New Term'}
                         </h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form data-testid="form-admin-terms" onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -218,7 +218,7 @@ const TermsPage = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Status
                                     </label>
-                                    <select
+                                    <select data-testid="select-admin-terms-4"
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -269,7 +269,7 @@ const TermsPage = () => {
                                 <Button type="submit" className="bg-gradient-to-r from-green-600 to-emerald-600">
                                     {editingId ? 'Update Term' : 'Create Term'}
                                 </Button>
-                                <Button type="button" onClick={resetForm} variant="outline">
+                                <Button data-testid="btn-reset-form-admin-terms" type="button" onClick={resetForm} variant="outline">
                                     Cancel
                                 </Button>
                             </div>
@@ -285,7 +285,7 @@ const TermsPage = () => {
                                 <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Terms Found</h3>
                                 <p className="text-gray-600 mb-4">Create your first term to get started</p>
-                                <Button onClick={() => setShowForm(true)}>Create Term</Button>
+                                <Button data-testid="btn-set-show-form-admin-terms" onClick={() => setShowForm(true)}>Create Term</Button>
                             </CardContent>
                         </Card>
                     ) : (

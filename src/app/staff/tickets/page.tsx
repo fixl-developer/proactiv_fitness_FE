@@ -85,13 +85,13 @@ export default function SupportTickets() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-                        <button onClick={handleSearch} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                        <button data-testid="btn-staff-tickets-1" onClick={handleSearch} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
                             Search
                         </button>
                     </div>
 
                     <div className="flex gap-4">
-                        <select
+                        <select data-testid="select-staff-tickets-2"
                             value={filters.status}
                             onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -103,7 +103,7 @@ export default function SupportTickets() {
                             <option value="closed">Closed</option>
                         </select>
 
-                        <select
+                        <select data-testid="select-staff-tickets-3"
                             value={filters.priority}
                             onChange={(e) => setFilters({ ...filters, priority: e.target.value, page: 1 })}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

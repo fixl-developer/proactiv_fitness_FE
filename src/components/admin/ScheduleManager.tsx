@@ -243,10 +243,10 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                             {schedule.price === 0 ? 'FREE' : `HK$${schedule.price}`}
                         </div>
                         <div className="flex space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => setSelectedSlot(schedule)}>
+                            <Button data-testid="btn-set-selected-slot-components-admin-ScheduleManager" size="sm" variant="outline" onClick={() => setSelectedSlot(schedule)}>
                                 <Eye className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setSelectedSlot(schedule)}>
+                            <Button data-testid="btn-set-selected-slot-components-admin-ScheduleManager" size="sm" variant="outline" onClick={() => setSelectedSlot(schedule)}>
                                 <Edit className="w-4 h-4" />
                             </Button>
                             {(userRole === 'ADMIN') && (
@@ -293,7 +293,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         <Upload className="w-4 h-4 mr-2" />
                         Import
                     </Button>
-                    <Button size="sm" onClick={() => setShowCreateModal(true)}>
+                    <Button data-testid="btn-set-show-create-modal-components-admin-ScheduleManager" size="sm" onClick={() => setShowCreateModal(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Schedule
                     </Button>
@@ -382,7 +382,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            <select
+                            <select data-testid="select-components-admin-ScheduleManager-5"
                                 value={filters.location}
                                 onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -394,7 +394,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Coach</label>
-                            <select
+                            <select data-testid="select-components-admin-ScheduleManager-6"
                                 value={filters.coach}
                                 onChange={(e) => setFilters({ ...filters, coach: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -407,7 +407,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Program Type</label>
-                            <select
+                            <select data-testid="select-components-admin-ScheduleManager-7"
                                 value={filters.programType}
                                 onChange={(e) => setFilters({ ...filters, programType: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -422,7 +422,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                            <select
+                            <select data-testid="select-components-admin-ScheduleManager-8"
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -477,7 +477,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No schedules found</h3>
                         <p className="text-gray-600 mb-4">Try adjusting your filters or create a new schedule.</p>
-                        <Button onClick={() => setShowCreateModal(true)}>
+                        <Button data-testid="btn-set-show-create-modal-components-admin-ScheduleManager" onClick={() => setShowCreateModal(true)}>
                             <Plus className="w-4 h-4 mr-2" />
                             Create Schedule
                         </Button>

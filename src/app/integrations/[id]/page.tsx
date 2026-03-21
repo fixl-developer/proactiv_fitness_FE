@@ -80,7 +80,7 @@ export default function IntegrationDetailsPage() {
                     <div className="text-center py-12">
                         <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">Integration not found</p>
-                        <Button onClick={() => router.push('/integrations')} variant="outline">
+                        <Button data-testid="btn-router-integrations-id" onClick={() => router.push('/integrations')} variant="outline">
                             Back to Integrations
                         </Button>
                     </div>
@@ -173,7 +173,7 @@ export default function IntegrationDetailsPage() {
                                     <p className="text-sm text-gray-600">Last Sync</p>
                                     <p className="font-semibold text-gray-900">{new Date(integration.lastSync).toLocaleString()}</p>
                                 </div>
-                                <Button onClick={() => router.push(`/integrations/${integration.id}/webhooks`)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button data-testid="btn-router-integrations-id" onClick={() => router.push(`/integrations/${integration.id}/webhooks`)} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                     Manage Webhooks
                                 </Button>
                             </div>
@@ -189,16 +189,16 @@ export default function IntegrationDetailsPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
-                                <Button onClick={() => router.push(`/integrations/${integration.id}/analytics`)} className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
+                                <Button data-testid="btn-router-integrations-id" onClick={() => router.push(`/integrations/${integration.id}/analytics`)} className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
                                     <TrendingUp className="w-4 h-4 mr-2" />
                                     View Analytics
                                 </Button>
                                 {integration.status === 'error' && (
-                                    <Button onClick={handleRetry} className="w-full justify-start bg-orange-50 text-orange-600 hover:bg-orange-100">
+                                    <Button data-testid="btn-retry-integrations-id" onClick={handleRetry} className="w-full justify-start bg-orange-50 text-orange-600 hover:bg-orange-100">
                                         Retry Integration
                                     </Button>
                                 )}
-                                <Button onClick={() => router.push('/integrations')} variant="outline" className="w-full">
+                                <Button data-testid="btn-router-integrations-id" onClick={() => router.push('/integrations')} variant="outline" className="w-full">
                                     Back to Integrations
                                 </Button>
                             </div>

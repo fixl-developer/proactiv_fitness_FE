@@ -78,7 +78,7 @@ export default function CachePage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Cache Management</h1>
                         <p className="text-gray-600">Monitor and manage system cache</p>
                     </div>
-                    <Button onClick={() => handleClearCache()} className="bg-red-600 hover:bg-red-700 text-white">
+                    <Button data-testid="btn-clear-cache-system-cache" onClick={() => handleClearCache()} className="bg-red-600 hover:bg-red-700 text-white">
                         <Trash2 className="w-4 h-4 mr-2" />
                         Clear All Cache
                     </Button>

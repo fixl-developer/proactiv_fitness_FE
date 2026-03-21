@@ -64,7 +64,7 @@ export default function RetentionPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Retention Analysis</h1>
                         <p className="text-gray-600">Monitor user retention and churn rates</p>
                     </div>
-                    <Button onClick={() => router.push('/marketing/growth')} variant="outline">
+                    <Button data-testid="btn-router-marketing-growth-retention" onClick={() => router.push('/marketing/growth')} variant="outline">
                         Back to Overview
                     </Button>
                 </div>

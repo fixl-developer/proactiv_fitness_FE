@@ -247,14 +247,14 @@ export default function ProgramRulesPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Program Rules</h1>
         <div className="flex gap-3">
-          <button
+          <button data-testid="btn-admin-programs-rules-1"
             onClick={handleTestRules}
             disabled={testing}
             className="border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-50"
           >
             {testing ? 'Evaluating...' : 'Test All Rules'}
           </button>
-          <button
+          <button data-testid="btn-admin-programs-rules-2"
             onClick={() => { showForm ? resetForm() : setShowForm(true) }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
@@ -294,7 +294,7 @@ export default function ProgramRulesPage() {
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold">Evaluation Results</h2>
-            <button onClick={() => setTestResults(null)} className="text-sm text-gray-500 hover:text-gray-700">
+            <button data-testid="btn-admin-programs-rules-3" onClick={() => setTestResults(null)} className="text-sm text-gray-500 hover:text-gray-700">
               Dismiss
             </button>
           </div>
@@ -323,11 +323,11 @@ export default function ProgramRulesPage() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Rule' : 'Create Rule'}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form data-testid="form-admin-programs-rules" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Rule Name</label>
-                <input
+                <input data-testid="input-text-admin-programs-rules"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -338,7 +338,7 @@ export default function ProgramRulesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Category</label>
-                <select
+                <select data-testid="select-admin-programs-rules-15"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg"
@@ -352,7 +352,7 @@ export default function ProgramRulesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Priority (1 = highest)</label>
-                <input
+                <input data-testid="input-number-admin-programs-rules"
                   type="number"
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
@@ -364,7 +364,7 @@ export default function ProgramRulesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
-                <select
+                <select data-testid="select-admin-programs-rules-16"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as Rule['status'] })}
                   className="w-full px-4 py-2 border rounded-lg"
@@ -389,14 +389,14 @@ export default function ProgramRulesPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium">Conditions</label>
-                <button type="button" onClick={addCondition} className="text-sm text-blue-600 hover:text-blue-800">
+                <button data-testid="btn-admin-programs-rules-4" type="button" onClick={addCondition} className="text-sm text-blue-600 hover:text-blue-800">
                   + Add Condition
                 </button>
               </div>
               <div className="space-y-2">
                 {formData.conditions.map((cond, i) => (
                   <div key={i} className="flex gap-2 items-center">
-                    <input
+                    <input data-testid="input-text-admin-programs-rules"
                       type="text"
                       placeholder="Field (e.g. student.age)"
                       value={cond.field}
@@ -404,7 +404,7 @@ export default function ProgramRulesPage() {
                       className="flex-1 px-3 py-2 border rounded-lg text-sm"
                       required
                     />
-                    <select
+                    <select data-testid="select-admin-programs-rules-17"
                       value={cond.operator}
                       onChange={(e) => updateCondition(i, 'operator', e.target.value)}
                       className="px-3 py-2 border rounded-lg text-sm"
@@ -413,7 +413,7 @@ export default function ProgramRulesPage() {
                         <option key={op.value} value={op.value}>{op.label}</option>
                       ))}
                     </select>
-                    <input
+                    <input data-testid="input-text-admin-programs-rules"
                       type="text"
                       placeholder="Value"
                       value={cond.value}
@@ -443,7 +443,7 @@ export default function ProgramRulesPage() {
               >
                 {submitting ? 'Saving...' : editingId ? 'Update Rule' : 'Create Rule'}
               </button>
-              <button type="button" onClick={resetForm} className="px-6 py-2 border rounded-lg hover:bg-gray-50">
+              <button data-testid="btn-admin-programs-rules-5" type="button" onClick={resetForm} className="px-6 py-2 border rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
             </div>
@@ -487,13 +487,13 @@ export default function ProgramRulesPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 ml-4 flex-shrink-0">
-                    <button onClick={() => startEdit(r)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50">
+                    <button data-testid="btn-admin-programs-rules-6" onClick={() => startEdit(r)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50">
                       Edit
                     </button>
-                    <button onClick={() => toggleStatus(r)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50">
+                    <button data-testid="btn-admin-programs-rules-7" onClick={() => toggleStatus(r)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50">
                       {r.status === 'active' ? 'Deactivate' : 'Activate'}
                     </button>
-                    <button onClick={() => setDeleteTarget(r)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50">
+                    <button data-testid="btn-admin-programs-rules-8" onClick={() => setDeleteTarget(r)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50">
                       Delete
                     </button>
                   </div>
@@ -513,10 +513,10 @@ export default function ProgramRulesPage() {
               Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              <button data-testid="btn-admin-programs-rules-9" onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
-              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+              <button data-testid="btn-admin-programs-rules-10" onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                 Delete
               </button>
             </div>

@@ -200,11 +200,11 @@ export default function NotificationsPage() {
                     <p className="text-gray-600 mt-1">Send, schedule, and track all notifications across channels</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); loadNotifications() }}>
+                    <Button data-testid="btn-action-admin-communications-notifications" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadNotifications() }}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowSendModal(true)}>
+                    <Button data-testid="btn-set-show-send-modal-admin-communications-notifications" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowSendModal(true)}>
                         <Send className="w-4 h-4 mr-2" />
                         Send Notification
                     </Button>
@@ -222,7 +222,7 @@ export default function NotificationsPage() {
                                         <Send className="w-5 h-5 text-blue-600" />
                                         Send New Notification
                                     </CardTitle>
-                                    <Button variant="ghost" size="sm" onClick={() => setShowSendModal(false)}>
+                                    <Button data-testid="btn-set-show-send-modal-admin-communications-notifications" variant="ghost" size="sm" onClick={() => setShowSendModal(false)}>
                                         <X className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -231,7 +231,7 @@ export default function NotificationsPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Type</label>
-                                        <select value={sendForm.type} onChange={e => setSendForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                        <select data-testid="select-admin-communications-notifications-14" value={sendForm.type} onChange={e => setSendForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                             <option value="EMAIL">Email</option>
                                             <option value="SMS">SMS</option>
                                             <option value="PUSH">Push</option>
@@ -240,7 +240,7 @@ export default function NotificationsPage() {
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Title</label>
-                                        <input type="text" value={sendForm.title} onChange={e => setSendForm(f => ({ ...f, title: e.target.value }))} placeholder="Notification title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                        <input data-testid="input-text-admin-communications-notifications" type="text" value={sendForm.title} onChange={e => setSendForm(f => ({ ...f, title: e.target.value }))} placeholder="Notification title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                     </div>
                                 </div>
                                 <div>
@@ -252,8 +252,8 @@ export default function NotificationsPage() {
                                     <textarea value={sendForm.message} onChange={e => setSendForm(f => ({ ...f, message: e.target.value }))} placeholder="Write your notification message..." rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => setShowSendModal(false)}>Cancel</Button>
-                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSendNotification} disabled={sending}>
+                                    <Button data-testid="btn-set-show-send-modal-admin-communications-notifications" variant="outline" size="sm" onClick={() => setShowSendModal(false)}>Cancel</Button>
+                                    <Button data-testid="btn-send-notification-admin-communications-notifications" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSendNotification} disabled={sending}>
                                         {sending ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                                         {sending ? 'Sending...' : 'Send'}
                                     </Button>
@@ -287,7 +287,7 @@ export default function NotificationsPage() {
                         <div className="flex flex-col sm:flex-row gap-4 items-center">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
+                                <input data-testid="input-text-admin-communications-notifications"
                                     type="text"
                                     placeholder="Search notifications..."
                                     value={searchQuery}
@@ -297,14 +297,14 @@ export default function NotificationsPage() {
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 {['All', 'EMAIL', 'SMS', 'PUSH', 'IN_APP'].map(t => (
-                                    <Button key={t} variant={filterType === t ? 'default' : 'outline'} size="sm" onClick={() => setFilterType(t)}>
+                                    <Button data-testid="btn-set-filter-type-admin-communications-notifications" key={t} variant={filterType === t ? 'default' : 'outline'} size="sm" onClick={() => setFilterType(t)}>
                                         {t === 'All' ? 'All Types' : getTypeLabel(t)}
                                     </Button>
                                 ))}
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 {['All', 'SENT', 'READ', 'PENDING', 'FAILED'].map(s => (
-                                    <Button key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>
+                                    <Button data-testid="btn-set-filter-status-admin-communications-notifications" key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>
                                         {s === 'All' ? 'All Status' : s.charAt(0) + s.slice(1).toLowerCase()}
                                     </Button>
                                 ))}
@@ -388,21 +388,21 @@ export default function NotificationsPage() {
                                                     <td className="py-3.5 px-4 text-right">
                                                         <div className="flex items-center gap-1 justify-end">
                                                             {!n.read && (
-                                                                <Button variant="ghost" size="sm" onClick={() => handleMarkAsRead(n.id)} title="Mark as read">
+                                                                <Button data-testid="btn-mark-as-read-admin-communications-notifications" variant="ghost" size="sm" onClick={() => handleMarkAsRead(n.id)} title="Mark as read">
                                                                     <Eye className="w-4 h-4 text-blue-500" />
                                                                 </Button>
                                                             )}
                                                             {deleteConfirm === n.id ? (
                                                                 <div className="flex items-center gap-1">
-                                                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs" onClick={() => handleDelete(n.id)}>
+                                                                    <Button data-testid="btn-delete-admin-communications-notifications" variant="ghost" size="sm" className="text-red-600 hover:text-red-700 text-xs" onClick={() => handleDelete(n.id)}>
                                                                         Confirm
                                                                     </Button>
-                                                                    <Button variant="ghost" size="sm" className="text-gray-500 text-xs" onClick={() => setDeleteConfirm(null)}>
+                                                                    <Button data-testid="btn-set-delete-confirm-admin-communications-notifications" variant="ghost" size="sm" className="text-gray-500 text-xs" onClick={() => setDeleteConfirm(null)}>
                                                                         Cancel
                                                                     </Button>
                                                                 </div>
                                                             ) : (
-                                                                <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(n.id)} title="Delete">
+                                                                <Button data-testid="btn-set-delete-confirm-admin-communications-notifications" variant="ghost" size="sm" onClick={() => setDeleteConfirm(n.id)} title="Delete">
                                                                     <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
                                                                 </Button>
                                                             )}

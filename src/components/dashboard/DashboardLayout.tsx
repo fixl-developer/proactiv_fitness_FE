@@ -282,7 +282,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
             {/* Sidebar - Fixed Position */}
             <div
-                className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200/50 z-50 flex flex-col"
+                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 flex flex-col"
                 style={{ width: '280px' }}
             >
                 {/* Sidebar Header */}
@@ -383,12 +383,12 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 </div>
 
                 {/* Sidebar Footer */}
-                <div className="flex-shrink-0 px-4 pt-4 pb-2 border-t border-gray-200/50 bg-white mt-auto">
+                <div className="flex-shrink-0 px-4 pt-3 pb-0 border-t border-gray-200/50 bg-white mt-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="space-y-3"
+                        className="space-y-2"
                     >
                         {/* User Info */}
                         <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>

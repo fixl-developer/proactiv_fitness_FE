@@ -59,7 +59,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Location
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-1"
                             value={filters.location || ''}
                             onChange={(e) => handleFilterChange('location', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -77,7 +77,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Day of Week
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-2"
                             value={filters.day || ''}
                             onChange={(e) => handleFilterChange('day', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -98,7 +98,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Time of Day
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-3"
                             value={filters.time || ''}
                             onChange={(e) => handleFilterChange('time', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -115,7 +115,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Program
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-4"
                             value={filters.program || ''}
                             onChange={(e) => handleFilterChange('program', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -132,7 +132,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Instructor
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-5"
                             value={filters.staff || ''}
                             onChange={(e) => handleFilterChange('staff', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -149,7 +149,7 @@ export function ClassFilters({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Skill Level
                         </label>
-                        <select
+                        <select data-testid="select-components-booking-ClassFilters-6"
                             value={filters.skillLevel || ''}
                             onChange={(e) => handleFilterChange('skillLevel', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"

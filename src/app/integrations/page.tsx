@@ -82,7 +82,7 @@ export default function IntegrationsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integrations</h1>
                         <p className="text-gray-600">Manage your third-party integrations</p>
                     </div>
-                    <Button onClick={() => router.push('/integrations/marketplace')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button data-testid="btn-router-integrations" onClick={() => router.push('/integrations/marketplace')} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Integration
                     </Button>
@@ -163,7 +163,7 @@ export default function IntegrationsPage() {
                     <div className="text-center py-12">
                         <Plug className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">No integrations yet</p>
-                        <Button onClick={() => router.push('/integrations/marketplace')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button data-testid="btn-router-integrations" onClick={() => router.push('/integrations/marketplace')} className="bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus className="w-4 h-4 mr-2" />
                             Browse Marketplace
                         </Button>

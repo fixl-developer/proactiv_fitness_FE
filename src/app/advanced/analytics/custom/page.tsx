@@ -119,7 +119,7 @@ export default function CustomAnalyticsPage() {
                                         <Play className="w-4 h-4 mr-2" />
                                         {executing ? 'Executing...' : 'Execute'}
                                     </Button>
-                                    <Button onClick={handleSave} variant="outline" disabled={!query.trim()}>
+                                    <Button data-testid="btn-save-advanced-analytics-custom" onClick={handleSave} variant="outline" disabled={!query.trim()}>
                                         <Save className="w-4 h-4 mr-2" />
                                         Save Query
                                     </Button>

@@ -221,11 +221,11 @@ export default function TermsHolidaysPage() {
           <p className="text-gray-600 mt-2">Manage academic terms and holiday schedules</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => openHolidayForm()}>
+          <Button data-testid="btn-open-holiday-form-admin-business-config-terms" variant="outline" onClick={() => openHolidayForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Holiday
           </Button>
-          <Button onClick={() => openTermForm()}>
+          <Button data-testid="btn-open-term-form-admin-business-config-terms" onClick={() => openTermForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Term
           </Button>
@@ -280,7 +280,7 @@ export default function TermsHolidaysPage() {
                 <div className="text-center py-8">
                   <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No terms found</p>
-                  <Button className="mt-3" size="sm" onClick={() => openTermForm()}>
+                  <Button data-testid="btn-open-term-form-admin-business-config-terms" className="mt-3" size="sm" onClick={() => openTermForm()}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Term
                   </Button>
@@ -311,7 +311,7 @@ export default function TermsHolidaysPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge className={statusBadgeClass(status)}>{status}</Badge>
-                          <Button variant="ghost" size="sm" onClick={() => openTermForm(term)}>
+                          <Button data-testid="btn-open-term-form-admin-business-config-terms" variant="ghost" size="sm" onClick={() => openTermForm(term)}>
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
@@ -344,7 +344,7 @@ export default function TermsHolidaysPage() {
                 <div className="text-center py-8">
                   <Umbrella className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500">No holidays found</p>
-                  <Button className="mt-3" size="sm" onClick={() => openHolidayForm()}>
+                  <Button data-testid="btn-open-holiday-form-admin-business-config-terms" className="mt-3" size="sm" onClick={() => openHolidayForm()}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Holiday
                   </Button>
@@ -376,7 +376,7 @@ export default function TermsHolidaysPage() {
                         </div>
                         <p className="text-sm text-gray-600">{formatDate(holiday.date)}</p>
                         <div className="flex gap-2 mt-3">
-                          <Button variant="outline" size="sm" className="flex-1" onClick={() => openHolidayForm(holiday)}>
+                          <Button data-testid="btn-open-holiday-form-admin-business-config-terms" variant="outline" size="sm" className="flex-1" onClick={() => openHolidayForm(holiday)}>
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
@@ -408,10 +408,10 @@ export default function TermsHolidaysPage() {
               {editingTerm ? 'Update the term details below.' : 'Fill in the details to create a new term.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleTermSubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-terms" onSubmit={handleTermSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Term Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-terms"
                 type="text"
                 value={termForm.name}
                 onChange={(e) => setTermForm({ ...termForm, name: e.target.value })}
@@ -422,7 +422,7 @@ export default function TermsHolidaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Start Date</label>
-              <input
+              <input data-testid="input-date-admin-business-config-terms"
                 type="date"
                 value={termForm.startDate}
                 onChange={(e) => setTermForm({ ...termForm, startDate: e.target.value })}
@@ -432,7 +432,7 @@ export default function TermsHolidaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">End Date</label>
-              <input
+              <input data-testid="input-date-admin-business-config-terms"
                 type="date"
                 value={termForm.endDate}
                 onChange={(e) => setTermForm({ ...termForm, endDate: e.target.value })}
@@ -441,7 +441,7 @@ export default function TermsHolidaysPage() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowTermForm(false)}>
+              <Button data-testid="btn-set-show-term-form-admin-business-config-terms" type="button" variant="outline" onClick={() => setShowTermForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={savingTerm}>
@@ -462,10 +462,10 @@ export default function TermsHolidaysPage() {
               {editingHoliday ? 'Update the holiday details below.' : 'Fill in the details to create a new holiday.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleHolidaySubmit} className="space-y-4">
+          <form data-testid="form-admin-business-config-terms" onSubmit={handleHolidaySubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Holiday Name</label>
-              <input
+              <input data-testid="input-text-admin-business-config-terms"
                 type="text"
                 value={holidayForm.name}
                 onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
@@ -476,7 +476,7 @@ export default function TermsHolidaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Date</label>
-              <input
+              <input data-testid="input-date-admin-business-config-terms"
                 type="date"
                 value={holidayForm.date}
                 onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
@@ -486,7 +486,7 @@ export default function TermsHolidaysPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Type</label>
-              <select
+              <select data-testid="select-admin-business-config-terms-16"
                 value={holidayForm.type}
                 onChange={(e) => setHolidayForm({ ...holidayForm, type: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -498,7 +498,7 @@ export default function TermsHolidaysPage() {
               </select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowHolidayForm(false)}>
+              <Button data-testid="btn-set-show-holiday-form-admin-business-config-terms" type="button" variant="outline" onClick={() => setShowHolidayForm(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={savingHoliday}>
@@ -520,10 +520,10 @@ export default function TermsHolidaysPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button data-testid="btn-set-delete-target-admin-business-config-terms" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button data-testid="btn-delete-admin-business-config-terms" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

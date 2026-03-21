@@ -374,7 +374,7 @@ const BlogDetailPage = () => {
                 <main className="min-h-screen flex items-center justify-center">
                     <div className="text-center">
                         <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog Post Not Found</h1>
-                        <Link href="/blog" className="btn-primary">
+                        <Link data-testid="link-blog" href="/blog" className="btn-primary">
                             Back to Blog
                         </Link>
                     </div>

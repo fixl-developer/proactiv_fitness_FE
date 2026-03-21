@@ -165,7 +165,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
             <nav className="w-full">
                 <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4">
                     <motion.div className="flex items-center" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-                        <Link href="/" className="flex items-center group">
+                        <Link data-testid="link-home" href="/" className="flex items-center group">
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={{ type: "spring", stiffness: 400 }}>
                                 <Image src="/images/colorlogo.webp" alt="ProActive Sports" width={100} height={32} className="h-7 sm:h-9 w-auto transition-all duration-300 group-hover:brightness-110" priority />
                             </motion.div>
@@ -211,7 +211,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                     <motion.div className="hidden lg:flex items-center space-x-3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
                         {!hideBookAssessment && (
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link href="/book-assessment" className="relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
+                                <Link data-testid="link-book-assessment" href="/book-assessment" className="relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
                                     <span className="relative z-10">Book Assessment</span>
                                     <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
                                 </Link>
@@ -239,11 +239,11 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button onClick={() => { setIsProfileOpen(false); router.push('/user/dashboard'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                            <button data-testid="btn-components-layout-Header-1" onClick={() => { setIsProfileOpen(false); router.push('/user/dashboard'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                                 <FiGrid className="w-4 h-4 text-blue-600" />
                                                 <span className="font-medium">My Dashboard</span>
                                             </button>
-                                            <button onClick={handleLogoutClick} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                            <button data-testid="btn-components-layout-Header-2" onClick={handleLogoutClick} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                                 <FiLogOut className="w-4 h-4" />
                                                 <span className="font-medium">Logout</span>
                                             </button>
@@ -253,7 +253,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                             </div>
                         ) : (
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link href="/login" className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
+                                <Link data-testid="link-login" href="/login" className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center shadow-md hover:shadow-lg overflow-hidden group">
                                     <span className="relative z-10">Login</span>
                                     <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
                                 </Link>
@@ -306,7 +306,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                     <div key={item.label}>
                                         {item.dropdown ? (
                                             <div>
-                                                <button onClick={() => toggleMobileDropdown(item.label)} className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                                                <button data-testid="btn-components-layout-Header-3" onClick={() => toggleMobileDropdown(item.label)} className="flex items-center justify-between w-full px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
                                                     <span>{item.label}</span>
                                                     <FiChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdowns[item.label] ? 'rotate-180' : ''}`} />
                                                 </button>
@@ -334,7 +334,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                         <div className="text-sm font-medium text-gray-700 mb-2">Language</div>
                                         <div className="grid grid-cols-3 gap-2">
                                             {languageOptions.map((language) => (
-                                                <button key={language.code} onClick={() => handleLanguageSelect(language.code)} className={`flex items-center justify-center space-x-2 px-3 py-2 rounded text-sm transition-colors duration-200 ${selectedLanguage === language.code ? 'bg-blue-100 text-blue-600 border border-blue-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                                <button data-testid="btn-components-layout-Header-4" key={language.code} onClick={() => handleLanguageSelect(language.code)} className={`flex items-center justify-center space-x-2 px-3 py-2 rounded text-sm transition-colors duration-200 ${selectedLanguage === language.code ? 'bg-blue-100 text-blue-600 border border-blue-300' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                                                     <span>{language.flag}</span>
                                                     <span className="font-medium">{language.code}</span>
                                                 </button>
@@ -342,11 +342,11 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                         </div>
                                     </div>
                                     {!hideBookAssessment && (
-                                        <Link href="/book-assessment" className="block w-full text-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
+                                        <Link data-testid="link-book-assessment" href="/book-assessment" className="block w-full text-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
                                             Book Assessment
                                         </Link>
                                     )}
-                                    <Link href="/book-trial" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
+                                    <Link data-testid="link-book-trial" href="/book-trial" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
                                         Book a Trial
                                     </Link>
                                     <div className="border-t border-gray-200 pt-4 mt-4">
@@ -361,15 +361,15 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                                         <p className="text-xs text-gray-500">{loggedInUser.email}</p>
                                                     </div>
                                                 </div>
-                                                <button onClick={() => { router.push('/user/dashboard'); setIsMenuOpen(false); }} className="block w-full text-center bg-blue-50 text-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-blue-100">
+                                                <button data-testid="btn-components-layout-Header-5" onClick={() => { router.push('/user/dashboard'); setIsMenuOpen(false); }} className="block w-full text-center bg-blue-50 text-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-blue-100">
                                                     My Dashboard
                                                 </button>
-                                                <button onClick={() => { handleLogoutClick(); setIsMenuOpen(false); }} className="block w-full text-center bg-red-50 text-red-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-red-100">
+                                                <button data-testid="btn-components-layout-Header-6" onClick={() => { handleLogoutClick(); setIsMenuOpen(false); }} className="block w-full text-center bg-red-50 text-red-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-red-100">
                                                     Logout
                                                 </button>
                                             </div>
                                         ) : (
-                                            <Link href="/login" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
+                                            <Link data-testid="link-login" href="/login" className="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg" onClick={() => setIsMenuOpen(false)}>
                                                 Login
                                             </Link>
                                         )}

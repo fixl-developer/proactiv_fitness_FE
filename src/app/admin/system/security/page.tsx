@@ -216,10 +216,10 @@ export default function SecurityCenterPage() {
                     <p className="text-gray-600 mt-1">Monitor and manage system security, access control, and threats</p>
                 </motion.div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleLogEvent}>
+                    <Button data-testid="btn-log-event-admin-system-security" variant="outline" size="sm" onClick={handleLogEvent}>
                         <ShieldCheck className="w-4 h-4 mr-2" /> Log Audit
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); loadSecurityData() }}>
+                    <Button data-testid="btn-action-admin-system-security" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadSecurityData() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
                 </div>
@@ -346,7 +346,7 @@ export default function SecurityCenterPage() {
                                 <div className="space-y-3 pl-6">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600">Minimum Length</span>
-                                        <select value={passwordMinLength} onChange={(e) => { const v = Number(e.target.value); setPasswordMinLength(v); saveSettings('passwordMinLength', v); toast.success(`Minimum password length set to ${v}`) }} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none">
+                                        <select data-testid="select-admin-system-security-4" value={passwordMinLength} onChange={(e) => { const v = Number(e.target.value); setPasswordMinLength(v); saveSettings('passwordMinLength', v); toast.success(`Minimum password length set to ${v}`) }} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none">
                                             <option value={8}>8 characters</option>
                                             <option value={10}>10 characters</option>
                                             <option value={12}>12 characters</option>
@@ -363,7 +363,7 @@ export default function SecurityCenterPage() {
                                 <div className="space-y-3 pl-6">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600">Session Timeout</span>
-                                        <select value={sessionTimeout} onChange={(e) => { const v = Number(e.target.value); setSessionTimeout(v); saveSettings('sessionTimeout', v); toast.success(`Session timeout set to ${v} minutes`) }} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none">
+                                        <select data-testid="select-admin-system-security-5" value={sessionTimeout} onChange={(e) => { const v = Number(e.target.value); setSessionTimeout(v); saveSettings('sessionTimeout', v); toast.success(`Session timeout set to ${v} minutes`) }} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:border-blue-500 outline-none">
                                             <option value={15}>15 minutes</option>
                                             <option value={30}>30 minutes</option>
                                             <option value={60}>60 minutes</option>
@@ -371,7 +371,7 @@ export default function SecurityCenterPage() {
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-gray-600">2FA Enforcement</span>
-                                        <button onClick={() => { const v = !twoFAEnforced; setTwoFAEnforced(v); saveSettings('twoFAEnforced', v); toast.success(`2FA enforcement ${v ? 'enabled' : 'disabled'}`) }} className={`relative w-11 h-6 rounded-full transition-colors ${twoFAEnforced ? 'bg-green-500' : 'bg-gray-300'}`}>
+                                        <button data-testid="btn-admin-system-security-3" onClick={() => { const v = !twoFAEnforced; setTwoFAEnforced(v); saveSettings('twoFAEnforced', v); toast.success(`2FA enforcement ${v ? 'enabled' : 'disabled'}`) }} className={`relative w-11 h-6 rounded-full transition-colors ${twoFAEnforced ? 'bg-green-500' : 'bg-gray-300'}`}>
                                             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${twoFAEnforced ? 'translate-x-5' : ''}`}></span>
                                         </button>
                                     </div>

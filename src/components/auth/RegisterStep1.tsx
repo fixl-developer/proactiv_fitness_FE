@@ -29,7 +29,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
     });
 
     return (
-        <form onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form data-testid="form-components-auth-RegisterStep1" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Account Details</h2>
                 <p className="text-gray-600 mt-2">

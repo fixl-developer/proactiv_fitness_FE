@@ -68,7 +68,7 @@ export default function TrendAnalysisPage() {
                 )}
 
                 <div className="mb-6 flex gap-4">
-                    <select
+                    <select data-testid="select-advanced-analytics-trends-1"
                         value={metric}
                         onChange={(e) => setMetric(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -79,7 +79,7 @@ export default function TrendAnalysisPage() {
                         <option value="attendance">Attendance</option>
                     </select>
 
-                    <select
+                    <select data-testid="select-advanced-analytics-trends-2"
                         value={period}
                         onChange={(e) => setPeriod(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

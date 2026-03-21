@@ -20,7 +20,7 @@ export default function EventPage() {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h1>
-                    <Link href="/book-now" className="text-blue-600 hover:text-blue-800">
+                    <Link data-testid="link-book-now" href="/book-now" className="text-blue-600 hover:text-blue-800">
                         ← Back to Booking
                     </Link>
                 </div>
@@ -42,7 +42,7 @@ export default function EventPage() {
                 <div className="bg-white border-b">
                     <div className="max-w-7xl mx-auto px-4 py-4">
                         <div className="flex items-center justify-between">
-                            <Link href="/book-now" className="text-blue-600 hover:text-blue-800 font-medium">
+                            <Link data-testid="link-book-now" href="/book-now" className="text-blue-600 hover:text-blue-800 font-medium">
                                 ← Back to Classes
                             </Link>
                             <div className="flex items-center space-x-4">
@@ -242,7 +242,7 @@ export default function EventPage() {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-lg max-w-md w-full p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Book Assessment</h3>
-                            <form className="space-y-4">
+                            <form data-testid="form-event-id" className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Parent Name *

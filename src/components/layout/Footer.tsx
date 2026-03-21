@@ -222,13 +222,13 @@ const Footer = () => {
                             <p>&copy; {currentYear} ProActive Sports. All rights reserved.</p>
                         </div>
                         <div className="flex space-x-6">
-                            <Link href="/privacy" className="hover:text-white transition-colors duration-200">
+                            <Link data-testid="link-privacy" href="/privacy" className="hover:text-white transition-colors duration-200">
                                 Privacy Policy
                             </Link>
-                            <Link href="/terms" className="hover:text-white transition-colors duration-200">
+                            <Link data-testid="link-terms" href="/terms" className="hover:text-white transition-colors duration-200">
                                 Terms of Service
                             </Link>
-                            <Link href="/careers" className="hover:text-white transition-colors duration-200">
+                            <Link data-testid="link-careers" href="/careers" className="hover:text-white transition-colors duration-200">
                                 Careers
                             </Link>
                         </div>

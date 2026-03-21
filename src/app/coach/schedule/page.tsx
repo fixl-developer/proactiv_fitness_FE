@@ -91,7 +91,7 @@ const CoachSchedulePage = () => {
                         Manage your coaching schedule and classes
                     </p>
                 </div>
-                <Button onClick={() => router.push('/coach/schedule/new')} className="w-full sm:w-auto">
+                <Button data-testid="btn-router-coach-schedule" onClick={() => router.push('/coach/schedule/new')} className="w-full sm:w-auto">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Class
                 </Button>

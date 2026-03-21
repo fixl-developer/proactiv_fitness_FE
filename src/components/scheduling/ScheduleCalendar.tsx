@@ -361,7 +361,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            <select
+                            <select data-testid="select-components-scheduling-ScheduleCalendar-1"
                                 value={filters.location}
                                 onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -373,7 +373,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Program Type</label>
-                            <select
+                            <select data-testid="select-components-scheduling-ScheduleCalendar-2"
                                 value={filters.program}
                                 onChange={(e) => setFilters({ ...filters, program: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -388,7 +388,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
-                            <select
+                            <select data-testid="select-components-scheduling-ScheduleCalendar-3"
                                 value={filters.ageGroup}
                                 onChange={(e) => setFilters({ ...filters, ageGroup: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -402,7 +402,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Coach</label>
-                            <select
+                            <select data-testid="select-components-scheduling-ScheduleCalendar-4"
                                 value={filters.coach}
                                 onChange={(e) => setFilters({ ...filters, coach: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"

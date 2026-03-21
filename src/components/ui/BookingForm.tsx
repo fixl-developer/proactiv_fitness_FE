@@ -272,7 +272,7 @@ const BookingForm = ({
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form data-testid="form-components-ui-BookingForm" onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
@@ -324,7 +324,7 @@ const BookingForm = ({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Child's Age *
                         </label>
-                        <select
+                        <select data-testid="select-components-ui-BookingForm-1"
                             name="childAge"
                             value={formData.childAge}
                             onChange={handleInputChange}
@@ -392,7 +392,7 @@ const BookingForm = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Program Level *
                                 </label>
-                                <select
+                                <select data-testid="select-components-ui-BookingForm-2"
                                     name="program"
                                     value={formData.program}
                                     onChange={handleInputChange}
@@ -417,7 +417,7 @@ const BookingForm = ({
                                 </label>
                                 <div className="relative">
                                     <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                    <select
+                                    <select data-testid="select-components-ui-BookingForm-3"
                                         name="location"
                                         value={formData.location}
                                         onChange={handleInputChange}
@@ -466,7 +466,7 @@ const BookingForm = ({
                                 </label>
                                 <div className="relative">
                                     <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                    <select
+                                    <select data-testid="select-components-ui-BookingForm-4"
                                         name="preferredTime"
                                         value={formData.preferredTime}
                                         onChange={handleInputChange}
@@ -554,7 +554,7 @@ const BookingForm = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Party Time *
                                 </label>
-                                <select
+                                <select data-testid="select-components-ui-BookingForm-5"
                                     name="partyTime"
                                     value={formData.partyTime}
                                     onChange={handleInputChange}
@@ -575,7 +575,7 @@ const BookingForm = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Number of Guests *
                                 </label>
-                                <select
+                                <select data-testid="select-components-ui-BookingForm-6"
                                     name="guestCount"
                                     value={formData.guestCount}
                                     onChange={handleInputChange}
@@ -597,7 +597,7 @@ const BookingForm = ({
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Party Theme *
                             </label>
-                            <select
+                            <select data-testid="select-components-ui-BookingForm-7"
                                 name="partyTheme"
                                 value={formData.partyTheme}
                                 onChange={handleInputChange}
@@ -638,7 +638,7 @@ const BookingForm = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Current Skill Level
                                 </label>
-                                <select
+                                <select data-testid="select-components-ui-BookingForm-8"
                                     name="skillLevel"
                                     value={formData.skillLevel || ''}
                                     onChange={handleInputChange}
@@ -654,7 +654,7 @@ const BookingForm = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Assessment Type
                                 </label>
-                                <select
+                                <select data-testid="select-components-ui-BookingForm-9"
                                     name="assessmentType"
                                     value={formData.assessmentType || ''}
                                     onChange={handleInputChange}
@@ -730,7 +730,7 @@ const BookingForm = ({
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         How did you hear about us?
                     </label>
-                    <select
+                    <select data-testid="select-components-ui-BookingForm-10"
                         name="hearAboutUs"
                         value={formData.hearAboutUs}
                         onChange={handleInputChange}

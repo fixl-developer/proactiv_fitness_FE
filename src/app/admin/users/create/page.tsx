@@ -454,7 +454,7 @@ export default function CreateUserPage() {
             <ShieldAlert className="w-16 h-16 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
             <p className="text-gray-600 mb-4">Your role does not have permission to create users.</p>
-            <Button onClick={() => router.push('/admin/users')}>Back to Users</Button>
+            <Button data-testid="btn-router-admin-users-create" onClick={() => router.push('/admin/users')}>Back to Users</Button>
           </CardContent>
         </Card>
       </div>
@@ -469,7 +469,7 @@ export default function CreateUserPage() {
           <h1 className="text-3xl font-bold text-gray-900">Create New User</h1>
           <p className="text-gray-600 mt-2">Add a new user to the system</p>
         </div>
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button data-testid="btn-router-admin-users-create" variant="outline" onClick={() => router.back()}>
           <X className="w-4 h-4 mr-2" />
           Cancel
         </Button>
@@ -510,7 +510,7 @@ export default function CreateUserPage() {
         </div>
       </motion.div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form data-testid="form-admin-users-create" onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Information */}
         <Card>
           <CardHeader>
@@ -525,7 +525,7 @@ export default function CreateUserPage() {
                 <label className="text-sm font-medium text-gray-700">
                   First Name <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input data-testid="input-text-admin-users-create"
                   type="text"
                   required
                   value={formData.firstName}
@@ -548,7 +548,7 @@ export default function CreateUserPage() {
                 <label className="text-sm font-medium text-gray-700">
                   Last Name <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input data-testid="input-text-admin-users-create"
                   type="text"
                   required
                   value={formData.lastName}
@@ -572,7 +572,7 @@ export default function CreateUserPage() {
                   <Mail className="w-4 h-4" />
                   Email <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input data-testid="input-email-admin-users-create"
                   type="email"
                   required
                   value={formData.email}
@@ -596,7 +596,7 @@ export default function CreateUserPage() {
                   <Phone className="w-4 h-4" />
                   Phone
                 </label>
-                <input
+                <input data-testid="input-tel-admin-users-create"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -747,7 +747,7 @@ export default function CreateUserPage() {
                     <MapPin className="w-4 h-4" />
                     Assign to Location <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <select data-testid="select-admin-users-create-11"
                     value={formData.locationId}
                     onChange={(e) => {
                       setFormData({ ...formData, locationId: e.target.value })
@@ -795,7 +795,7 @@ export default function CreateUserPage() {
                     <Building2 className="w-4 h-4" />
                     Assign to Organization <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <select data-testid="select-admin-users-create-12"
                     value={formData.organizationId}
                     onChange={(e) => {
                       setFormData({ ...formData, organizationId: e.target.value })
@@ -889,7 +889,7 @@ export default function CreateUserPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <input
+                <input data-testid="input-checkbox-admin-users-create"
                   type="checkbox"
                   id="gdprConsent"
                   checked={gdprConsent}
@@ -958,7 +958,7 @@ export default function CreateUserPage() {
               <UserPlus className="w-5 h-5 text-indigo-600" />
               <CardTitle>Existing Users</CardTitle>
             </div>
-            <Link
+            <Link data-testid="link-admin-users"
               href="/admin/users"
               className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
             >
@@ -971,7 +971,7 @@ export default function CreateUserPage() {
           <div className="flex flex-col md:flex-row gap-3 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <input data-testid="input-text-admin-users-create"
                 type="text"
                 placeholder="Search by name or email..."
                 value={searchTerm}
@@ -979,7 +979,7 @@ export default function CreateUserPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
-            <select
+            <select data-testid="select-admin-users-create-13"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -989,7 +989,7 @@ export default function CreateUserPage() {
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
-            <select
+            <select data-testid="select-admin-users-create-14"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -1072,7 +1072,7 @@ export default function CreateUserPage() {
                             </Link>
                           )}
                           {canManageRole(user.role) && (
-                            <button
+                            <button data-testid="btn-admin-users-create-3"
                               onClick={() => handleStatusChange(user.id, user.status, `${user.firstName} ${user.lastName}`)}
                               disabled={actionLoading === user.id}
                               className={`p-1.5 rounded transition ${
@@ -1092,7 +1092,7 @@ export default function CreateUserPage() {
                             </button>
                           )}
                           {canManageRole(user.role) && (
-                            <button
+                            <button data-testid="btn-admin-users-create-4"
                               onClick={() => handleDelete(user.id, `${user.firstName} ${user.lastName}`)}
                               disabled={actionLoading === user.id}
                               className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"

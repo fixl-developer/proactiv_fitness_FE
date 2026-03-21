@@ -103,7 +103,7 @@ export default function ImportPage() {
                                         {selectedFile && <p className="text-sm font-medium mt-2">{selectedFile.name}</p>}
                                     </label>
                                 </div>
-                                <Button onClick={handleImport} disabled={!selectedFile} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button data-testid="btn-import-advanced-data-import" onClick={handleImport} disabled={!selectedFile} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
                                     Import
                                 </Button>
                             </CardContent>

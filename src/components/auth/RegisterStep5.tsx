@@ -62,7 +62,7 @@ export function RegisterStep5({
     };
 
     return (
-        <form onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form data-testid="form-components-auth-RegisterStep5" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                     Guardian & Emergency Contacts
@@ -151,7 +151,7 @@ export function RegisterStep5({
                             </label>
                             <div className="relative">
                                 <Heart className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <select
+                                <select data-testid="select-components-auth-RegisterStep5-1"
                                     {...register(`guardians.${index}.relationship`)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                                 >

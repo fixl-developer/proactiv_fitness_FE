@@ -76,7 +76,7 @@ export default function MarketplacePage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration Marketplace</h1>
                         <p className="text-gray-600">Discover and install integrations</p>
                     </div>
-                    <Button onClick={() => router.push('/integrations')} variant="outline">
+                    <Button data-testid="btn-router-integrations-marketplace" onClick={() => router.push('/integrations')} variant="outline">
                         Back to Integrations
                     </Button>
                 </div>

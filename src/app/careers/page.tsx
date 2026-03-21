@@ -542,7 +542,7 @@ const CareersPage = () => {
                                 <h3 className="text-xl font-heading font-semibold mb-6">
                                     Quick Application
                                 </h3>
-                                <form className="space-y-4">
+                                <form data-testid="form-careers" className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <input
                                             type="text"
@@ -560,7 +560,7 @@ const CareersPage = () => {
                                         placeholder="Phone Number"
                                         className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
                                     />
-                                    <select className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <select data-testid="select-careers-1" className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-white/50">
                                         <option value="">Select Position</option>
                                         <option value="gymnastics-coach">Gymnastics Coach</option>
                                         <option value="assistant-coach">Assistant Coach</option>

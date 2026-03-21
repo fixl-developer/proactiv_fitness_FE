@@ -101,7 +101,7 @@ export default function ProgressPage() {
                     <h1 className="text-3xl font-bold text-gray-900">My Progress</h1>
                     <p className="text-gray-600 mt-2">Track your gymnastics journey</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <Button data-testid="btn-refresh-user-progress" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                     Refresh
                 </Button>

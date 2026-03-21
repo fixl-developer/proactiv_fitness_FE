@@ -305,7 +305,7 @@ export default function TemplatesPage() {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>{title}</CardTitle>
-                        <Button variant="ghost" size="sm" onClick={onClose}>
+                        <Button data-testid="btn-on-close-admin-communications-templates" variant="ghost" size="sm" onClick={onClose}>
                             <X className="w-4 h-4" />
                         </Button>
                     </div>
@@ -316,7 +316,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Name
                             </label>
-                            <input
+                            <input data-testid="input-text-admin-communications-templates"
                                 type="text"
                                 value={form.name}
                                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -328,7 +328,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Type
                             </label>
-                            <select
+                            <select data-testid="select-admin-communications-templates-6"
                                 value={form.type}
                                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
@@ -343,7 +343,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Category
                             </label>
-                            <select
+                            <select data-testid="select-admin-communications-templates-7"
                                 value={form.category}
                                 onChange={(e) =>
                                     setForm((f) => ({ ...f, category: e.target.value }))
@@ -361,7 +361,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Status
                             </label>
-                            <select
+                            <select data-testid="select-admin-communications-templates-8"
                                 value={form.status}
                                 onChange={(e) =>
                                     setForm((f) => ({
@@ -380,7 +380,7 @@ export default function TemplatesPage() {
                         <label className="text-sm font-medium text-gray-700 mb-1 block">
                             Subject
                         </label>
-                        <input
+                        <input data-testid="input-text-admin-communications-templates"
                             type="text"
                             value={form.subject}
                             onChange={(e) =>
@@ -403,7 +403,7 @@ export default function TemplatesPage() {
                         />
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={onClose}>
+                        <Button data-testid="btn-on-close-admin-communications-templates" variant="outline" size="sm" onClick={onClose}>
                             Cancel
                         </Button>
                         <Button
@@ -505,7 +505,7 @@ export default function TemplatesPage() {
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
+                            <input data-testid="input-text-admin-communications-templates"
                                 type="text"
                                 placeholder="Search templates..."
                                 value={searchQuery}

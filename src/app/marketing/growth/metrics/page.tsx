@@ -60,7 +60,7 @@ export default function MetricsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Growth Metrics</h1>
                         <p className="text-gray-600">Detailed view of all growth metrics</p>
                     </div>
-                    <Button onClick={() => router.push('/marketing/growth')} variant="outline">
+                    <Button data-testid="btn-router-marketing-growth-metrics" onClick={() => router.push('/marketing/growth')} variant="outline">
                         Back to Overview
                     </Button>
                 </div>

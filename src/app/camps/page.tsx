@@ -206,7 +206,7 @@ const CampsHomePage = () => {
                             Join our exciting summer gymnastics camps with outdoor activities,
                             swimming, and intensive skill development programs.
                         </p>
-                        <Button variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
+                        <Button data-testid="btn-window-camps" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
                             View Summer Programs
                         </Button>
                     </CardContent>
@@ -224,7 +224,7 @@ const CampsHomePage = () => {
                             Special holiday programs during school breaks with themed activities,
                             competitions, and skill assessments.
                         </p>
-                        <Button variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
+                        <Button data-testid="btn-window-camps" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
                             View Holiday Programs
                         </Button>
                     </CardContent>

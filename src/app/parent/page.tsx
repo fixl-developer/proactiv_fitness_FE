@@ -148,7 +148,7 @@ const ParentHomePage = () => {
                         Track your children's gymnastics journey
                     </p>
                 </div>
-                <Button onClick={() => window.location.href = '/parent/dashboard'}>
+                <Button data-testid="btn-window-parent" onClick={() => window.location.href = '/parent/dashboard'}>
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Go to Dashboard
                 </Button>

@@ -225,17 +225,17 @@ export default function SystemLogsPage() {
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
                     <div className="flex items-center gap-2 mr-2">
                         <span className="text-sm text-gray-500">Auto-refresh</span>
-                        <button
+                        <button data-testid="btn-admin-system-logs-4"
                             onClick={() => setAutoRefresh(!autoRefresh)}
                             className={`relative w-10 h-5 rounded-full transition-colors ${autoRefresh ? 'bg-green-500' : 'bg-gray-300'}`}
                         >
                             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${autoRefresh ? 'translate-x-5' : ''}`}></span>
                         </button>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); loadLogs() }}>
+                    <Button data-testid="btn-action-admin-system-logs" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadLogs() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button variant="outline" size="sm" onClick={exportToCsv}>
+                    <Button data-testid="btn-export-to-csv-admin-system-logs" variant="outline" size="sm" onClick={exportToCsv}>
                         <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
                 </motion.div>
@@ -265,17 +265,17 @@ export default function SystemLogsPage() {
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input type="text" placeholder="Search logs by message or service..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-mono text-sm" />
+                                <input data-testid="input-text-admin-system-logs" type="text" placeholder="Search logs by message or service..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all font-mono text-sm" />
                             </div>
                             <div className="flex gap-2">
-                                <input
+                                <input data-testid="input-date-admin-system-logs"
                                     type="date"
                                     value={startDate}
                                     onChange={e => setStartDate(e.target.value)}
                                     className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
                                     placeholder="Start date"
                                 />
-                                <input
+                                <input data-testid="input-date-admin-system-logs"
                                     type="date"
                                     value={endDate}
                                     onChange={e => setEndDate(e.target.value)}
@@ -286,7 +286,7 @@ export default function SystemLogsPage() {
                         </div>
                         <div className="flex gap-1.5 mt-3">
                             {levels.map(l => (
-                                <Button key={l.key} variant={activeLevel === l.key ? 'default' : 'outline'} size="sm" onClick={() => setActiveLevel(l.key)} className="gap-1">
+                                <Button data-testid="btn-set-active-level-admin-system-logs" key={l.key} variant={activeLevel === l.key ? 'default' : 'outline'} size="sm" onClick={() => setActiveLevel(l.key)} className="gap-1">
                                     <span className={activeLevel !== l.key ? l.color : ''}>{l.label}</span>
                                     <span className="text-xs opacity-60">({l.count})</span>
                                 </Button>
