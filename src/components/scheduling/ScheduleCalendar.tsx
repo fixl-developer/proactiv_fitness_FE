@@ -125,7 +125,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                 if (filters.ageGroup !== 'all') params.ageGroup = filters.ageGroup
                 if (filters.coach !== 'all') params.coach = filters.coach
 
-                const result = await apiClient.get('/scheduling/schedules/available', { params })
+                const result = await apiClient.get('/scheduling/available', { params })
                 if (result.success) {
                     setTimeSlots(result.data)
                 } else {
