@@ -1,96 +1,116 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
-    TrendingUp, Users, DollarSign, Building2, Calendar,
+    TrendingUp, Users, DollarSign, Building2,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    MapPin, Zap, Activity, Target, BarChart3, PieChart
+    Activity, Target, BarChart3, Info, AlertCircle
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { RegionalAdminService } from '@/services/regionalAdminService'
 
-const FALLBACK_REGIONAL = {
-    regionName: 'My Region', totalLocations: 0, totalStaff: 0, totalStudents: 0,
-    totalRevenue: 0, monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0,
-    staffUtilization: 0, customerSatisfaction: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0
-}
-
 export default function RegionalAdminDashboard() {
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [dashboardData, setDashboardData] = useState<any>(null)
+    const [revenueData, setRevenueData] = useState<any[]>([])
+    const [locationData, setLocationData] = useState<any[]>([])
+    const [staffData, setStaffData] = useState<any[]>([])
+    const [alerts, setAlerts] = useState<any[]>([])
+    const [pendingActions, setPendingActions] = useState<any[]>([])
     const [timeRange, setTimeRange] = useState('30d')
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [overview, analytics] = await Promise.allSettled([
-                    RegionalAdminService.getDashboardOverview(),
-                    RegionalAdminService.getAnalytics(timeRange)
-                ])
-                const data = overview.status === 'fulfilled' ? overview.value : {}
-                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
-                setDashboardData({
-                    regionName: data?.regionName ?? FALLBACK_REGIONAL.regionName,
-                    totalLocations: data?.totalLocations ?? FALLBACK_REGIONAL.totalLocations,
-                    totalStaff: data?.totalStaff ?? FALLBACK_REGIONAL.totalStaff,
-                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_REGIONAL.totalStudents,
-                    totalRevenue: data?.totalRevenue ?? stats?.totalRevenue ?? FALLBACK_REGIONAL.totalRevenue,
-                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_REGIONAL.monthlyRevenue,
-                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_REGIONAL.revenueGrowth,
-                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_REGIONAL.occupancyRate,
-                    staffUtilization: data?.staffUtilization ?? FALLBACK_REGIONAL.staffUtilization,
-                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_REGIONAL.customerSatisfaction,
-                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_REGIONAL.pendingApprovals,
-                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_REGIONAL.criticalAlerts,
-                    warnings: data?.warnings ?? FALLBACK_REGIONAL.warnings
-                })
-            } catch (error) {
-                console.error('Error loading regional dashboard:', error)
-                setDashboardData(FALLBACK_REGIONAL)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        loadData()
+        loadDashboard()
     }, [timeRange])
 
-    // Revenue trend data
-    const revenueData = [
-        { month: 'Jan', revenue: 120000, target: 130000 },
-        { month: 'Feb', revenue: 128000, target: 135000 },
-        { month: 'Mar', revenue: 135000, target: 140000 },
-        { month: 'Apr', revenue: 138000, target: 142000 },
-        { month: 'May', revenue: 140000, target: 145000 },
-        { month: 'Jun', revenue: 142000, target: 150000 },
-    ]
+    const loadDashboard = async () => {
+        try {
+            setIsLoading(true)
+            setError(null)
 
-    // Location performance data
-    const locationData = [
-        { name: 'Boston Downtown', students: 320, revenue: 185000, status: 'excellent' },
-        { name: 'Boston Suburbs', students: 280, revenue: 165000, status: 'excellent' },
-        { name: 'Providence', students: 210, revenue: 125000, status: 'good' },
-        { name: 'Hartford', students: 240, revenue: 145000, status: 'good' },
-        { name: 'New Haven', students: 200, revenue: 115000, status: 'needs-attention' },
-    ]
+            const [overview, approvalsResp] = await Promise.allSettled([
+                RegionalAdminService.getDashboardOverview(),
+                RegionalAdminService.getPendingApprovals(1, 10)
+            ])
 
-    // Staff performance
-    const staffData = [
-        { name: 'Coaches', count: 18, utilization: 85 },
-        { name: 'Managers', count: 8, utilization: 90 },
-        { name: 'Support Staff', count: 19, utilization: 75 },
-    ]
+            if (overview.status === 'fulfilled' && overview.value) {
+                const data = overview.value
+                setDashboardData(data)
+
+                // Revenue chart - directly from backend
+                if (data.revenueData && data.revenueData.length > 0) {
+                    setRevenueData(data.revenueData)
+                }
+
+                // Location performance - directly from backend
+                if (data.locationPerformance && data.locationPerformance.length > 0) {
+                    setLocationData(data.locationPerformance)
+                }
+
+                // Staff performance - directly from backend
+                if (data.staffPerformance && data.staffPerformance.length > 0) {
+                    setStaffData(data.staffPerformance)
+                }
+
+                // Alerts - directly from backend
+                if (data.alerts && data.alerts.length > 0) {
+                    setAlerts(data.alerts)
+                }
+            } else {
+                setError('Failed to load dashboard data')
+            }
+
+            // Pending approvals
+            if (approvalsResp.status === 'fulfilled' && approvalsResp.value?.data?.length > 0) {
+                setPendingActions(approvalsResp.value.data.slice(0, 5).map((a: any) => ({
+                    type: a.type || 'Approval',
+                    name: a.title || a.name || a.description || 'Pending item',
+                    date: a.requestedDate ? formatRelativeDate(a.requestedDate) : 'Recently',
+                    priority: (a.priority || 'MEDIUM').toLowerCase()
+                })))
+            }
+        } catch (err: any) {
+            console.error('Dashboard load error:', err)
+            setError(err.message || 'Failed to load dashboard')
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    function formatRelativeDate(dateStr: string): string {
+        try {
+            const date = new Date(dateStr)
+            const now = new Date()
+            const diffMs = now.getTime() - date.getTime()
+            const diffMins = Math.floor(diffMs / 60000)
+            if (diffMins < 1) return 'Just now'
+            if (diffMins < 60) return `${diffMins}m ago`
+            const diffHours = Math.floor(diffMins / 60)
+            if (diffHours < 24) return `${diffHours}h ago`
+            const diffDays = Math.floor(diffHours / 24)
+            return `${diffDays}d ago`
+        } catch { return dateStr }
+    }
 
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-3 text-sm">Loading dashboard...</p>
+                </div>
             </div>
         )
     }
+
+    const d = dashboardData || {}
 
     return (
         <div className="space-y-6">
@@ -98,7 +118,7 @@ export default function RegionalAdminDashboard() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Regional Dashboard</h1>
-                    <p className="text-gray-600 mt-1">{dashboardData?.regionName} - Operations Overview</p>
+                    <p className="text-gray-600 mt-1">{d.regionName || 'Region'} - Operations Overview</p>
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
@@ -116,59 +136,65 @@ export default function RegionalAdminDashboard() {
                 </div>
             </div>
 
-            {/* Top KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Error Banner */}
+            {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <p className="text-sm text-red-700">{error}</p>
+                    <button onClick={loadDashboard} className="ml-auto text-sm text-red-600 underline">Retry</button>
+                </div>
+            )}
+
+            {/* KPI Cards - Fully Dynamic */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                     {
                         title: 'Regional Locations',
-                        value: dashboardData?.totalLocations,
+                        value: d.totalLocations ?? 0,
                         icon: Building2,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50',
-                        change: '+1 this month'
+                        gradient: 'from-blue-500 to-blue-600',
+                        bgGradient: 'from-blue-50 to-blue-100',
+                        change: d.locationsChange > 0 ? `+${d.locationsChange} this month` : `${d.totalLocations ?? 0} total`
                     },
                     {
                         title: 'Total Students',
-                        value: dashboardData?.totalStudents,
+                        value: (d.totalStudents ?? 0).toLocaleString(),
                         icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50',
-                        change: '+85 this month'
+                        gradient: 'from-green-500 to-emerald-600',
+                        bgGradient: 'from-green-50 to-emerald-100',
+                        change: d.studentsChange > 0 ? `+${d.studentsChange} this month` : d.studentGrowth ? `${d.studentGrowth > 0 ? '+' : ''}${d.studentGrowth}% growth` : `${d.totalStudents ?? 0} total`
                     },
                     {
                         title: 'Staff Members',
-                        value: dashboardData?.totalStaff,
+                        value: d.totalStaff ?? 0,
                         icon: Users,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50',
-                        change: '+3 this month'
+                        gradient: 'from-purple-500 to-purple-600',
+                        bgGradient: 'from-purple-50 to-purple-100',
+                        change: d.staffChange > 0 ? `+${d.staffChange} this month` : `${d.totalStaff ?? 0} active`
                     },
                     {
                         title: 'Regional Revenue',
-                        value: `${(dashboardData?.totalRevenue / 1000).toFixed(0)}K`,
+                        value: `$${((d.totalRevenue || 0) / 1000).toFixed(0)}K`,
                         icon: DollarSign,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50',
-                        change: `+${dashboardData?.revenueGrowth}% YoY`
+                        gradient: 'from-orange-500 to-orange-600',
+                        bgGradient: 'from-orange-50 to-orange-100',
+                        change: d.revenueGrowth ? `${d.revenueGrowth > 0 ? '+' : ''}${d.revenueGrowth}% growth` : `$${((d.monthlyRevenue || 0) / 1000).toFixed(0)}K this month`
                     },
                 ].map((metric, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
-                                        <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
-                                    </div>
+                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -176,7 +202,7 @@ export default function RegionalAdminDashboard() {
                 ))}
             </div>
 
-            {/* Regional Metrics & Alerts */}
+            {/* Regional Metrics, Alerts & Monthly Performance */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Regional Metrics */}
                 <Card>
@@ -191,64 +217,71 @@ export default function RegionalAdminDashboard() {
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium text-gray-700">Occupancy Rate</span>
-                                    <span className="text-lg font-bold text-green-600">{dashboardData?.occupancyRate}%</span>
+                                    <span className="text-lg font-bold text-green-600">{d.occupancyRate ?? 0}%</span>
                                 </div>
-                                <Progress value={dashboardData?.occupancyRate} className="h-2" />
+                                <Progress value={d.occupancyRate ?? 0} className="h-2" />
                             </div>
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium text-gray-700">Staff Utilization</span>
-                                    <span className="text-lg font-bold text-blue-600">{dashboardData?.staffUtilization}%</span>
+                                    <span className="text-lg font-bold text-blue-600">{d.staffUtilization ?? 0}%</span>
                                 </div>
-                                <Progress value={dashboardData?.staffUtilization} className="h-2" />
+                                <Progress value={d.staffUtilization ?? 0} className="h-2" />
                             </div>
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm font-medium text-gray-700">Customer Satisfaction</span>
-                                    <span className="text-lg font-bold text-purple-600">{dashboardData?.customerSatisfaction}/5.0</span>
+                                    <span className="text-lg font-bold text-purple-600">{d.customerSatisfaction ?? 0}/5.0</span>
                                 </div>
-                                <Progress value={(dashboardData?.customerSatisfaction / 5) * 100} className="h-2" />
+                                <Progress value={((d.customerSatisfaction ?? 0) / 5) * 100} className="h-2" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Regional Alerts */}
+                {/* Dynamic Alerts from Backend */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-red-600" />
                             Regional Alerts
+                            {alerts.length > 0 && <Badge variant="destructive" className="text-xs ml-2">{alerts.length}</Badge>}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="destructive" className="text-xs">Critical</Badge>
-                                    <span className="text-sm font-medium text-red-900">Boston Downtown Staffing</span>
+                            {alerts.length === 0 ? (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-5 h-5 text-green-600" />
+                                        <span className="text-sm font-medium text-green-900">All systems normal</span>
+                                    </div>
+                                    <p className="text-xs text-green-700 mt-1">No active alerts at this time</p>
                                 </div>
-                                <p className="text-xs text-red-700">2 coaches out sick, coverage needed</p>
-                            </div>
-                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="text-xs">Warning</Badge>
-                                    <span className="text-sm font-medium text-yellow-900">New Haven Performance</span>
-                                </div>
-                                <p className="text-xs text-yellow-700">Revenue below target by 15%</p>
-                            </div>
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge className="text-xs">Info</Badge>
-                                    <span className="text-sm font-medium text-blue-900">Pending Approvals</span>
-                                </div>
-                                <p className="text-xs text-blue-700">{dashboardData?.pendingApprovals} items awaiting review</p>
-                            </div>
+                            ) : (
+                                alerts.map((alert, idx) => {
+                                    const severityConfig: Record<string, { bg: string; border: string; textTitle: string; textBody: string; badge: any }> = {
+                                        critical: { bg: 'bg-red-50', border: 'border-red-200', textTitle: 'text-red-900', textBody: 'text-red-700', badge: 'destructive' as const },
+                                        warning: { bg: 'bg-yellow-50', border: 'border-yellow-200', textTitle: 'text-yellow-900', textBody: 'text-yellow-700', badge: 'secondary' as const },
+                                        info: { bg: 'bg-blue-50', border: 'border-blue-200', textTitle: 'text-blue-900', textBody: 'text-blue-700', badge: 'default' as const },
+                                    }
+                                    const cfg = severityConfig[alert.severity] || severityConfig.info
+                                    return (
+                                        <div key={idx} className={`p-3 ${cfg.bg} border ${cfg.border} rounded-lg`}>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Badge variant={cfg.badge} className="text-xs capitalize">{alert.severity}</Badge>
+                                                <span className={`text-sm font-medium ${cfg.textTitle}`}>{alert.title}</span>
+                                            </div>
+                                            <p className={`text-xs ${cfg.textBody}`}>{alert.message}</p>
+                                        </div>
+                                    )
+                                })
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Quick Stats */}
+                {/* Monthly Performance */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -261,24 +294,28 @@ export default function RegionalAdminDashboard() {
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-gray-700">Monthly Revenue</span>
-                                    <span className="font-bold text-gray-900">${(dashboardData?.monthlyRevenue / 1000).toFixed(0)}K</span>
+                                    <span className="font-bold text-gray-900">${((d.monthlyRevenue || 0) / 1000).toFixed(0)}K</span>
                                 </div>
-                                <Progress value={75} className="h-2" />
+                                <Progress value={d.totalRevenue > 0 ? Math.min(100, Math.round((d.monthlyRevenue / d.totalRevenue) * 100)) : 0} className="h-2" />
                             </div>
                             <div className="pt-2 border-t">
                                 <p className="text-xs text-gray-600 mb-2">Revenue Growth</p>
-                                <p className="text-2xl font-bold text-gray-900">{dashboardData?.revenueGrowth?.toFixed(1)}%</p>
-                                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                                    <ArrowUp className="w-3 h-3" />
+                                <p className="text-2xl font-bold text-gray-900">{(d.revenueGrowth ?? 0).toFixed(1)}%</p>
+                                <p className={`text-xs flex items-center gap-1 mt-1 ${(d.revenueGrowth ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {(d.revenueGrowth ?? 0) >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                                     vs last month
                                 </p>
+                            </div>
+                            <div className="pt-2 border-t">
+                                <p className="text-xs text-gray-600 mb-2">Total Bookings</p>
+                                <p className="text-lg font-bold text-gray-900">{d.totalBookings ?? 0}</p>
                             </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Revenue Trend Chart */}
+            {/* Revenue Trend Chart - Dynamic from Backend */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -287,21 +324,29 @@ export default function RegionalAdminDashboard() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={revenueData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => typeof value === 'number' ? `${(value / 1000).toFixed(0)}K` : value} />
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#3b82f6" name="Actual Revenue" />
-                            <Bar dataKey="target" fill="#10b981" name="Target Revenue" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {revenueData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={revenueData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => typeof value === 'number' ? `$${(value / 1000).toFixed(1)}K` : value} />
+                                <Legend />
+                                <Bar dataKey="revenue" fill="#3b82f6" name="Actual Revenue" />
+                                <Bar dataKey="target" fill="#10b981" name="Target Revenue" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-[300px] text-gray-400">
+                            <BarChart3 className="w-12 h-12 mb-3" />
+                            <p className="text-sm font-medium">No revenue data yet</p>
+                            <p className="text-xs">Revenue chart will appear when bookings are made</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
-            {/* Location Performance & Staff Utilization */}
+            {/* Location Performance & Staff Utilization - Dynamic */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Location Performance */}
                 <Card>
@@ -312,19 +357,31 @@ export default function RegionalAdminDashboard() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-3">
-                            {locationData.map((location, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{location.name}</p>
-                                        <p className="text-xs text-gray-600">{location.students} students • ${(location.revenue / 1000).toFixed(0)}K revenue</p>
+                        {locationData.length > 0 ? (
+                            <div className="space-y-3">
+                                {locationData.map((location, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => router.push('/admin/regional/locations')}>
+                                        <div className="flex-1">
+                                            <p className="font-medium text-gray-900">{location.name}</p>
+                                            <p className="text-xs text-gray-600">
+                                                {location.students} students
+                                                {location.revenue > 0 ? ` • $${(location.revenue / 1000).toFixed(0)}K revenue` : ''}
+                                                {location.occupancyRate > 0 ? ` • ${location.occupancyRate}% occupancy` : ''}
+                                            </p>
+                                        </div>
+                                        <Badge variant={location.status === 'excellent' ? 'default' : location.status === 'good' ? 'secondary' : 'destructive'}>
+                                            {location.status}
+                                        </Badge>
                                     </div>
-                                    <Badge variant={location.status === 'excellent' ? 'default' : 'secondary'}>
-                                        {location.status}
-                                    </Badge>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-400">
+                                <Building2 className="w-10 h-10 mx-auto mb-2" />
+                                <p className="text-sm">No locations added yet</p>
+                                <button onClick={() => router.push('/admin/regional/locations')} className="mt-2 text-xs text-blue-600 underline">Add Location</button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -337,54 +394,69 @@ export default function RegionalAdminDashboard() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {staffData.map((staff, idx) => (
-                                <div key={idx}>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-gray-700">{staff.name}</span>
-                                        <span className="text-sm font-bold text-gray-900">{staff.count} • {staff.utilization}%</span>
+                        {staffData.length > 0 ? (
+                            <div className="space-y-4">
+                                {staffData.map((staff, idx) => (
+                                    <div key={idx}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">{staff.name}</span>
+                                            <span className="text-sm font-bold text-gray-900">{staff.count} members • {staff.utilization}%</span>
+                                        </div>
+                                        <Progress value={staff.utilization} className="h-2" />
                                     </div>
-                                    <Progress value={staff.utilization} className="h-2" />
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-400">
+                                <Users className="w-10 h-10 mx-auto mb-2" />
+                                <p className="text-sm">No staff members yet</p>
+                                <button onClick={() => router.push('/admin/regional/staff')} className="mt-2 text-xs text-blue-600 underline">Add Staff</button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Pending Actions */}
+            {/* Pending Actions - Dynamic */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Clock className="w-5 h-5 text-orange-600" />
                         Pending Actions
+                        {pendingActions.length > 0 && <Badge variant="secondary" className="text-xs ml-2">{pendingActions.length}</Badge>}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {[
-                            { type: 'Staff Approval', name: 'New Coach - John Smith', date: '2 days ago', priority: 'high' },
-                            { type: 'Location Update', name: 'Boston Downtown - Facility Upgrade', date: '1 day ago', priority: 'medium' },
-                            { type: 'Schedule Review', name: 'Summer Program Schedule', date: '3 hours ago', priority: 'medium' },
-                            { type: 'Budget Approval', name: 'Q3 Regional Budget', date: '5 hours ago', priority: 'low' },
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">{item.type}</p>
-                                    <p className="text-sm text-gray-600">{item.name}</p>
-                                    <p className="text-xs text-gray-500">{item.date}</p>
+                    {pendingActions.length > 0 ? (
+                        <div className="space-y-3">
+                            {pendingActions.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{item.type}</p>
+                                        <p className="text-sm text-gray-600">{item.name}</p>
+                                        <p className="text-xs text-gray-500">{item.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={item.priority === 'high' ? 'destructive' : item.priority === 'medium' ? 'secondary' : 'outline'}>
+                                            {item.priority}
+                                        </Badge>
+                                        <button
+                                            onClick={() => router.push('/admin/regional/approvals')}
+                                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                                        >
+                                            Review
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Badge variant={item.priority === 'high' ? 'destructive' : item.priority === 'medium' ? 'secondary' : 'outline'}>
-                                        {item.priority}
-                                    </Badge>
-                                    <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
-                                        Review
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-gray-400">
+                            <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-400" />
+                            <p className="text-sm text-gray-600">No pending actions</p>
+                            <p className="text-xs text-gray-400">All approvals are up to date</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

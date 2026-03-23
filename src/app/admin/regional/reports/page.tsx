@@ -23,15 +23,34 @@ export default function RegionalReportsPage() {
         fetchAnalytics()
     }, [dateRange])
 
+    const [analyticsData, setAnalyticsData] = useState<any>(null)
+
     const fetchAnalytics = async () => {
         setIsLoading(true)
         setError(null)
         try {
-            await RegionalAdminService.getAnalytics(dateRange)
+            const data = await RegionalAdminService.getAnalytics(dateRange)
+            setAnalyticsData(data)
         } catch {
-            // API not available yet — use hardcoded mock data
+            setError('API not available - showing sample data')
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handleExport = async () => {
+        try {
+            const blob = await RegionalAdminService.exportReport('current', 'csv')
+            const url = window.URL.createObjectURL(new Blob([blob]))
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `regional-report-${dateRange}.csv`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+        } catch {
+            alert('Export not available yet')
         }
     }
 
@@ -126,7 +145,7 @@ export default function RegionalReportsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Regional Reports</h1>
                     <p className="text-gray-600 mt-1">Comprehensive regional performance analytics</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Download className="w-5 h-5" />
                     Export Report
                 </button>

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
     LayoutDashboard, Building2, Users, Settings, BarChart3,
-    MapPin, Shield, TrendingUp, Bell, LogOut, Menu
+    MapPin, Shield, TrendingUp, Bell, LogOut, Menu, DollarSign, ShieldCheck, Target
 } from 'lucide-react'
 import LogoutModal from '@/components/ui/LogoutModal'
 
@@ -68,6 +68,9 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
         { name: 'Analytics', href: '/admin/regional/analytics', icon: BarChart3 },
         { name: 'Reports', href: '/admin/regional/reports', icon: TrendingUp },
         { name: 'Approvals', href: '/admin/regional/approvals', icon: Shield },
+        { name: 'Budget', href: '/admin/regional/budget', icon: DollarSign },
+        { name: 'Compliance', href: '/admin/regional/compliance', icon: ShieldCheck },
+        { name: 'Benchmarks', href: '/admin/regional/benchmarks', icon: Target },
         { name: 'Settings', href: '/admin/regional/settings', icon: Settings },
     ]
 

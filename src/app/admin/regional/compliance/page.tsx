@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { RegionalAdminService } from '@/services/regionalAdminService'
 
 export default function RegionalCompliancePage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -24,7 +25,18 @@ export default function RegionalCompliancePage() {
     const fetchCompliance = async () => {
         try {
             setIsLoading(true)
-            // Mock data
+            const data = await RegionalAdminService.getCompliance()
+            if (data?.items?.length) {
+                setComplianceItems(data.items.map((item: any) => ({
+                    id: item.id, name: item.title, category: item.category,
+                    status: item.status === 'NEEDS_ATTENTION' ? 'WARNING' : item.status,
+                    completionRate: item.completionRate, dueDate: item.dueDate,
+                    lastAudit: item.lastAudit, locations: 5,
+                    details: `${item.title} - ${item.completionRate}% complete`
+                })))
+                return
+            }
+            // Fallback mock data
             setComplianceItems([
                 {
                     id: '1',
@@ -95,6 +107,7 @@ export default function RegionalCompliancePage() {
             ])
         } catch (err: any) {
             console.error('Error fetching compliance:', err)
+            // keep existing mock data
         } finally {
             setIsLoading(false)
         }
@@ -145,64 +158,31 @@ export default function RegionalCompliancePage() {
                 <p className="text-gray-600 mt-1">Track regional compliance status and audit results</p>
             </div>
 
-            {/* Compliance Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Overall Compliance</p>
-                                <p className="text-3xl font-bold text-gray-900 mt-2">{complianceRate}%</p>
-                            </div>
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                                <Shield className="w-6 h-6 text-blue-600" />
-                            </div>
-                        </div>
-                        <Progress value={complianceRate} className="mt-4 h-2" />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Compliant</p>
-                                <p className="text-3xl font-bold text-green-600 mt-2">{compliant}</p>
-                            </div>
-                            <div className="bg-green-50 p-3 rounded-lg">
-                                <CheckCircle className="w-6 h-6 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Warnings</p>
-                                <p className="text-3xl font-bold text-yellow-600 mt-2">{warning}</p>
-                            </div>
-                            <div className="bg-yellow-50 p-3 rounded-lg">
-                                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Non-Compliant</p>
-                                <p className="text-3xl font-bold text-red-600 mt-2">{nonCompliant}</p>
-                            </div>
-                            <div className="bg-red-50 p-3 rounded-lg">
-                                <XCircle className="w-6 h-6 text-red-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Compliance Overview - Colorful Gradient Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[
+                    { title: 'Overall Compliance', value: `${complianceRate}%`, icon: Shield, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', showProgress: true },
+                    { title: 'Compliant', value: compliant, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
+                    { title: 'Warnings', value: warning, icon: AlertTriangle, gradient: 'from-yellow-500 to-amber-600', bgGradient: 'from-yellow-50 to-amber-100' },
+                    { title: 'Non-Compliant', value: nonCompliant, icon: XCircle, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
+                ].map((stat, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${stat.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <stat.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{stat.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                                </div>
+                                {stat.showProgress && <Progress value={complianceRate} className="mt-3 h-2" />}
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ))}
             </div>
 
             {/* Filters */}

@@ -10,7 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { budgetService, BudgetItem, LocationBudget } from '@/services/budgetService'
+import { RegionalAdminService } from '@/services/regionalAdminService'
+
+interface BudgetItem {
+    id: string; name: string; allocated: number; spent: number; percentage: number; category: string; period: string
+}
+interface LocationBudget {
+    id: string; location: string; budget: number; spent: number; remaining: number; locationId: string
+}
 
 export default function RegionalBudgetPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -28,13 +35,18 @@ export default function RegionalBudgetPage() {
             setIsLoading(true)
             setError(null)
 
-            const [items, locations] = await Promise.all([
-                budgetService.getBudgetItems(selectedPeriod),
-                budgetService.getLocationBudgets(selectedPeriod)
-            ])
-
+            const budgetResp = await RegionalAdminService.getBudget(selectedPeriod)
+            const items = (budgetResp?.items || []).map((i: any, idx: number) => ({
+                id: i.id || `b${idx}`, name: i.category, allocated: i.allocated, spent: i.spent,
+                percentage: i.allocated > 0 ? Math.round((i.spent / i.allocated) * 100) : 0,
+                category: i.category, period: selectedPeriod
+            }))
+            const locs = (budgetResp?.locationBudgets || []).map((l: any, idx: number) => ({
+                id: `lb${idx}`, location: l.locationName, budget: l.allocated, spent: l.spent,
+                remaining: l.allocated - l.spent, locationId: l.locationId
+            }))
             setBudgetData(items)
-            setLocationBudget(locations)
+            setLocationBudget(locs)
         } catch (err: any) {
             console.error('Error fetching budget data:', err)
             setError(err.message || 'Failed to fetch budget data')
@@ -90,7 +102,7 @@ export default function RegionalBudgetPage() {
                     <button
                         onClick={async () => {
                             try {
-                                const blob = await budgetService.exportBudgetReport(selectedPeriod)
+                                const blob = await RegionalAdminService.exportReport('budget', 'csv')
                                 const url = window.URL.createObjectURL(blob)
                                 const a = document.createElement('a')
                                 a.href = url
@@ -132,53 +144,24 @@ export default function RegionalBudgetPage() {
             </div>
 
             {/* Budget Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    {
-                        title: 'Total Allocated',
-                        value: `$${(totalAllocated / 1000).toFixed(0)}K`,
-                        icon: DollarSign,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50'
-                    },
-                    {
-                        title: 'Total Spent',
-                        value: `$${(totalSpent / 1000).toFixed(0)}K`,
-                        icon: TrendingUp,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50'
-                    },
-                    {
-                        title: 'Remaining',
-                        value: `$${(totalRemaining / 1000).toFixed(0)}K`,
-                        icon: DollarSign,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50'
-                    },
-                    {
-                        title: 'Spending %',
-                        value: `${spendingPercentage}%`,
-                        icon: CheckCircle,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50'
-                    },
+                    { title: 'Total Allocated', value: `$${(totalAllocated / 1000).toFixed(0)}K`, icon: DollarSign, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
+                    { title: 'Total Spent', value: `$${(totalSpent / 1000).toFixed(0)}K`, icon: TrendingUp, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
+                    { title: 'Remaining', value: `$${(totalRemaining / 1000).toFixed(0)}K`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
+                    { title: 'Spending %', value: `${spendingPercentage}%`, icon: CheckCircle, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
                 ].map((stat, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 font-medium">{stat.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${stat.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <stat.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{stat.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                                 </div>
                             </CardContent>
                         </Card>

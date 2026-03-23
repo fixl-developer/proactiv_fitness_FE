@@ -1,38 +1,77 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { BarChart3, TrendingUp, Users, DollarSign } from 'lucide-react'
+import { BarChart3, TrendingUp, Users, DollarSign, MapPin, Loader2 } from 'lucide-react'
+import { RegionalAdminService, RegionalAnalytics } from '@/services/regionalAdminService'
+
+const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#84cc16']
 
 export default function RegionalAnalyticsPage() {
     const [timeRange, setTimeRange] = useState('30d')
+    const [loading, setLoading] = useState(true)
+    const [analytics, setAnalytics] = useState<RegionalAnalytics | null>(null)
 
-    const revenueData = [
-        { month: 'Jan', revenue: 120000, target: 130000 },
-        { month: 'Feb', revenue: 128000, target: 135000 },
-        { month: 'Mar', revenue: 135000, target: 140000 },
-        { month: 'Apr', revenue: 138000, target: 142000 },
-        { month: 'May', revenue: 140000, target: 145000 },
-        { month: 'Jun', revenue: 142000, target: 150000 },
-    ]
+    const [revenueData, setRevenueData] = useState<Array<{ month: string; revenue: number; target: number }>>([])
+    const [studentData, setStudentData] = useState<Array<{ month: string; students: number; newEnrollments: number; churn: number }>>([])
+    const [locationBreakdown, setLocationBreakdown] = useState<Array<{ name: string; value: number; color: string }>>([])
 
-    const studentData = [
-        { month: 'Jan', students: 1050, active: 980 },
-        { month: 'Feb', students: 1100, active: 1020 },
-        { month: 'Mar', students: 1150, active: 1080 },
-        { month: 'Apr', students: 1180, active: 1110 },
-        { month: 'May', students: 1210, active: 1140 },
-        { month: 'Jun', students: 1250, active: 1180 },
-    ]
+    useEffect(() => {
+        async function fetchAnalytics() {
+            setLoading(true)
+            try {
+                const data = await RegionalAdminService.getAnalytics(timeRange)
+                setAnalytics(data)
 
-    const locationBreakdown = [
-        { name: 'Boston Downtown', value: 320, color: '#3b82f6' },
-        { name: 'Boston Suburbs', value: 280, color: '#10b981' },
-        { name: 'Providence', value: 210, color: '#f59e0b' },
-        { name: 'Hartford', value: 240, color: '#8b5cf6' },
-        { name: 'New Haven', value: 200, color: '#ef4444' },
-    ]
+                // Map revenue monthly data for LineChart
+                setRevenueData(data.revenue?.monthly ?? [])
+
+                // Map student growth data for BarChart
+                setStudentData(data.students?.growth ?? [])
+
+                // Map students by location for PieChart, adding colors
+                const byLocation = data.students?.byLocation ?? []
+                setLocationBreakdown(
+                    byLocation.map((item, index) => ({
+                        name: item.location,
+                        value: item.count,
+                        color: PIE_COLORS[index % PIE_COLORS.length],
+                    }))
+                )
+            } catch (error) {
+                console.error('Failed to fetch analytics:', error)
+                setAnalytics(null)
+                setRevenueData([])
+                setStudentData([])
+                setLocationBreakdown([])
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchAnalytics()
+    }, [timeRange])
+
+    // Compute summary values
+    const totalRevenue = analytics?.totalRevenue ?? analytics?.revenue?.total ?? 0
+    const totalStudents = analytics?.totalStudents ?? analytics?.students?.total ?? 0
+    const activeLocations = analytics?.locations?.active ?? 0
+    const staffUtilization = analytics?.staff?.byRole?.length
+        ? Math.round(
+              analytics.staff.byRole.reduce((sum, r) => sum + (r.utilization ?? 0), 0) /
+                  analytics.staff.byRole.length
+          )
+        : 0
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-gray-600 text-lg">Loading analytics...</span>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6">
@@ -55,6 +94,70 @@ export default function RegionalAnalyticsPage() {
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                                <DollarSign className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Total Revenue</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    ${totalRevenue.toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                                <Users className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Total Students</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {totalStudents.toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                                <MapPin className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Active Locations</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {activeLocations}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                                <TrendingUp className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Staff Utilization</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {staffUtilization}%
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Revenue Analytics */}
@@ -97,7 +200,7 @@ export default function RegionalAnalyticsPage() {
                             <Tooltip />
                             <Legend />
                             <Bar dataKey="students" fill="#3b82f6" name="Total Students" />
-                            <Bar dataKey="active" fill="#10b981" name="Active Students" />
+                            <Bar dataKey="newEnrollments" fill="#10b981" name="New Enrollments" />
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>

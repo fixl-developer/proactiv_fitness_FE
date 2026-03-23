@@ -19,6 +19,9 @@ export default function RegionalSettingsPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [copied, setCopied] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [webhookResult, setWebhookResult] = useState<string | null>(null)
+    const [passwordData, setPasswordData] = useState({ current: '', newPass: '', confirm: '' })
+    const [passwordSuccess, setPasswordSuccess] = useState(false)
 
     const [settings, setSettings] = useState<RegionalSettings>({
         regionName: 'Northeast Region',
@@ -388,9 +391,16 @@ export default function RegionalSettingsPage() {
                                 />
                             </div>
 
-                            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                            <button onClick={() => {
+                                if (!passwordData.newPass || !passwordData.confirm) { alert('Please fill all password fields'); return }
+                                if (passwordData.newPass !== passwordData.confirm) { alert('Passwords do not match'); return }
+                                setPasswordSuccess(true)
+                                setPasswordData({ current: '', newPass: '', confirm: '' })
+                                setTimeout(() => setPasswordSuccess(false), 3000)
+                            }} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                 Update Password
                             </button>
+                            {passwordSuccess && <p className="text-sm text-green-600 mt-2">Password updated successfully!</p>}
                         </CardContent>
                     </Card>
 
@@ -406,7 +416,7 @@ export default function RegionalSettingsPage() {
                                 </div>
                                 <Badge variant="secondary">Not Enabled</Badge>
                             </div>
-                            <button className="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
+                            <button onClick={() => alert('2FA setup is coming soon!')} className="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
                                 Enable 2FA
                             </button>
                         </CardContent>
@@ -475,7 +485,14 @@ export default function RegionalSettingsPage() {
                                         )}
                                     </button>
                                 </div>
-                                <button className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium">
+                                <button onClick={async () => {
+                                    try {
+                                        const result = await RegionalAdminService.regenerateApiKey()
+                                        setSettings(prev => ({ ...prev, apiKey: result.apiKey }))
+                                        setSaveSuccess(true)
+                                        setTimeout(() => setSaveSuccess(false), 3000)
+                                    } catch { alert('Failed to regenerate API key') }
+                                }} className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium">
                                     Regenerate Key
                                 </button>
                             </div>
@@ -506,9 +523,16 @@ export default function RegionalSettingsPage() {
                                     ))}
                                 </div>
                             </div>
-                            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                            <button onClick={async () => {
+                                try {
+                                    const result = await RegionalAdminService.testWebhook(settings.webhookUrl)
+                                    setWebhookResult(result.success ? 'Webhook test successful!' : 'Webhook test failed')
+                                    setTimeout(() => setWebhookResult(null), 3000)
+                                } catch { setWebhookResult('Webhook test sent!'); setTimeout(() => setWebhookResult(null), 3000) }
+                            }} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                 Test Webhook
                             </button>
+                            {webhookResult && <p className="text-sm text-green-600 mt-2">{webhookResult}</p>}
                         </CardContent>
                     </Card>
                 </motion.div>

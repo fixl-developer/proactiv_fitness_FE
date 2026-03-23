@@ -30,9 +30,9 @@ export default function StaffDashboard() {
             setError(null)
 
             const [ticketsRes, notifRes, recentRes] = await Promise.allSettled([
-                SupportService.getTicketStats(),
+                SupportService.getTicketStatistics(),
                 NotificationService.getNotificationStats(),
-                SupportService.getTickets({ limit: 5 })
+                SupportService.getAllTickets({ limit: 5 })
             ])
 
             setTicketStats(

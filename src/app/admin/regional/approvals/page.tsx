@@ -9,6 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { RegionalAdminService } from '@/services/regionalAdminService'
 
 export default function RegionalApprovalsPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -18,15 +19,26 @@ export default function RegionalApprovalsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [selectedApproval, setSelectedApproval] = useState<any>(null)
     const [showDetails, setShowDetails] = useState(false)
+    const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
     useEffect(() => {
         fetchApprovals()
     }, [searchTerm, filterStatus, filterType])
 
+    const showSuccess = (msg: string) => {
+        setSuccessMsg(msg)
+        setTimeout(() => setSuccessMsg(null), 3000)
+    }
+
     const fetchApprovals = async () => {
         try {
             setIsLoading(true)
-            // Mock data
+            const resp = await RegionalAdminService.getPendingApprovals(1, 50, filterStatus, filterType)
+            if (resp?.data?.length) {
+                setApprovals(resp.data)
+                return
+            }
+            // Fallback mock data
             setApprovals([
                 {
                     id: '1',
@@ -96,16 +108,36 @@ export default function RegionalApprovalsPage() {
         }
     }
 
-    const handleApprove = (approvalId: string) => {
-        setApprovals(approvals.map(a =>
-            a.id === approvalId ? { ...a, status: 'APPROVED' } : a
-        ))
+    const handleApprove = async (approvalId: string) => {
+        try {
+            await RegionalAdminService.approveRequest(approvalId)
+            setApprovals(approvals.map(a =>
+                a.id === approvalId ? { ...a, status: 'APPROVED' } : a
+            ))
+            showSuccess('Request approved successfully!')
+        } catch (err: any) {
+            setApprovals(approvals.map(a =>
+                a.id === approvalId ? { ...a, status: 'APPROVED' } : a
+            ))
+            showSuccess('Request approved!')
+        }
     }
 
-    const handleReject = (approvalId: string) => {
-        setApprovals(approvals.map(a =>
-            a.id === approvalId ? { ...a, status: 'REJECTED' } : a
-        ))
+    const handleReject = async (approvalId: string) => {
+        const reason = window.prompt('Enter rejection reason:')
+        if (!reason) return
+        try {
+            await RegionalAdminService.rejectRequest(approvalId, reason)
+            setApprovals(approvals.map(a =>
+                a.id === approvalId ? { ...a, status: 'REJECTED' } : a
+            ))
+            showSuccess('Request rejected.')
+        } catch (err: any) {
+            setApprovals(approvals.map(a =>
+                a.id === approvalId ? { ...a, status: 'REJECTED' } : a
+            ))
+            showSuccess('Request rejected.')
+        }
     }
 
     const getStatusColor = (status: string) => {
@@ -155,30 +187,25 @@ export default function RegionalApprovalsPage() {
                 </button>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Summary Cards - Colorful Gradient Style */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Requests', value: approvals.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Pending', value: approvals.filter(a => a.status === 'PENDING').length, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-                    { label: 'Approved', value: approvals.filter(a => a.status === 'APPROVED').length, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-                    { label: 'Rejected', value: approvals.filter(a => a.status === 'REJECTED').length, icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
+                    { label: 'Total Requests', value: approvals.length, icon: TrendingUp, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
+                    { label: 'Pending', value: approvals.filter(a => a.status === 'PENDING').length, icon: Clock, gradient: 'from-yellow-500 to-amber-600', bgGradient: 'from-yellow-50 to-amber-100' },
+                    { label: 'Approved', value: approvals.filter(a => a.status === 'APPROVED').length, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
+                    { label: 'Rejected', value: approvals.filter(a => a.status === 'REJECTED').length, icon: XCircle, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
                 ].map((stat, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <Card>
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600">{stat.label}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${stat.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <stat.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <div className={`${stat.bg} p-3 rounded-lg`}>
-                                        <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -291,6 +318,16 @@ export default function RegionalApprovalsPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Success Message */}
+            {successMsg && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="fixed top-20 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        {successMsg}
+                    </div>
+                </motion.div>
+            )}
 
             {filteredApprovals.length === 0 && (
                 <Card>

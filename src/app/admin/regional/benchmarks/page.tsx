@@ -10,19 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { RegionalAdminService } from '@/services/regionalAdminService'
 
 export default function RegionalBenchmarksPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [timeRange, setTimeRange] = useState('30d')
+    const [benchmarkData, setBenchmarkData] = useState<any[]>([])
+    const [locationComparison, setLocationComparison] = useState<any[]>([])
+    const [trendData, setTrendData] = useState<any[]>([])
 
-    useEffect(() => {
-        setTimeout(() => {
-            setIsLoading(false)
-        }, 1000)
-    }, [])
-
-    // Regional vs National Benchmarks
-    const benchmarkData = [
+    const FALLBACK_BENCHMARKS = [
         { metric: 'Revenue/Location', regional: 142000, national: 135000, target: 150000 },
         { metric: 'Student Enrollment', regional: 250, national: 240, target: 280 },
         { metric: 'Staff Utilization', regional: 82, national: 78, target: 85 },
@@ -30,18 +27,14 @@ export default function RegionalBenchmarksPage() {
         { metric: 'Class Occupancy', regional: 78.5, national: 75, target: 85 },
         { metric: 'Retention Rate', regional: 92, national: 88, target: 95 },
     ]
-
-    // Location Performance Comparison
-    const locationComparison = [
+    const FALLBACK_LOCATIONS = [
         { name: 'Boston Downtown', revenue: 185000, target: 180000, status: 'EXCEEDING' },
         { name: 'Boston Suburbs', revenue: 165000, target: 160000, status: 'EXCEEDING' },
         { name: 'Providence', revenue: 125000, target: 140000, status: 'BELOW' },
         { name: 'Hartford', revenue: 145000, target: 145000, status: 'ON_TARGET' },
         { name: 'New Haven', revenue: 115000, target: 130000, status: 'BELOW' },
     ]
-
-    // Trend data
-    const trendData = [
+    const FALLBACK_TREND = [
         { month: 'Jan', regional: 135000, national: 130000, target: 145000 },
         { month: 'Feb', regional: 138000, national: 132000, target: 147000 },
         { month: 'Mar', regional: 142000, national: 135000, target: 150000 },
@@ -49,6 +42,33 @@ export default function RegionalBenchmarksPage() {
         { month: 'May', regional: 145000, national: 137000, target: 155000 },
         { month: 'Jun', regional: 148000, national: 140000, target: 158000 },
     ]
+
+    useEffect(() => {
+        const loadBenchmarks = async () => {
+            try {
+                setIsLoading(true)
+                const data = await RegionalAdminService.getBenchmarks()
+                setBenchmarkData(data?.metrics?.length ? data.metrics.map((m: any) => ({
+                    metric: m.metric, regional: m.regional, national: m.national,
+                    target: m.national * 1.1 // derive target as 10% above national
+                })) : FALLBACK_BENCHMARKS)
+                setLocationComparison(data?.locationBenchmarks?.length ? data.locationBenchmarks.map((l: any) => ({
+                    name: l.location, revenue: l.revenueActual, target: l.revenueTarget,
+                    status: l.revenueActual > l.revenueTarget ? 'EXCEEDING' : l.revenueActual === l.revenueTarget ? 'ON_TARGET' : 'BELOW'
+                })) : FALLBACK_LOCATIONS)
+                setTrendData(data?.trendData?.length ? data.trendData.map((t: any) => ({
+                    month: t.month, regional: t.regional * 1000, national: t.national * 1000, target: t.regional * 1050
+                })) : FALLBACK_TREND)
+            } catch {
+                setBenchmarkData(FALLBACK_BENCHMARKS)
+                setLocationComparison(FALLBACK_LOCATIONS)
+                setTrendData(FALLBACK_TREND)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadBenchmarks()
+    }, [timeRange])
 
     if (isLoading) {
         return (
