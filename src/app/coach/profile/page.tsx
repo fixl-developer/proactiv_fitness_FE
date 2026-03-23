@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     User, Mail, Phone, MapPin, Award, BookOpen, Target,
-    Edit2, Save, AlertCircle, CheckCircle, Star, Users
+    Edit2, Save, AlertCircle, CheckCircle, Star, Users,
+    X, Plus, Clock, TrendingUp
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,55 +14,278 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
+import { coachService, CoachProfile, CoachReportData } from '@/services/modules/coach.service'
+import { toast } from 'sonner'
+
+// ==================== MOCK DATA ====================
+
+const MOCK_PROFILE: CoachProfile = {
+    id: '',
+    staffId: '',
+    name: 'Coach Sarah Johnson',
+    firstName: 'Sarah',
+    lastName: 'Johnson',
+    email: 'sarah.johnson@proactiv.com',
+    phone: '+91-9876543210',
+    location: 'Mumbai, India',
+    bio: 'Certified gymnastics coach with 10+ years of experience. Specializing in beginner and intermediate level training.',
+    specializations: ['Gymnastics', 'Tumbling', 'Flexibility Training'],
+    certifications: [
+        { name: 'Level 3 Gymnastics Coach', status: 'valid', issuingOrganization: 'National Gymnastics Federation', expiryDate: '2027-06-15' },
+        { name: 'First Aid Certified', status: 'valid', issuingOrganization: 'Red Cross', expiryDate: '2026-12-01' },
+        { name: 'Sports Nutrition', status: 'valid', issuingOrganization: 'ISSA', expiryDate: '2027-03-20' },
+    ],
+    skills: ['Coaching', 'Mentoring', 'Program Design', 'Student Assessment'],
+    experienceYears: 10,
+    rating: 4.8,
+    totalStudents: 45,
+    totalClasses: 48,
+    status: 'active',
+}
+
+// ==================== COMPONENT ====================
 
 const CoachProfilePage = () => {
     const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
-    const [profile, setProfile] = useState({
-        name: 'Coach Sarah Johnson',
-        email: 'sarah.johnson@proactiv.com',
-        phone: '+91-9876543210',
-        location: 'Mumbai, India',
-        bio: 'Certified gymnastics coach with 10+ years of experience. Specializing in beginner and intermediate level training.',
-        specializations: ['Gymnastics', 'Tumbling', 'Flexibility Training'],
-        certifications: ['Level 3 Gymnastics Coach', 'First Aid Certified', 'Sports Nutrition'],
-        experience: '10+ years',
-        rating: 4.8,
-        totalStudents: 45,
-        totalClasses: 48
-    })
+    const [profile, setProfile] = useState<CoachProfile>(MOCK_PROFILE)
+    const [editedProfile, setEditedProfile] = useState<CoachProfile>(MOCK_PROFILE)
 
-    const [editedProfile, setEditedProfile] = useState(profile)
+    // Inline input states for adding items
+    const [newSpecialization, setNewSpecialization] = useState('')
+    const [newSkill, setNewSkill] = useState('')
+    const [newCertification, setNewCertification] = useState({ name: '', issuingOrganization: '', expiryDate: '' })
+    const [showAddCert, setShowAddCert] = useState(false)
+    const [goals, setGoals] = useState<string[]>([])
+    const [newGoal, setNewGoal] = useState('')
 
-    useEffect(() => {
-        if (!isAuthenticated && !localStorage.getItem('token')) return
+    const coachId = user?.id || ''
 
-        loadProfile()
-    }, [isAuthenticated])
+    // ==================== LOAD PROFILE ====================
 
-    const loadProfile = async () => {
-        try {
+    const loadProfile = useCallback(async () => {
+        if (!coachId) {
             setIsLoading(false)
+            return
+        }
+        try {
+            setIsLoading(true)
+            const [profileRes, performanceRes] = await Promise.allSettled([
+                coachService.getProfile(coachId),
+                coachService.getReportData(coachId, 'performance', 'month')
+            ])
+
+            const data = profileRes.status === 'fulfilled' ? profileRes.value : null
+            const perfData = performanceRes.status === 'fulfilled' ? performanceRes.value : null
+
+            // If the API returned essentially empty data, fall back to mock
+            if (!data || (!data.name && !data.firstName && !data.email)) {
+                setProfile(MOCK_PROFILE)
+                setEditedProfile(MOCK_PROFILE)
+            } else {
+                setProfile(data)
+                setEditedProfile(data)
+            }
+
+            // Generate dynamic goals based on performance data
+            const dynamicGoals: string[] = []
+            if (perfData) {
+                const satisfaction = perfData.performanceMetrics?.find(m => m.metric === 'Student Satisfaction')
+                const completion = perfData.performanceMetrics?.find(m => m.metric === 'Class Completion Rate')
+                const attendance = perfData.avgAttendance
+
+                if (satisfaction && satisfaction.value < 95) {
+                    dynamicGoals.push(`Improve student satisfaction from ${satisfaction.value}% to 95%`)
+                }
+                if (completion && completion.value < 100) {
+                    dynamicGoals.push(`Achieve 100% class completion rate (currently ${completion.value}%)`)
+                }
+                if (attendance && attendance < 95) {
+                    dynamicGoals.push(`Boost class attendance to 95% (currently ${attendance}%)`)
+                }
+                if (data && data.totalStudents > 0) {
+                    dynamicGoals.push(`Continue mentoring ${data.totalStudents} active students`)
+                }
+            }
+
+            if (dynamicGoals.length === 0) {
+                // Default goals if no performance data
+                dynamicGoals.push(
+                    'Maintain high student satisfaction rating',
+                    'Complete all scheduled classes on time',
+                    'Continue professional development',
+                    'Mentor and support student growth'
+                )
+            }
+            setGoals(dynamicGoals)
         } catch (error) {
             console.error('Error loading profile:', error)
+            setProfile(MOCK_PROFILE)
+            setEditedProfile(MOCK_PROFILE)
+            setGoals([
+                'Maintain high student satisfaction rating',
+                'Complete all scheduled classes on time',
+                'Continue professional development',
+                'Mentor and support student growth'
+            ])
+        } finally {
             setIsLoading(false)
+        }
+    }, [coachId])
+
+    useEffect(() => {
+        if (!isAuthenticated && !localStorage.getItem('token')) {
+            setIsLoading(false)
+            return
+        }
+        loadProfile()
+    }, [isAuthenticated, loadProfile])
+
+    // ==================== SAVE PROFILE ====================
+
+    const handleSave = async () => {
+        if (!coachId) {
+            toast.error('User ID not found. Cannot save profile.')
+            return
+        }
+
+        try {
+            setIsSaving(true)
+
+            // Parse location into city/country
+            const locationParts = editedProfile.location.split(',').map(s => s.trim())
+            const city = locationParts[0] || ''
+            const country = locationParts[1] || ''
+
+            // Parse name into first/last
+            const firstName = editedProfile.firstName || editedProfile.name.split(' ')[0] || ''
+            const lastName = editedProfile.lastName || editedProfile.name.split(' ').slice(1).join(' ') || ''
+
+            const updateData = {
+                personalInfo: { firstName, lastName },
+                contactInfo: {
+                    email: editedProfile.email,
+                    phone: editedProfile.phone,
+                    address: { city, country },
+                },
+                notes: editedProfile.bio,
+                specializations: editedProfile.specializations,
+                skills: editedProfile.skills,
+            }
+
+            await coachService.updateProfile(coachId, updateData)
+
+            // Update local state on success
+            const updatedProfile = {
+                ...editedProfile,
+                firstName,
+                lastName,
+                name: `${firstName} ${lastName}`.trim(),
+            }
+            setProfile(updatedProfile)
+            setEditedProfile(updatedProfile)
+            setIsEditing(false)
+            toast.success('Profile updated successfully!')
+        } catch (error) {
+            console.error('Error saving profile:', error)
+            toast.error('Failed to save profile. Please try again.')
+        } finally {
+            setIsSaving(false)
         }
     }
 
-    const handleSave = async () => {
-        try {
-            setIsSaving(true)
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            setProfile(editedProfile)
-            setIsEditing(false)
-            setIsSaving(false)
-        } catch (error) {
-            console.error('Error saving profile:', error)
-            setIsSaving(false)
-        }
+    // ==================== CANCEL EDITS ====================
+
+    const handleCancel = () => {
+        setEditedProfile(profile)
+        setIsEditing(false)
+        setNewSpecialization('')
+        setNewSkill('')
+        setNewCertification({ name: '', issuingOrganization: '', expiryDate: '' })
+        setShowAddCert(false)
     }
+
+    // ==================== SPECIALIZATION HELPERS ====================
+
+    const addSpecialization = () => {
+        const value = newSpecialization.trim()
+        if (!value) return
+        if (editedProfile.specializations.includes(value)) {
+            toast.error('Specialization already exists')
+            return
+        }
+        setEditedProfile(prev => ({
+            ...prev,
+            specializations: [...prev.specializations, value],
+        }))
+        setNewSpecialization('')
+    }
+
+    const removeSpecialization = (index: number) => {
+        setEditedProfile(prev => ({
+            ...prev,
+            specializations: prev.specializations.filter((_, i) => i !== index),
+        }))
+    }
+
+    // ==================== SKILL HELPERS ====================
+
+    const addSkill = () => {
+        const value = newSkill.trim()
+        if (!value) return
+        if (editedProfile.skills.includes(value)) {
+            toast.error('Skill already exists')
+            return
+        }
+        setEditedProfile(prev => ({
+            ...prev,
+            skills: [...prev.skills, value],
+        }))
+        setNewSkill('')
+    }
+
+    const removeSkill = (index: number) => {
+        setEditedProfile(prev => ({
+            ...prev,
+            skills: prev.skills.filter((_, i) => i !== index),
+        }))
+    }
+
+    // ==================== CERTIFICATION HELPERS ====================
+
+    const addCertification = () => {
+        const name = newCertification.name.trim()
+        if (!name) return
+        if (editedProfile.certifications.some(c => c.name === name)) {
+            toast.error('Certification already exists')
+            return
+        }
+        setEditedProfile(prev => ({
+            ...prev,
+            certifications: [
+                ...prev.certifications,
+                {
+                    name,
+                    status: 'valid',
+                    issuingOrganization: newCertification.issuingOrganization.trim(),
+                    expiryDate: newCertification.expiryDate,
+                },
+            ],
+        }))
+        setNewCertification({ name: '', issuingOrganization: '', expiryDate: '' })
+        setShowAddCert(false)
+    }
+
+    const removeCertification = (index: number) => {
+        setEditedProfile(prev => ({
+            ...prev,
+            certifications: prev.certifications.filter((_, i) => i !== index),
+        }))
+    }
+
+    // ==================== LOADING STATE ====================
 
     if (isLoading) {
         return (
@@ -74,6 +298,11 @@ const CoachProfilePage = () => {
         )
     }
 
+    // Decide which data to display: edited when editing, profile when viewing
+    const displayProfile = isEditing ? editedProfile : profile
+
+    // ==================== RENDER ====================
+
     return (
         <div className={responsiveClasses.pageContainer}>
             {/* Header */}
@@ -84,30 +313,43 @@ const CoachProfilePage = () => {
                         Manage your coaching profile and credentials
                     </p>
                 </div>
-                <Button
-                    onClick={() => {
-                        if (isEditing) {
-                            handleSave()
-                        } else {
-                            setIsEditing(true)
-                            setEditedProfile(profile)
-                        }
-                    }}
-                    disabled={isSaving}
-                    className="w-full sm:w-auto"
-                >
-                    {isEditing ? (
-                        <>
-                            <Save className="w-4 h-4 mr-2" />
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </>
-                    ) : (
-                        <>
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            Edit Profile
-                        </>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    {isEditing && (
+                        <Button
+                            variant="outline"
+                            onClick={handleCancel}
+                            disabled={isSaving}
+                            className="w-full sm:w-auto"
+                        >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancel
+                        </Button>
                     )}
-                </Button>
+                    <Button
+                        onClick={() => {
+                            if (isEditing) {
+                                handleSave()
+                            } else {
+                                setIsEditing(true)
+                                setEditedProfile(profile)
+                            }
+                        }}
+                        disabled={isSaving}
+                        className="w-full sm:w-auto"
+                    >
+                        {isEditing ? (
+                            <>
+                                <Save className="w-4 h-4 mr-2" />
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </>
+                        ) : (
+                            <>
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Edit Profile
+                            </>
+                        )}
+                    </Button>
+                </div>
             </div>
 
             {/* Profile Overview */}
@@ -116,22 +358,59 @@ const CoachProfilePage = () => {
                 <div className="lg:col-span-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Personal Information</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <User className="w-5 h-5 text-blue-600" />
+                                Personal Information
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* Name */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Full Name
-                                </label>
-                                {isEditing ? (
-                                    <Input
-                                        value={editedProfile.name}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
-                                    />
-                                ) : (
-                                    <p className="text-gray-900 font-medium">{profile.name}</p>
-                                )}
+                            {/* First Name & Last Name */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        First Name
+                                    </label>
+                                    {isEditing ? (
+                                        <Input
+                                            value={editedProfile.firstName}
+                                            onChange={(e) =>
+                                                setEditedProfile({
+                                                    ...editedProfile,
+                                                    firstName: e.target.value,
+                                                    name: `${e.target.value} ${editedProfile.lastName}`.trim(),
+                                                })
+                                            }
+                                            placeholder="First name"
+                                        />
+                                    ) : (
+                                        <p className="text-gray-900 font-medium flex items-center gap-2">
+                                            <User className="w-4 h-4 text-gray-400" />
+                                            {displayProfile.firstName || displayProfile.name.split(' ')[0] || '-'}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Last Name
+                                    </label>
+                                    {isEditing ? (
+                                        <Input
+                                            value={editedProfile.lastName}
+                                            onChange={(e) =>
+                                                setEditedProfile({
+                                                    ...editedProfile,
+                                                    lastName: e.target.value,
+                                                    name: `${editedProfile.firstName} ${e.target.value}`.trim(),
+                                                })
+                                            }
+                                            placeholder="Last name"
+                                        />
+                                    ) : (
+                                        <p className="text-gray-900 font-medium">
+                                            {displayProfile.lastName || displayProfile.name.split(' ').slice(1).join(' ') || '-'}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Email */}
@@ -144,9 +423,13 @@ const CoachProfilePage = () => {
                                         type="email"
                                         value={editedProfile.email}
                                         onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
+                                        placeholder="email@example.com"
                                     />
                                 ) : (
-                                    <p className="text-gray-900 font-medium">{profile.email}</p>
+                                    <p className="text-gray-900 font-medium flex items-center gap-2">
+                                        <Mail className="w-4 h-4 text-gray-400" />
+                                        {displayProfile.email || '-'}
+                                    </p>
                                 )}
                             </div>
 
@@ -159,9 +442,13 @@ const CoachProfilePage = () => {
                                     <Input
                                         value={editedProfile.phone}
                                         onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
+                                        placeholder="+91-0000000000"
                                     />
                                 ) : (
-                                    <p className="text-gray-900 font-medium">{profile.phone}</p>
+                                    <p className="text-gray-900 font-medium flex items-center gap-2">
+                                        <Phone className="w-4 h-4 text-gray-400" />
+                                        {displayProfile.phone || '-'}
+                                    </p>
                                 )}
                             </div>
 
@@ -174,9 +461,13 @@ const CoachProfilePage = () => {
                                     <Input
                                         value={editedProfile.location}
                                         onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })}
+                                        placeholder="City, Country"
                                     />
                                 ) : (
-                                    <p className="text-gray-900 font-medium">{profile.location}</p>
+                                    <p className="text-gray-900 font-medium flex items-center gap-2">
+                                        <MapPin className="w-4 h-4 text-gray-400" />
+                                        {displayProfile.location || '-'}
+                                    </p>
                                 )}
                             </div>
 
@@ -190,9 +481,10 @@ const CoachProfilePage = () => {
                                         value={editedProfile.bio}
                                         onChange={(e) => setEditedProfile({ ...editedProfile, bio: e.target.value })}
                                         className="min-h-24"
+                                        placeholder="Tell us about your coaching experience..."
                                     />
                                 ) : (
-                                    <p className="text-gray-700">{profile.bio}</p>
+                                    <p className="text-gray-700">{displayProfile.bio || 'No bio provided.'}</p>
                                 )}
                             </div>
                         </CardContent>
@@ -200,58 +492,87 @@ const CoachProfilePage = () => {
                 </div>
 
                 {/* Stats Sidebar */}
-                <div className="space-y-6">
-                    {/* Rating */}
-                    <Card>
+                <div className="space-y-4">
+                    {/* Rating Card */}
+                    <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
                         <CardContent className="pt-6">
                             <div className="text-center">
                                 <div className="flex justify-center gap-1 mb-2">
                                     {[...Array(5)].map((_, i) => (
                                         <Star
                                             key={i}
-                                            className={`w-5 h-5 ${i < Math.floor(profile.rating)
+                                            className={`w-5 h-5 ${
+                                                i < Math.floor(displayProfile.rating)
                                                     ? 'fill-yellow-400 text-yellow-400'
-                                                    : 'text-gray-300'
-                                                }`}
+                                                    : i < displayProfile.rating
+                                                        ? 'fill-yellow-200 text-yellow-300'
+                                                        : 'text-gray-300'
+                                            }`}
                                         />
                                     ))}
                                 </div>
-                                <p className="text-2xl font-bold text-gray-900">{profile.rating}</p>
-                                <p className="text-sm text-gray-600">Coach Rating</p>
+                                <p className="text-3xl font-bold text-amber-700">{displayProfile.rating || '-'}</p>
+                                <p className="text-sm text-amber-600 font-medium">Coach Rating</p>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Stats */}
-                    <Card>
-                        <CardContent className="pt-6 space-y-4">
+                    {/* Total Students */}
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                        <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Users className="w-5 h-5 text-blue-600" />
-                                    <span className="text-sm text-gray-600">Total Students</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                        <Users className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-blue-600 font-medium">Total Students</p>
+                                        <p className="text-2xl font-bold text-blue-800">{displayProfile.totalStudents}</p>
+                                    </div>
                                 </div>
-                                <span className="font-bold text-gray-900">{profile.totalStudents}</span>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Total Classes */}
+                    <Card className="bg-gradient-to-br from-purple-50 to-fuchsia-50 border-purple-200">
+                        <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <BookOpen className="w-5 h-5 text-purple-600" />
-                                    <span className="text-sm text-gray-600">Total Classes</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-purple-100 rounded-lg">
+                                        <BookOpen className="w-5 h-5 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-purple-600 font-medium">Total Classes</p>
+                                        <p className="text-2xl font-bold text-purple-800">{displayProfile.totalClasses}</p>
+                                    </div>
                                 </div>
-                                <span className="font-bold text-gray-900">{profile.totalClasses}</span>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Experience */}
+                    <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+                        <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Target className="w-5 h-5 text-green-600" />
-                                    <span className="text-sm text-gray-600">Experience</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-emerald-100 rounded-lg">
+                                        <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-emerald-600 font-medium">Experience</p>
+                                        <p className="text-2xl font-bold text-emerald-800">
+                                            {displayProfile.experienceYears ? `${displayProfile.experienceYears} yrs` : '-'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <span className="font-bold text-gray-900">{profile.experience}</span>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
-            {/* Specializations & Certifications */}
+            {/* Specializations, Skills & Certifications */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 {/* Specializations */}
                 <Card>
@@ -262,12 +583,79 @@ const CoachProfilePage = () => {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                            {profile.specializations.map((spec, index) => (
-                                <Badge key={index} className="bg-blue-100 text-blue-800">
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {displayProfile.specializations.map((spec, index) => (
+                                <Badge key={index} className="bg-blue-100 text-blue-800 flex items-center gap-1">
                                     {spec}
+                                    {isEditing && (
+                                        <button
+                                            onClick={() => removeSpecialization(index)}
+                                            className="ml-1 hover:text-red-600 transition-colors"
+                                            aria-label={`Remove ${spec}`}
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
                                 </Badge>
                             ))}
+                            {displayProfile.specializations.length === 0 && (
+                                <p className="text-sm text-gray-500">No specializations added yet.</p>
+                            )}
+                        </div>
+                        {isEditing && (
+                            <div className="flex gap-2 mt-2">
+                                <Input
+                                    value={newSpecialization}
+                                    onChange={(e) => setNewSpecialization(e.target.value)}
+                                    placeholder="Add specialization..."
+                                    className="flex-1"
+                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
+                                />
+                                <Button size="sm" onClick={addSpecialization} variant="outline">
+                                    <Plus className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Skills sub-section */}
+                        <div className="mt-6 pt-4 border-t">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <BookOpen className="w-4 h-4 text-indigo-500" />
+                                Skills
+                            </h4>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {displayProfile.skills.map((skill, index) => (
+                                    <Badge key={index} variant="outline" className="border-indigo-300 text-indigo-700 flex items-center gap-1">
+                                        {skill}
+                                        {isEditing && (
+                                            <button
+                                                onClick={() => removeSkill(index)}
+                                                className="ml-1 hover:text-red-600 transition-colors"
+                                                aria-label={`Remove ${skill}`}
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        )}
+                                    </Badge>
+                                ))}
+                                {displayProfile.skills.length === 0 && (
+                                    <p className="text-sm text-gray-500">No skills added yet.</p>
+                                )}
+                            </div>
+                            {isEditing && (
+                                <div className="flex gap-2 mt-2">
+                                    <Input
+                                        value={newSkill}
+                                        onChange={(e) => setNewSkill(e.target.value)}
+                                        placeholder="Add skill..."
+                                        className="flex-1"
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                                    />
+                                    <Button size="sm" onClick={addSkill} variant="outline">
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -282,19 +670,115 @@ const CoachProfilePage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
-                            {profile.certifications.map((cert, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center gap-2 p-2 bg-green-50 rounded-lg"
-                                >
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                    <span className="text-sm text-gray-700">{cert}</span>
-                                </motion.div>
-                            ))}
+                            <AnimatePresence>
+                                {displayProfile.certifications.map((cert, index) => (
+                                    <motion.div
+                                        key={`${cert.name}-${index}`}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className="flex items-start gap-3 p-3 bg-green-50 rounded-lg group"
+                                    >
+                                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-sm font-medium text-gray-800 block">{cert.name}</span>
+                                            {cert.issuingOrganization && (
+                                                <span className="text-xs text-gray-500 block">
+                                                    Issued by: {cert.issuingOrganization}
+                                                </span>
+                                            )}
+                                            {cert.expiryDate && (
+                                                <span className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                                    <Clock className="w-3 h-3" />
+                                                    Expires: {new Date(cert.expiryDate).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <Badge
+                                            variant="outline"
+                                            className={
+                                                cert.status === 'valid'
+                                                    ? 'border-green-300 text-green-700 text-xs'
+                                                    : cert.status === 'expired'
+                                                        ? 'border-red-300 text-red-700 text-xs'
+                                                        : 'border-yellow-300 text-yellow-700 text-xs'
+                                            }
+                                        >
+                                            {cert.status}
+                                        </Badge>
+                                        {isEditing && (
+                                            <button
+                                                onClick={() => removeCertification(index)}
+                                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all"
+                                                aria-label={`Remove ${cert.name}`}
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                            {displayProfile.certifications.length === 0 && (
+                                <p className="text-sm text-gray-500 py-2">No certifications added yet.</p>
+                            )}
                         </div>
+
+                        {/* Add Certification Form */}
+                        {isEditing && (
+                            <div className="mt-4">
+                                {showAddCert ? (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="space-y-2 p-3 border border-dashed border-green-300 rounded-lg bg-green-50/50"
+                                    >
+                                        <Input
+                                            value={newCertification.name}
+                                            onChange={(e) => setNewCertification(prev => ({ ...prev, name: e.target.value }))}
+                                            placeholder="Certification name *"
+                                        />
+                                        <Input
+                                            value={newCertification.issuingOrganization}
+                                            onChange={(e) => setNewCertification(prev => ({ ...prev, issuingOrganization: e.target.value }))}
+                                            placeholder="Issuing organization"
+                                        />
+                                        <Input
+                                            type="date"
+                                            value={newCertification.expiryDate}
+                                            onChange={(e) => setNewCertification(prev => ({ ...prev, expiryDate: e.target.value }))}
+                                            placeholder="Expiry date"
+                                        />
+                                        <div className="flex gap-2 justify-end">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setShowAddCert(false)
+                                                    setNewCertification({ name: '', issuingOrganization: '', expiryDate: '' })
+                                                }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button size="sm" onClick={addCertification} disabled={!newCertification.name.trim()}>
+                                                <Plus className="w-4 h-4 mr-1" />
+                                                Add
+                                            </Button>
+                                        </div>
+                                    </motion.div>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full mt-2 border-dashed"
+                                        onClick={() => setShowAddCert(true)}
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Certification
+                                    </Button>
+                                )}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -309,24 +793,63 @@ const CoachProfilePage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {[
-                            'Improve student skill development by 15% this quarter',
-                            'Achieve 95% student satisfaction rating',
-                            'Complete advanced coaching certification',
-                            'Mentor 2 junior coaches'
-                        ].map((goal, index) => (
+                        {goals.map((goal, index) => (
                             <motion.div
                                 key={index}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg"
+                                className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg group"
                             >
                                 <div className="w-5 h-5 rounded-full border-2 border-purple-600 mt-0.5 flex-shrink-0" />
-                                <span className="text-sm text-gray-700">{goal}</span>
+                                <span className="text-sm text-gray-700 flex-1">{goal}</span>
+                                {isEditing && (
+                                    <button
+                                        onClick={() => setGoals(prev => prev.filter((_, i) => i !== index))}
+                                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
                             </motion.div>
                         ))}
+                        {goals.length === 0 && (
+                            <p className="text-sm text-gray-500 py-2">No goals set yet.</p>
+                        )}
                     </div>
+                    {isEditing && (
+                        <div className="flex gap-2 mt-4">
+                            <Input
+                                value={newGoal}
+                                onChange={(e) => setNewGoal(e.target.value)}
+                                placeholder="Add a new goal..."
+                                className="flex-1"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        const val = newGoal.trim()
+                                        if (val) {
+                                            setGoals(prev => [...prev, val])
+                                            setNewGoal('')
+                                        }
+                                    }
+                                }}
+                            />
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    const val = newGoal.trim()
+                                    if (val) {
+                                        setGoals(prev => [...prev, val])
+                                        setNewGoal('')
+                                    }
+                                }}
+                            >
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

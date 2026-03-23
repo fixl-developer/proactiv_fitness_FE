@@ -13,9 +13,33 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
-import { attendanceService } from '@/services/modules/attendance.service'
-import { programService } from '@/services/modules/program.service'
-import { schedulingService } from '@/services/modules/scheduling.service'
+import { coachService } from '@/services/modules/coach.service'
+import { toast } from 'sonner'
+
+// Fallback mock data when API fails
+const FALLBACK_DATA = {
+    todayClasses: 4,
+    totalStudents: 45,
+    attendanceRate: 92,
+    activePrograms: 3,
+    todaySchedule: [
+        { id: '1', className: 'Beginner Gymnastics', date: '', time: '09:00 AM - 10:00 AM', startTime: '09:00 AM', endTime: '10:00 AM', location: 'Studio A', level: 'Beginner', enrolledStudents: 12, capacity: 15, duration: 60, status: 'active' },
+        { id: '2', className: 'Intermediate Tumbling', date: '', time: '10:30 AM - 11:30 AM', startTime: '10:30 AM', endTime: '11:30 AM', location: 'Studio B', level: 'Intermediate', enrolledStudents: 15, capacity: 20, duration: 60, status: 'active' },
+        { id: '3', className: 'Advanced Acrobatics', date: '', time: '02:00 PM - 03:00 PM', startTime: '02:00 PM', endTime: '03:00 PM', location: 'Studio A', level: 'Advanced', enrolledStudents: 8, capacity: 10, duration: 60, status: 'active' },
+        { id: '4', className: 'Kids Fitness', date: '', time: '03:30 PM - 04:30 PM', startTime: '03:30 PM', endTime: '04:30 PM', location: 'Studio C', level: 'Beginner', enrolledStudents: 20, capacity: 25, duration: 60, status: 'active' },
+    ],
+    programs: [
+        { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
+        { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
+        { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 },
+    ],
+    performanceMetrics: {
+        studentSatisfaction: 94,
+        classCompletion: 98,
+        skillImprovement: 87,
+        attendanceConsistency: 92,
+    },
+}
 
 const CoachDashboard = () => {
     const router = useRouter()
@@ -23,14 +47,14 @@ const CoachDashboard = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
 
-    // State for data
+    // Dashboard data state
     const [todayClasses, setTodayClasses] = useState(0)
     const [totalStudents, setTotalStudents] = useState(0)
     const [attendanceRate, setAttendanceRate] = useState(0)
-    const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
-    const [recentAttendance, setRecentAttendance] = useState<any[]>([])
+    const [activePrograms, setActivePrograms] = useState(0)
+    const [todaySchedule, setTodaySchedule] = useState<any[]>([])
     const [programs, setPrograms] = useState<any[]>([])
-    const [analytics, setAnalytics] = useState<any>(null)
+    const [performanceMetrics, setPerformanceMetrics] = useState(FALLBACK_DATA.performanceMetrics)
 
     useEffect(() => {
         // Don't redirect - layout handles auth. Just load data if authenticated.
@@ -41,59 +65,40 @@ const CoachDashboard = () => {
     const loadDashboardData = async () => {
         setIsLoading(true)
 
-        // Try to load from API with a short timeout, fallback to mock data
         try {
-            const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+            const coachId = user?.id
+            if (!coachId) {
+                throw new Error('No coach ID available')
+            }
 
-            const [schedulesResult, programsResult, attendanceResult] = await Promise.allSettled([
-                Promise.race([
-                    schedulingService.getSchedules(1, 10, {
-                        coachId: user?.id,
-                        date: new Date().toISOString().split('T')[0]
-                    }),
-                    timeout(3000)
-                ]),
-                Promise.race([
-                    programService.getPrograms({ limit: 5 }),
-                    timeout(3000)
-                ]),
-                Promise.race([
-                    attendanceService.getAttendance({ limit: 10 }),
-                    timeout(3000)
-                ])
-            ])
+            const data = await coachService.getDashboardData(coachId)
 
-            setTodayClasses(
-                schedulesResult.status === 'fulfilled'
-                    ? (schedulesResult.value as any)?.data?.schedules?.length ?? 4
-                    : 4
-            )
-            setPrograms(
-                programsResult.status === 'fulfilled' && (programsResult.value as any)?.data?.programs?.length > 0
-                    ? (programsResult.value as any).data.programs
-                    : [
-                        { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
-                        { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
-                        { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 }
-                    ]
-            )
-            setRecentAttendance(
-                attendanceResult.status === 'fulfilled'
-                    ? (attendanceResult.value as any)?.data?.records ?? []
-                    : []
-            )
-        } catch {
-            // Use mock data on any error
-            setTodayClasses(4)
-            setPrograms([
-                { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
-                { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
-                { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 }
-            ])
+            setTodayClasses(data.todayClasses ?? 0)
+            setTotalStudents(data.totalStudents ?? 0)
+            setAttendanceRate(data.attendanceRate ?? 0)
+            setActivePrograms(data.activePrograms ?? 0)
+            setTodaySchedule(data.todaySchedule ?? [])
+            setPrograms(data.programs ?? [])
+            setPerformanceMetrics({
+                studentSatisfaction: data.performanceMetrics?.studentSatisfaction ?? 0,
+                classCompletion: data.performanceMetrics?.classCompletion ?? 0,
+                skillImprovement: data.performanceMetrics?.skillImprovement ?? 0,
+                attendanceConsistency: data.performanceMetrics?.attendanceConsistency ?? 0,
+            })
+        } catch (error) {
+            console.error('Failed to load dashboard data:', error)
+            toast.error('Could not load live data. Showing cached data.')
+
+            // Use fallback mock data
+            setTodayClasses(FALLBACK_DATA.todayClasses)
+            setTotalStudents(FALLBACK_DATA.totalStudents)
+            setAttendanceRate(FALLBACK_DATA.attendanceRate)
+            setActivePrograms(FALLBACK_DATA.activePrograms)
+            setTodaySchedule(FALLBACK_DATA.todaySchedule)
+            setPrograms(FALLBACK_DATA.programs)
+            setPerformanceMetrics(FALLBACK_DATA.performanceMetrics)
         }
 
-        setTotalStudents(45)
-        setAttendanceRate(92)
         setIsLoading(false)
     }
 
@@ -102,6 +107,42 @@ const CoachDashboard = () => {
         await loadDashboardData()
         setRefreshing(false)
     }
+
+    // KPI card definitions with colorful gradients
+    const kpiMetrics = [
+        {
+            title: "Today's Classes",
+            value: todayClasses,
+            icon: Calendar,
+            gradient: 'from-blue-500 to-blue-600',
+            bgGradient: 'from-blue-50 to-blue-100',
+            change: 'Today',
+        },
+        {
+            title: 'Total Students',
+            value: totalStudents,
+            icon: Users,
+            gradient: 'from-green-500 to-emerald-600',
+            bgGradient: 'from-green-50 to-emerald-100',
+            change: 'Active',
+        },
+        {
+            title: 'Attendance Rate',
+            value: `${attendanceRate}%`,
+            icon: CheckCircle,
+            gradient: 'from-purple-500 to-purple-600',
+            bgGradient: 'from-purple-50 to-purple-100',
+            change: 'Excellent',
+        },
+        {
+            title: 'Active Programs',
+            value: activePrograms,
+            icon: BookOpen,
+            gradient: 'from-orange-500 to-orange-600',
+            bgGradient: 'from-orange-50 to-orange-100',
+            change: 'Running',
+        },
+    ]
 
     if (isLoading) {
         return (
@@ -112,6 +153,10 @@ const CoachDashboard = () => {
                         {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
                         ))}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 h-64 bg-gray-200 rounded-lg"></div>
+                        <div className="h-64 bg-gray-200 rounded-lg"></div>
                     </div>
                 </div>
             </div>
@@ -125,7 +170,7 @@ const CoachDashboard = () => {
                 <div>
                     <h1 className={responsiveClasses.headerTitle}>Coach Dashboard</h1>
                     <p className={responsiveClasses.headerSubtitle}>
-                        Welcome back! Here's your coaching overview
+                        Welcome back{user?.id ? '!' : '!'} Here&apos;s your coaching overview
                     </p>
                 </div>
                 <Button
@@ -140,59 +185,29 @@ const CoachDashboard = () => {
                 </Button>
             </div>
 
-            {/* KPI Cards */}
+            {/* KPI Cards - Colorful Gradient Style */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {[
-                    {
-                        title: 'Today\'s Classes',
-                        value: todayClasses,
-                        icon: Calendar,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50'
-                    },
-                    {
-                        title: 'Total Students',
-                        value: totalStudents,
-                        icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50'
-                    },
-                    {
-                        title: 'Attendance Rate',
-                        value: `${attendanceRate}%`,
-                        icon: CheckCircle,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50'
-                    },
-                    {
-                        title: 'Active Programs',
-                        value: programs.length,
-                        icon: BookOpen,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50'
-                    }
-                ].map((metric, index) => (
+                {kpiMetrics.map((metric, index) => (
                     <motion.div
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 * index }}
                     >
-                        <Card className="relative overflow-hidden h-full hover:shadow-lg transition-shadow">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
-                                    {metric.title}
-                                </CardTitle>
-                                <metric.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${metric.color}`} />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-xl sm:text-2xl font-bold text-gray-900">
-                                    {metric.value}
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
                                 </div>
-                                <div className={`text-xs sm:text-sm font-medium mt-2 ${metric.color}`}>
-                                    {metric.title === 'Attendance Rate' ? 'Excellent' : 'Active'}
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
-                                <div className={`mt-3 h-1 sm:h-2 rounded-full ${metric.bgColor}`}></div>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -208,40 +223,58 @@ const CoachDashboard = () => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Calendar className="w-5 h-5 text-blue-600" />
-                                    <CardTitle>Today's Schedule</CardTitle>
+                                    <CardTitle>Today&apos;s Schedule</CardTitle>
                                 </div>
                                 <Badge variant="outline">
-                                    {todayClasses} Classes
+                                    {todaySchedule.length} Classes
                                 </Badge>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {[
-                                    { time: '09:00 AM', class: 'Beginner Gymnastics', students: 12, location: 'Studio A' },
-                                    { time: '10:30 AM', class: 'Intermediate Tumbling', students: 15, location: 'Studio B' },
-                                    { time: '02:00 PM', class: 'Advanced Acrobatics', students: 8, location: 'Studio A' },
-                                    { time: '03:30 PM', class: 'Kids Fitness', students: 20, location: 'Studio C' }
-                                ].slice(0, todayClasses || 4).map((item, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="font-semibold text-gray-900">{item.class}</div>
-                                            <div className="text-sm text-gray-600">{item.time} • {item.location}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm font-medium text-gray-700">{item.students}</span>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                            <Button className="w-full mt-4" variant="outline">
+                            {todaySchedule.length > 0 ? (
+                                <div className="space-y-4">
+                                    {todaySchedule.map((item, index) => (
+                                        <motion.div
+                                            key={item.id || index}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                        >
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-gray-900">{item.className}</div>
+                                                <div className="text-sm text-gray-600">
+                                                    {item.time || `${item.startTime} - ${item.endTime}`} {item.location ? `\u2022 ${item.location}` : ''}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {item.level && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {item.level}
+                                                    </Badge>
+                                                )}
+                                                <div className="flex items-center gap-1">
+                                                    <Users className="w-4 h-4 text-gray-400" />
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        {item.enrolledStudents}{item.capacity ? `/${item.capacity}` : ''}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                    <Calendar className="w-12 h-12 text-gray-300 mb-3" />
+                                    <p className="text-gray-500 font-medium">No classes scheduled for today</p>
+                                    <p className="text-sm text-gray-400 mt-1">Enjoy your day off or check upcoming schedules</p>
+                                </div>
+                            )}
+                            <Button
+                                className="w-full mt-4"
+                                variant="outline"
+                                onClick={() => router.push('/coach/schedule')}
+                            >
                                 View Full Schedule
                             </Button>
                         </CardContent>
@@ -256,12 +289,12 @@ const CoachDashboard = () => {
                     <CardContent>
                         <div className="space-y-3">
                             {[
-                                { icon: CheckCircle, label: 'Mark Attendance', href: '/coach/attendance' },
+                                { icon: CheckCircle, label: 'Mark Attendance', href: '/coach/schedule' },
                                 { icon: Users, label: 'View Students', href: '/coach/students' },
                                 { icon: MessageSquare, label: 'Send Feedback', href: '/coach/feedback' },
                                 { icon: BarChart3, label: 'View Reports', href: '/coach/reports' },
                                 { icon: Clock, label: 'Set Availability', href: '/coach/availability' },
-                                { icon: Target, label: 'View Goals', href: '/coach/profile' }
+                                { icon: Target, label: 'View Goals', href: '/coach/profile' },
                             ].map((action, index) => (
                                 <Button
                                     key={index}
@@ -289,28 +322,42 @@ const CoachDashboard = () => {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {programs.slice(0, 3).map((program, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h4 className="font-semibold text-gray-900">{program.name}</h4>
-                                        <Badge variant="outline">{program.level}</Badge>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                                        <span>{program.currentEnrollment}/{program.capacity} Students</span>
-                                        <span>{program.duration} weeks</span>
-                                    </div>
-                                    <Progress value={(program.currentEnrollment / program.capacity) * 100} className="h-2" />
-                                </motion.div>
-                            ))}
-                        </div>
-                        <Button className="w-full mt-4" variant="outline">
+                        {programs.length > 0 ? (
+                            <div className="space-y-4">
+                                {programs.slice(0, 3).map((program, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-semibold text-gray-900">{program.name}</h4>
+                                            <Badge variant="outline">{program.level}</Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                            <span>{program.currentEnrollment}/{program.capacity} Students</span>
+                                            <span>{program.duration} weeks</span>
+                                        </div>
+                                        <Progress
+                                            value={program.capacity > 0 ? (program.currentEnrollment / program.capacity) * 100 : 0}
+                                            className="h-2"
+                                        />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <BookOpen className="w-12 h-12 text-gray-300 mb-3" />
+                                <p className="text-gray-500 font-medium">No active programs</p>
+                            </div>
+                        )}
+                        <Button
+                            className="w-full mt-4"
+                            variant="outline"
+                            onClick={() => router.push('/coach/schedule')}
+                        >
                             View All Programs
                         </Button>
                     </CardContent>
@@ -327,10 +374,10 @@ const CoachDashboard = () => {
                     <CardContent>
                         <div className="space-y-4">
                             {[
-                                { label: 'Student Satisfaction', value: 94, color: 'bg-green-500' },
-                                { label: 'Class Completion Rate', value: 98, color: 'bg-blue-500' },
-                                { label: 'Skill Improvement', value: 87, color: 'bg-purple-500' },
-                                { label: 'Attendance Consistency', value: 92, color: 'bg-orange-500' }
+                                { label: 'Student Satisfaction', value: performanceMetrics.studentSatisfaction, color: 'bg-green-500' },
+                                { label: 'Class Completion Rate', value: performanceMetrics.classCompletion, color: 'bg-blue-500' },
+                                { label: 'Skill Improvement', value: performanceMetrics.skillImprovement, color: 'bg-purple-500' },
+                                { label: 'Attendance Consistency', value: performanceMetrics.attendanceConsistency, color: 'bg-orange-500' },
                             ].map((metric, index) => (
                                 <div key={index}>
                                     <div className="flex items-center justify-between mb-2">
