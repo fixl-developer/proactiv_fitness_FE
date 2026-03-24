@@ -16,7 +16,10 @@ import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
 const FALLBACK_FRANCHISE = {
     franchiseName: 'My Franchise', totalLocations: 0, totalStaff: 0, totalStudents: 0,
     totalRevenue: 0, monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0,
-    staffUtilization: 0, customerSatisfaction: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0
+    staffUtilization: 0, customerSatisfaction: 0, pendingApprovals: 0, criticalAlerts: 0, warnings: 0,
+    locationsChange: '+0 this year', studentsChange: '+0 this month',
+    staffChange: '+0 this month', revenueChange: '+0% YoY',
+    revenueTrend: [], locationPerformance: [], pendingActions: [], alerts: [],
 }
 
 export default function FranchiseOwnerDashboard() {
@@ -27,26 +30,31 @@ export default function FranchiseOwnerDashboard() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [overview, analytics] = await Promise.allSettled([
-                    FranchiseOwnerService.getDashboardOverview(),
-                    FranchiseOwnerService.getAnalytics(timeRange)
-                ])
-                const data = overview.status === 'fulfilled' ? overview.value : {}
-                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+                const response = await FranchiseOwnerService.getDashboardOverview()
+                // Backend returns { success: true, data: { ... } }
+                const data = response?.data ?? response ?? {}
                 setDashboardData({
-                    franchiseName: data?.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
-                    totalLocations: data?.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
-                    totalStaff: data?.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
-                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
-                    totalRevenue: data?.totalRevenue ?? stats?.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
-                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
-                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
-                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
-                    staffUtilization: data?.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
-                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
-                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
-                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
-                    warnings: data?.warnings ?? FALLBACK_FRANCHISE.warnings
+                    franchiseName: data.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
+                    totalLocations: data.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
+                    totalStaff: data.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
+                    totalStudents: data.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
+                    totalRevenue: data.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
+                    monthlyRevenue: data.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
+                    revenueGrowth: data.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
+                    occupancyRate: data.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
+                    staffUtilization: data.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
+                    customerSatisfaction: data.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
+                    pendingApprovals: data.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
+                    criticalAlerts: data.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
+                    warnings: data.warnings ?? FALLBACK_FRANCHISE.warnings,
+                    locationsChange: data.locationsChange ?? FALLBACK_FRANCHISE.locationsChange,
+                    studentsChange: data.studentsChange ?? FALLBACK_FRANCHISE.studentsChange,
+                    staffChange: data.staffChange ?? FALLBACK_FRANCHISE.staffChange,
+                    revenueChange: data.revenueChange ?? FALLBACK_FRANCHISE.revenueChange,
+                    revenueTrend: data.revenueTrend ?? FALLBACK_FRANCHISE.revenueTrend,
+                    locationPerformance: data.locationPerformance ?? FALLBACK_FRANCHISE.locationPerformance,
+                    pendingActions: data.pendingActions ?? FALLBACK_FRANCHISE.pendingActions,
+                    alerts: data.alerts ?? FALLBACK_FRANCHISE.alerts,
                 })
             } catch (error) {
                 console.error('Error loading franchise dashboard:', error)
@@ -57,24 +65,6 @@ export default function FranchiseOwnerDashboard() {
         }
         loadData()
     }, [timeRange])
-
-    // Revenue trend data
-    const revenueData = [
-        { month: 'Jan', revenue: 180000, target: 190000 },
-        { month: 'Feb', revenue: 185000, target: 195000 },
-        { month: 'Mar', revenue: 190000, target: 200000 },
-        { month: 'Apr', revenue: 195000, target: 205000 },
-        { month: 'May', revenue: 198000, target: 210000 },
-        { month: 'Jun', revenue: 200000, target: 215000 },
-    ]
-
-    // Location performance data
-    const locationData = [
-        { name: 'Manhattan', students: 320, revenue: 385000, status: 'excellent' },
-        { name: 'Brooklyn', students: 280, revenue: 335000, status: 'excellent' },
-        { name: 'Queens', students: 210, revenue: 252000, status: 'good' },
-        { name: 'Bronx', students: 170, revenue: 228000, status: 'good' },
-    ]
 
     if (isLoading) {
         return (
@@ -115,33 +105,33 @@ export default function FranchiseOwnerDashboard() {
                         title: 'Franchise Locations',
                         value: dashboardData?.totalLocations,
                         icon: Building2,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50',
-                        change: '+1 this year'
+                        gradient: 'from-blue-500 to-blue-600',
+                        bgGradient: 'from-blue-50 to-blue-100',
+                        change: dashboardData?.locationsChange || '+0 this year'
                     },
                     {
                         title: 'Total Students',
                         value: dashboardData?.totalStudents,
                         icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50',
-                        change: '+120 this month'
+                        gradient: 'from-green-500 to-emerald-600',
+                        bgGradient: 'from-green-50 to-emerald-100',
+                        change: dashboardData?.studentsChange || '+0 this month'
                     },
                     {
                         title: 'Staff Members',
                         value: dashboardData?.totalStaff,
                         icon: Users,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50',
-                        change: '+4 this month'
+                        gradient: 'from-purple-500 to-purple-600',
+                        bgGradient: 'from-purple-50 to-purple-100',
+                        change: dashboardData?.staffChange || '+0 this month'
                     },
                     {
                         title: 'Total Revenue',
-                        value: `${(dashboardData?.totalRevenue / 1000000).toFixed(2)}M`,
+                        value: dashboardData?.totalRevenue > 0 ? `${(dashboardData.totalRevenue / 1000000).toFixed(2)}M` : '$0',
                         icon: DollarSign,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50',
-                        change: `+${dashboardData?.revenueGrowth}% YoY`
+                        gradient: 'from-orange-500 to-orange-600',
+                        bgGradient: 'from-orange-50 to-orange-100',
+                        change: dashboardData?.revenueChange || '+0% YoY'
                     },
                 ].map((metric, idx) => (
                     <motion.div
@@ -150,17 +140,19 @@ export default function FranchiseOwnerDashboard() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
-                                        <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
-                                    </div>
+                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -215,27 +207,46 @@ export default function FranchiseOwnerDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="text-xs">Warning</Badge>
-                                    <span className="text-sm font-medium text-yellow-900">Queens Location</span>
+                            {(dashboardData?.alerts ?? []).length > 0 ? (
+                                dashboardData.alerts.map((alert: any, idx: number) => (
+                                    <div key={idx} className={`p-3 rounded-lg border ${
+                                        alert.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+                                        alert.type === 'error' ? 'bg-red-50 border-red-200' :
+                                        alert.type === 'info' ? 'bg-blue-50 border-blue-200' :
+                                        'bg-green-50 border-green-200'
+                                    }`}>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Badge variant={
+                                                alert.type === 'warning' ? 'secondary' :
+                                                alert.type === 'error' ? 'destructive' :
+                                                'outline'
+                                            } className="text-xs">
+                                                {alert.type === 'warning' ? 'Warning' :
+                                                 alert.type === 'error' ? 'Critical' :
+                                                 alert.type === 'success' ? 'Success' : 'Info'}
+                                            </Badge>
+                                            <span className={`text-sm font-medium ${
+                                                alert.type === 'warning' ? 'text-yellow-900' :
+                                                alert.type === 'error' ? 'text-red-900' :
+                                                alert.type === 'success' ? 'text-green-900' : 'text-blue-900'
+                                            }`}>{alert.title}</span>
+                                        </div>
+                                        <p className={`text-xs ${
+                                            alert.type === 'warning' ? 'text-yellow-700' :
+                                            alert.type === 'error' ? 'text-red-700' :
+                                            alert.type === 'success' ? 'text-green-700' : 'text-blue-700'
+                                        }`}>{alert.message}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="outline" className="text-xs">Success</Badge>
+                                        <span className="text-sm font-medium text-green-900">All Systems Operational</span>
+                                    </div>
+                                    <p className="text-xs text-green-700">No critical issues detected</p>
                                 </div>
-                                <p className="text-xs text-yellow-700">Revenue 8% below target</p>
-                            </div>
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge className="text-xs">Info</Badge>
-                                    <span className="text-sm font-medium text-blue-900">Pending Approvals</span>
-                                </div>
-                                <p className="text-xs text-blue-700">{dashboardData?.pendingApprovals} items awaiting review</p>
-                            </div>
-                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline" className="text-xs">Success</Badge>
-                                    <span className="text-sm font-medium text-green-900">All Systems Operational</span>
-                                </div>
-                                <p className="text-xs text-green-700">No critical issues detected</p>
-                            </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -253,15 +264,17 @@ export default function FranchiseOwnerDashboard() {
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-gray-700">Monthly Revenue</span>
-                                    <span className="font-bold text-gray-900">${(dashboardData?.monthlyRevenue / 1000).toFixed(0)}K</span>
+                                    <span className="font-bold text-gray-900">
+                                        {dashboardData?.monthlyRevenue > 0 ? `$${(dashboardData.monthlyRevenue / 1000).toFixed(0)}K` : '$0'}
+                                    </span>
                                 </div>
-                                <Progress value={80} className="h-2" />
+                                <Progress value={dashboardData?.totalRevenue > 0 ? Math.min(100, (dashboardData.monthlyRevenue / (dashboardData.totalRevenue / 12)) * 100) : 0} className="h-2" />
                             </div>
                             <div className="pt-2 border-t">
                                 <p className="text-xs text-gray-600 mb-2">Revenue Growth</p>
-                                <p className="text-2xl font-bold text-gray-900">{dashboardData?.revenueGrowth?.toFixed(1)}%</p>
-                                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                                    <ArrowUp className="w-3 h-3" />
+                                <p className="text-2xl font-bold text-gray-900">{dashboardData?.revenueGrowth?.toFixed(1) ?? '0.0'}%</p>
+                                <p className={`text-xs flex items-center gap-1 mt-1 ${dashboardData?.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {dashboardData?.revenueGrowth >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                                     vs last month
                                 </p>
                             </div>
@@ -279,17 +292,23 @@ export default function FranchiseOwnerDashboard() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={revenueData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => typeof value === 'number' ? `${(value / 1000).toFixed(0)}K` : value} />
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#3b82f6" name="Actual Revenue" />
-                            <Bar dataKey="target" fill="#10b981" name="Target Revenue" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {(dashboardData?.revenueTrend ?? []).length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={dashboardData.revenueTrend}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => typeof value === 'number' ? `${(value / 1000).toFixed(0)}K` : value} />
+                                <Legend />
+                                <Bar dataKey="revenue" fill="#3b82f6" name="Actual Revenue" />
+                                <Bar dataKey="target" fill="#10b981" name="Target Revenue" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-[300px] text-gray-400">
+                            No revenue data available yet
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -302,19 +321,27 @@ export default function FranchiseOwnerDashboard() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {locationData.map((location, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">{location.name}</p>
-                                    <p className="text-xs text-gray-600">{location.students} students • ${(location.revenue / 1000).toFixed(0)}K revenue</p>
+                    {(dashboardData?.locationPerformance ?? []).length > 0 ? (
+                        <div className="space-y-3">
+                            {dashboardData.locationPerformance.map((location: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{location.name}</p>
+                                        <p className="text-xs text-gray-600">
+                                            {location.students} students &bull; {location.revenue > 0 ? `$${(location.revenue / 1000).toFixed(0)}K revenue` : 'No revenue yet'}
+                                        </p>
+                                    </div>
+                                    <Badge variant={location.status === 'excellent' ? 'default' : 'secondary'}>
+                                        {location.status}
+                                    </Badge>
                                 </div>
-                                <Badge variant={location.status === 'excellent' ? 'default' : 'secondary'}>
-                                    {location.status}
-                                </Badge>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-[100px] text-gray-400">
+                            No location data available yet
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -327,29 +354,31 @@ export default function FranchiseOwnerDashboard() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {[
-                            { type: 'Staff Approval', name: 'New Coach - Maria Garcia', date: '1 day ago', priority: 'high' },
-                            { type: 'Location Update', name: 'Manhattan - Equipment Purchase', date: '2 days ago', priority: 'medium' },
-                            { type: 'Budget Review', name: 'Q3 Franchise Budget', date: '3 days ago', priority: 'medium' },
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">{item.type}</p>
-                                    <p className="text-sm text-gray-600">{item.name}</p>
-                                    <p className="text-xs text-gray-500">{item.date}</p>
+                    {(dashboardData?.pendingActions ?? []).length > 0 ? (
+                        <div className="space-y-3">
+                            {dashboardData.pendingActions.map((item: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{item.type}</p>
+                                        <p className="text-sm text-gray-600">{item.name}</p>
+                                        <p className="text-xs text-gray-500">{item.date}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>
+                                            {item.priority}
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>
-                                        {item.priority}
-                                    </Badge>
-                                    <button className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
-                                        Review
-                                    </button>
-                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-[80px] text-gray-400">
+                            <div className="text-center">
+                                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
+                                <p>No pending actions</p>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

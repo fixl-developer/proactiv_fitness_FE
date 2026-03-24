@@ -191,10 +191,10 @@ export class FranchiseOwnerService {
      * Get revenue data
      * Backend: GET /admin/franchise/revenue
      */
-    static async getRevenue(timeRange?: string): Promise<RevenueData> {
+    static async getRevenue(timeRange?: string): Promise<any> {
         try {
             const params = timeRange ? `?timeRange=${timeRange}` : ''
-            const response = await apiClient.get<RevenueData>(
+            const response = await apiClient.get(
                 `/admin/franchise/revenue${params}`
             )
             return response.data
@@ -208,10 +208,10 @@ export class FranchiseOwnerService {
      * Get franchise analytics
      * Backend: GET /admin/franchise/analytics
      */
-    static async getAnalytics(timeRange?: string): Promise<FranchiseAnalytics> {
+    static async getAnalytics(timeRange?: string): Promise<any> {
         try {
             const params = timeRange ? `?timeRange=${timeRange}` : ''
-            const response = await apiClient.get<FranchiseAnalytics>(
+            const response = await apiClient.get(
                 `/admin/franchise/analytics${params}`
             )
             return response.data
@@ -416,4 +416,148 @@ export class FranchiseOwnerService {
         throw new Error(error.response?.data?.message || 'Failed to export financial report')
     }
 }
+
+    // =============================================
+    // CRUD Operations
+    // =============================================
+
+    /** Create a new location */
+    static async createLocation(data: any): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/franchise/locations', data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create location')
+        }
+    }
+
+    /** Update a location */
+    static async updateLocation(locationId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/franchise/locations/${locationId}`, data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update location')
+        }
+    }
+
+    /** Delete a location */
+    static async deleteLocation(locationId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/admin/franchise/locations/${locationId}`)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete location')
+        }
+    }
+
+    /** Create staff member */
+    static async createStaff(data: any): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/franchise/staff', data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create staff member')
+        }
+    }
+
+    /** Update staff member */
+    static async updateStaff(staffId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/franchise/staff/${staffId}`, data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update staff member')
+        }
+    }
+
+    /** Delete staff member */
+    static async deleteStaff(staffId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/admin/franchise/staff/${staffId}`)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete staff member')
+        }
+    }
+
+    /** Create inventory item */
+    static async createInventoryItem(data: any): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/franchise/inventory', data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create inventory item')
+        }
+    }
+
+    /** Update inventory item */
+    static async updateInventoryItem(itemId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/franchise/inventory/${itemId}`, data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update inventory item')
+        }
+    }
+
+    /** Delete inventory item */
+    static async deleteInventoryItem(itemId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/admin/franchise/inventory/${itemId}`)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete inventory item')
+        }
+    }
+
+    /** Update campaign */
+    static async updateCampaign(campaignId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/franchise/marketing/campaigns/${campaignId}`, data)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update campaign')
+        }
+    }
+
+    /** Delete campaign */
+    static async deleteCampaign(campaignId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/admin/franchise/marketing/campaigns/${campaignId}`)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete campaign')
+        }
+    }
+
+    /** Reply to feedback */
+    static async replyToFeedback(feedbackId: string, reply: string): Promise<any> {
+        try {
+            const response = await apiClient.post(`/admin/franchise/feedback/${feedbackId}/reply`, { reply })
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to reply to feedback')
+        }
+    }
+
+    /** Delete feedback */
+    static async deleteFeedback(feedbackId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/admin/franchise/feedback/${feedbackId}`)
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete feedback')
+        }
+    }
+
+    /** Change password */
+    static async changePassword(currentPassword: string, newPassword: string): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/franchise/change-password', { currentPassword, newPassword })
+            return response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to change password')
+        }
+    }
 }

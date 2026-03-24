@@ -11,20 +11,83 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { responsiveClasses } from '@/lib/responsiveClasses'
+import { useAuth } from '@/contexts/AuthContext'
+import { coachService } from '@/services/modules/coach.service'
 
 const CoachHomePage = () => {
+    const { isAuthenticated, user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
+    const [stats, setStats] = useState({
+        todayClasses: 0,
+        totalStudents: 0,
+        weeklyHours: 0,
+        rating: 0
+    })
+    const [highlights, setHighlights] = useState({
+        classesCompleted: 0,
+        totalClasses: 0,
+        pendingAssessments: 0,
+        studentsLeveledUp: 0
+    })
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const isAuthenticated = localStorage.getItem('isAuthenticated')
-            if (!isAuthenticated) {
-                window.location.href = '/login'
+        if (!isAuthenticated && !localStorage.getItem('token')) {
+            window.location.href = '/login'
+            return
+        }
+        loadHomeData()
+    }, [isAuthenticated])
+
+    const loadHomeData = async () => {
+        try {
+            const coachId = user?.id || ''
+            if (!coachId) {
+                setIsLoading(false)
                 return
             }
+
+            const [dashboardData, profileData] = await Promise.allSettled([
+                coachService.getDashboardData(coachId),
+                coachService.getProfile(coachId)
+            ])
+
+            const dashboard = dashboardData.status === 'fulfilled' ? dashboardData.value : null
+            const profile = profileData.status === 'fulfilled' ? profileData.value : null
+
+            setStats({
+                todayClasses: dashboard?.todayClasses || 0,
+                totalStudents: dashboard?.totalStudents || profile?.totalStudents || 0,
+                weeklyHours: profile?.totalClasses ? Math.round(profile.totalClasses * 1.5) : 0,
+                rating: profile?.rating || 0
+            })
+
+            // Calculate highlights from dashboard data
+            const todaySchedule = dashboard?.todaySchedule || []
+            const now = new Date()
+            const currentHour = now.getHours()
+            const currentMinute = now.getMinutes()
+            const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+
+            let completed = 0
+            todaySchedule.forEach((cls: any) => {
+                const endTime = cls.endTime || ''
+                if (endTime && endTime <= currentTimeStr) {
+                    completed++
+                }
+            })
+
+            setHighlights({
+                classesCompleted: completed,
+                totalClasses: todaySchedule.length,
+                pendingAssessments: dashboard?.activePrograms || 0,
+                studentsLeveledUp: 0
+            })
+        } catch (error) {
+            console.error('Error loading home data:', error)
+        } finally {
+            setIsLoading(false)
         }
-        setTimeout(() => setIsLoading(false), 1000)
-    }, [])
+    }
 
     // Coach Navigation Items
     const coachSections = [
@@ -43,7 +106,7 @@ const CoachHomePage = () => {
             icon: Calendar,
             href: '/coach/schedule',
             color: 'bg-green-500',
-            stats: '8 classes today',
+            stats: stats.todayClasses > 0 ? `${stats.todayClasses} classes today` : 'No classes today',
             priority: 'high'
         },
         {
@@ -52,7 +115,7 @@ const CoachHomePage = () => {
             icon: Users,
             href: '/coach/students',
             color: 'bg-purple-500',
-            stats: '45 students',
+            stats: stats.totalStudents > 0 ? `${stats.totalStudents} students` : 'View students',
             priority: 'medium'
         },
         {
@@ -61,7 +124,7 @@ const CoachHomePage = () => {
             icon: Clock,
             href: '/coach/availability',
             color: 'bg-orange-500',
-            stats: 'Update needed',
+            stats: 'Manage schedule',
             priority: 'medium'
         },
         {
@@ -70,7 +133,7 @@ const CoachHomePage = () => {
             icon: MessageSquare,
             href: '/coach/feedback',
             color: 'bg-red-500',
-            stats: '3 pending',
+            stats: 'Send feedback',
             priority: 'medium'
         },
         {
@@ -79,7 +142,7 @@ const CoachHomePage = () => {
             icon: BarChart3,
             href: '/coach/reports',
             color: 'bg-indigo-500',
-            stats: 'Weekly report',
+            stats: 'View reports',
             priority: 'low'
         },
         {
@@ -88,7 +151,7 @@ const CoachHomePage = () => {
             icon: User,
             href: '/coach/profile',
             color: 'bg-pink-500',
-            stats: 'Complete',
+            stats: stats.rating > 0 ? `${stats.rating} rating` : 'View profile',
             priority: 'low'
         }
     ]
@@ -97,25 +160,25 @@ const CoachHomePage = () => {
     const quickStats = [
         {
             label: 'Today\'s Classes',
-            value: '8',
+            value: stats.todayClasses.toString(),
             icon: Calendar,
             color: 'text-blue-600'
         },
         {
             label: 'Active Students',
-            value: '45',
+            value: stats.totalStudents.toString(),
             icon: Users,
             color: 'text-green-600'
         },
         {
-            label: 'This Week',
-            value: '32 hrs',
+            label: 'Weekly Hours',
+            value: stats.weeklyHours > 0 ? `${stats.weeklyHours} hrs` : '—',
             icon: Clock,
             color: 'text-purple-600'
         },
         {
             label: 'Rating',
-            value: '4.9',
+            value: stats.rating > 0 ? stats.rating.toFixed(1) : '—',
             icon: Star,
             color: 'text-yellow-600'
         }
@@ -230,7 +293,7 @@ const CoachHomePage = () => {
             {/* Today's Highlights */}
             <Card className="mt-8">
                 <CardHeader>
-                    <CardTitle>Today's Highlights</CardTitle>
+                    <CardTitle>Today&apos;s Highlights</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -238,21 +301,27 @@ const CoachHomePage = () => {
                             <CheckCircle className="w-6 h-6 text-green-600" />
                             <div>
                                 <div className="font-semibold text-gray-900">Classes Completed</div>
-                                <div className="text-sm text-gray-600">3 of 8 classes done</div>
+                                <div className="text-sm text-gray-600">
+                                    {highlights.classesCompleted} of {highlights.totalClasses} classes done
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
                             <Target className="w-6 h-6 text-blue-600" />
                             <div>
-                                <div className="font-semibold text-gray-900">Student Progress</div>
-                                <div className="text-sm text-gray-600">5 assessments pending</div>
+                                <div className="font-semibold text-gray-900">Active Programs</div>
+                                <div className="text-sm text-gray-600">
+                                    {highlights.pendingAssessments} programs running
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg">
                             <Award className="w-6 h-6 text-yellow-600" />
                             <div>
-                                <div className="font-semibold text-gray-900">Achievements</div>
-                                <div className="text-sm text-gray-600">2 students leveled up</div>
+                                <div className="font-semibold text-gray-900">Students</div>
+                                <div className="text-sm text-gray-600">
+                                    {stats.totalStudents} active students
+                                </div>
                             </div>
                         </div>
                     </div>
