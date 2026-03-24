@@ -196,6 +196,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
 
     const SlotCard = ({ slot }: { slot: TimeSlot }) => (
         <motion.div
+            id={`schedule-slot-${slot.id}-card`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.02, y: -2 }}
@@ -244,7 +245,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         <div className="text-lg font-bold text-gray-900">
                             {slot.price === 0 ? 'FREE' : `HK$${slot.price}`}
                         </div>
-                        <Button
+                        <Button id={`schedule-slot-${slot.id}-book-btn`}
                             size="sm"
                             className={`${slot.status === 'available' ? 'bg-green-600 hover:bg-green-700' :
                                 slot.status === 'waitlist' ? 'bg-yellow-600 hover:bg-yellow-700' :
@@ -300,7 +301,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
             {/* Header with Navigation */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center space-x-4">
-                    <Button
+                    <Button id="schedule-calendar-prev-week-btn"
                         variant="outline"
                         size="sm"
                         onClick={() => {
@@ -318,7 +319,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                             day: 'numeric'
                         })}
                     </h2>
-                    <Button
+                    <Button id="schedule-calendar-next-week-btn"
                         variant="outline"
                         size="sm"
                         onClick={() => {
@@ -332,14 +333,14 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                    <Button
+                    <Button id="schedule-calendar-week-view-btn"
                         variant={viewMode === 'week' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setViewMode('week')}
                     >
                         Week
                     </Button>
-                    <Button
+                    <Button id="schedule-calendar-month-view-btn"
                         variant={viewMode === 'month' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setViewMode('month')}
@@ -361,7 +362,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            <select data-testid="select-components-scheduling-ScheduleCalendar-1"
+                            <select id="schedule-calendar-location-select"
                                 value={filters.location}
                                 onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -373,7 +374,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Program Type</label>
-                            <select data-testid="select-components-scheduling-ScheduleCalendar-2"
+                            <select id="schedule-calendar-program-select"
                                 value={filters.program}
                                 onChange={(e) => setFilters({ ...filters, program: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -388,7 +389,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
-                            <select data-testid="select-components-scheduling-ScheduleCalendar-3"
+                            <select id="schedule-calendar-age-select"
                                 value={filters.ageGroup}
                                 onChange={(e) => setFilters({ ...filters, ageGroup: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -402,7 +403,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Coach</label>
-                            <select data-testid="select-components-scheduling-ScheduleCalendar-4"
+                            <select id="schedule-calendar-coach-select"
                                 value={filters.coach}
                                 onChange={(e) => setFilters({ ...filters, coach: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"

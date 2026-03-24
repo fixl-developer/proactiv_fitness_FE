@@ -35,7 +35,7 @@ export function Sidebar({ role = 'location_manager' }: SidebarProps) {
                     const isActive = pathname === item.href;
 
                     return (
-                        <Link
+                        <Link id={`sidebar-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                             key={item.href}
                             href={item.href}
                             className={cn(

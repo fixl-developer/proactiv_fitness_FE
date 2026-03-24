@@ -315,7 +315,7 @@ const CoachProfilePage = () => {
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     {isEditing && (
-                        <Button
+                        <Button id="coach-profile-cancel-btn"
                             variant="outline"
                             onClick={handleCancel}
                             disabled={isSaving}
@@ -325,7 +325,7 @@ const CoachProfilePage = () => {
                             Cancel
                         </Button>
                     )}
-                    <Button
+                    <Button id="coach-profile-edit-save-btn"
                         onClick={() => {
                             if (isEditing) {
                                 handleSave()
@@ -588,7 +588,7 @@ const CoachProfilePage = () => {
                                 <Badge key={index} className="bg-blue-100 text-blue-800 flex items-center gap-1">
                                     {spec}
                                     {isEditing && (
-                                        <button
+                                        <button id={`coach-profile-remove-spec-${index}-btn`}
                                             onClick={() => removeSpecialization(index)}
                                             className="ml-1 hover:text-red-600 transition-colors"
                                             aria-label={`Remove ${spec}`}
@@ -611,7 +611,7 @@ const CoachProfilePage = () => {
                                     className="flex-1"
                                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSpecialization())}
                                 />
-                                <Button size="sm" onClick={addSpecialization} variant="outline">
+                                <Button id="coach-profile-add-spec-btn" size="sm" onClick={addSpecialization} variant="outline">
                                     <Plus className="w-4 h-4" />
                                 </Button>
                             </div>
@@ -628,7 +628,7 @@ const CoachProfilePage = () => {
                                     <Badge key={index} variant="outline" className="border-indigo-300 text-indigo-700 flex items-center gap-1">
                                         {skill}
                                         {isEditing && (
-                                            <button
+                                            <button id={`coach-profile-remove-skill-${index}-btn`}
                                                 onClick={() => removeSkill(index)}
                                                 className="ml-1 hover:text-red-600 transition-colors"
                                                 aria-label={`Remove ${skill}`}
@@ -651,7 +651,7 @@ const CoachProfilePage = () => {
                                         className="flex-1"
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
                                     />
-                                    <Button size="sm" onClick={addSkill} variant="outline">
+                                    <Button id="coach-profile-add-skill-btn" size="sm" onClick={addSkill} variant="outline">
                                         <Plus className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -708,7 +708,7 @@ const CoachProfilePage = () => {
                                             {cert.status}
                                         </Badge>
                                         {isEditing && (
-                                            <button
+                                            <button id={`coach-profile-remove-cert-${index}-btn`}
                                                 onClick={() => removeCertification(index)}
                                                 className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all"
                                                 aria-label={`Remove ${cert.name}`}
@@ -750,7 +750,7 @@ const CoachProfilePage = () => {
                                             placeholder="Expiry date"
                                         />
                                         <div className="flex gap-2 justify-end">
-                                            <Button
+                                            <Button id="coach-profile-cancel-cert-btn"
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={() => {
@@ -760,14 +760,14 @@ const CoachProfilePage = () => {
                                             >
                                                 Cancel
                                             </Button>
-                                            <Button size="sm" onClick={addCertification} disabled={!newCertification.name.trim()}>
+                                            <Button id="coach-profile-add-cert-btn" size="sm" onClick={addCertification} disabled={!newCertification.name.trim()}>
                                                 <Plus className="w-4 h-4 mr-1" />
                                                 Add
                                             </Button>
                                         </div>
                                     </motion.div>
                                 ) : (
-                                    <Button
+                                    <Button id="coach-profile-show-add-cert-btn"
                                         variant="outline"
                                         size="sm"
                                         className="w-full mt-2 border-dashed"
@@ -804,7 +804,7 @@ const CoachProfilePage = () => {
                                 <div className="w-5 h-5 rounded-full border-2 border-purple-600 mt-0.5 flex-shrink-0" />
                                 <span className="text-sm text-gray-700 flex-1">{goal}</span>
                                 {isEditing && (
-                                    <button
+                                    <button id={`coach-profile-remove-goal-${index}-btn`}
                                         onClick={() => setGoals(prev => prev.filter((_, i) => i !== index))}
                                         className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all"
                                     >
@@ -835,7 +835,7 @@ const CoachProfilePage = () => {
                                     }
                                 }}
                             />
-                            <Button
+                            <Button id="coach-profile-add-goal-btn"
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {

@@ -205,7 +205,7 @@ export default function APIMonitoringPage() {
                     <h1 className="text-3xl font-bold text-gray-900">API Monitoring</h1>
                     <p className="text-gray-600 mt-1">Real-time performance metrics, endpoint health, and service status</p>
                 </motion.div>
-                <Button data-testid="btn-action-admin-system-api" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadData() }}>
+                <Button id="btn-action-admin-system-api" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadData() }}>
                     <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                 </Button>
             </div>

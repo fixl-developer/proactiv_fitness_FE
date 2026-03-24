@@ -243,11 +243,11 @@ export default function SecuritySettingsPage() {
                     </p>
                 </div>
                 <div className="flex space-x-3">
-                    <Button variant="outline">
+                    <Button id="admin-settings-security-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Logs
                     </Button>
-                    <Button className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700">
+                    <Button id="admin-settings-security-btn-2" className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700">
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>
@@ -330,7 +330,7 @@ export default function SecuritySettingsPage() {
                     <TabsContent value="policies" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Security Policies</h3>
-                            <Button>
+                            <Button id="admin-settings-security-btn-3">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Policy
                             </Button>
@@ -358,14 +358,14 @@ export default function SecuritySettingsPage() {
                                                 </p>
                                             </div>
                                             <div className="flex space-x-2">
-                                                <Button
+                                                <Button id="admin-settings-security-btn-4"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleConfigurePolicy(policy)}
                                                 >
                                                     <Settings className="w-4 h-4" />
                                                 </Button>
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-settings-security-btn-5" variant="outline" size="sm">
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
                                             </div>
@@ -381,11 +381,11 @@ export default function SecuritySettingsPage() {
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Access Logs</h3>
                             <div className="flex space-x-2">
-                                <Button variant="outline" size="sm">
+                                <Button id="admin-settings-security-btn-6" variant="outline" size="sm">
                                     <RefreshCw className="w-4 h-4 mr-2" />
                                     Refresh
                                 </Button>
-                                <Button variant="outline" size="sm">
+                                <Button id="admin-settings-security-btn-7" variant="outline" size="sm">
                                     <Download className="w-4 h-4 mr-2" />
                                     Export
                                 </Button>
@@ -466,7 +466,7 @@ export default function SecuritySettingsPage() {
                     <TabsContent value="api" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">API Keys</h3>
-                            <Button data-testid="btn-generate-api-key-admin-settings-security" onClick={handleGenerateApiKey}>
+                            <Button id="btn-generate-api-key-admin-settings-security" onClick={handleGenerateApiKey}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Generate API Key
                             </Button>
@@ -491,14 +491,14 @@ export default function SecuritySettingsPage() {
                                                         readOnly
                                                         className="font-mono text-sm w-64"
                                                     />
-                                                    <Button
+                                                    <Button id="admin-settings-security-btn-8"
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => toggleApiKeyVisibility(apiKey.id)}
                                                     >
                                                         {showApiKeys[apiKey.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                     </Button>
-                                                    <Button variant="outline" size="sm">
+                                                    <Button id="admin-settings-security-btn-9" variant="outline" size="sm">
                                                         <Copy className="w-4 h-4" />
                                                     </Button>
                                                 </div>
@@ -514,10 +514,10 @@ export default function SecuritySettingsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex space-x-2">
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-settings-security-btn-10" variant="outline" size="sm">
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
-                                                <Button
+                                                <Button id="admin-settings-security-btn-11"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleRevokeApiKey(apiKey.id)}
@@ -691,7 +691,7 @@ export default function SecuritySettingsPage() {
                                     <h2 className="text-xl font-bold">Configure {selectedPolicy.name}</h2>
                                     <p className="text-gray-600">{selectedPolicy.description}</p>
                                 </div>
-                                <Button
+                                <Button id="admin-settings-security-btn-12"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsConfiguring(false)}
@@ -739,13 +739,13 @@ export default function SecuritySettingsPage() {
                                 </div>
 
                                 <div className="flex justify-end space-x-3">
-                                    <Button
+                                    <Button id="admin-settings-security-btn-cancel"
                                         variant="outline"
                                         onClick={() => setIsConfiguring(false)}
                                     >
                                         Cancel
                                     </Button>
-                                    <Button className="bg-gradient-to-r from-red-600 to-pink-600">
+                                    <Button id="admin-settings-security-btn-save-policy" className="bg-gradient-to-r from-red-600 to-pink-600">
                                         Save Policy
                                     </Button>
                                 </div>

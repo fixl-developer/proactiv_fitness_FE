@@ -111,11 +111,11 @@ export default function AIChatbot() {
             setMessages([welcomeMessage])
             setStreamingMessageId(welcomeMessageId)
 
-            const welcomeText = `👋 Hi! I'm your ProActive Sports AI Assistant! 
+            const welcomeText = `👋 Hi! I'm your ProActive Sports AI Assistant!
 
 I can help you with:
 🤸‍♀️ Information about our programs
-📅 Booking trial classes and assessments  
+📅 Booking trial classes and assessments
 📍 Location and schedule details
 💰 Pricing information
 ❓ Answering any questions
@@ -272,6 +272,7 @@ How can I help you today?`
         <>
             {/* Chat Toggle Button */}
             <motion.button
+                id="ai-chatbot-toggle-btn"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.1 }}
@@ -379,7 +380,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Program</label>
-                                            <select data-testid="select-components-ai-AIChatbot-1"
+                                            <select id="ai-chatbot-booking-program-select"
                                                 value={bookingData.program || ''}
                                                 onChange={(e) => handleBookingInput('program', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -393,7 +394,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Location</label>
-                                            <select data-testid="select-components-ai-AIChatbot-2"
+                                            <select id="ai-chatbot-booking-location-select"
                                                 value={bookingData.location || ''}
                                                 onChange={(e) => handleBookingInput('location', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -417,7 +418,7 @@ How can I help you today?`
 
                                         <div>
                                             <label className="block text-gray-700 font-medium">Time Slot</label>
-                                            <select data-testid="select-components-ai-AIChatbot-3"
+                                            <select id="ai-chatbot-booking-timeslot-select"
                                                 value={bookingData.timeSlot || ''}
                                                 onChange={(e) => handleBookingInput('timeSlot', e.target.value)}
                                                 className="w-full px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -436,7 +437,7 @@ How can I help you today?`
                                     </div>
 
                                     <div className="flex gap-2 pt-2">
-                                        <button
+                                        <button id="ai-chatbot-complete-booking-btn"
                                             onClick={completeBooking}
                                             disabled={!bookingData.parentName || !bookingData.parentEmail || !bookingData.parentPhone ||
                                                 !bookingData.childName || !bookingData.childAge || !bookingData.program ||
@@ -445,7 +446,7 @@ How can I help you today?`
                                         >
                                             Complete Booking
                                         </button>
-                                        <button
+                                        <button id="ai-chatbot-cancel-booking-btn"
                                             onClick={() => {
                                                 setIsBookingMode(false)
                                                 setBookingData({})
@@ -491,7 +492,7 @@ How can I help you today?`
                                         {message.suggestions && message.suggestions.length > 0 && !message.isStreaming && (
                                             <div className="mt-2 flex flex-wrap gap-2">
                                                 {message.suggestions.map((suggestion, index) => (
-                                                    <button
+                                                    <button id={`ai-chatbot-suggestion-${index}-btn`}
                                                         key={index}
                                                         onClick={() => handleSuggestionClick(suggestion)}
                                                         disabled={!!streamingMessageId}
@@ -541,7 +542,7 @@ How can I help you today?`
                                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                     disabled={isLoading || !!streamingMessageId}
                                 />
-                                <button
+                                <button id="ai-chatbot-send-btn"
                                     onClick={() => sendMessage(inputMessage)}
                                     disabled={isLoading || !inputMessage.trim() || !!streamingMessageId}
                                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"

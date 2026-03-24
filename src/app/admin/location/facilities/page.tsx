@@ -112,7 +112,7 @@ export default function LocationFacilitiesPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Facilities Management</h1>
                     <p className="text-gray-600 mt-1">Manage location facilities and equipment</p>
                 </div>
-                <button onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="admin-location-facilities-btn" onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     Add Facility
                 </button>
@@ -160,7 +160,7 @@ export default function LocationFacilitiesPage() {
                             <Building2 className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input placeholder="Search facilities..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} className="pl-10" />
                         </div>
-                        <select data-testid="select-admin-location-facilities-1" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+                        <select id="select-admin-location-facilities-1" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Status</option>
                             <option value="operational">Operational</option>
@@ -219,10 +219,10 @@ export default function LocationFacilitiesPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleOpenEdit(facility)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
+                                        <button id="admin-location-facilities-btn-2" onClick={() => handleOpenEdit(facility)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
                                             <Edit2 className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => handleDeleteFacility(facility.id || facility._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
+                                        <button id="admin-location-facilities-btn-3" onClick={() => handleDeleteFacility(facility.id || facility._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -244,10 +244,10 @@ export default function LocationFacilitiesPage() {
 
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                    <button id="admin-location-facilities-btn-4" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
                     <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                    <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                    <button id="admin-location-facilities-btn-5" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
                 </div>
             )}
@@ -286,7 +286,7 @@ export default function LocationFacilitiesPage() {
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-6 border-b">
                             <h2 className="text-xl font-bold text-gray-900">{editingFacility ? 'Edit Facility' : 'Add New Facility'}</h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+                            <button id="admin-location-facilities-btn-6" onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
@@ -312,8 +312,8 @@ export default function LocationFacilitiesPage() {
                             </div>
                         </div>
                         <div className="flex gap-3 p-6 border-t">
-                            <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                            <button onClick={handleSave} disabled={isSaving || !formData.name}
+                            <button id="admin-location-facilities-btn-7" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                            <button id="admin-location-facilities-btn-8" onClick={handleSave} disabled={isSaving || !formData.name}
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {isSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save className="w-4 h-4" />}
                                 {editingFacility ? 'Update' : 'Create'}

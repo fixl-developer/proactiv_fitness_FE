@@ -123,11 +123,11 @@ const KnowledgeBasePage = () => {
                     <p className="text-gray-600 mt-2">Manage documentation, SOPs, and training materials</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <Button className="flex-1 sm:flex-none">
+                    <Button id="admin-ai-knowledge-new-article-btn" className="flex-1 sm:flex-none">
                         <Plus className="w-4 h-4 mr-2" />
                         New Article
                     </Button>
-                    <Button variant="outline" className="flex-1 sm:flex-none">
+                    <Button id="admin-ai-knowledge-import-btn" variant="outline" className="flex-1 sm:flex-none">
                         <Upload className="w-4 h-4 mr-2" />
                         Import
                     </Button>
@@ -209,6 +209,7 @@ const KnowledgeBasePage = () => {
                         <div className="flex flex-wrap gap-2">
                             {categories.map((category) => (
                                 <button
+                                    id={`admin-ai-knowledge-category-${category.id}-btn`}
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
                                     className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${selectedCategory === category.id
@@ -281,15 +282,15 @@ const KnowledgeBasePage = () => {
                                     </div>
 
                                     <div className="flex gap-2 lg:ml-4 flex-shrink-0">
-                                        <Button variant="outline" size="sm" className="flex-1 lg:flex-none">
+                                        <Button id={`admin-ai-knowledge-view-${article.id}-btn`} variant="outline" size="sm" className="flex-1 lg:flex-none">
                                             <Eye className="w-4 h-4 lg:mr-0 mr-2" />
                                             <span className="lg:hidden">View</span>
                                         </Button>
-                                        <Button variant="outline" size="sm" className="flex-1 lg:flex-none">
+                                        <Button id={`admin-ai-knowledge-edit-${article.id}-btn`} variant="outline" size="sm" className="flex-1 lg:flex-none">
                                             <Edit className="w-4 h-4 lg:mr-0 mr-2" />
                                             <span className="lg:hidden">Edit</span>
                                         </Button>
-                                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                        <Button id={`admin-ai-knowledge-delete-${article.id}-btn`} variant="outline" size="sm" className="text-red-600 hover:text-red-700">
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -309,7 +310,7 @@ const KnowledgeBasePage = () => {
                         <p className="text-gray-600 mb-4">
                             No articles match your search criteria. Try adjusting your filters.
                         </p>
-                        <Button>
+                        <Button id="admin-ai-knowledge-create-new-btn">
                             <Plus className="w-4 h-4 mr-2" />
                             Create New Article
                         </Button>

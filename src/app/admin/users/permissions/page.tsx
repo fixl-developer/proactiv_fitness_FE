@@ -462,21 +462,21 @@ export default function PermissionsMatrixPage() {
                     <p className="text-gray-600 mt-1">View and manage permissions across all roles</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button data-testid="btn-export-c-s-v-admin-users-permissions" variant="outline" onClick={exportCSV}>
+                    <Button id="btn-export-c-s-v-admin-users-permissions" variant="outline" onClick={exportCSV}>
                         <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
-                    <Button data-testid="btn-set-reset-confirm-open-admin-users-permissions" variant="outline" onClick={() => setResetConfirmOpen(true)}>
+                    <Button id="btn-set-reset-confirm-open-admin-users-permissions" variant="outline" onClick={() => setResetConfirmOpen(true)}>
                         <RotateCcw className="w-4 h-4 mr-2" /> Reset to Defaults
                     </Button>
                     {!editMode ? (
-                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => {
+                        <Button id="admin-users-permissions-btn" className="bg-blue-600 hover:bg-blue-700" onClick={() => {
                             setEditMode(true)
                             setOriginalSnapshot(JSON.stringify(roles.map(r => ({ name: r.name, permissions: [...r.permissions].sort() }))))
                         }}>
                             <Unlock className="w-4 h-4 mr-2" /> Edit Mode
                         </Button>
                     ) : (
-                        <Button data-testid="btn-cancel-edit-admin-users-permissions" variant="outline" onClick={handleCancelEdit}>
+                        <Button id="btn-cancel-edit-admin-users-permissions" variant="outline" onClick={handleCancelEdit}>
                             <Lock className="w-4 h-4 mr-2" /> Exit Edit Mode
                         </Button>
                     )}
@@ -507,7 +507,7 @@ export default function PermissionsMatrixPage() {
                         )}
                     </div>
                     {hasChanges && (
-                        <Button data-testid="btn-save-admin-users-permissions" className="bg-green-600 hover:bg-green-700" onClick={handleSave}>
+                        <Button id="btn-save-admin-users-permissions" className="bg-green-600 hover:bg-green-700" onClick={handleSave}>
                             <Save className="w-4 h-4 mr-2" /> Save Changes
                         </Button>
                     )}
@@ -520,7 +520,7 @@ export default function PermissionsMatrixPage() {
                     <div className="flex items-center gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input data-testid="input-text-admin-users-permissions"
+                            <input id="input-text-admin-users-permissions"
                                 type="text"
                                 placeholder="Search permissions..."
                                 value={searchTerm}
@@ -528,8 +528,8 @@ export default function PermissionsMatrixPage() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
-                        <Button data-testid="btn-expand-all-admin-users-permissions" variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
-                        <Button data-testid="btn-collapse-all-admin-users-permissions" variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
+                        <Button id="btn-expand-all-admin-users-permissions" variant="outline" size="sm" onClick={expandAll}>Expand All</Button>
+                        <Button id="btn-collapse-all-admin-users-permissions" variant="outline" size="sm" onClick={collapseAll}>Collapse All</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -555,7 +555,7 @@ export default function PermissionsMatrixPage() {
                                             <span className="text-xs text-gray-500">{grantedCount}/{ALL_PERMISSION_KEYS.length}</span>
                                             {editMode && (
                                                 <div className="flex gap-1 mt-1">
-                                                    <button
+                                                    <button id="admin-users-permissions-btn-2"
                                                         className="text-[10px] text-green-700 hover:underline"
                                                         onClick={() => openBulkConfirm(role.name, true)}
                                                         title="Grant all permissions"
@@ -563,7 +563,7 @@ export default function PermissionsMatrixPage() {
                                                         Grant All
                                                     </button>
                                                     <span className="text-gray-300">|</span>
-                                                    <button
+                                                    <button id="admin-users-permissions-btn-3"
                                                         className="text-[10px] text-red-700 hover:underline"
                                                         onClick={() => openBulkConfirm(role.name, false)}
                                                         title="Revoke all permissions"
@@ -588,7 +588,7 @@ export default function PermissionsMatrixPage() {
                             return (
                                 <AnimatePresence key={cat.name}>
                                     {/* Category row */}
-                                    <tr
+                                    <tr id="admin-users-permissions-tr-clickable"
                                         className="border-b bg-gray-50/70 cursor-pointer hover:bg-gray-100 transition-colors"
                                         onClick={() => toggleCategory(cat.name)}
                                     >
@@ -641,7 +641,7 @@ export default function PermissionsMatrixPage() {
                                                 return (
                                                     <td key={role.name} className="px-2 py-2.5 text-center">
                                                         {editMode ? (
-                                                            <button
+                                                            <button id="admin-users-permissions-btn-4"
                                                                 type="button"
                                                                 onClick={() => togglePermission(role.name, perm.key)}
                                                                 className={`w-7 h-7 rounded-md flex items-center justify-center transition-all mx-auto ${
@@ -708,8 +708,8 @@ export default function PermissionsMatrixPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button data-testid="btn-set-reset-confirm-open-admin-users-permissions" variant="outline" onClick={() => setResetConfirmOpen(false)}>Cancel</Button>
-                        <Button data-testid="btn-reset-to-defaults-admin-users-permissions" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleResetToDefaults}>
+                        <Button id="btn-set-reset-confirm-open-admin-users-permissions" variant="outline" onClick={() => setResetConfirmOpen(false)}>Cancel</Button>
+                        <Button id="btn-reset-to-defaults-admin-users-permissions" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleResetToDefaults}>
                             <RotateCcw className="w-4 h-4 mr-1" /> Reset
                         </Button>
                     </DialogFooter>
@@ -726,8 +726,8 @@ export default function PermissionsMatrixPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button data-testid="btn-action-admin-users-permissions" variant="outline" onClick={() => { setBulkConfirmOpen(false); setBulkAction(null) }}>Cancel</Button>
-                        <Button
+                        <Button id="btn-action-admin-users-permissions" variant="outline" onClick={() => { setBulkConfirmOpen(false); setBulkAction(null) }}>Cancel</Button>
+                        <Button id="admin-users-permissions-btn-5"
                             className={bulkAction?.grant ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}
                             onClick={handleBulkAction}
                         >

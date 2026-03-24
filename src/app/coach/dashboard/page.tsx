@@ -173,7 +173,7 @@ const CoachDashboard = () => {
                         Welcome back{user?.id ? '!' : '!'} Here&apos;s your coaching overview
                     </p>
                 </div>
-                <Button
+                <Button id="coach-dashboard-refresh-btn"
                     variant="outline"
                     size="sm"
                     onClick={handleRefresh}
@@ -270,7 +270,7 @@ const CoachDashboard = () => {
                                     <p className="text-sm text-gray-400 mt-1">Enjoy your day off or check upcoming schedules</p>
                                 </div>
                             )}
-                            <Button
+                            <Button id="coach-dashboard-view-full-schedule-btn"
                                 className="w-full mt-4"
                                 variant="outline"
                                 onClick={() => router.push('/coach/schedule')}
@@ -289,14 +289,14 @@ const CoachDashboard = () => {
                     <CardContent>
                         <div className="space-y-3">
                             {[
-                                { icon: CheckCircle, label: 'Mark Attendance', href: '/coach/schedule' },
-                                { icon: Users, label: 'View Students', href: '/coach/students' },
-                                { icon: MessageSquare, label: 'Send Feedback', href: '/coach/feedback' },
-                                { icon: BarChart3, label: 'View Reports', href: '/coach/reports' },
-                                { icon: Clock, label: 'Set Availability', href: '/coach/availability' },
-                                { icon: Target, label: 'View Goals', href: '/coach/profile' },
+                                { icon: CheckCircle, label: 'Mark Attendance', href: '/coach/schedule', actionId: 'mark-attendance' },
+                                { icon: Users, label: 'View Students', href: '/coach/students', actionId: 'view-students' },
+                                { icon: MessageSquare, label: 'Send Feedback', href: '/coach/feedback', actionId: 'send-feedback' },
+                                { icon: BarChart3, label: 'View Reports', href: '/coach/reports', actionId: 'view-reports' },
+                                { icon: Clock, label: 'Set Availability', href: '/coach/availability', actionId: 'set-availability' },
+                                { icon: Target, label: 'View Goals', href: '/coach/profile', actionId: 'view-goals' },
                             ].map((action, index) => (
-                                <Button
+                                <Button id={`coach-dashboard-${action.actionId}-btn`}
                                     key={index}
                                     className="w-full justify-start"
                                     variant="outline"
@@ -353,7 +353,7 @@ const CoachDashboard = () => {
                                 <p className="text-gray-500 font-medium">No active programs</p>
                             </div>
                         )}
-                        <Button
+                        <Button id="coach-dashboard-view-all-programs-btn"
                             className="w-full mt-4"
                             variant="outline"
                             onClick={() => router.push('/coach/schedule')}

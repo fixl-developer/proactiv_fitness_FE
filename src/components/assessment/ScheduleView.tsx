@@ -452,7 +452,7 @@ export default function ScheduleView({ onBookAssessment }: ScheduleViewProps) {
 
                             return (
                                 <div key={filterKey} className="border-b border-gray-100 pb-4">
-                                    <button
+                                    <button id={`assessment-schedule-filter-${filterKey}-btn`}
                                         onClick={() => toggleFilter(filterKey as keyof typeof expandedFilters)}
                                         className="flex items-center justify-between w-full text-left py-2"
                                     >
@@ -471,7 +471,7 @@ export default function ScheduleView({ onBookAssessment }: ScheduleViewProps) {
                                                         {Array.isArray(subItems) ? (
                                                             // Category with sub-items (no checkbox, has dropdown)
                                                             <div>
-                                                                <button
+                                                                <button id={`assessment-schedule-category-${categoryName.replace(/\s+/g, '-').toLowerCase()}-btn`}
                                                                     onClick={() => toggleCategory(categoryName)}
                                                                     className="flex items-center justify-between w-full text-left py-1 pl-2"
                                                                 >
@@ -498,7 +498,7 @@ export default function ScheduleView({ onBookAssessment }: ScheduleViewProps) {
                                                             </div>
                                                         ) : subItems === 'empty' ? (
                                                             // Empty category (no checkbox, but has + button for consistency)
-                                                            <button
+                                                            <button id={`assessment-schedule-empty-category-${categoryName.replace(/\s+/g, '-').toLowerCase()}-btn`}
                                                                 onClick={() => toggleCategory(categoryName)}
                                                                 className="flex items-center justify-between w-full text-left py-1 pl-2"
                                                             >
@@ -649,7 +649,7 @@ export default function ScheduleView({ onBookAssessment }: ScheduleViewProps) {
                                                                 </div>
                                                             </div>
 
-                                                            <button
+                                                            <button id={`assessment-schedule-book-${assessment.id}-btn`}
                                                                 onClick={() => onBookAssessment(assessment.id)}
                                                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
                                                             >

@@ -105,7 +105,7 @@ export default function LocationStaffPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
                     <p className="text-gray-600 mt-1">Manage location staff members</p>
                 </div>
-                <button onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="admin-location-staff-btn" onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     Add Staff
                 </button>
@@ -119,14 +119,14 @@ export default function LocationStaffPage() {
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input placeholder="Search staff..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} className="pl-10" />
                         </div>
-                        <select data-testid="select-admin-location-staff-1" value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1) }}
+                        <select id="select-admin-location-staff-1" value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Roles</option>
                             <option value="COACH">Coach</option>
                             <option value="MANAGER">Manager</option>
                             <option value="SUPPORT_STAFF">Support Staff</option>
                         </select>
-                        <select data-testid="select-admin-location-staff-2" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+                        <select id="select-admin-location-staff-2" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
@@ -199,10 +199,10 @@ export default function LocationStaffPage() {
                                         </td>
                                         <td className="py-3 px-4">
                                             <div className="flex gap-2">
-                                                <button onClick={() => handleOpenEdit(member)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
+                                                <button id="admin-location-staff-btn-2" onClick={() => handleOpenEdit(member)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
-                                                <button onClick={() => handleDeleteStaff(member.id || member._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
+                                                <button id="admin-location-staff-btn-3" onClick={() => handleDeleteStaff(member.id || member._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -226,10 +226,10 @@ export default function LocationStaffPage() {
 
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                    <button id="admin-location-staff-btn-4" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
                     <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                    <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                    <button id="admin-location-staff-btn-5" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
                 </div>
             )}
@@ -240,7 +240,7 @@ export default function LocationStaffPage() {
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between p-6 border-b">
                             <h2 className="text-xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+                            <button id="admin-location-staff-btn-6" onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
@@ -266,8 +266,8 @@ export default function LocationStaffPage() {
                             </div>
                         </div>
                         <div className="flex gap-3 p-6 border-t">
-                            <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                            <button onClick={handleSave} disabled={isSaving || !formData.name || !formData.email}
+                            <button id="admin-location-staff-btn-7" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                            <button id="admin-location-staff-btn-8" onClick={handleSave} disabled={isSaving || !formData.name || !formData.email}
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {isSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save className="w-4 h-4" />}
                                 {editingStaff ? 'Update' : 'Create'}

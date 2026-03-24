@@ -160,7 +160,7 @@ export default function CustomerFeedbackPage() {
                 <Card className="border-red-200 bg-red-50">
                     <CardContent className="pt-4 pb-4 flex items-center justify-between">
                         <p className="text-sm text-red-800">{error}</p>
-                        <button
+                        <button id="admin-franchise-feedback-btn-dismiss"
                             onClick={() => setError(null)}
                             className="text-red-600 hover:text-red-800 text-sm font-medium"
                         >
@@ -296,7 +296,7 @@ export default function CustomerFeedbackPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-franchise-feedback-1"
+                            id="select-admin-franchise-feedback-1"
                             value={filterRating}
                             onChange={(e) => { setFilterRating(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -309,7 +309,7 @@ export default function CustomerFeedbackPage() {
                             <option value="1">1 Star</option>
                         </select>
                         <select
-                            data-testid="select-admin-franchise-feedback-2"
+                            id="select-admin-franchise-feedback-2"
                             value={filterStatus}
                             onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -382,7 +382,7 @@ export default function CustomerFeedbackPage() {
                                         </div>
                                         <div className="flex gap-2">
                                             {item.status === 'PENDING' && (
-                                                <button
+                                                <button id="admin-franchise-feedback-btn"
                                                     onClick={() => handlePublish(item.id)}
                                                     disabled={actionLoading === item.id}
                                                     className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors disabled:opacity-50"
@@ -395,7 +395,7 @@ export default function CustomerFeedbackPage() {
                                                     )}
                                                 </button>
                                             )}
-                                            <button
+                                            <button id="admin-franchise-feedback-btn-2"
                                                 onClick={() => {
                                                     setReplyModal({ open: true, feedbackId: item.id, feedbackTitle: item.title || 'Feedback' })
                                                     setReplyText('')
@@ -405,14 +405,14 @@ export default function CustomerFeedbackPage() {
                                             >
                                                 <Reply className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id="admin-franchise-feedback-btn-3"
                                                 onClick={() => setViewModal({ open: true, item })}
                                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                                 title="View"
                                             >
                                                 <Eye className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id="admin-franchise-feedback-btn-4"
                                                 onClick={() => setDeleteModal({ open: true, feedbackId: item.id, feedbackTitle: item.title || 'Feedback' })}
                                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
                                                 title="Delete"
@@ -431,7 +431,7 @@ export default function CustomerFeedbackPage() {
             {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 pt-4">
-                    <button
+                    <button id="admin-franchise-feedback-btn-5"
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page <= 1}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -441,7 +441,7 @@ export default function CustomerFeedbackPage() {
                     <span className="text-sm text-gray-600">
                         Page {page} of {totalPages}
                     </span>
-                    <button
+                    <button id="admin-franchise-feedback-btn-6"
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -453,8 +453,8 @@ export default function CustomerFeedbackPage() {
 
             {/* Reply Modal */}
             {replyModal.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+                <div id="admin-franchise-feedback-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
+                    <div id="admin-franchise-feedback-div-clickable-2" className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
                         <h2 className="text-xl font-bold text-gray-900 mb-1">Reply to Feedback</h2>
                         <p className="text-sm text-gray-500 mb-4">{replyModal.feedbackTitle}</p>
                         <textarea
@@ -465,13 +465,13 @@ export default function CustomerFeedbackPage() {
                             className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                         <div className="flex justify-end gap-3 mt-4">
-                            <button
+                            <button id="admin-franchise-feedback-btn-7"
                                 onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
-                            <button
+                            <button id="admin-franchise-feedback-btn-8"
                                 onClick={handleReplySubmit}
                                 disabled={replyLoading || !replyText.trim()}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -485,8 +485,8 @@ export default function CustomerFeedbackPage() {
 
             {/* View Detail Modal */}
             {viewModal.open && viewModal.item && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewModal({ open: false, item: null })}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div id="admin-franchise-feedback-div-clickable-3" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewModal({ open: false, item: null })}>
+                    <div id="admin-franchise-feedback-div-clickable-4" className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-gray-900">Feedback Details</h2>
                             <Badge variant={viewModal.item.status === 'PUBLISHED' ? 'default' : 'secondary'}>
@@ -522,7 +522,7 @@ export default function CustomerFeedbackPage() {
                             </div>
                         )}
                         <div className="flex justify-end">
-                            <button
+                            <button id="admin-franchise-feedback-btn-9"
                                 onClick={() => setViewModal({ open: false, item: null })}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
@@ -535,8 +535,8 @@ export default function CustomerFeedbackPage() {
 
             {/* Delete Confirmation Modal */}
             {deleteModal.open && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+                <div id="admin-franchise-feedback-div-clickable-5" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
+                    <div id="admin-franchise-feedback-div-clickable-6" className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="bg-red-100 p-2 rounded-full">
                                 <Trash2 className="w-5 h-5 text-red-600" />
@@ -546,13 +546,13 @@ export default function CustomerFeedbackPage() {
                         <p className="text-gray-600 mb-1">Are you sure you want to delete this feedback?</p>
                         <p className="text-sm text-gray-500 mb-6 font-medium">&quot;{deleteModal.feedbackTitle}&quot;</p>
                         <div className="flex justify-end gap-3">
-                            <button
+                            <button id="admin-franchise-feedback-btn-10"
                                 onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
-                            <button
+                            <button id="admin-franchise-feedback-btn-11"
                                 onClick={handleDelete}
                                 disabled={deleteLoading}
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"

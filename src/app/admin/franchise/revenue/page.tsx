@@ -162,7 +162,7 @@ export default function FranchiseRevenuePage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen gap-4">
                 <p className="text-red-600 text-lg font-medium">{error}</p>
-                <button
+                <button id="admin-franchise-revenue-btn"
                     onClick={() => fetchRevenue(timeRange)}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
@@ -182,7 +182,7 @@ export default function FranchiseRevenuePage() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-franchise-revenue-btn-2"
                             key={range}
                             onClick={() => handleTimeRangeChange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -426,7 +426,7 @@ export default function FranchiseRevenuePage() {
                 transition={{ delay: 0.8 }}
                 className="flex gap-4"
             >
-                <button
+                <button id="admin-franchise-revenue-btn-3"
                     onClick={handleExport}
                     disabled={exporting}
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"

@@ -138,7 +138,7 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
                 </div>
 
                 <div className="flex gap-2">
-                    <Link
+                    <Link id="booking-booking-card-nav-view-details"
                         href={`/classes/${booking.classId}`}
                         className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                     >
@@ -146,7 +146,7 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
                     </Link>
 
                     {canCancel && !isPast && (
-                        <button
+                        <button id="booking-booking-card-btn"
                             onClick={() => onCancel(booking.id)}
                             className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                         >

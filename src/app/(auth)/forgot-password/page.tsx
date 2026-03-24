@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
                     <p className="text-gray-600 mb-4">
                         We've sent a password reset link to <strong>{email}</strong>. Please check your email and follow the instructions to reset your password.
                     </p>
-                    <Link
+                    <Link id="auth-forgot-password-nav-login"
                         href="/login"
                         className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors"
                     >
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
                         {/* Decorative top bar */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-t-2xl"></div>
 
-                        <form data-testid="form-forgot-password" onSubmit={handleSubmit} className="space-y-5">
+                        <form id="form-forgot-password" onSubmit={handleSubmit} className="space-y-5">
                             {/* Error Message */}
                             {error && (
                                 <motion.div
@@ -159,6 +159,7 @@ export default function ForgotPasswordPage() {
 
                             {/* Submit Button */}
                             <motion.button
+                                id="auth-forgot-password-submit-btn"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 type="submit"
@@ -181,7 +182,7 @@ export default function ForgotPasswordPage() {
 
                         {/* Back to Login */}
                         <div className="mt-6 pt-6 border-t border-gray-200">
-                            <button
+                            <button id="auth-forgot-password-btn"
                                 onClick={() => router.push('/login')}
                                 className="flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors w-full"
                             >

@@ -101,7 +101,7 @@ export default function DataManagementPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/import')}>
+                    <Card id="data-import-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/import')}>
                         <CardContent className="pt-6">
                             <Upload className="w-12 h-12 text-blue-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Import Data</h3>
@@ -109,7 +109,7 @@ export default function DataManagementPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/export')}>
+                    <Card id="data-export-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/export')}>
                         <CardContent className="pt-6">
                             <Download className="w-12 h-12 text-green-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Export Data</h3>
@@ -117,7 +117,7 @@ export default function DataManagementPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/bulk')}>
+                    <Card id="data-bulk-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/bulk')}>
                         <CardContent className="pt-6">
                             <Database className="w-12 h-12 text-purple-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Bulk Operations</h3>
@@ -125,7 +125,7 @@ export default function DataManagementPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/archive')}>
+                    <Card id="data-archive-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/data/archive')}>
                         <CardContent className="pt-6">
                             <Trash2 className="w-12 h-12 text-orange-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Archive Data</h3>

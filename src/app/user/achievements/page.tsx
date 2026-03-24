@@ -201,7 +201,7 @@ export default function AchievementsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">My Achievements</h1>
                     <p className="text-gray-600 mt-2">Track your accomplishments and earn rewards</p>
                 </div>
-                <Button data-testid="btn-refresh-user-achievements" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <Button id="user-achievements-refresh-btn" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                     Refresh
                 </Button>
@@ -234,9 +234,9 @@ export default function AchievementsPage() {
                             <div className="text-2xl font-bold text-gray-900">
                                 {stats?.unlockedAchievements || 0}/{stats?.totalAchievements || 0}
                             </div>
-                            <Progress 
-                                value={((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100} 
-                                className="mt-3 h-2" 
+                            <Progress
+                                value={((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100}
+                                className="mt-3 h-2"
                             />
                         </CardContent>
                     </Card>
@@ -280,7 +280,7 @@ export default function AchievementsPage() {
                         {/* Status Filter */}
                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                             {['all', 'unlocked', 'locked'].map((filter) => (
-                                <button
+                                <button id={`user-achievements-status-${filter}-btn`}
                                     key={filter}
                                     onClick={() => setActiveFilter(filter as any)}
                                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
@@ -297,7 +297,7 @@ export default function AchievementsPage() {
                         {/* Category Filter */}
                         <div className="flex items-center gap-2 flex-wrap">
                             {categories.map((cat) => (
-                                <button
+                                <button id={`user-achievements-category-${cat.key}-btn`}
                                     key={cat.key}
                                     onClick={() => setCategoryFilter(cat.key)}
                                     className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
@@ -325,17 +325,17 @@ export default function AchievementsPage() {
                         transition={{ delay: index * 0.05 }}
                     >
                         <Card className={`hover:shadow-xl transition-all ${
-                            achievement.achieved 
-                                ? 'border-2 border-green-200 bg-gradient-to-br from-white to-green-50/30' 
+                            achievement.achieved
+                                ? 'border-2 border-green-200 bg-gradient-to-br from-white to-green-50/30'
                                 : 'border-2 border-gray-200'
                         }`}>
                             <CardContent className="p-6">
                                 <div className="flex items-start gap-4">
                                     {/* Icon */}
-                                    <motion.div 
+                                    <motion.div
                                         className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl ${
-                                            achievement.achieved 
-                                                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg' 
+                                            achievement.achieved
+                                                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg'
                                                 : 'bg-gray-200 grayscale'
                                         }`}
                                         whileHover={{ scale: 1.1, rotate: 5 }}
@@ -406,7 +406,7 @@ export default function AchievementsPage() {
                                 <TrendingUp className="w-5 h-5 text-purple-600" />
                                 <CardTitle>Leaderboard</CardTitle>
                             </div>
-                            <Button variant="ghost" size="sm">View All</Button>
+                            <Button id="user-achievements-view-all-leaderboard-btn" variant="ghost" size="sm">View All</Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -418,8 +418,8 @@ export default function AchievementsPage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
                                     className={`flex items-center justify-between p-4 rounded-lg ${
-                                        entry.userId === user?.id 
-                                            ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200' 
+                                        entry.userId === user?.id
+                                            ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200'
                                             : 'bg-gray-50'
                                     }`}
                                 >

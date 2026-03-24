@@ -187,7 +187,7 @@ export default function IntegrationsPage() {
                         Connect and manage third-party services and APIs
                     </p>
                 </div>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Button id="admin-settings-integrations-btn" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Integration
                 </Button>
@@ -210,7 +210,7 @@ export default function IntegrationsPage() {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                     {categories.map((category) => (
-                        <Button
+                        <Button id="admin-settings-integrations-btn-2"
                             key={category}
                             variant={selectedCategory === category ? "default" : "outline"}
                             size="sm"
@@ -336,7 +336,7 @@ export default function IntegrationsPage() {
                                     )}
 
                                     <div className="flex space-x-2">
-                                        <Button
+                                        <Button id="admin-settings-integrations-btn-3"
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleConfigureIntegration(integration)}
@@ -346,7 +346,7 @@ export default function IntegrationsPage() {
                                             Configure
                                         </Button>
                                         {integration.status === 'connected' && (
-                                            <Button
+                                            <Button id="admin-settings-integrations-btn-4"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleSyncIntegration(integration.id)}
@@ -387,7 +387,7 @@ export default function IntegrationsPage() {
                                         <p className="text-gray-600">{selectedIntegration.description}</p>
                                     </div>
                                 </div>
-                                <Button
+                                <Button id="admin-settings-integrations-btn-5"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsConfiguring(false)}
@@ -427,13 +427,13 @@ export default function IntegrationsPage() {
                                 </div>
 
                                 <div className="flex justify-end space-x-3">
-                                    <Button
+                                    <Button id="admin-settings-integrations-btn-cancel"
                                         variant="outline"
                                         onClick={() => setIsConfiguring(false)}
                                     >
                                         Cancel
                                     </Button>
-                                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                                    <Button id="admin-settings-integrations-btn-save-configuration" className="bg-gradient-to-r from-blue-600 to-purple-600">
                                         Save Configuration
                                     </Button>
                                 </div>

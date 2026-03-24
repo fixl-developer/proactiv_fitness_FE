@@ -176,6 +176,7 @@ const ConversionReportsPage = () => {
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {['week', 'month', 'quarter', 'year'].map((period) => (
                             <button
+                                id={`admin-analytics-conversion-period-${period}-btn`}
                                 key={period}
                                 onClick={() => setSelectedPeriod(period as any)}
                                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedPeriod === period
@@ -187,7 +188,7 @@ const ConversionReportsPage = () => {
                             </button>
                         ))}
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-analytics-conversion-export-btn" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>

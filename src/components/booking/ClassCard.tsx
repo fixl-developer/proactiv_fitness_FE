@@ -15,7 +15,7 @@ export function ClassCard({ classItem }: ClassCardProps) {
     const isFull = classItem.capacity.available === 0;
 
     return (
-        <Link
+        <Link id="booking-class-card-nav"
             href={`/classes/${classItem.id}`}
             className="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group"
         >
@@ -114,7 +114,7 @@ export function ClassCard({ classItem }: ClassCardProps) {
                         <p className="text-xs text-gray-500">per class</p>
                     </div>
 
-                    <button className="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors">
+                    <button id="booking-class-card-btn" className="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors">
                         {isFull ? 'Join Waitlist' : 'Book Now'}
                     </button>
                 </div>

@@ -301,6 +301,7 @@ const TeamPreview = () => {
                 <div className="relative mb-20 py-12">
                     {/* Enhanced Navigation Arrows */}
                     <motion.button
+                        id="team-preview-prev-btn"
                         onClick={navigateCarouselPrev}
                         disabled={carouselIndex === 0}
                         className={`absolute left-2 sm:left-4 lg:left-8 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 shadow-xl ${carouselIndex === 0
@@ -315,6 +316,7 @@ const TeamPreview = () => {
                     </motion.button>
 
                     <motion.button
+                        id="team-preview-next-btn"
                         onClick={navigateCarouselNext}
                         disabled={carouselIndex >= maxIndex}
                         className={`absolute right-2 sm:right-4 lg:right-8 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 shadow-xl ${carouselIndex >= maxIndex
@@ -358,7 +360,7 @@ const TeamPreview = () => {
                                             {/* Card Container with Fixed Equal Height */}
                                             <div className="relative flex flex-col items-center bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 h-[420px]">
                                                 {/* Circular Image - No Zoom Effect */}
-                                                <div
+                                                <div id="sections-team-preview-div-clickable"
                                                     className="relative w-32 h-32 sm:w-40 sm:h-40 mb-4 cursor-pointer"
                                                     onClick={() => openMemberModal(member)}
                                                 >
@@ -438,6 +440,7 @@ const TeamPreview = () => {
                                                     {/* View Profile Button - At Bottom */}
                                                     <div className="mt-auto">
                                                         <motion.button
+                                                            id={`team-preview-view-profile-${member.id}-btn`}
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
                                                                 openMemberModal(member)
@@ -578,7 +581,7 @@ const TeamPreview = () => {
                                 className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4"
                             >
                                 <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}>
-                                    <Link
+                                    <Link id="sections-team-preview-nav-team"
                                         href="/team"
                                         className="group relative overflow-hidden bg-white text-blue-600 hover:bg-gray-50 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg transition-all duration-300 shadow-xl flex items-center justify-center space-x-2 w-full sm:w-auto"
                                     >
@@ -593,7 +596,7 @@ const TeamPreview = () => {
                                     </Link>
                                 </motion.div>
                                 <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}>
-                                    <Link
+                                    <Link id="sections-team-preview-nav-book-trial"
                                         href="/book-trial"
                                         className="group border-2 border-white text-white hover:bg-white hover:text-blue-600 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg transition-all duration-300 flex items-center justify-center space-x-2 w-full sm:w-auto"
                                     >
@@ -626,7 +629,7 @@ const TeamPreview = () => {
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Close Button Only */}
-                                <button
+                                <button id="sections-team-preview-btn"
                                     onClick={closeMemberModal}
                                     className="absolute top-4 right-4 z-10 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-all duration-200"
                                 >

@@ -52,7 +52,7 @@ export default function Automation() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Automation Rules</h1>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button id="staff-automation-new-rule-btn" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         New Rule
                     </button>
@@ -85,13 +85,13 @@ export default function Automation() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <button className={`px-4 py-2 rounded-lg font-medium ${rule.isActive
+                                        <button id={`staff-automation-status-${rule.id}-btn`} className={`px-4 py-2 rounded-lg font-medium ${rule.isActive
                                             ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                             : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                                             }`}>
                                             {rule.isActive ? 'Active' : 'Inactive'}
                                         </button>
-                                        <button data-testid="btn-staff-automation-1" onClick={() => handleToggle(rule.id)} className="text-gray-400 hover:text-gray-600">
+                                        <button id={`staff-automation-toggle-${rule.id}-btn`} onClick={() => handleToggle(rule.id)} className="text-gray-400 hover:text-gray-600">
                                             <ToggleRight className="w-5 h-5" />
                                         </button>
                                     </div>

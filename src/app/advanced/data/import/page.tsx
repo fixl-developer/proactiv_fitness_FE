@@ -16,7 +16,9 @@ export default function ImportPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [jobs, setJobs] = useState<ImportJob[]>([])
-    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [entity, setEntity] = useState('users')
+    const [format, setFormat] = useState('csv')
+    const [importing, setImporting] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -41,17 +43,15 @@ export default function ImportPage() {
     }
 
     const handleImport = async () => {
-        if (!selectedFile) {
-            alert('Please select a file')
-            return
-        }
         try {
-            await DataManagementService.importData(selectedFile, {})
+            setImporting(true)
+            await DataManagementService.importData(entity, format, {})
             await loadJobs()
-            setSelectedFile(null)
         } catch (err) {
             console.error('Error importing:', err)
             alert('Failed to import data')
+        } finally {
+            setImporting(false)
         }
     }
 
@@ -73,7 +73,7 @@ export default function ImportPage() {
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">Import Data</h1>
-                    <p className="text-gray-600">Upload data from files</p>
+                    <p className="text-gray-600">Upload and import data from various formats</p>
                 </div>
 
                 {error && (
@@ -87,25 +87,41 @@ export default function ImportPage() {
                     <div className="lg:col-span-1">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Upload File</CardTitle>
+                                <CardTitle>Import Options</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                    <input
-                                        type="file"
-                                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                                        className="hidden"
-                                        id="file-input"
-                                    />
-                                    <label htmlFor="file-input" className="cursor-pointer">
-                                        <p className="text-sm text-gray-600">Click to select file</p>
-                                        {selectedFile && <p className="text-sm font-medium mt-2">{selectedFile.name}</p>}
-                                    </label>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Entity</label>
+                                        <select id="import-entity-select"
+                                            value={entity}
+                                            onChange={(e) => setEntity(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="users">Users</option>
+                                            <option value="bookings">Bookings</option>
+                                            <option value="classes">Classes</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                                        <select id="import-format-select"
+                                            value={format}
+                                            onChange={(e) => setFormat(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="csv">CSV</option>
+                                            <option value="excel">Excel</option>
+                                            <option value="json">JSON</option>
+                                        </select>
+                                    </div>
+
+                                    <Button id="import-submit-btn" onClick={handleImport} disabled={importing} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                        <Upload className="w-4 h-4 mr-2" />
+                                        {importing ? 'Importing...' : 'Import'}
+                                    </Button>
                                 </div>
-                                <Button data-testid="btn-import-advanced-data-import" onClick={handleImport} disabled={!selectedFile} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">
-                                    Import
-                                </Button>
                             </CardContent>
                         </Card>
                     </div>
@@ -135,13 +151,13 @@ export default function ImportPage() {
                                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                                                     )}
                                                     <div className="flex-1">
-                                                        <p className="font-medium">{job.fileName}</p>
-                                                        <p className="text-sm text-gray-600">{job.processedRecords}/{job.totalRecords} records</p>
+                                                        <p className="font-medium">{job.name}</p>
+                                                        <p className="text-sm text-gray-600">{job.totalRecords} records • {job.format}</p>
                                                     </div>
                                                 </div>
                                                 <Badge className={`${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                         job.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                                            'bg-yellow-100 text-yellow-800'
+                                                        'bg-yellow-100 text-yellow-800'
                                                     }`}>
                                                     {job.status}
                                                 </Badge>

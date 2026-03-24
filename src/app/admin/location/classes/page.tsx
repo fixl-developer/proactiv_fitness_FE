@@ -104,7 +104,7 @@ export default function LocationClassesPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Classes</h1>
                     <p className="text-gray-600 mt-1">Manage all classes at this location</p>
                 </div>
-                <button
+                <button id="admin-location-classes-btn"
                     onClick={handleOpenCreate}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -126,7 +126,7 @@ export default function LocationClassesPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-location-classes-1"
+                            id="select-admin-location-classes-1"
                             value={filterLevel}
                             onChange={(e) => { setFilterLevel(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -202,14 +202,14 @@ export default function LocationClassesPage() {
                                     </div>
 
                                     <div className="flex gap-2 w-full lg:w-auto">
-                                        <button
+                                        <button id="admin-location-classes-btn-2"
                                             onClick={() => handleOpenEdit(cls)}
                                             className="flex-1 lg:flex-none px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                             <span className="hidden sm:inline">Edit</span>
                                         </button>
-                                        <button
+                                        <button id="admin-location-classes-btn-3"
                                             onClick={() => handleDelete(cls.id || cls._id)}
                                             className="flex-1 lg:flex-none px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                                         >
@@ -235,7 +235,7 @@ export default function LocationClassesPage() {
 
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button
+                    <button id="admin-location-classes-btn-4"
                         onClick={() => setPage(Math.max(1, page - 1))}
                         disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
@@ -243,7 +243,7 @@ export default function LocationClassesPage() {
                         Previous
                     </button>
                     <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                    <button
+                    <button id="admin-location-classes-btn-5"
                         onClick={() => setPage(Math.min(totalPages, page + 1))}
                         disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
@@ -261,7 +261,7 @@ export default function LocationClassesPage() {
                             <h2 className="text-xl font-bold text-gray-900">
                                 {editingClass ? 'Edit Class' : 'Add New Class'}
                             </h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                            <button id="admin-location-classes-btn-6" onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -298,10 +298,10 @@ export default function LocationClassesPage() {
                             </div>
                         </div>
                         <div className="flex gap-3 p-6 border-t">
-                            <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <button id="admin-location-classes-btn-7" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                                 Cancel
                             </button>
-                            <button onClick={handleSave} disabled={isSaving || !formData.name}
+                            <button id="admin-location-classes-btn-8" onClick={handleSave} disabled={isSaving || !formData.name}
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                                 {isSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save className="w-4 h-4" />}
                                 {editingClass ? 'Update' : 'Create'}

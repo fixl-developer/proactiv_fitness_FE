@@ -95,7 +95,7 @@ export default function StaffLoginPage() {
                 animate={{ opacity: 1, x: 0 }}
                 className="absolute top-4 left-4 z-10"
             >
-                <Link data-testid="link-login" href="/login" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors font-medium bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
+                <Link id="login" href="/login" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-blue-600 transition-colors font-medium bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
                     <ArrowLeft className="w-4 h-4" />
                     Back to Login
                 </Link>
@@ -134,11 +134,11 @@ export default function StaffLoginPage() {
                                 <div className="mb-5 p-3.5 bg-blue-50 border border-blue-100 rounded-xl text-sm">
                                     <p className="text-blue-800 font-medium mb-2.5">You&apos;re already signed in.</p>
                                     <div className="flex gap-2">
-                                        <button data-testid="btn-login-staff-1" type="button" onClick={() => { router.push(rbacManager.getDashboard() || '/staff/dashboard'); }}
+                                        <button id="btn-login-staff-1" type="button" onClick={() => { router.push(rbacManager.getDashboard() || '/staff/dashboard'); }}
                                             className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors">
                                             Go to Dashboard
                                         </button>
-                                        <button data-testid="btn-login-staff-2" type="button" onClick={() => logout()}
+                                        <button id="btn-login-staff-2" type="button" onClick={() => logout()}
                                             className="flex-1 bg-white text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors border border-gray-200">
                                             Switch Account
                                         </button>
@@ -166,7 +166,7 @@ export default function StaffLoginPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button data-testid="btn-login-staff-3" type="button" onClick={() => {
+                                        <button id="btn-login-staff-3" type="button" onClick={() => {
                                             try {
                                                 const saved = JSON.parse(localStorage.getItem('savedSession') || '{}');
                                                 localStorage.setItem('token', saved.token);
@@ -202,7 +202,7 @@ export default function StaffLoginPage() {
                                             className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
                                             Continue to Dashboard
                                         </button>
-                                        <button data-testid="btn-login-staff-4" type="button" onClick={() => { localStorage.removeItem('savedSession'); setSavedSession(null); }}
+                                        <button id="btn-login-staff-4" type="button" onClick={() => { localStorage.removeItem('savedSession'); setSavedSession(null); }}
                                             className="flex-1 bg-white text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors border border-gray-200">
                                             Switch Account
                                         </button>
@@ -210,7 +210,7 @@ export default function StaffLoginPage() {
                                 </div>
                             )}
 
-                            <form data-testid="form-login-staff" onSubmit={handleSubmit} className="space-y-4">
+                            <form id="form-login-staff" onSubmit={handleSubmit} className="space-y-4">
                                 {/* Error */}
                                 <AnimatePresence>
                                     {formErrors.general && (
@@ -230,7 +230,7 @@ export default function StaffLoginPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Email address</label>
                                     <div className="relative">
                                         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400" />
-                                        <input data-testid="input-email-login-staff"
+                                        <input id="input-email-login-staff"
                                             type="email"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -254,7 +254,7 @@ export default function StaffLoginPage() {
                                             placeholder="Enter your password"
                                             disabled={isLoading}
                                         />
-                                        <button data-testid="btn-login-staff-5" type="button" onClick={() => setShowPassword(!showPassword)}
+                                        <button id="btn-login-staff-5" type="button" onClick={() => setShowPassword(!showPassword)}
                                             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
                                             disabled={isLoading}>
                                             {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
@@ -263,7 +263,7 @@ export default function StaffLoginPage() {
                                 </div>
 
                                 {/* Submit */}
-                                <button type="submit" disabled={isLoading}
+                                <button id="auth-login-staff-btn" type="submit" disabled={isLoading}
                                     className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold active:scale-[0.98]">
                                     {isLoading ? (
                                         <>
@@ -316,6 +316,7 @@ export default function StaffLoginPage() {
                                         const isSelected = selectedDemo === account.email;
                                         return (
                                             <motion.button
+                                                id={`staff-login-demo-${account.label.toLowerCase().replace(/\s+/g, '-')}-btn`}
                                                 key={account.email}
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}

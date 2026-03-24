@@ -221,7 +221,7 @@ export default function MarketingPromotionsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Marketing & Promotions</h1>
                     <p className="text-gray-600 mt-1">Manage campaigns and promotions</p>
                 </div>
-                <button
+                <button id="admin-franchise-marketing-btn"
                     onClick={openCreateModal}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -295,7 +295,7 @@ export default function MarketingPromotionsPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-franchise-marketing-1"
+                            id="select-admin-franchise-marketing-1"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -394,21 +394,21 @@ export default function MarketingPromotionsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button
+                                        <button id="admin-franchise-marketing-btn-2"
                                             onClick={() => openViewModal(campaign)}
                                             className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                             title="View"
                                         >
                                             <Eye className="w-4 h-4" />
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-marketing-btn-3"
                                             onClick={() => openEditModal(campaign)}
                                             className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                             title="Edit"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-marketing-btn-4"
                                             onClick={() => setDeleteConfirmId(campaign.id)}
                                             className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
                                             title="Delete"
@@ -432,14 +432,14 @@ export default function MarketingPromotionsPage() {
                             Are you sure you want to delete this campaign? This action cannot be undone.
                         </p>
                         <div className="flex justify-end gap-3">
-                            <button
+                            <button id="admin-franchise-marketing-btn-5"
                                 onClick={() => setDeleteConfirmId(null)}
                                 disabled={isDeleting}
                                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
-                            <button
+                            <button id="admin-franchise-marketing-btn-6"
                                 onClick={() => handleDelete(deleteConfirmId)}
                                 disabled={isDeleting}
                                 className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
@@ -462,7 +462,7 @@ export default function MarketingPromotionsPage() {
                                 {modalMode === 'edit' && 'Edit Campaign'}
                                 {modalMode === 'view' && 'Campaign Details'}
                             </h2>
-                            <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                            <button id="admin-franchise-marketing-btn-7" onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
                         </div>
@@ -614,14 +614,14 @@ export default function MarketingPromotionsPage() {
 
                         {/* Modal Footer */}
                         <div className="flex justify-end gap-3 p-6 border-t">
-                            <button
+                            <button id="admin-franchise-marketing-btn-8"
                                 onClick={closeModal}
                                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
                                 {modalMode === 'view' ? 'Close' : 'Cancel'}
                             </button>
                             {modalMode !== 'view' && (
-                                <button
+                                <button id="admin-franchise-marketing-btn-9"
                                     onClick={handleSave}
                                     disabled={isSaving || !formData.name}
                                     className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"

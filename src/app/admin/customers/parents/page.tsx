@@ -226,15 +226,15 @@ const ParentAccountsPage = () => {
                     <p className="text-gray-600 mt-2">Manage parent profiles and family relationships</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-parents-filter-btn" variant="outline" size="sm">
                         <Filter className="w-4 h-4 mr-2" />
                         Filter
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-parents-export-btn" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
-                    <Button size="sm">
+                    <Button id="admin-parents-add-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Parent
                     </Button>
@@ -292,7 +292,7 @@ const ParentAccountsPage = () => {
             <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                     {['all', 'active', 'inactive', 'vip'].map((filter) => (
-                        <button
+                        <button id={`admin-parents-filter-${filter}-btn`}
                             key={filter}
                             onClick={() => setSelectedFilter(filter as any)}
                             className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedFilter === filter
@@ -307,6 +307,7 @@ const ParentAccountsPage = () => {
                 <div className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-gray-400" />
                     <input
+                        id="admin-parents-search-input"
                         type="text"
                         placeholder="Search parents..."
                         className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -406,11 +407,11 @@ const ParentAccountsPage = () => {
                                         Joined {parent.joinDate}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="outline" size="sm">
+                                        <Button id={`admin-parents-message-${parent.id}-btn`} variant="outline" size="sm">
                                             <MessageSquare className="w-4 h-4 mr-2" />
                                             Message
                                         </Button>
-                                        <Button variant="outline" size="sm">
+                                        <Button id={`admin-parents-view-${parent.id}-btn`} variant="outline" size="sm">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View Profile
                                         </Button>

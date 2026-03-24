@@ -364,7 +364,7 @@ const CoachReportsPage = () => {
                                 Report Type
                             </label>
                             <select
-                                data-testid="select-coach-reports-1"
+                                id="select-coach-reports-1"
                                 value={reportType}
                                 onChange={(e) => handleReportTypeChange(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -380,7 +380,7 @@ const CoachReportsPage = () => {
                                 Date Range
                             </label>
                             <select
-                                data-testid="select-coach-reports-2"
+                                id="select-coach-reports-2"
                                 value={dateRange}
                                 onChange={(e) => setDateRange(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -392,7 +392,7 @@ const CoachReportsPage = () => {
                             </select>
                         </div>
                         <div className="flex items-end gap-2">
-                            <Button
+                            <Button id="coach-reports-apply-filter-btn"
                                 variant="outline"
                                 className="flex-1 sm:flex-none"
                                 onClick={handleApplyFilter}
@@ -619,7 +619,7 @@ const CoachReportsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-3">
-                        <Button
+                        <Button id="coach-reports-download-pdf-btn"
                             variant="outline"
                             className="flex-1"
                             onClick={() => handleDownload('pdf')}
@@ -632,7 +632,7 @@ const CoachReportsPage = () => {
                             )}
                             Download as PDF
                         </Button>
-                        <Button
+                        <Button id="coach-reports-download-excel-btn"
                             variant="outline"
                             className="flex-1"
                             onClick={() => handleDownload('excel')}
@@ -645,7 +645,7 @@ const CoachReportsPage = () => {
                             )}
                             Download as Excel
                         </Button>
-                        <Button
+                        <Button id="coach-reports-download-csv-btn"
                             variant="outline"
                             className="flex-1"
                             onClick={() => handleDownload('csv')}

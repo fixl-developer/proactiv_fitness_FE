@@ -42,7 +42,7 @@ export default function Schedules() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Staff Schedules</h1>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button id="staff-schedules-new-btn" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         New Schedule
                     </button>
@@ -84,7 +84,7 @@ export default function Schedules() {
                                         <td className="py-3 px-6 text-gray-600">{schedule.end}</td>
                                         <td className="py-3 px-6 text-gray-600">{schedule.days}</td>
                                         <td className="py-3 px-6">
-                                            <button className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                            <button id={`staff-schedules-edit-${schedule.id}-btn`} className="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                                         </td>
                                     </tr>
                                 ))}

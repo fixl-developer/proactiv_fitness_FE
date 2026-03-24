@@ -111,7 +111,7 @@ export default function CustomAnalyticsPage() {
                                     className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
                                 />
                                 <div className="flex gap-3 mt-4">
-                                    <Button
+                                    <Button id="custom-analytics-execute-btn"
                                         onClick={handleExecute}
                                         disabled={executing || !query.trim()}
                                         className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -119,7 +119,7 @@ export default function CustomAnalyticsPage() {
                                         <Play className="w-4 h-4 mr-2" />
                                         {executing ? 'Executing...' : 'Execute'}
                                     </Button>
-                                    <Button data-testid="btn-save-advanced-analytics-custom" onClick={handleSave} variant="outline" disabled={!query.trim()}>
+                                    <Button id="custom-analytics-save-btn" onClick={handleSave} variant="outline" disabled={!query.trim()}>
                                         <Save className="w-4 h-4 mr-2" />
                                         Save Query
                                     </Button>
@@ -145,7 +145,7 @@ export default function CustomAnalyticsPage() {
                             <CardContent>
                                 <div className="space-y-2">
                                     {savedQueries.map((sq) => (
-                                        <div
+                                        <div id={`custom-analytics-saved-query-${sq.id}-item`}
                                             key={sq.id}
                                             onClick={() => setQuery(sq.query)}
                                             className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"

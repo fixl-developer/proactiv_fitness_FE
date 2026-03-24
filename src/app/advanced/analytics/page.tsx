@@ -125,7 +125,7 @@ export default function AdvancedAnalyticsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/custom')}>
+                    <Card id="analytics-custom-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/custom')}>
                         <CardContent className="pt-6">
                             <BarChart3 className="w-12 h-12 text-blue-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Custom Analytics</h3>
@@ -133,7 +133,7 @@ export default function AdvancedAnalyticsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/trends')}>
+                    <Card id="analytics-trends-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/trends')}>
                         <CardContent className="pt-6">
                             <TrendingUp className="w-12 h-12 text-green-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Trend Analysis</h3>
@@ -141,7 +141,7 @@ export default function AdvancedAnalyticsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/predictions')}>
+                    <Card id="analytics-predictions-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/predictions')}>
                         <CardContent className="pt-6">
                             <Target className="w-12 h-12 text-purple-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Predictions</h3>
@@ -149,7 +149,7 @@ export default function AdvancedAnalyticsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/comparisons')}>
+                    <Card id="analytics-comparisons-nav-card" className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/advanced/analytics/comparisons')}>
                         <CardContent className="pt-6">
                             <Zap className="w-12 h-12 text-orange-600 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Comparisons</h3>

@@ -147,7 +147,7 @@ export default function PartnerIntegrationsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Integrations Hub</h1>
                     <p className="text-gray-600 mt-1">Manage third-party integrations and data sync</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-integrations-add-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     Add Integration
                 </button>
@@ -260,21 +260,21 @@ export default function PartnerIntegrationsPage() {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <button
+                                            <button id={`partner-integrations-test-${integration.id}-btn`}
                                                 onClick={() => handleTestIntegration(integration.id)}
                                                 className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                                 title="Test Connection"
                                             >
                                                 <Play className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-integrations-configure-${integration.id}-btn`}
                                                 onClick={() => handleConfigureIntegration(integration.id)}
                                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                                 title="Configure"
                                             >
                                                 <Settings className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-integrations-toggle-${integration.id}-btn`}
                                                 onClick={() => handleToggleIntegration(integration.id, integration.status)}
                                                 className={`p-2 rounded-lg transition-colors ${integration.status === 'CONNECTED'
                                                     ? 'hover:bg-red-50 text-red-600'
@@ -284,7 +284,7 @@ export default function PartnerIntegrationsPage() {
                                             >
                                                 {integration.status === 'CONNECTED' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                             </button>
-                                            <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                            <button id={`partner-integrations-external-${integration.id}-btn`} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
                                                 <ExternalLink className="w-4 h-4" />
                                             </button>
                                         </div>

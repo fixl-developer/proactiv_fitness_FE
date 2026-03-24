@@ -201,7 +201,7 @@ export default function BookingConfirmation({ bookingData, onBackToStart }: Book
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button
+                    <button id="booking-booking-confirmation-btn"
                         onClick={onBackToStart}
                         className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50 font-medium transition-all"
                     >
@@ -209,7 +209,7 @@ export default function BookingConfirmation({ bookingData, onBackToStart }: Book
                         Book Another Assessment
                     </button>
 
-                    <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
+                    <button id="booking-booking-confirmation-btn-add-to-calendar" className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
                         Add to Calendar
                     </button>
                 </div>

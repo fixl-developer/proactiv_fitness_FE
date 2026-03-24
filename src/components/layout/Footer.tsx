@@ -87,13 +87,13 @@ const Footer = () => {
                         <div className="space-y-3">
                             <div className="flex items-center space-x-3">
                                 <FiPhone className="w-5 h-5 text-blue-400" />
-                                <a href="tel:+85212345678" className="text-gray-300 hover:text-white transition-colors duration-200">
+                                <a id="layout-footer-link-tel85212345678" href="tel:+85212345678" className="text-gray-300 hover:text-white transition-colors duration-200">
                                     +852 1234 5678
                                 </a>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <FiMail className="w-5 h-5 text-blue-400" />
-                                <a href="mailto:info@proactivsports.net" className="text-gray-300 hover:text-white transition-colors duration-200">
+                                <a id="layout-footer-link-mailtoinfoproactivsportsnet" href="mailto:info@proactivsports.net" className="text-gray-300 hover:text-white transition-colors duration-200">
                                     info@proactivsports.net
                                 </a>
                             </div>
@@ -102,7 +102,7 @@ const Footer = () => {
                         {/* Social Links */}
                         <div className="flex space-x-4 mt-6">
                             {socialLinks.map((social) => (
-                                <a
+                                <a id={`footer-social-${social.label.toLowerCase()}`}
                                     key={social.label}
                                     href={social.href}
                                     target="_blank"
@@ -122,7 +122,7 @@ const Footer = () => {
                         <ul className="space-y-3">
                             {quickLinks.map((link) => (
                                 <li key={link.href}>
-                                    <Link
+                                    <Link id={`footer-quicklink-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
                                         href={link.href}
                                         className="text-gray-300 hover:text-white transition-colors duration-200"
                                     >
@@ -139,7 +139,7 @@ const Footer = () => {
                         <ul className="space-y-3">
                             {programs.map((program) => (
                                 <li key={program.href}>
-                                    <Link
+                                    <Link id={`footer-program-${program.label.toLowerCase().replace(/\s+/g, '-')}`}
                                         href={program.href}
                                         className="text-gray-300 hover:text-white transition-colors duration-200"
                                     >
@@ -163,7 +163,7 @@ const Footer = () => {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <FiPhone className="w-4 h-4 text-blue-400" />
-                                        <a href="tel:+85222345678" className="hover:text-white transition-colors duration-200">
+                                        <a id="layout-footer-link-tel85222345678" href="tel:+85222345678" className="hover:text-white transition-colors duration-200">
                                             +852 2234 5678
                                         </a>
                                     </div>
@@ -179,7 +179,7 @@ const Footer = () => {
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         <FiPhone className="w-4 h-4 text-blue-400" />
-                                        <a href="tel:+85223456789" className="hover:text-white transition-colors duration-200">
+                                        <a id="layout-footer-link-tel85223456789" href="tel:+85223456789" className="hover:text-white transition-colors duration-200">
                                             +852 2345 6789
                                         </a>
                                     </div>
@@ -202,11 +202,12 @@ const Footer = () => {
                         </div>
                         <div className="flex w-full md:w-auto">
                             <input
+                                id="footer-input-newsletter-email"
                                 type="email"
                                 placeholder="Enter your email"
                                 className="flex-1 md:w-64 px-4 py-2 bg-gray-800 border border-gray-700 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
                             />
-                            <button className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-r-lg font-semibold transition-colors duration-300">
+                            <button id="layout-footer-btn-subscribe" className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-r-lg font-semibold transition-colors duration-300">
                                 Subscribe
                             </button>
                         </div>
@@ -222,13 +223,13 @@ const Footer = () => {
                             <p>&copy; {currentYear} ProActive Sports. All rights reserved.</p>
                         </div>
                         <div className="flex space-x-6">
-                            <Link data-testid="link-privacy" href="/privacy" className="hover:text-white transition-colors duration-200">
+                            <Link id="footer-link-privacy" href="/privacy" className="hover:text-white transition-colors duration-200">
                                 Privacy Policy
                             </Link>
-                            <Link data-testid="link-terms" href="/terms" className="hover:text-white transition-colors duration-200">
+                            <Link id="footer-link-terms" href="/terms" className="hover:text-white transition-colors duration-200">
                                 Terms of Service
                             </Link>
-                            <Link data-testid="link-careers" href="/careers" className="hover:text-white transition-colors duration-200">
+                            <Link id="footer-link-careers" href="/careers" className="hover:text-white transition-colors duration-200">
                                 Careers
                             </Link>
                         </div>

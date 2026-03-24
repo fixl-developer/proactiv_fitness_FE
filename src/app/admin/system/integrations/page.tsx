@@ -228,10 +228,10 @@ export default function IntegrationsPage() {
                     <p className="text-gray-600 mt-1">Connect, configure, and monitor third-party services</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button data-testid="btn-action-admin-system-integrations" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadIntegrations() }}>
+                    <Button id={`btn-action-admin-system-integrations-${i}`} variant="outline" size="sm" onClick={() => { setIsLoading(true); loadIntegrations() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button data-testid="btn-open-create-modal-admin-system-integrations" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
+                    <Button id="btn-open-create-modal-admin-system-integrations" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
                         <Plus className="w-4 h-4 mr-2" /> Add Integration
                     </Button>
                 </motion.div>
@@ -244,24 +244,24 @@ export default function IntegrationsPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>{editingInteg ? 'Edit Integration' : 'Add Integration'}</CardTitle>
-                                <Button data-testid="btn-action-admin-system-integrations" variant="ghost" size="sm" onClick={() => { setShowModal(false); setEditingInteg(null) }}><X className="w-4 h-4" /></Button>
+                                <Button id={`btn-action-admin-system-integrations-${i}`} variant="ghost" size="sm" onClick={() => { setShowModal(false); setEditingInteg(null) }}><X className="w-4 h-4" /></Button>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
-                                    <input data-testid="input-text-admin-system-integrations" type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Integration name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                    <input id="input-text-admin-system-integrations" type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Integration name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Provider</label>
-                                    <input data-testid="input-text-admin-system-integrations" type="text" value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} placeholder="e.g. Stripe, Twilio" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                    <input id="input-text-admin-system-integrations" type="text" value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} placeholder="e.g. Stripe, Twilio" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Type</label>
-                                    <select data-testid="select-admin-system-integrations-15" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <select id="select-admin-system-integrations-15" value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                         <option value="payment">Payment</option>
                                         <option value="sms">SMS</option>
                                         <option value="email">Email</option>
@@ -273,7 +273,7 @@ export default function IntegrationsPage() {
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
-                                    <select data-testid="select-admin-system-integrations-16" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <select id="select-admin-system-integrations-16" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                         <option value="disconnected">Disconnected</option>
                                         <option value="connected">Connected</option>
                                         <option value="error">Error</option>
@@ -285,8 +285,8 @@ export default function IntegrationsPage() {
                                 <textarea value={form.config} onChange={e => setForm(f => ({ ...f, config: e.target.value }))} placeholder='{"apiKey": "...", "secret": "..."}' rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none font-mono" />
                             </div>
                             <div className="flex justify-end gap-2">
-                                <Button data-testid="btn-action-admin-system-integrations" variant="outline" size="sm" onClick={() => { setShowModal(false); setEditingInteg(null) }}>Cancel</Button>
-                                <Button data-testid="btn-submit-admin-system-integrations" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={submitting}>
+                                <Button id="btn-action-admin-system-integrations" variant="outline" size="sm" onClick={() => { setShowModal(false); setEditingInteg(null) }}>Cancel</Button>
+                                <Button id="btn-submit-admin-system-integrations" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={submitting}>
                                     {submitting ? (editingInteg ? 'Updating...' : 'Adding...') : (editingInteg ? 'Update' : 'Add Integration')}
                                 </Button>
                             </div>
@@ -302,7 +302,7 @@ export default function IntegrationsPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Logs: {logsModal.integration.name}</CardTitle>
-                                <Button data-testid="btn-set-logs-modal-admin-system-integrations" variant="ghost" size="sm" onClick={() => setLogsModal(null)}><X className="w-4 h-4" /></Button>
+                                <Button id="btn-set-logs-modal-admin-system-integrations" variant="ghost" size="sm" onClick={() => setLogsModal(null)}><X className="w-4 h-4" /></Button>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -399,23 +399,23 @@ export default function IntegrationsPage() {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <Button data-testid="btn-open-edit-modal-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => openEditModal(integration)}>
+                                            <Button id="btn-open-edit-modal-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => openEditModal(integration)}>
                                                 <Settings className="w-3.5 h-3.5 mr-1" /> Configure
                                             </Button>
-                                            <Button data-testid="btn-test-connection-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => handleTestConnection(integration)} disabled={integration.testing}>
+                                            <Button id="btn-test-connection-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => handleTestConnection(integration)} disabled={integration.testing}>
                                                 {integration.testing ? <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-1" />}
                                                 {integration.testing ? 'Testing...' : 'Test'}
                                             </Button>
-                                            <Button data-testid="btn-view-logs-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => handleViewLogs(integration)}>
+                                            <Button id="btn-view-logs-admin-system-integrations" variant="outline" size="sm" className="flex-1" onClick={() => handleViewLogs(integration)}>
                                                 <FileText className="w-3.5 h-3.5 mr-1" /> Logs
                                             </Button>
                                             {deleteConfirm === integration.id ? (
                                                 <div className="flex items-center gap-1">
-                                                    <Button data-testid="btn-delete-admin-system-integrations" variant="ghost" size="sm" onClick={() => handleDelete(integration)} className="text-red-600 text-xs px-2">Yes</Button>
-                                                    <Button data-testid="btn-set-delete-confirm-admin-system-integrations" variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)} className="text-gray-500 text-xs px-2">No</Button>
+                                                    <Button id="btn-delete-admin-system-integrations" variant="ghost" size="sm" onClick={() => handleDelete(integration)} className="text-red-600 text-xs px-2">Yes</Button>
+                                                    <Button id="btn-set-delete-confirm-admin-system-integrations" variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)} className="text-gray-500 text-xs px-2">No</Button>
                                                 </div>
                                             ) : (
-                                                <Button data-testid="btn-set-delete-confirm-admin-system-integrations" variant="outline" size="sm" onClick={() => setDeleteConfirm(integration.id)} className="text-red-500 hover:text-red-700">
+                                                <Button id="btn-set-delete-confirm-admin-system-integrations" variant="outline" size="sm" onClick={() => setDeleteConfirm(integration.id)} className="text-red-500 hover:text-red-700">
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
                                             )}

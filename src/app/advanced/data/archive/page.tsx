@@ -89,7 +89,7 @@ export default function ArchivePage() {
                                             <p className="font-medium">{item.name}</p>
                                             <p className="text-sm text-gray-600">Archived: {new Date(item.archivedAt).toLocaleDateString()}</p>
                                         </div>
-                                        <Button size="sm" variant="outline">
+                                        <Button id={`data-archive-restore-${idx}-btn`} size="sm" variant="outline">
                                             <RotateCcw className="w-4 h-4 mr-2" />
                                             Restore
                                         </Button>

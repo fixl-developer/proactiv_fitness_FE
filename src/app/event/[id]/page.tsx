@@ -20,7 +20,7 @@ export default function EventPage() {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Event Not Found</h1>
-                    <Link data-testid="link-book-now" href="/book-now" className="text-blue-600 hover:text-blue-800">
+                    <Link id="book-now" href="/book-now" className="text-blue-600 hover:text-blue-800">
                         ← Back to Booking
                     </Link>
                 </div>
@@ -42,7 +42,7 @@ export default function EventPage() {
                 <div className="bg-white border-b">
                     <div className="max-w-7xl mx-auto px-4 py-4">
                         <div className="flex items-center justify-between">
-                            <Link data-testid="link-book-now" href="/book-now" className="text-blue-600 hover:text-blue-800 font-medium">
+                            <Link id="book-now" href="/book-now" className="text-blue-600 hover:text-blue-800 font-medium">
                                 ← Back to Classes
                             </Link>
                             <div className="flex items-center space-x-4">
@@ -74,7 +74,7 @@ export default function EventPage() {
                                 {/* Sessions List */}
                                 <div className="space-y-3 mb-6">
                                     {event.sessions.map((session: any) => (
-                                        <div
+                                        <div id="event-id-div-clickable"
                                             key={session.id}
                                             className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedSession === session.id
                                                 ? 'border-blue-500 bg-blue-50'
@@ -117,7 +117,7 @@ export default function EventPage() {
                                             </div>
                                         </div>
                                     ))}
-                                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    <button id="event-id-btn--14-sessions-more" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                         + 14 sessions more
                                     </button>
                                 </div>
@@ -188,7 +188,7 @@ export default function EventPage() {
                                     <div className="text-sm text-gray-600">{event.duration}</div>
                                 </div>
 
-                                <button
+                                <button id="event-id-btn-select-continue"
                                     onClick={handleSelectAndContinue}
                                     disabled={!selectedSession}
                                     className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${selectedSession
@@ -242,7 +242,7 @@ export default function EventPage() {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div className="bg-white rounded-lg max-w-md w-full p-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Book Assessment</h3>
-                            <form data-testid="form-event-id" className="space-y-4">
+                            <form id="form-event-id" className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Parent Name *
@@ -296,14 +296,14 @@ export default function EventPage() {
                                     />
                                 </div>
                                 <div className="flex space-x-3 pt-4">
-                                    <button
+                                    <button id="event-id-btn"
                                         type="button"
                                         onClick={() => setShowBookingForm(false)}
                                         className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                                     >
                                         Cancel
                                     </button>
-                                    <button
+                                    <button id="event-id-btn-book-now"
                                         type="submit"
                                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                                     >

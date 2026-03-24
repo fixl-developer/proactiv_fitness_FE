@@ -172,7 +172,7 @@ const BirthdayPartiesPage = () => {
                                     </div>
                                 </div>
                                 <div className="mt-8">
-                                    <Link
+                                    <Link id="birthday-parties-nav-contact"
                                         href="/contact"
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition-colors inline-block"
                                     >
@@ -393,6 +393,7 @@ const BirthdayPartiesPage = () => {
                                         )}
 
                                         <motion.button
+                                            id={`birthday-parties-select-package-${pkg.id}-btn`}
                                             onClick={() => setSelectedPackage(pkg.id)}
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
@@ -597,7 +598,7 @@ const BirthdayPartiesPage = () => {
                             viewport={{ once: true }}
                         >
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link
+                                <Link id="birthday-parties-nav-contact-2"
                                     href="/contact"
                                     className="inline-block bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg hover:shadow-xl"
                                 >
@@ -605,6 +606,7 @@ const BirthdayPartiesPage = () => {
                                 </Link>
                             </motion.div>
                             <motion.a
+                                id="birthday-parties-whatsapp-link"
                                 href="https://wa.me/85212345678"
                                 target="_blank"
                                 rel="noopener noreferrer"

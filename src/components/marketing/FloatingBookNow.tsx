@@ -28,7 +28,7 @@ export function FloatingBookNow() {
     }
 
     return (
-        <Link
+        <Link id="marketing-floating-book-now-nav-book-trial"
             href="/book-trial"
             className={`fixed right-6 top-1/2 -translate-y-1/2 z-50 transition-all duration-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20'
                 }`}

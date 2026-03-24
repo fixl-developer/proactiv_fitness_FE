@@ -61,7 +61,7 @@ export default function LocationAnalyticsPage() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-location-analytics-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range

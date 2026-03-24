@@ -158,6 +158,7 @@ const AIRecommendations = ({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
+                        id={`ai-recommendations-program-${recommendation.id}-card`}
                         className={`border-2 rounded-xl p-6 cursor-pointer transition-all duration-300 ${selectedRecommendation === recommendation.id
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-gray-200 hover:border-primary-300 hover:shadow-md'
@@ -254,7 +255,7 @@ const AIRecommendations = ({
                         </div>
 
                         {/* Action Button */}
-                        <button
+                        <button id={`ai-recommendations-select-${recommendation.id}-btn`}
                             className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${selectedRecommendation === recommendation.id
                                 ? 'bg-primary-600 text-white hover:bg-primary-700'
                                 : 'bg-primary-100 text-primary-700 hover:bg-primary-200'

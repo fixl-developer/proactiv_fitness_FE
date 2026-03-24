@@ -198,7 +198,7 @@ const MakeupCreditsPage = () => {
                                                     )}
                                                 </div>
 
-                                                <Button
+                                                <Button id={`parent-makeup-credits-use-${credit._id}-btn`}
                                                     onClick={() => handleUseCredit(credit._id)}
                                                     className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold hover:from-green-700 hover:to-emerald-700"
                                                 >
@@ -288,7 +288,7 @@ const MakeupCreditsPage = () => {
                             <p className="text-gray-600 mb-4">
                                 You don't have any makeup credits yet. When you miss a class, you'll receive a makeup credit that you can use for any available session.
                             </p>
-                            <Button data-testid="btn-router-parent-makeup-credits" onClick={() => router.push('/parent/browse-classes')}>
+                            <Button id="parent-makeup-credits-browse-btn" onClick={() => router.push('/parent/browse-classes')}>
                                 Browse Classes
                             </Button>
                         </CardContent>

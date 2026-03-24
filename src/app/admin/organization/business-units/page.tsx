@@ -189,15 +189,15 @@ const BusinessUnitsPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-organization-business-units-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-organization-business-units-btn-2" variant="outline" size="sm">
                         <Eye className="w-4 h-4 mr-2" />
                         View Reports
                     </Button>
-                    <Button>
+                    <Button id="admin-organization-business-units-btn-3">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Business Unit
                     </Button>
@@ -310,7 +310,7 @@ const BusinessUnitsPage = () => {
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm">
+                                                <Button id="admin-organization-business-units-btn-4" variant="ghost" size="sm">
                                                     <MoreHorizontal className="w-4 h-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
@@ -414,15 +414,15 @@ const BusinessUnitsPage = () => {
                         <div className="mt-6 pt-4 border-t border-gray-200">
                             <h4 className="font-semibold text-gray-900 mb-3">Quick Actions</h4>
                             <div className="space-y-2">
-                                <Button variant="outline" size="sm" className="w-full justify-start">
+                                <Button id="admin-organization-business-units-btn-5" variant="outline" size="sm" className="w-full justify-start">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add New Business Unit
                                 </Button>
-                                <Button variant="outline" size="sm" className="w-full justify-start">
+                                <Button id="admin-organization-business-units-btn-6" variant="outline" size="sm" className="w-full justify-start">
                                     <Eye className="w-4 h-4 mr-2" />
                                     Generate Performance Report
                                 </Button>
-                                <Button variant="outline" size="sm" className="w-full justify-start">
+                                <Button id="admin-organization-business-units-btn-7" variant="outline" size="sm" className="w-full justify-start">
                                     <Calendar className="w-4 h-4 mr-2" />
                                     Schedule Review Meeting
                                 </Button>

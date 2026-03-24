@@ -75,11 +75,11 @@ export default function ReportViewerPage() {
                         <p className="text-gray-600">{report.description}</p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="outline">
+                        <Button id="advanced-reports-id-btn" variant="outline">
                             <Download className="w-4 h-4 mr-2" />
                             Export
                         </Button>
-                        <Button variant="outline">
+                        <Button id="advanced-reports-id-btn-2" variant="outline">
                             <Share2 className="w-4 h-4 mr-2" />
                             Share
                         </Button>

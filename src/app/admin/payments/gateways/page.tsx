@@ -160,11 +160,11 @@ const PaymentGatewaysPage = () => {
                     <p className="text-gray-600 mt-2">Manage payment processing methods and configurations</p>
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <Button className="flex-1 sm:flex-none">
+                    <Button id="admin-payments-gateways-btn" className="flex-1 sm:flex-none">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Gateway
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                    <Button id="admin-payments-gateways-btn-2" variant="outline" size="sm" className="flex-1 sm:flex-none">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Sync Status
                     </Button>
@@ -233,7 +233,7 @@ const PaymentGatewaysPage = () => {
                 <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-wrap gap-2">
                         {['all', 'active', 'inactive', 'testing'].map((status) => (
-                            <button
+                            <button id="admin-payments-gateways-btn-3"
                                 key={status}
                                 onClick={() => setSelectedStatus(status)}
                                 className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors capitalize ${selectedStatus === status
@@ -331,15 +331,15 @@ const PaymentGatewaysPage = () => {
                                     </div>
 
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" className="flex-1">
+                                        <Button id="admin-payments-gateways-btn-4" variant="outline" size="sm" className="flex-1">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View
                                         </Button>
-                                        <Button variant="outline" size="sm" className="flex-1">
+                                        <Button id="admin-payments-gateways-btn-5" variant="outline" size="sm" className="flex-1">
                                             <Edit className="w-4 h-4 mr-2" />
                                             Configure
                                         </Button>
-                                        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                        <Button id="admin-payments-gateways-btn-6" variant="outline" size="sm" className="text-red-600 hover:text-red-700">
                                             <Trash2 className="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -359,7 +359,7 @@ const PaymentGatewaysPage = () => {
                         <p className="text-gray-600 mb-4">
                             No payment gateways match the selected status filter.
                         </p>
-                        <Button>
+                        <Button id="admin-payments-gateways-btn-7">
                             <Plus className="w-4 h-4 mr-2" />
                             Add Payment Gateway
                         </Button>

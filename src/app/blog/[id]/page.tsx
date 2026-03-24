@@ -374,7 +374,7 @@ const BlogDetailPage = () => {
                 <main className="min-h-screen flex items-center justify-center">
                     <div className="text-center">
                         <h1 className="text-4xl font-bold text-gray-900 mb-4">Blog Post Not Found</h1>
-                        <Link data-testid="link-blog" href="/blog" className="btn-primary">
+                        <Link id="blog" href="/blog" className="btn-primary">
                             Back to Blog
                         </Link>
                     </div>
@@ -406,7 +406,7 @@ const BlogDetailPage = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8 }}
                         >
-                            <Link
+                            <Link id="blog-id-nav-blog"
                                 href="/blog"
                                 className="inline-flex items-center space-x-2 text-primary-100 hover:text-white mb-6 transition-colors"
                             >
@@ -514,7 +514,7 @@ const BlogDetailPage = () => {
                                         </h3>
                                         <div className="space-y-4">
                                             {relatedPosts.map((post) => (
-                                                <Link
+                                                <Link id="blog-id-nav"
                                                     key={post.id}
                                                     href={`/blog/${post.id}`}
                                                     className="block group"
@@ -546,7 +546,7 @@ const BlogDetailPage = () => {
                                     <p className="text-primary-100 text-sm mb-4">
                                         Book a free trial class and experience our expert coaching firsthand.
                                     </p>
-                                    <Link
+                                    <Link id="blog-id-nav-book-trial"
                                         href="/book-trial"
                                         className="block w-full bg-white text-primary-600 hover:bg-gray-100 text-center py-2 rounded-lg font-semibold transition-colors duration-300"
                                     >

@@ -145,7 +145,7 @@ export default function RegionalReportsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Regional Reports</h1>
                     <p className="text-gray-600 mt-1">Comprehensive regional performance analytics</p>
                 </div>
-                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="admin-regional-reports-btn" onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Download className="w-5 h-5" />
                     Export Report
                 </button>
@@ -155,6 +155,7 @@ export default function RegionalReportsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {availableReports.map((report) => (
                     <motion.button
+                        id={`admin-regional-reports-type-${report.id}-btn`}
                         key={report.id}
                         onClick={() => setReportType(report.id)}
                         initial={{ opacity: 0, y: 20 }}
@@ -179,7 +180,7 @@ export default function RegionalReportsPage() {
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <Calendar className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <select data-testid="select-admin-regional-reports-1"
+                            <select id="select-admin-regional-reports-1"
                                 value={dateRange}
                                 onChange={(e) => setDateRange(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

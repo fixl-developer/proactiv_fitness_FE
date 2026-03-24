@@ -156,7 +156,7 @@ const OutletsPage = () => {
                     <h1 className={responsiveClasses.headerTitle}>Outlet Management</h1>
                     <p className={responsiveClasses.headerSubtitle}>Manage all locations and their operations</p>
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button id="admin-organization-outlets-btn" className="bg-blue-600 hover:bg-blue-700">
                     <Plus className="w-4 h-4 mr-2" />
                     Add New Outlet
                 </Button>
@@ -235,7 +235,7 @@ const OutletsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <select data-testid="select-admin-organization-outlets-1"
+                            <select id="select-admin-organization-outlets-1"
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -245,7 +245,7 @@ const OutletsPage = () => {
                                 <option value="maintenance">Maintenance</option>
                                 <option value="inactive">Inactive</option>
                             </select>
-                            <Button variant="outline">
+                            <Button id="admin-organization-outlets-btn-2" variant="outline">
                                 <Filter className="w-4 h-4 mr-2" />
                                 More Filters
                             </Button>
@@ -276,7 +276,7 @@ const OutletsPage = () => {
                                         <Badge className={getStatusColor(outlet.status)}>
                                             {outlet.status}
                                         </Badge>
-                                        <Button variant="ghost" size="sm">
+                                        <Button id="admin-organization-outlets-btn-3" variant="ghost" size="sm">
                                             <MoreHorizontal className="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -346,11 +346,11 @@ const OutletsPage = () => {
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-2 pt-2">
-                                    <Button variant="outline" size="sm" className="flex-1">
+                                    <Button id="admin-organization-outlets-btn-4" variant="outline" size="sm" className="flex-1">
                                         <Eye className="w-4 h-4 mr-2" />
                                         View Details
                                     </Button>
-                                    <Button variant="outline" size="sm" className="flex-1">
+                                    <Button id="admin-organization-outlets-btn-5" variant="outline" size="sm" className="flex-1">
                                         <Edit className="w-4 h-4 mr-2" />
                                         Edit
                                     </Button>
@@ -370,7 +370,7 @@ const OutletsPage = () => {
                         <p className="text-gray-600 mb-4">
                             Try adjusting your search criteria or add a new outlet.
                         </p>
-                        <Button>
+                        <Button id="admin-organization-outlets-btn-6">
                             <Plus className="w-4 h-4 mr-2" />
                             Add New Outlet
                         </Button>

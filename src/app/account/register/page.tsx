@@ -192,7 +192,7 @@ function UserRegisterContent() {
                     >
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-t-2xl"></div>
 
-                        <form data-testid="form-account-register" onSubmit={handleSubmit} className="space-y-3">
+                        <form id="form-account-register" onSubmit={handleSubmit} className="space-y-3">
                             {formErrors.general && (
                                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                                     {formErrors.general}
@@ -205,7 +205,7 @@ function UserRegisterContent() {
                                     <label className="block text-xs font-semibold text-gray-700">First Name</label>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                        <input data-testid="input-text-account-register"
+                                        <input id="input-text-account-register"
                                             type="text"
                                             value={formData.firstName}
                                             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -220,7 +220,7 @@ function UserRegisterContent() {
                                     <label className="block text-xs font-semibold text-gray-700">Last Name</label>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                        <input data-testid="input-text-account-register"
+                                        <input id="input-text-account-register"
                                             type="text"
                                             value={formData.lastName}
                                             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -238,7 +238,7 @@ function UserRegisterContent() {
                                 <label className="block text-xs font-semibold text-gray-700">Email Address</label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                    <input data-testid="input-email-account-register"
+                                    <input id="input-email-account-register"
                                         type="email"
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -256,7 +256,7 @@ function UserRegisterContent() {
                                     <label className="block text-xs font-semibold text-gray-700">Phone Number</label>
                                     <div className="relative">
                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                        <input data-testid="input-tel-account-register"
+                                        <input id="input-tel-account-register"
                                             type="tel"
                                             value={formData.phone}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -271,7 +271,7 @@ function UserRegisterContent() {
                                     <label className="block text-xs font-semibold text-gray-700">Date of Birth</label>
                                     <div className="relative">
                                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                        <input data-testid="input-date-account-register"
+                                        <input id="input-date-account-register"
                                             type="date"
                                             value={formData.dateOfBirth}
                                             onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
@@ -295,7 +295,7 @@ function UserRegisterContent() {
                                         className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="e.g. Test@1234"
                                     />
-                                    <button data-testid="btn-account-register-1" type="button" onClick={() => setShowPassword(!showPassword)}
+                                    <button id="btn-account-register-1" type="button" onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
@@ -320,7 +320,7 @@ function UserRegisterContent() {
                                         className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="Re-enter password"
                                     />
-                                    <button data-testid="btn-account-register-2" type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    <button id="btn-account-register-2" type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
@@ -333,7 +333,7 @@ function UserRegisterContent() {
                             </div>
 
                             {/* Submit */}
-                            <button type="submit" disabled={isLoading}
+                            <button id="account-register-btn" type="submit" disabled={isLoading}
                                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-2.5 rounded-lg shadow-lg text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 mt-3 hover:scale-105 active:scale-95 transition-all text-sm">
                                 {isLoading ? (
                                     <>
@@ -353,7 +353,7 @@ function UserRegisterContent() {
                         <div className="text-center mt-3">
                             <p className="text-sm text-gray-600">
                                 Already have an account?{' '}
-                                <Link data-testid="link-login" href="/login" className="text-emerald-600 font-medium hover:underline">
+                                <Link id="login" href="/login" className="text-emerald-600 font-medium hover:underline">
                                     Sign in
                                 </Link>
                             </p>

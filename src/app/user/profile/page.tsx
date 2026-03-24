@@ -119,17 +119,17 @@ export default function ProfilePage() {
                     <p className="text-gray-600 mt-2">Manage your personal information</p>
                 </div>
                 {!isEditing ? (
-                    <Button data-testid="btn-set-is-editing-user-profile" onClick={() => setIsEditing(true)}>
+                    <Button id="user-profile-edit-btn" onClick={() => setIsEditing(true)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit Profile
                     </Button>
                 ) : (
                     <div className="flex gap-2">
-                        <Button data-testid="btn-set-is-editing-user-profile" variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+                        <Button id="user-profile-cancel-edit-btn" variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                             <X className="w-4 h-4 mr-2" />
                             Cancel
                         </Button>
-                        <Button data-testid="btn-save-user-profile" onClick={handleSave} disabled={isSaving}>
+                        <Button id="user-profile-save-btn" onClick={handleSave} disabled={isSaving}>
                             <Save className="w-4 h-4 mr-2" />
                             {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
@@ -171,7 +171,7 @@ export default function ProfilePage() {
                                 </div>
                             )}
                             {isEditing && (
-                                <button
+                                <button id="user-profile-avatar-upload-btn"
                                     onClick={() => fileInputRef.current?.click()}
                                     className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white hover:bg-emerald-700 transition-colors shadow-lg"
                                 >

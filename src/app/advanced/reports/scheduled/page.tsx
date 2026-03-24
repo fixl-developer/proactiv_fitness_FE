@@ -92,10 +92,10 @@ export default function ScheduledReportsPage() {
                                             <Badge className={`${report.schedule?.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                                 {report.schedule?.enabled ? 'Active' : 'Inactive'}
                                             </Badge>
-                                            <Button size="sm" variant="outline">
+                                            <Button id="reports-scheduled-edit-btn" size="sm" variant="outline">
                                                 <Edit className="w-4 h-4" />
                                             </Button>
-                                            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
+                                            <Button id="reports-scheduled-delete-btn" size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>

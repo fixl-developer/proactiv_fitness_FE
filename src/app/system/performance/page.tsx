@@ -75,7 +75,7 @@ export default function PerformancePage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Performance Monitoring</h1>
                         <p className="text-gray-600">Monitor system performance metrics</p>
                     </div>
-                    <Button data-testid="btn-export-system-performance" onClick={handleExport} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="btn-export-system-performance" onClick={handleExport} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
@@ -90,7 +90,7 @@ export default function PerformancePage() {
 
                 <div className="mb-6 flex gap-2">
                     {['7d', '30d', '90d', '1y'].map((p) => (
-                        <Button
+                        <Button id={`system-performance-period-${p}-btn`}
                             key={p}
                             onClick={() => setPeriod(p)}
                             variant={period === p ? 'default' : 'outline'}

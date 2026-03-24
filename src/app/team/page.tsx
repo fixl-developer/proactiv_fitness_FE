@@ -62,7 +62,7 @@ const TeamMemberCard = ({ member, index, onOpenModal }: { member: any, index: nu
                         </div>
 
                         {/* Read More Button */}
-                        <button
+                        <button id="team-btn-read-more-"
                             onClick={onOpenModal}
                             className="text-red-500 font-semibold text-xs uppercase tracking-wide hover:text-red-600 transition-colors duration-200"
                         >
@@ -96,7 +96,7 @@ const TeamCarousel = ({
 }) => (
     <div className="relative">
         {/* Navigation Arrows */}
-        <button
+        <button id="team-btn"
             onClick={onPrev}
             disabled={carouselIndex === 0}
             className={`absolute left-0 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center transition-all duration-200 ${carouselIndex === 0
@@ -107,7 +107,7 @@ const TeamCarousel = ({
             <FiChevronLeft className="w-6 h-6 text-gray-600" />
         </button>
 
-        <button
+        <button id="team-btn-2"
             onClick={onNext}
             disabled={carouselIndex >= maxIndex}
             className={`absolute right-0 top-1/2 transform -translate-y-1/2 z-10 w-12 h-12 rounded-full border-2 border-dashed border-gray-400 flex items-center justify-center transition-all duration-200 ${carouselIndex >= maxIndex
@@ -763,10 +763,10 @@ const TeamPage = () => {
                             transition={{ delay: 0.4, duration: 0.8 }}
                             className="flex flex-col sm:flex-row gap-4 justify-center"
                         >
-                            <Link data-testid="link-careers" href="/careers" className="btn-secondary hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                            <Link id="careers" href="/careers" className="btn-secondary hover:shadow-lg transition-all duration-300 transform hover:scale-105">
                                 View Open Positions
                             </Link>
-                            <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
+                            <Link id="contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-blue-600 transition-all duration-300 transform hover:scale-105">
                                 Contact Us
                             </Link>
                         </motion.div>
@@ -777,6 +777,7 @@ const TeamPage = () => {
                 <AnimatePresence>
                     {selectedMember && (
                         <motion.div
+                            id="team-modal-overlay"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -791,7 +792,7 @@ const TeamPage = () => {
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Close Button */}
-                                <button
+                                <button id="team-btn-3"
                                     onClick={closeMemberModal}
                                     className="absolute top-4 right-4 z-10 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-all duration-200"
                                 >

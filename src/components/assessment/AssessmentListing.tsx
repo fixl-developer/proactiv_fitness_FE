@@ -744,7 +744,7 @@ export default function AssessmentListing({ onBookAssessment }: AssessmentListin
 
                     {/* View Mode Toggle */}
                     <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                        <button
+                        <button id="assessment-listing-grid-view-btn"
                             onClick={() => setViewMode('grid')}
                             className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${viewMode === 'grid'
                                 ? 'bg-white text-blue-600 shadow-sm'
@@ -754,7 +754,7 @@ export default function AssessmentListing({ onBookAssessment }: AssessmentListin
                             <Grid3X3 className="w-4 h-4" />
                             <span className="text-sm font-medium">Grid</span>
                         </button>
-                        <button
+                        <button id="assessment-listing-week-view-btn"
                             onClick={() => setViewMode('week')}
                             className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${viewMode === 'week'
                                 ? 'bg-white text-blue-600 shadow-sm'
@@ -764,7 +764,7 @@ export default function AssessmentListing({ onBookAssessment }: AssessmentListin
                             <List className="w-4 h-4" />
                             <span className="text-sm font-medium">Week</span>
                         </button>
-                        <button
+                        <button id="assessment-listing-schedule-view-btn"
                             onClick={() => setViewMode('schedule')}
                             className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all ${viewMode === 'schedule'
                                 ? 'bg-white text-blue-600 shadow-sm'

@@ -70,7 +70,7 @@ export default function WorkflowsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Workflows</h1>
                         <p className="text-gray-600">Manage automation workflows</p>
                     </div>
-                    <Button data-testid="btn-router-advanced-workflows" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="workflows-create-workflow-btn" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Workflow
                     </Button>
@@ -109,7 +109,7 @@ export default function WorkflowsPage() {
                                                 }`}>
                                                 {workflow.status}
                                             </Badge>
-                                            <Button
+                                            <Button id="workflows-toggle-btn"
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={() => handleToggle(workflow.id, workflow.status === 'active')}
@@ -120,7 +120,7 @@ export default function WorkflowsPage() {
                                                     <Play className="w-4 h-4" />
                                                 )}
                                             </Button>
-                                            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
+                                            <Button id="workflows-delete-btn" size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>
@@ -135,7 +135,7 @@ export default function WorkflowsPage() {
                     <div className="text-center py-12">
                         <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">No workflows yet</p>
-                        <Button data-testid="btn-router-advanced-workflows" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button id="workflows-create-first-workflow-btn" onClick={() => router.push('/advanced/workflows/builder')} className="bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus className="w-4 h-4 mr-2" />
                             Create Your First Workflow
                         </Button>

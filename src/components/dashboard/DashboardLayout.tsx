@@ -317,7 +317,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                 {item.submenu ? (
                                     // Menu item with submenu
                                     <div>
-                                        <button
+                                        <button id="dashboard-dashboard-layout-btn"
                                             onClick={() => toggleSubmenu(item.href)}
                                             className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                 ? `bg-gray-100 ${colors.text}`
@@ -350,7 +350,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                         >
                                             <div className="ml-8 mt-1 space-y-1">
                                                 {item.submenu?.map((subItem: { label: string; href: string }, subIndex: number) => (
-                                                    <Link
+                                                    <Link id="dashboard-dashboard-layout-nav"
                                                         key={subItem.href}
                                                         href={subItem.href}
                                                         className={`block p-2 rounded-md text-sm transition-all duration-200 hover:bg-gray-100 ${pathname === subItem.href
@@ -366,7 +366,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                     </div>
                                 ) : (
                                     // Regular menu item
-                                    <Link
+                                    <Link id="dashboard-dashboard-layout-nav-2"
                                         href={item.href}
                                         className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${isActiveLink(item.href)
                                             ? `bg-gray-100 ${colors.text}`
@@ -409,7 +409,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
-                            <Button
+                            <Button id="dashboard-dashboard-layout-btn-2"
                                 variant="outline"
                                 size="sm"
                                 className="flex-1 text-gray-600 hover:text-gray-900"
@@ -417,7 +417,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                 <Bell className="w-4 h-4 mr-2" />
                                 Alerts
                             </Button>
-                            <Button
+                            <Button id="dashboard-dashboard-layout-btn-3"
                                 variant="outline"
                                 size="sm"
                                 onClick={handleLogoutClick}
@@ -454,11 +454,11 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                         </div>
 
                         <div className="flex items-center space-x-3">
-                            <Button variant="outline" size="sm">
+                            <Button id="dashboard-dashboard-layout-btn-4" variant="outline" size="sm">
                                 <Bell className="w-4 h-4 mr-2" />
                                 Notifications
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </Button>

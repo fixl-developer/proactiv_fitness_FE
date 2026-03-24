@@ -46,7 +46,7 @@ export default function AIAnalyticsPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center py-4">
                         <div className="flex items-center gap-4">
-                            <Button
+                            <Button id="admin-ai-analytics-back-btn"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => router.push('/admin/dashboard')}
@@ -60,11 +60,11 @@ export default function AIAnalyticsPage() {
                             </div>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-ai-analytics-settings-btn" variant="outline" size="sm">
                                 <Settings className="h-4 w-4 mr-2" />
                                 Settings
                             </Button>
-                            <Button data-testid="btn-logout-admin-ai-analytics" variant="outline" size="sm" onClick={handleLogout}>
+                            <Button id="btn-logout-admin-ai-analytics" variant="outline" size="sm" onClick={handleLogout}>
                                 <LogOut className="h-4 w-4 mr-2" />
                                 Logout
                             </Button>

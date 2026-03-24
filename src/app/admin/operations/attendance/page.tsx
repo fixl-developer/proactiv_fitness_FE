@@ -144,7 +144,7 @@ export default function OperationsAttendancePage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Attendance Management</h1>
-        <button data-testid="btn-admin-operations-attendance-1" onClick={() => setShowCheckIn(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button id="btn-admin-operations-attendance-1" onClick={() => setShowCheckIn(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
           + Check In
         </button>
       </div>
@@ -182,7 +182,7 @@ export default function OperationsAttendancePage() {
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-          <input data-testid="input-date-admin-operations-attendance"
+          <input id="input-date-admin-operations-attendance"
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
@@ -191,7 +191,7 @@ export default function OperationsAttendancePage() {
         </div>
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-medium text-gray-500 mb-1">Session ID</label>
-          <input data-testid="input-text-admin-operations-attendance"
+          <input id="input-text-admin-operations-attendance-session"
             type="text"
             placeholder="Filter by session ID..."
             value={sessionFilter}
@@ -199,7 +199,7 @@ export default function OperationsAttendancePage() {
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <button data-testid="btn-admin-operations-attendance-2" onClick={() => { setDateFilter(''); setSessionFilter('') }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
+        <button id="btn-admin-operations-attendance-2" onClick={() => { setDateFilter(''); setSessionFilter('') }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
           Clear
         </button>
       </div>
@@ -246,15 +246,15 @@ export default function OperationsAttendancePage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Session ID *</label>
-                <input data-testid="input-text-admin-operations-attendance" type="text" value={checkInForm.sessionId} onChange={(e) => setCheckInForm({ ...checkInForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id={`input-text-admin-operations-attendance-${r}`} type="text" value={checkInForm.sessionId} onChange={(e) => setCheckInForm({ ...checkInForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">User ID *</label>
-                <input data-testid="input-text-admin-operations-attendance" type="text" value={checkInForm.userId} onChange={(e) => setCheckInForm({ ...checkInForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-attendance" type="text" value={checkInForm.userId} onChange={(e) => setCheckInForm({ ...checkInForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                <select data-testid="select-admin-operations-attendance-9" value={checkInForm.status} onChange={(e) => setCheckInForm({ ...checkInForm, status: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="select-admin-operations-attendance-9" value={checkInForm.status} onChange={(e) => setCheckInForm({ ...checkInForm, status: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="present">Present</option>
                   <option value="late">Late</option>
                   <option value="absent">Absent</option>
@@ -262,8 +262,8 @@ export default function OperationsAttendancePage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button data-testid="btn-admin-operations-attendance-3" onClick={() => setShowCheckIn(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button data-testid="btn-admin-operations-attendance-4" onClick={handleCheckIn} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
+              <button id="btn-admin-operations-attendance-3" onClick={() => setShowCheckIn(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
+              <button id="btn-admin-operations-attendance-4" onClick={handleCheckIn} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
                 {submitting ? 'Saving...' : 'Check In'}
               </button>
             </div>

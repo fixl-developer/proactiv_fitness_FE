@@ -95,7 +95,7 @@ export default function LocationManagerDashboard() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-location-dashboard-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
@@ -223,16 +223,16 @@ export default function LocationManagerDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
-                            <a href="/admin/location/attendance" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium text-center">
+                            <a id="admin-location-dashboard-link-admin-location-attendance" href="/admin/location/attendance" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium text-center">
                                 View Attendance
                             </a>
-                            <a href="/admin/location/classes" className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium text-center">
+                            <a id="admin-location-dashboard-link-admin-location-classes" href="/admin/location/classes" className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium text-center">
                                 Manage Classes
                             </a>
-                            <a href="/admin/location/facilities" className="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium text-center">
+                            <a id="admin-location-dashboard-link-admin-location-facilities" href="/admin/location/facilities" className="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium text-center">
                                 Facilities Status
                             </a>
-                            <a href="/admin/location/analytics" className="block w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium text-center">
+                            <a id="admin-location-dashboard-link-admin-location-analytics" href="/admin/location/analytics" className="block w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium text-center">
                                 View Reports
                             </a>
                         </div>

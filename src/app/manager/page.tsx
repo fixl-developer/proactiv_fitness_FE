@@ -146,7 +146,7 @@ const ManagerHomePage = () => {
                         <Building2 className="w-3 h-3 mr-1" />
                         Cyberport Location
                     </Badge>
-                    <Button data-testid="btn-window-manager" onClick={() => window.location.href = '/manager/dashboard'}>
+                    <Button id="manager-goto-dashboard-btn" onClick={() => window.location.href = '/manager/dashboard'}>
                         <LayoutDashboard className="w-4 h-4 mr-2" />
                         Dashboard
                     </Button>
@@ -193,6 +193,7 @@ const ManagerHomePage = () => {
                         transition={{ delay: 0.1 * index }}
                     >
                         <Card
+                            id={`manager-section-${section.title.toLowerCase()}-card`}
                             className={`hover:shadow-lg transition-all cursor-pointer group ${section.priority === 'high' ? 'ring-2 ring-blue-200' : ''
                                 }`}
                             onClick={() => window.location.href = section.href}
@@ -224,7 +225,7 @@ const ManagerHomePage = () => {
                                     <span className="text-sm font-medium text-gray-500">
                                         {section.stats}
                                     </span>
-                                    <Button variant="ghost" size="sm" className="group-hover:bg-blue-50">
+                                    <Button id={`manager-section-${section.title.toLowerCase()}-open-btn`} variant="ghost" size="sm" className="group-hover:bg-blue-50">
                                         Open <ArrowRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>

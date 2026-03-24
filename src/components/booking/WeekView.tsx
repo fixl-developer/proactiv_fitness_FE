@@ -31,7 +31,7 @@ export function WeekView({
         <div>
             {/* Week Navigation */}
             <div className="flex items-center justify-between mb-6">
-                <button
+                <button id="booking-week-view-btn"
                     onClick={() => onWeekChange('prev')}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -42,7 +42,7 @@ export function WeekView({
                     Week of {currentWeek.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </h3>
 
-                <button
+                <button id="booking-week-view-btn-2"
                     onClick={() => onWeekChange('next')}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >

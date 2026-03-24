@@ -214,7 +214,7 @@ const CoachFeedbackPage = () => {
                             <AlertCircle className="w-5 h-5" />
                         )}
                         <span className="text-sm font-medium">{notification.message}</span>
-                        <button onClick={() => setNotification(null)} className="ml-2 hover:opacity-80">
+                        <button id="coach-feedback-dismiss-notification-btn" onClick={() => setNotification(null)} className="ml-2 hover:opacity-80">
                             <X className="w-4 h-4" />
                         </button>
                     </motion.div>
@@ -244,7 +244,7 @@ const CoachFeedbackPage = () => {
                         </label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                             {students.map(student => (
-                                <button
+                                <button id={`coach-feedback-select-student-${student.id}-btn`}
                                     key={student.id}
                                     onClick={() => setSelectedStudent(student.id)}
                                     className={`p-3 rounded-lg border-2 transition-all text-center ${selectedStudent === student.id
@@ -273,7 +273,7 @@ const CoachFeedbackPage = () => {
                                 </label>
                                 <div className="flex gap-2">
                                     {[1, 2, 3, 4, 5].map(r => (
-                                        <button
+                                        <button id={`coach-feedback-rating-${r}-btn`}
                                             key={r}
                                             onClick={() => setRating(r)}
                                             className="transition-transform hover:scale-110"
@@ -303,7 +303,7 @@ const CoachFeedbackPage = () => {
                             </div>
 
                             {/* Send Button */}
-                            <Button
+                            <Button id="coach-feedback-send-btn"
                                 onClick={handleSendFeedback}
                                 disabled={isSending || !feedbackText.trim()}
                                 className="w-full"
@@ -331,7 +331,7 @@ const CoachFeedbackPage = () => {
                     <div className="flex items-center justify-between">
                         <CardTitle>Feedback History</CardTitle>
                         <div className="flex gap-2">
-                            <select data-testid="select-coach-feedback-1"
+                            <select id="select-coach-feedback-1"
                                 value={filterType}
                                 onChange={(e) => setFilterType(e.target.value)}
                                 className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -376,7 +376,7 @@ const CoachFeedbackPage = () => {
                                                     />
                                                 ))}
                                             </div>
-                                            <button
+                                            <button id={`coach-feedback-delete-${feedback.id}-btn`}
                                                 onClick={() => handleDeleteFeedback(feedback.id)}
                                                 className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50"
                                                 title="Delete feedback"

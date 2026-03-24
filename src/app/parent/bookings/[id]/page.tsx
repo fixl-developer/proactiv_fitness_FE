@@ -134,7 +134,7 @@ const BookingDetailsPage = () => {
                             <div>
                                 <h3 className="font-semibold text-red-900">Booking Not Found</h3>
                                 <p className="text-sm text-red-700 mt-1">The booking you're looking for is no longer available.</p>
-                                <Button data-testid="btn-router-parent-bookings-id" onClick={() => router.push('/parent/bookings')} className="mt-4">
+                                <Button id="parent-bookings-detail-back-btn" onClick={() => router.push('/parent/bookings')} className="mt-4">
                                     Back to My Bookings
                                 </Button>
                             </div>
@@ -326,7 +326,7 @@ const BookingDetailsPage = () => {
                                 </div>
 
                                 {booking.payment.status === PaymentStatus.PENDING && (
-                                    <Button data-testid="btn-router-parent-bookings-id"
+                                    <Button id="parent-bookings-detail-complete-payment-btn"
                                         onClick={() => router.push(`/parent/bookings/${booking._id}/payment`)}
                                         className="w-full mt-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold"
                                     >
@@ -343,7 +343,7 @@ const BookingDetailsPage = () => {
                             </CardHeader>
                             <CardContent className="space-y-2">
                                 {canReschedule && (
-                                    <Button data-testid="btn-reschedule-parent-bookings-id"
+                                    <Button id="parent-bookings-detail-reschedule-btn"
                                         onClick={handleReschedule}
                                         variant="outline"
                                         className="w-full"
@@ -353,7 +353,7 @@ const BookingDetailsPage = () => {
                                 )}
 
                                 {canCancel && (
-                                    <Button data-testid="btn-set-show-cancel-modal-parent-bookings-id"
+                                    <Button id="parent-bookings-detail-cancel-btn"
                                         onClick={() => setShowCancelModal(true)}
                                         variant="outline"
                                         className="w-full text-red-600 hover:text-red-700 border-red-200"
@@ -398,7 +398,7 @@ const BookingDetailsPage = () => {
                             />
 
                             <div className="flex gap-3">
-                                <Button data-testid="btn-set-show-cancel-modal-parent-bookings-id"
+                                <Button id="parent-bookings-detail-keep-booking-btn"
                                     onClick={() => setShowCancelModal(false)}
                                     variant="outline"
                                     className="flex-1"
@@ -406,7 +406,7 @@ const BookingDetailsPage = () => {
                                 >
                                     Keep Booking
                                 </Button>
-                                <Button data-testid="btn-cancel-parent-bookings-id"
+                                <Button id="parent-bookings-detail-confirm-cancel-btn"
                                     onClick={handleCancel}
                                     className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                                     disabled={isCancelling}

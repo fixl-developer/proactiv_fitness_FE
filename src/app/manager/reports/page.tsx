@@ -81,17 +81,17 @@ const ManagerReportsPage = () => {
                     <p className="text-gray-600 mt-2">Location performance insights and metrics</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="manager-reports-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="manager-reports-export-btn" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {['week', 'month', 'quarter'].map((period) => (
-                            <button
+                            <button id={`manager-reports-period-${period}-btn`}
                                 key={period}
                                 onClick={() => setSelectedPeriod(period as any)}
                                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedPeriod === period
@@ -254,19 +254,19 @@ const ManagerReportsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-reports-monthly-btn" className="h-20 flex-col gap-2" variant="outline">
                             <FileText className="w-6 h-6" />
                             <span>Monthly Report</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-reports-revenue-btn" className="h-20 flex-col gap-2" variant="outline">
                             <PieChart className="w-6 h-6" />
                             <span>Revenue Analysis</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-reports-student-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Users className="w-6 h-6" />
                             <span>Student Report</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-reports-export-data-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Download className="w-6 h-6" />
                             <span>Export Data</span>
                         </Button>

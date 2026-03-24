@@ -139,7 +139,7 @@ const Notifications = ({ items, onDismiss }: { items: Notification[]; onDismiss:
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     )}
                     <span className="flex-1">{n.message}</span>
-                    <button onClick={() => onDismiss(n.id)} className="ml-2">
+                    <button id={`coach-schedule-dismiss-notif-${n.id}-btn`} onClick={() => onDismiss(n.id)} className="ml-2">
                         <X className="w-3 h-3" />
                     </button>
                 </motion.div>
@@ -522,7 +522,7 @@ const CoachSchedulePage = () => {
                     </p>
                 </div>
                 <Button
-                    data-testid="btn-add-class"
+                    id="coach-schedule-add-class-btn"
                     onClick={() => openAddModal()}
                     className="w-full sm:w-auto"
                 >
@@ -540,10 +540,10 @@ const CoachSchedulePage = () => {
                             <div className="flex items-center justify-between">
                                 <CardTitle>{monthName}</CardTitle>
                                 <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={handlePrevMonth}>
+                                    <Button id="coach-schedule-prev-month-btn" variant="outline" size="sm" onClick={handlePrevMonth}>
                                         <ChevronLeft className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="outline" size="sm" onClick={handleNextMonth}>
+                                    <Button id="coach-schedule-next-month-btn" variant="outline" size="sm" onClick={handleNextMonth}>
                                         <ChevronRight className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -574,6 +574,7 @@ const CoachSchedulePage = () => {
 
                                     return (
                                         <motion.button
+                                            id={`coach-schedule-day-${day}-btn`}
                                             key={day}
                                             onClick={() => setSelectedDay(isSelected ? null : day.toString())}
                                             whileHover={{ scale: 1.05 }}
@@ -653,7 +654,7 @@ const CoachSchedulePage = () => {
                                             </div>
                                         </div>
                                         <div className="flex gap-2 mt-3">
-                                            <Button
+                                            <Button id={`coach-schedule-upcoming-edit-${schedule.id}-btn`}
                                                 size="sm"
                                                 variant="outline"
                                                 className="flex-1 h-7 text-xs"
@@ -662,7 +663,7 @@ const CoachSchedulePage = () => {
                                                 <Edit2 className="w-3 h-3 mr-1" />
                                                 Edit
                                             </Button>
-                                            <Button
+                                            <Button id={`coach-schedule-upcoming-delete-${schedule.id}-btn`}
                                                 size="sm"
                                                 variant="outline"
                                                 className="flex-1 h-7 text-xs text-red-600 hover:text-red-700"
@@ -697,7 +698,7 @@ const CoachSchedulePage = () => {
                                         parseInt(selectedDay)
                                     ).toLocaleDateString()}
                                 </CardTitle>
-                                <Button
+                                <Button id="coach-schedule-add-to-day-btn"
                                     size="sm"
                                     onClick={() => {
                                         const dateStr = new Date(
@@ -750,7 +751,7 @@ const CoachSchedulePage = () => {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button
+                                                <Button id={`coach-schedule-detail-edit-${schedule.id}-btn`}
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => openEditModal(schedule)}
@@ -758,7 +759,7 @@ const CoachSchedulePage = () => {
                                                     <Edit2 className="w-4 h-4 mr-2" />
                                                     Edit
                                                 </Button>
-                                                <Button
+                                                <Button id={`coach-schedule-detail-delete-${schedule.id}-btn`}
                                                     size="sm"
                                                     variant="outline"
                                                     className="text-red-600 hover:text-red-700"
@@ -775,7 +776,7 @@ const CoachSchedulePage = () => {
                                 <div className="text-center py-8">
                                     <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                     <p className="text-gray-600">No classes scheduled for this day</p>
-                                    <Button
+                                    <Button id="coach-schedule-add-empty-day-btn"
                                         className="mt-4"
                                         onClick={() => {
                                             const dateStr = new Date(
@@ -807,14 +808,14 @@ const CoachSchedulePage = () => {
                     </DialogHeader>
                     {renderFormFields()}
                     <DialogFooter className="gap-2">
-                        <Button
+                        <Button id="coach-schedule-add-cancel-btn"
                             variant="outline"
                             onClick={() => setShowAddModal(false)}
                             disabled={isSaving}
                         >
                             Cancel
                         </Button>
-                        <Button onClick={handleCreate} disabled={isSaving}>
+                        <Button id="coach-schedule-add-confirm-btn" onClick={handleCreate} disabled={isSaving}>
                             {isSaving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -842,14 +843,14 @@ const CoachSchedulePage = () => {
                     </DialogHeader>
                     {renderFormFields()}
                     <DialogFooter className="gap-2">
-                        <Button
+                        <Button id="coach-schedule-edit-cancel-btn"
                             variant="outline"
                             onClick={() => setEditingSchedule(null)}
                             disabled={isSaving}
                         >
                             Cancel
                         </Button>
-                        <Button onClick={handleUpdate} disabled={isSaving}>
+                        <Button id="coach-schedule-edit-save-btn" onClick={handleUpdate} disabled={isSaving}>
                             {isSaving ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -877,14 +878,14 @@ const CoachSchedulePage = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 mt-4">
-                        <Button
+                        <Button id="coach-schedule-delete-cancel-btn"
                             variant="outline"
                             onClick={() => setDeletingSchedule(null)}
                             disabled={isSaving}
                         >
                             Cancel
                         </Button>
-                        <Button
+                        <Button id="coach-schedule-delete-confirm-btn"
                             variant="destructive"
                             onClick={handleDelete}
                             disabled={isSaving}

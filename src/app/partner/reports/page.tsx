@@ -98,7 +98,7 @@ export default function PartnerReportsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Partner Reports</h1>
                     <p className="text-gray-600 mt-1">Generate and manage partner reports</p>
                 </div>
-                <button
+                <button id="partner-reports-generate-btn"
                     onClick={handleGenerateReport}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -164,7 +164,7 @@ export default function PartnerReportsPage() {
             {/* Period Selection */}
             <div className="flex gap-2 overflow-x-auto">
                 {['weekly', 'monthly', 'quarterly', 'yearly'].map((period) => (
-                    <button
+                    <button id={`partner-reports-period-${period}-btn`}
                         key={period}
                         onClick={() => setSelectedPeriod(period)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap capitalize ${selectedPeriod === period
@@ -216,6 +216,7 @@ export default function PartnerReportsPage() {
                         ].map((template, idx) => (
                             <motion.div
                                 key={idx}
+                                id={`partner-reports-template-${idx}-btn`}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.1 }}
@@ -267,10 +268,10 @@ export default function PartnerReportsPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                    <button id={`partner-reports-view-${report.id}-btn`} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
                                         <Eye className="w-4 h-4" />
                                     </button>
-                                    <button
+                                    <button id={`partner-reports-download-${report.id}-btn`}
                                         onClick={() => handleDownloadReport(report.id)}
                                         className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors"
                                     >

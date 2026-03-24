@@ -24,7 +24,7 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
                             <Input type="search" placeholder="Search..." className="w-64 pl-8 bg-background" />
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="relative">
+                    <Button id="layouts-dashboard-header-btn" variant="ghost" size="icon" className="relative">
                         <Bell className="h-5 w-5" />
                         <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
                     </Button>

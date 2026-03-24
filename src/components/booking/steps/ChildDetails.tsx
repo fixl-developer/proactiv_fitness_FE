@@ -40,7 +40,7 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                     <label htmlFor="childAge" className="block text-sm font-medium text-gray-700 mb-2">
                         Child's Age *
                     </label>
-                    <select data-testid="select-components-booking-steps-ChildDetails-1"
+                    <select
                         id="childAge"
                         value={childAge}
                         onChange={(e) => onUpdate({ childAge: e.target.value })}
@@ -62,7 +62,7 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                     </label>
                     <div className="flex gap-4">
                         {['Boy', 'Girl', 'Prefer not to say'].map((option) => (
-                            <button
+                            <button id={`child-details-gender-${option.toLowerCase().replace(/\s+/g, '-')}-btn`}
                                 key={option}
                                 onClick={() => onUpdate({ childGender: option })}
                                 className={`px-6 py-3 rounded-xl border-2 font-medium transition-all ${childGender === option

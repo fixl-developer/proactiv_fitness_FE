@@ -123,7 +123,7 @@ export default function PartnerMarketingPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Marketing Tools</h1>
                     <p className="text-gray-600 mt-1">Manage campaigns and track lead generation</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-marketing-create-campaign-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     Create Campaign
                 </button>
@@ -213,7 +213,7 @@ export default function PartnerMarketingPage() {
                     { id: 'campaigns', name: 'Campaigns', icon: Megaphone },
                     { id: 'leads', name: 'Lead Management', icon: Users },
                 ].map((tab) => (
-                    <button
+                    <button id={`partner-marketing-tab-${tab.id}-btn`}
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${activeTab === tab.id
@@ -301,19 +301,19 @@ export default function PartnerMarketingPage() {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <button
+                                            <button id={`partner-marketing-view-campaign-${campaign.id}-btn`}
                                                 onClick={() => handleCampaignAction(campaign.id, 'view')}
                                                 className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                             >
                                                 <Eye className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-marketing-edit-campaign-${campaign.id}-btn`}
                                                 onClick={() => handleCampaignAction(campaign.id, 'edit')}
                                                 className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-marketing-toggle-campaign-${campaign.id}-btn`}
                                                 onClick={() => handleCampaignAction(campaign.id, campaign.status === 'ACTIVE' ? 'pause' : 'play')}
                                                 className={`p-2 rounded-lg transition-colors ${campaign.status === 'ACTIVE'
                                                     ? 'hover:bg-yellow-50 text-yellow-600'
@@ -382,19 +382,19 @@ export default function PartnerMarketingPage() {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <button
+                                            <button id={`partner-marketing-call-lead-${lead.id}-btn`}
                                                 onClick={() => handleLeadAction(lead.id, 'call')}
                                                 className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors"
                                             >
                                                 <MousePointer className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-marketing-email-lead-${lead.id}-btn`}
                                                 onClick={() => handleLeadAction(lead.id, 'email')}
                                                 className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                             >
                                                 <Mail className="w-4 h-4" />
                                             </button>
-                                            <button
+                                            <button id={`partner-marketing-schedule-lead-${lead.id}-btn`}
                                                 onClick={() => handleLeadAction(lead.id, 'schedule')}
                                                 className="p-2 hover:bg-purple-50 rounded-lg text-purple-600 transition-colors"
                                             >

@@ -44,7 +44,7 @@ export default function Programs() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Program Management</h1>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button id="partner-programs-new-btn" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         New Program
                     </button>
@@ -76,10 +76,10 @@ export default function Programs() {
                                     <p className="text-gray-600"><span className="font-medium">Revenue:</span> ${program.revenue?.toLocaleString()}</p>
                                 </div>
                                 <div className="mt-4 flex gap-2">
-                                    <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm font-medium">
+                                    <button id={`partner-programs-edit-${program.id}-btn`} className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm font-medium">
                                         Edit
                                     </button>
-                                    <button className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 text-sm font-medium">
+                                    <button id={`partner-programs-view-${program.id}-btn`} className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 text-sm font-medium">
                                         View
                                     </button>
                                 </div>

@@ -273,7 +273,7 @@ export default function ReviewConfirm({ bookingData, onConfirm }: ReviewConfirmP
                 </div>
 
                 {/* Confirm Button */}
-                <button
+                <button id="booking-steps-review-confirm-btn"
                     onClick={handleConfirm}
                     disabled={isSubmitting}
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300 disabled:cursor-not-allowed disabled:scale-100"
