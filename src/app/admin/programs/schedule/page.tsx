@@ -584,7 +584,8 @@ export default function ProgramSchedulePage() {
                           {form.programIds.length === programs.length ? 'Deselect All' : 'Select All'}
                         </button>
                         {programs.map((p) => (
-                          <label key={p._id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursorid={`input-checkbox-admin-programs-schedule-${p._id}`}put id={`input-checkbox-admin-programs-schedule-${p._id}`}
+                          <label key={p._id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                            <input id={`input-checkbox-admin-programs-schedule-${p._id}`}
                               type="checkbox"
                               checked={form.programIds.includes(p._id)}
                               onChange={() => setForm({ ...form, programIds: toggleArrayItem(form.programIds, p._id) })}

@@ -677,7 +677,7 @@ export default function PaymentsBillingPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5">
-                     id={`input-number-admin-finance-payments-${idx}`}inance-payments"
+                     <input id={`input-number-admin-finance-payments-${idx}`}
                                 type="number"
                                 min={1}
                                 value={item.quantity}

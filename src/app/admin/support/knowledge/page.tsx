@@ -245,7 +245,7 @@ export default function KnowledgeBasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Title</label>
-                            id={`input-text-admin-support-knowledge-${i}`}wledge" type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                            <input id={`input-text-admin-support-knowledge-${i}`} type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Category</label>

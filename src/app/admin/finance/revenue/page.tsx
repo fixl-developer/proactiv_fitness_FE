@@ -271,7 +271,7 @@ export default function RevenueReportsPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            id={`input-date-admin-finance-revenue-${r}`}evenue"
+            <input id={`input-date-admin-finance-revenue-${r}`}
               type="date"
               className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={dateFrom}

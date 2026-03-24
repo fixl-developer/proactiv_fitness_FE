@@ -279,7 +279,7 @@ export default function SupportTicketsPage() {
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            id={`input-text-admin-support-tickets-${i}`}ickets" type="text" placeholder="Search tickets by ID, subject, or requester..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+                            <input id={`input-text-admin-support-tickets-${i}`} type="text" placeholder="Search tickets by ID, subject, or requester..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
                         </div>
                         <div className="flex gap-2">
                             {['All', 'Open', 'In Progress', 'Resolved'].map(s => (
