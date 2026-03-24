@@ -343,7 +343,7 @@ export default function FranchiseLocationsPage() {
                 >
                     <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     <p className="text-sm">{error}</p>
-                    <button
+                    <button id="admin-franchise-locations-btn-retry"
                         onClick={fetchLocations}
                         className="ml-auto text-sm font-medium underline hover:no-underline"
                     >
@@ -446,21 +446,21 @@ export default function FranchiseLocationsPage() {
 
                                             {/* Actions */}
                                             <div className="flex gap-2 w-full lg:w-auto">
-                                                <button
+                                                <button id="admin-franchise-locations-btn"
                                                     onClick={() => openViewModal(location)}
                                                     className="flex-1 lg:flex-none px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                     <span className="hidden sm:inline">View</span>
                                                 </button>
-                                                <button
+                                                <button id="admin-franchise-locations-btn-2"
                                                     onClick={() => openEditModal(location)}
                                                     className="flex-1 lg:flex-none px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                     <span className="hidden sm:inline">Edit</span>
                                                 </button>
-                                                <button
+                                                <button id="admin-franchise-locations-btn-3"
                                                     onClick={() => openDeleteModal(location)}
                                                     className="flex-1 lg:flex-none px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                                                 >
@@ -484,7 +484,7 @@ export default function FranchiseLocationsPage() {
                         Page {currentPage} of {totalPages} &middot; {totalLocations} total locations
                     </p>
                     <div className="flex items-center gap-2">
-                        <button
+                        <button id="admin-franchise-locations-btn-4"
                             disabled={currentPage <= 1}
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -503,7 +503,7 @@ export default function FranchiseLocationsPage() {
                                 typeof item === 'string' ? (
                                     <span key={`ellipsis-${i}`} className="px-2 text-gray-400">...</span>
                                 ) : (
-                                    <button
+                                    <button id="admin-franchise-locations-btn-5"
                                         key={item}
                                         onClick={() => setCurrentPage(item)}
                                         className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -516,7 +516,7 @@ export default function FranchiseLocationsPage() {
                                     </button>
                                 )
                             )}
-                        <button
+                        <button id="admin-franchise-locations-btn-6"
                             disabled={currentPage >= totalPages}
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -551,7 +551,7 @@ export default function FranchiseLocationsPage() {
                                 <div>
                                     <div className="flex items-center justify-between p-6 border-b border-gray-100">
                                         <h2 className="text-xl font-bold text-gray-900">Location Details</h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-locations-btn-7" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -617,7 +617,7 @@ export default function FranchiseLocationsPage() {
                                         )}
                                     </div>
                                     <div className="p-6 border-t border-gray-100">
-                                        <button
+                                        <button id="admin-franchise-locations-btn-close"
                                             onClick={closeModal}
                                             className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                                         >
@@ -634,7 +634,7 @@ export default function FranchiseLocationsPage() {
                                         <h2 className="text-xl font-bold text-gray-900">
                                             {modalMode === 'add' ? 'Add New Location' : 'Edit Location'}
                                         </h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-locations-btn-8" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -720,14 +720,14 @@ export default function FranchiseLocationsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-3 p-6 border-t border-gray-100">
-                                        <button
+                                        <button id="admin-franchise-locations-btn-cancel"
                                             onClick={closeModal}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
                                         >
                                             Cancel
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-locations-btn-9"
                                             onClick={modalMode === 'add' ? handleCreate : handleUpdate}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
@@ -744,7 +744,7 @@ export default function FranchiseLocationsPage() {
                                 <div>
                                     <div className="flex items-center justify-between p-6 border-b border-gray-100">
                                         <h2 className="text-xl font-bold text-gray-900">Delete Location</h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-locations-btn-10" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -770,14 +770,14 @@ export default function FranchiseLocationsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-3 p-6 border-t border-gray-100">
-                                        <button
+                                        <button id="admin-franchise-locations-btn-cancel-2"
                                             onClick={closeModal}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
                                         >
                                             Cancel
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-locations-btn-11"
                                             onClick={handleDelete}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"

@@ -156,7 +156,7 @@ const StudentDetailsModal = ({ student, onClose }: StudentDetailsModalProps) => 
                             <h2 className="text-xl font-bold text-gray-900">Student Details</h2>
                             <p className="text-sm text-gray-500">Progress & Performance Overview</p>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={onClose}>
+                        <Button id="coach-students-modal-close-btn" variant="ghost" size="sm" onClick={onClose}>
                             <X className="w-5 h-5" />
                         </Button>
                     </div>
@@ -310,10 +310,10 @@ const StudentDetailsModal = ({ student, onClose }: StudentDetailsModalProps) => 
 
                     {/* Modal Footer */}
                     <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3 rounded-b-xl">
-                        <Button variant="outline" onClick={onClose}>
+                        <Button id="coach-students-details-close-btn" variant="outline" onClick={onClose}>
                             Close
                         </Button>
-                        <Button
+                        <Button id="coach-students-send-feedback-btn"
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                             onClick={() => {
                                 onClose()
@@ -470,7 +470,7 @@ const CoachStudentsPage = () => {
                         )}
                     </p>
                 </div>
-                <Button
+                <Button id="coach-students-refresh-btn"
                     variant="outline"
                     size="sm"
                     onClick={() => loadStudents(true)}
@@ -495,7 +495,7 @@ const CoachStudentsPage = () => {
                             />
                         </div>
                         <div className="flex gap-2">
-                            <select data-testid="select-coach-students-1"
+                            <select id="select-coach-students-1"
                                 value={filterLevel}
                                 onChange={(e) => setFilterLevel(e.target.value)}
                                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -530,20 +530,21 @@ const CoachStudentsPage = () => {
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm">
+                                            <Button id={`coach-students-menu-${student.id}-btn`} variant="ghost" size="sm">
                                                 <MoreVertical className="w-4 h-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleViewDetails(student)}>
+                                            <DropdownMenuItem id={`coach-students-view-details-${student.id}-btn`} onClick={() => handleViewDetails(student)}>
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 View Details
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleSendMessage(student)}>
+                                            <DropdownMenuItem id={`coach-students-send-message-${student.id}-btn`} onClick={() => handleSendMessage(student)}>
                                                 <Send className="w-4 h-4 mr-2" />
                                                 Send Message
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
+                                                id={`coach-students-remove-${student.id}-btn`}
                                                 onClick={() => handleRemoveStudent(student)}
                                                 className="text-red-600 focus:text-red-600"
                                             >
@@ -608,7 +609,7 @@ const CoachStudentsPage = () => {
 
                                 {/* Actions */}
                                 <div className="flex gap-2 pt-2">
-                                    <Button
+                                    <Button id={`coach-students-view-progress-${student.id}-btn`}
                                         size="sm"
                                         variant="outline"
                                         className="flex-1"
@@ -617,7 +618,7 @@ const CoachStudentsPage = () => {
                                         <TrendingUp className="w-4 h-4 mr-2" />
                                         View Progress
                                     </Button>
-                                    <Button
+                                    <Button id={`coach-students-feedback-${student.id}-btn`}
                                         size="sm"
                                         variant="outline"
                                         className="flex-1"
@@ -639,7 +640,7 @@ const CoachStudentsPage = () => {
                     <CardContent className="py-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">No students found matching your criteria</p>
-                        <Button variant="outline" onClick={() => {
+                        <Button id="coach-students-btn-clear-filters" variant="outline" onClick={() => {
                             setSearchTerm('')
                             setFilterLevel('all')
                         }}>

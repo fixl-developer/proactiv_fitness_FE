@@ -317,7 +317,7 @@ export default function PaymentsBillingPage() {
           <p className="text-sm text-amber-800">
             Backend endpoint not available - showing sample data. Connect the backend for live payment data.
           </p>
-          <Button data-testid="btn-fetch-data-admin-finance-payments" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
+          <Button id="btn-fetch-data-admin-finance-payments" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
             <RotateCcw className="h-3.5 w-3.5" /> Retry
           </Button>
         </motion.div>
@@ -333,15 +333,15 @@ export default function PaymentsBillingPage() {
           <p className="text-gray-500 text-sm mt-1">Manage invoices, track payments, and handle refunds</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button id="admin-finance-payments-btn" variant="outline" size="sm" className="gap-2">
             <Bell className="h-4 w-4" />
             Send Reminder
           </Button>
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button id="admin-finance-payments-btn-2" variant="outline" size="sm" className="gap-2">
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button
+          <Button id="admin-finance-payments-btn-3"
             size="sm"
             className="gap-2 bg-blue-600 hover:bg-blue-700"
             onClick={() => setShowInvoiceModal(true)}
@@ -398,7 +398,7 @@ export default function PaymentsBillingPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input data-testid="input-text-admin-finance-payments"
+                  <input id="input-text-admin-finance-payments"
                     type="text"
                     placeholder="Search invoices..."
                     className="pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-[220px]"
@@ -409,7 +409,7 @@ export default function PaymentsBillingPage() {
                 <div className="flex items-center gap-1 border rounded-lg p-1">
                   <Filter className="h-3.5 w-3.5 text-gray-400 ml-1.5" />
                   {['All', 'Paid', 'Pending', 'Overdue', 'Refunded'].map((s) => (
-                    <button
+                    <button id="admin-finance-payments-btn-4"
                       key={s}
                       onClick={() => setStatusFilter(s)}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -429,7 +429,7 @@ export default function PaymentsBillingPage() {
                 <thead>
                   <tr className="border-b bg-gray-50/50">
                     <th className="text-left p-3 w-10">
-                      <input data-testid="input-checkbox-admin-finance-payments"
+                      <input id={`input-checkbox-admin-finance-payments-${s}`}
                         type="checkbox"
                         checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
                         onChange={toggleSelectAll}
@@ -461,7 +461,7 @@ export default function PaymentsBillingPage() {
                           className="border-b hover:bg-gray-50/50 transition-colors"
                         >
                           <td className="p-3">
-                            <input data-testid="input-checkbox-admin-finance-payments"
+                            <input id="input-checkbox-admin-finance-payments"
                               type="checkbox"
                               checked={selectedInvoices.includes(inv.id)}
                               onChange={() => toggleSelect(inv.id)}
@@ -497,7 +497,7 @@ export default function PaymentsBillingPage() {
                             </Badge>
                           </td>
                           <td className="p-3 text-center relative">
-                            <button data-testid="btn-admin-finance-payments-2"
+                            <button id="btn-admin-finance-payments-2"
                               onClick={() => setActionMenuOpen(actionMenuOpen === inv.id ? null : inv.id)}
                               className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
                             >
@@ -509,14 +509,14 @@ export default function PaymentsBillingPage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="absolute right-8 top-2 z-10 bg-white border rounded-lg shadow-lg py-1 w-44"
                               >
-                                <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <button id="admin-finance-payments-btn-5" className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                   <Eye className="h-3.5 w-3.5" /> View Details
                                 </button>
-                                <button className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <button id="admin-finance-payments-btn-6" className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                   <Send className="h-3.5 w-3.5" /> Send Receipt
                                 </button>
                                 {inv.status === 'Pending' && (
-                                  <button data-testid="btn-admin-finance-payments-3"
+                                  <button id="btn-admin-finance-payments-3"
                                     onClick={() => handleUpdateStatus(inv.id, 'Paid')}
                                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50"
                                   >
@@ -524,14 +524,14 @@ export default function PaymentsBillingPage() {
                                   </button>
                                 )}
                                 {inv.status === 'Overdue' && (
-                                  <button data-testid="btn-admin-finance-payments-4"
+                                  <button id="btn-admin-finance-payments-4"
                                     onClick={() => handleUpdateStatus(inv.id, 'Paid')}
                                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-emerald-600 hover:bg-emerald-50"
                                   >
                                     <CheckCircle2 className="h-3.5 w-3.5" /> Mark as Paid
                                   </button>
                                 )}
-                                <button data-testid="btn-admin-finance-payments-5"
+                                <button id="btn-admin-finance-payments-5"
                                   onClick={() => handleUpdateStatus(inv.id, 'Refunded')}
                                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                                 >
@@ -567,13 +567,13 @@ export default function PaymentsBillingPage() {
             className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl px-5 py-3 flex items-center gap-4 shadow-xl z-50"
           >
             <span className="text-sm font-medium">{selectedInvoices.length} selected</span>
-            <Button size="sm" variant="secondary" className="gap-1.5">
+            <Button id="admin-finance-payments-btn-7" size="sm" variant="secondary" className="gap-1.5">
               <Send className="h-3.5 w-3.5" /> Send Reminders
             </Button>
-            <Button size="sm" variant="secondary" className="gap-1.5">
+            <Button id="admin-finance-payments-btn-8" size="sm" variant="secondary" className="gap-1.5">
               <Download className="h-3.5 w-3.5" /> Export Selected
             </Button>
-            <button data-testid="btn-admin-finance-payments-6"
+            <button id="btn-admin-finance-payments-6"
               onClick={() => setSelectedInvoices([])}
               className="text-gray-400 hover:text-white ml-1"
             >
@@ -606,7 +606,7 @@ export default function PaymentsBillingPage() {
                   <h2 className="text-xl font-bold text-gray-900">Generate Invoice</h2>
                   <p className="text-sm text-gray-500 mt-0.5">Create a new invoice for a student or parent</p>
                 </div>
-                <button data-testid="btn-admin-finance-payments-7" onClick={() => { setShowInvoiceModal(false); resetInvoiceForm(); }} className="p-1 hover:bg-gray-100 rounded-lg">
+                <button id="btn-admin-finance-payments-7" onClick={() => { setShowInvoiceModal(false); resetInvoiceForm(); }} className="p-1 hover:bg-gray-100 rounded-lg">
                   <X className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
@@ -618,7 +618,7 @@ export default function PaymentsBillingPage() {
                     <User className="h-4 w-4 inline mr-1.5 text-gray-400" />
                     Student / Parent Name <span className="text-red-500">*</span>
                   </label>
-                  <input data-testid="input-text-admin-finance-payments"
+                  <input id="input-text-admin-finance-payments"
                     type="text"
                     value={invoiceForm.studentName}
                     onChange={(e) => setInvoiceForm({ ...invoiceForm, studentName: e.target.value })}
@@ -632,7 +632,7 @@ export default function PaymentsBillingPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Invoice Description
                   </label>
-                  <input data-testid="input-text-admin-finance-payments"
+                  <input id="input-text-admin-finance-payments"
                     type="text"
                     value={invoiceForm.description}
                     onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
@@ -645,7 +645,7 @@ export default function PaymentsBillingPage() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-700">Line Items</label>
-                    <button
+                    <button id="admin-finance-payments-btn-9"
                       type="button"
                       onClick={addLineItem}
                       className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
@@ -668,7 +668,7 @@ export default function PaymentsBillingPage() {
                         {invoiceForm.items.map((item, idx) => (
                           <tr key={idx} className="border-b last:border-0">
                             <td className="px-2 py-1.5">
-                              <input data-testid="input-text-admin-finance-payments"
+                              <input id={`input-text-admin-finance-payments-${idx}`}
                                 type="text"
                                 value={item.description}
                                 onChange={(e) => updateLineItem(idx, 'description', e.target.value)}
@@ -677,7 +677,7 @@ export default function PaymentsBillingPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5">
-                              <input data-testid="input-number-admin-finance-payments"
+                     id={`input-number-admin-finance-payments-${idx}`}inance-payments"
                                 type="number"
                                 min={1}
                                 value={item.quantity}
@@ -686,7 +686,7 @@ export default function PaymentsBillingPage() {
                               />
                             </td>
                             <td className="px-2 py-1.5">
-                              <input data-testid="input-number-admin-finance-payments"
+                              <input id={`input-number-admin-finance-payments-${idx}`}
                                 type="number"
                                 min={0}
                                 step={0.01}
@@ -701,7 +701,7 @@ export default function PaymentsBillingPage() {
                             </td>
                             <td className="px-1 py-1.5">
                               {invoiceForm.items.length > 1 && (
-                                <button data-testid="btn-admin-finance-payments-8"
+                                <button id="btn-admin-finance-payments-8"
                                   onClick={() => removeLineItem(idx)}
                                   className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
                                 >
@@ -734,7 +734,7 @@ export default function PaymentsBillingPage() {
                     Amount Override <span className="text-xs text-gray-400">(leave blank to use line items total)</span>
                   </label>
                   <div className="flex gap-3">
-                    <input data-testid="input-number-admin-finance-payments"
+                    <input id="input-number-admin-finance-payments"
                       type="number"
                       min={0}
                       step={0.01}
@@ -743,7 +743,7 @@ export default function PaymentsBillingPage() {
                       placeholder={calculatedTotal > 0 ? `Auto: $${calculatedTotal}` : '0.00'}
                       className="flex-1 border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <select data-testid="select-admin-finance-payments-21"
+                    <select id="select-admin-finance-payments-21"
                       value={invoiceForm.currency}
                       onChange={(e) => setInvoiceForm({ ...invoiceForm, currency: e.target.value })}
                       className="border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-24"
@@ -763,7 +763,7 @@ export default function PaymentsBillingPage() {
                       <CalendarDays className="h-4 w-4 inline mr-1.5 text-gray-400" />
                       Due Date
                     </label>
-                    <input data-testid="input-date-admin-finance-payments"
+                    <input id="input-date-admin-finance-payments"
                       type="date"
                       value={invoiceForm.dueDate}
                       onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
@@ -774,7 +774,7 @@ export default function PaymentsBillingPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       Billing Period
                     </label>
-                    <select data-testid="select-admin-finance-payments-22"
+                    <select id="select-admin-finance-payments-22"
                       value={invoiceForm.billingPeriod}
                       onChange={(e) => setInvoiceForm({ ...invoiceForm, billingPeriod: e.target.value as any })}
                       className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -806,13 +806,13 @@ export default function PaymentsBillingPage() {
                   Invoice Total: <span className="font-bold text-gray-900 text-lg">${invoiceForm.amount ? Number(invoiceForm.amount).toLocaleString() : calculatedTotal.toLocaleString()}</span>
                 </div>
                 <div className="flex gap-3">
-                  <button data-testid="btn-admin-finance-payments-9"
+                  <button id="btn-admin-finance-payments-9"
                     onClick={() => { setShowInvoiceModal(false); resetInvoiceForm(); }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
                   </button>
-                  <button data-testid="btn-admin-finance-payments-10"
+                  <button id="btn-admin-finance-payments-10"
                     onClick={handleCreateInvoice}
                     disabled={creatingInvoice}
                     className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"

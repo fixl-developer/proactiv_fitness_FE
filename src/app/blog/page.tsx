@@ -204,7 +204,7 @@ const BlogPage = () => {
                                                     </div>
                                                 </div>
 
-                                                <Link
+                                                <Link id="blog-nav"
                                                     href={`/blog/${featuredPost.id}`}
                                                     className="group inline-flex items-center space-x-2 text-primary-600 hover:text-primary-700 font-semibold transition-colors duration-200"
                                                 >
@@ -283,7 +283,7 @@ const BlogPage = () => {
                                         </h3>
                                         <div className="space-y-2">
                                             {categories.map((category) => (
-                                                <button
+                                                <button id="blog-btn"
                                                     key={category}
                                                     onClick={() => setSelectedCategory(category)}
                                                     className={`block w-full text-left px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${selectedCategory === category
@@ -311,7 +311,7 @@ const BlogPage = () => {
                                                 placeholder="Your email address"
                                                 className="w-full px-4 py-2 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300"
                                             />
-                                            <button className="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-2 rounded-lg font-medium transition-colors duration-300">
+                                            <button id="blog-btn-subscribe" className="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-2 rounded-lg font-medium transition-colors duration-300">
                                                 Subscribe
                                             </button>
                                         </div>
@@ -346,7 +346,7 @@ const BlogPage = () => {
                                                     : `No articles in ${selectedCategory} category yet`
                                                 }
                                             </p>
-                                            <button
+                                            <button id="blog-btn-2"
                                                 onClick={() => {
                                                     setSelectedCategory('All Posts')
                                                     setSearchQuery('')
@@ -431,7 +431,7 @@ const BlogPage = () => {
                                                                 </div>
                                                             </div>
 
-                                                            <Link
+                                                            <Link id="blog-nav-2"
                                                                 href={`/blog/${post.id}`}
                                                                 className="group inline-flex items-center space-x-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors duration-200"
                                                             >
@@ -451,7 +451,7 @@ const BlogPage = () => {
                                                 viewport={{ once: true }}
                                                 className="text-center mt-12"
                                             >
-                                                <button className="btn-outline">
+                                                <button id="blog-btn-load-more-articles" className="btn-outline">
                                                     Load More Articles
                                                 </button>
                                             </motion.div>
@@ -480,10 +480,10 @@ const BlogPage = () => {
                                 our expert coaching and supportive environment firsthand.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Free Trial
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                                     Contact Us
                                 </Link>
                             </div>

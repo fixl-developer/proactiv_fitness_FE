@@ -261,15 +261,15 @@ const AdminCustomersPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-customers-export-btn" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-customers-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button>
+                    <Button id="admin-customers-add-btn">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Customer
                     </Button>
@@ -339,7 +339,7 @@ const AdminCustomersPage = () => {
                                     <SelectItem value="trial">Trial</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-customers-more-filters-btn" variant="outline" size="sm">
                                 <Filter className="w-4 h-4 mr-2" />
                                 More Filters
                             </Button>
@@ -354,7 +354,7 @@ const AdminCustomersPage = () => {
                     <div className="flex items-center justify-between">
                         <CardTitle>Customers ({filteredCustomers.length})</CardTitle>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-customers-sort-btn" variant="outline" size="sm">
                                 <ArrowUpDown className="w-4 h-4 mr-2" />
                                 Sort
                             </Button>
@@ -445,28 +445,28 @@ const AdminCustomersPage = () => {
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm">
+                                                        <Button id={`admin-customers-actions-${customer.id}-btn`} variant="ghost" size="sm">
                                                             <MoreHorizontal className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem id={`admin-customers-view-${customer.id}-menuitem`}>
                                                             <Eye className="w-4 h-4 mr-2" />
                                                             View Details
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem id={`admin-customers-edit-${customer.id}-menuitem`}>
                                                             <Edit className="w-4 h-4 mr-2" />
                                                             Edit Customer
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem id={`admin-customers-call-${customer.id}-menuitem`}>
                                                             <Phone className="w-4 h-4 mr-2" />
                                                             Call Customer
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem id={`admin-customers-email-${customer.id}-menuitem`}>
                                                             <Mail className="w-4 h-4 mr-2" />
                                                             Send Email
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-red-600">
+                                                        <DropdownMenuItem id={`admin-customers-delete-${customer.id}-menuitem`} className="text-red-600">
                                                             <Trash2 className="w-4 h-4 mr-2" />
                                                             Delete
                                                         </DropdownMenuItem>
@@ -484,19 +484,19 @@ const AdminCustomersPage = () => {
 
             {/* Quick Actions */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button data-testid="btn-window-admin-customers" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/parents'}>
+                <Button id="admin-customers-manage-parents-btn" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/parents'}>
                     <Users className="w-5 h-5" />
                     <span className="text-sm">Manage Parents</span>
                 </Button>
-                <Button data-testid="btn-window-admin-customers" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/assessments'}>
+                <Button id="admin-customers-view-assessments-btn" variant="outline" className="h-16 flex-col gap-2" onClick={() => window.location.href = '/admin/customers/assessments'}>
                     <Target className="w-5 h-5" />
                     <span className="text-sm">View Assessments</span>
                 </Button>
-                <Button variant="outline" className="h-16 flex-col gap-2">
+                <Button id="admin-customers-send-newsletter-btn" variant="outline" className="h-16 flex-col gap-2">
                     <Mail className="w-5 h-5" />
                     <span className="text-sm">Send Newsletter</span>
                 </Button>
-                <Button variant="outline" className="h-16 flex-col gap-2">
+                <Button id="admin-customers-export-data-btn" variant="outline" className="h-16 flex-col gap-2">
                     <Download className="w-5 h-5" />
                     <span className="text-sm">Export Data</span>
                 </Button>

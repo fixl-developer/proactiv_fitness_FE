@@ -40,7 +40,7 @@ const TestLoginPage = () => {
             <h1 className="text-2xl font-bold mb-4">Login Test Page</h1>
             <p className="mb-4">API URL: {process.env.NEXT_PUBLIC_API_BASE_URL}</p>
 
-            <button
+            <button id="test-login-btn"
                 onClick={testLogin}
                 disabled={loading}
                 className="bg-blue-500 text-white px-4 py-2 rounded mb-4"

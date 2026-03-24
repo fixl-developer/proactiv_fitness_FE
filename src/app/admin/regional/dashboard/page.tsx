@@ -122,7 +122,7 @@ export default function RegionalAdminDashboard() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-regional-dashboard-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
@@ -141,7 +141,7 @@ export default function RegionalAdminDashboard() {
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-red-600" />
                     <p className="text-sm text-red-700">{error}</p>
-                    <button onClick={loadDashboard} className="ml-auto text-sm text-red-600 underline">Retry</button>
+                    <button id="admin-regional-dashboard-btn-retry" onClick={loadDashboard} className="ml-auto text-sm text-red-600 underline">Retry</button>
                 </div>
             )}
 
@@ -360,7 +360,7 @@ export default function RegionalAdminDashboard() {
                         {locationData.length > 0 ? (
                             <div className="space-y-3">
                                 {locationData.map((location, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => router.push('/admin/regional/locations')}>
+                                    <div id="admin-regional-dashboard-div-clickable" key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => router.push('/admin/regional/locations')}>
                                         <div className="flex-1">
                                             <p className="font-medium text-gray-900">{location.name}</p>
                                             <p className="text-xs text-gray-600">
@@ -379,7 +379,7 @@ export default function RegionalAdminDashboard() {
                             <div className="text-center py-8 text-gray-400">
                                 <Building2 className="w-10 h-10 mx-auto mb-2" />
                                 <p className="text-sm">No locations added yet</p>
-                                <button onClick={() => router.push('/admin/regional/locations')} className="mt-2 text-xs text-blue-600 underline">Add Location</button>
+                                <button id="admin-regional-dashboard-btn-add-location" onClick={() => router.push('/admin/regional/locations')} className="mt-2 text-xs text-blue-600 underline">Add Location</button>
                             </div>
                         )}
                     </CardContent>
@@ -410,7 +410,7 @@ export default function RegionalAdminDashboard() {
                             <div className="text-center py-8 text-gray-400">
                                 <Users className="w-10 h-10 mx-auto mb-2" />
                                 <p className="text-sm">No staff members yet</p>
-                                <button onClick={() => router.push('/admin/regional/staff')} className="mt-2 text-xs text-blue-600 underline">Add Staff</button>
+                                <button id="admin-regional-dashboard-btn-add-location-2" onClick={() => router.push('/admin/regional/staff')} className="mt-2 text-xs text-blue-600 underline">Add Staff</button>
                             </div>
                         )}
                     </CardContent>
@@ -440,7 +440,7 @@ export default function RegionalAdminDashboard() {
                                         <Badge variant={item.priority === 'high' ? 'destructive' : item.priority === 'medium' ? 'secondary' : 'outline'}>
                                             {item.priority}
                                         </Badge>
-                                        <button
+                                        <button id="admin-regional-dashboard-btn-2"
                                             onClick={() => router.push('/admin/regional/approvals')}
                                             className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
                                         >

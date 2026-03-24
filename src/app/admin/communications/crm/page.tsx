@@ -247,13 +247,13 @@ export default function CRMPage() {
                     <p className="text-gray-600 mt-1">Manage customer relationships, leads, and engagement</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button data-testid="btn-action-admin-communications-crm" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadCRM() }}>
+                    <Button id="admin-crm-refresh-btn" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadCRM() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button data-testid="btn-set-show-log-modal-admin-communications-crm" variant="outline" size="sm" onClick={() => setShowLogModal(true)}>
+                    <Button id="admin-crm-log-interaction-open-btn" variant="outline" size="sm" onClick={() => setShowLogModal(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Log Interaction
                     </Button>
-                    <Button data-testid="btn-set-show-add-modal-admin-communications-crm" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddModal(true)}>
+                    <Button id="admin-crm-add-contact-open-btn" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddModal(true)}>
                         <UserPlus className="w-4 h-4 mr-2" /> Add Contact
                     </Button>
                 </motion.div>
@@ -267,21 +267,21 @@ export default function CRMPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Log Interaction</CardTitle>
-                                    <Button data-testid="btn-set-show-log-modal-admin-communications-crm" variant="ghost" size="sm" onClick={() => setShowLogModal(false)}><X className="w-4 h-4" /></Button>
+                                    <Button id="admin-crm-log-modal-close-btn" variant="ghost" size="sm" onClick={() => setShowLogModal(false)}><X className="w-4 h-4" /></Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Contact</label>
-                                        <select data-testid="select-admin-communications-crm-18" value={logForm.contactId} onChange={e => setLogForm(f => ({ ...f, contactId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                        <select id="admin-crm-log-contact-select" value={logForm.contactId} onChange={e => setLogForm(f => ({ ...f, contactId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                             <option value="">Select contact...</option>
                                             {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Type</label>
-                                        <select data-testid="select-admin-communications-crm-19" value={logForm.type} onChange={e => setLogForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                        <select id="admin-crm-log-type-select" value={logForm.type} onChange={e => setLogForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                             <option value="Call">Phone Call</option>
                                             <option value="Email">Email</option>
                                             <option value="Meeting">Meeting</option>
@@ -294,8 +294,8 @@ export default function CRMPage() {
                                     <textarea value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} placeholder="Interaction details..." rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <Button data-testid="btn-set-show-log-modal-admin-communications-crm" variant="outline" size="sm" onClick={() => setShowLogModal(false)}>Cancel</Button>
-                                    <Button data-testid="btn-log-interaction-admin-communications-crm" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleLogInteraction} disabled={logging}>
+                                    <Button id="admin-crm-log-cancel-btn" variant="outline" size="sm" onClick={() => setShowLogModal(false)}>Cancel</Button>
+                                    <Button id="admin-crm-log-save-btn" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleLogInteraction} disabled={logging}>
                                         {logging ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : null}
                                         {logging ? 'Saving...' : 'Save Interaction'}
                                     </Button>
@@ -314,28 +314,28 @@ export default function CRMPage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle>Add New Contact</CardTitle>
-                                    <Button data-testid="btn-set-show-add-modal-admin-communications-crm" variant="ghost" size="sm" onClick={() => setShowAddModal(false)}><X className="w-4 h-4" /></Button>
+                                    <Button id="admin-crm-add-modal-close-btn" variant="ghost" size="sm" onClick={() => setShowAddModal(false)}><X className="w-4 h-4" /></Button>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
-                                        <input data-testid="input-text-admin-communications-crm" type="text" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                        <input id="admin-crm-add-name-input" type="text" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
-                                        <input data-testid="input-email-admin-communications-crm" type="email" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                        <input id="admin-crm-add-email-input" type="email" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
-                                        <input data-testid="input-text-admin-communications-crm" type="text" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="+852 9123 4567" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                        <input id="admin-crm-add-phone-input" type="text" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="+852 9123 4567" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-gray-700 mb-1 block">Type</label>
-                                        <select data-testid="select-admin-communications-crm-20" value={addForm.type} onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                        <select id="admin-crm-add-type-select" value={addForm.type} onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                             <option value="Parent">Parent</option>
                                             <option value="Student">Student</option>
                                             <option value="Lead">Lead</option>
@@ -343,8 +343,8 @@ export default function CRMPage() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <Button data-testid="btn-set-show-add-modal-admin-communications-crm" variant="outline" size="sm" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                                    <Button data-testid="btn-add-contact-admin-communications-crm" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleAddContact} disabled={adding}>
+                                    <Button id="admin-crm-add-cancel-btn" variant="outline" size="sm" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                                    <Button id="admin-crm-add-submit-btn" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleAddContact} disabled={adding}>
                                         {adding ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
                                         {adding ? 'Adding...' : 'Add Contact'}
                                     </Button>
@@ -372,8 +372,8 @@ export default function CRMPage() {
             </div>
 
             <div className="flex gap-2">
-                <Button data-testid="btn-set-view-admin-communications-crm" variant={view === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setView('table')}>Table View</Button>
-                <Button data-testid="btn-set-view-admin-communications-crm" variant={view === 'pipeline' ? 'default' : 'outline'} size="sm" onClick={() => setView('pipeline')}>Pipeline View</Button>
+                <Button id="admin-crm-view-table-btn" variant={view === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setView('table')}>Table View</Button>
+                <Button id="admin-crm-view-pipeline-btn" variant={view === 'pipeline' ? 'default' : 'outline'} size="sm" onClick={() => setView('pipeline')}>Pipeline View</Button>
             </div>
 
             {view === 'pipeline' ? (
@@ -440,18 +440,18 @@ export default function CRMPage() {
                             <div className="flex flex-col sm:flex-row gap-4 items-center">
                                 <div className="flex-1 relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input data-testid="input-text-admin-communications-crm" type="text" placeholder="Search contacts by name or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+                                    <input id="admin-crm-search-input" type="text" placeholder="Search contacts by name or email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
                                     {['All', 'Parent', 'Student', 'Lead'].map(t => (
-                                        <Button data-testid="btn-set-filter-type-admin-communications-crm" key={t} variant={filterType === t ? 'default' : 'outline'} size="sm" onClick={() => setFilterType(t)}>
+                                        <Button id={`admin-crm-filter-type-${t.toLowerCase()}-btn`} key={t} variant={filterType === t ? 'default' : 'outline'} size="sm" onClick={() => setFilterType(t)}>
                                             {t === 'All' ? 'All Types' : t}
                                         </Button>
                                     ))}
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
                                     {['All', 'Active', 'At Risk', 'Inactive'].map(s => (
-                                        <Button data-testid="btn-set-filter-status-admin-communications-crm" key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>
+                                        <Button id={`admin-crm-filter-status-${s.toLowerCase().replace(/\s+/g, '-')}-btn`} key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>
                                             {s === 'All' ? 'All Status' : s}
                                         </Button>
                                     ))}
@@ -518,9 +518,9 @@ export default function CRMPage() {
                                                             </td>
                                                             <td className="py-3.5 px-4 text-right">
                                                                 <div className="flex items-center gap-1 justify-end">
-                                                                    <Button variant="ghost" size="sm" title="Call"><Phone className="w-3.5 h-3.5" /></Button>
-                                                                    <Button variant="ghost" size="sm" title="Email"><Mail className="w-3.5 h-3.5" /></Button>
-                                                                    <Button variant="ghost" size="sm"><MoreVertical className="w-3.5 h-3.5" /></Button>
+                                                                    <Button id={`admin-crm-call-${contact.id}-btn`} variant="ghost" size="sm" title="Call"><Phone className="w-3.5 h-3.5" /></Button>
+                                                                    <Button id={`admin-crm-email-${contact.id}-btn`} variant="ghost" size="sm" title="Email"><Mail className="w-3.5 h-3.5" /></Button>
+                                                                    <Button id={`admin-crm-more-${contact.id}-btn`} variant="ghost" size="sm"><MoreVertical className="w-3.5 h-3.5" /></Button>
                                                                 </div>
                                                             </td>
                                                         </motion.tr>

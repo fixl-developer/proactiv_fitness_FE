@@ -42,7 +42,7 @@ export default function Communication() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Communication Templates</h1>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button id="staff-communication-new-template-btn" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         New Template
                     </button>
@@ -58,7 +58,7 @@ export default function Communication() {
                 {/* Tabs */}
                 <div className="mb-6 flex gap-4 border-b border-gray-200">
                     {['email', 'sms', 'push'].map((tab) => (
-                        <button
+                        <button id={`staff-communication-tab-${tab}-btn`}
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === tab
@@ -92,10 +92,10 @@ export default function Communication() {
                                 </div>
                                 <p className="text-gray-600 text-sm mb-4 line-clamp-3">{template.subject || template.content}</p>
                                 <div className="flex gap-2">
-                                    <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm font-medium">
+                                    <button id={`staff-communication-edit-${template.id}-btn`} className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm font-medium">
                                         Edit
                                     </button>
-                                    <button className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 text-sm font-medium">
+                                    <button id={`staff-communication-preview-${template.id}-btn`} className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded hover:bg-gray-100 text-sm font-medium">
                                         Preview
                                     </button>
                                 </div>

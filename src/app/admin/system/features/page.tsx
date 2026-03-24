@@ -224,10 +224,10 @@ export default function FeatureFlagsPage() {
                     <p className="text-gray-600 mt-1">Control feature rollouts, A/B tests, and environment toggles</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button data-testid="btn-action-admin-system-features" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadFlags() }}>
+                    <Button id={`btn-action-admin-system-features-${i}`} variant="outline" size="sm" onClick={() => { setIsLoading(true); loadFlags() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button data-testid="btn-open-create-modal-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
+                    <Button id="btn-open-create-modal-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
                         <Plus className="w-4 h-4 mr-2" /> Create Flag
                     </Button>
                 </motion.div>
@@ -240,14 +240,14 @@ export default function FeatureFlagsPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>{editingFlag ? 'Edit Feature Flag' : 'Create Feature Flag'}</CardTitle>
-                                <Button data-testid="btn-action-admin-system-features" variant="ghost" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}><X className="w-4 h-4" /></Button>
+                                <Button id={`btn-action-admin-system-features-${i}`} variant="ghost" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}><X className="w-4 h-4" /></Button>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Flag Key</label>
-                                    <input data-testid="input-text-admin-system-features"
+                                    <input id="input-text-admin-system-features"
                                         type="text"
                                         value={form.key}
                                         onChange={e => setForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
@@ -258,7 +258,7 @@ export default function FeatureFlagsPage() {
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Display Name</label>
-                                    <input data-testid="input-text-admin-system-features" type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="My Feature Flag" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                    <input id="input-text-admin-system-features" type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="My Feature Flag" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                 </div>
                             </div>
                             <div>
@@ -268,7 +268,7 @@ export default function FeatureFlagsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Environment</label>
-                                    <select data-testid="select-admin-system-features-16" value={form.environment} onChange={e => setForm(f => ({ ...f, environment: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <select id="select-admin-system-features-16" value={form.environment} onChange={e => setForm(f => ({ ...f, environment: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                         <option value="development">Development</option>
                                         <option value="staging">Staging</option>
                                         <option value="production">Production</option>
@@ -276,19 +276,19 @@ export default function FeatureFlagsPage() {
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Initial State</label>
-                                    <select data-testid="select-admin-system-features-17" value={form.enabled ? 'enabled' : 'disabled'} onChange={e => setForm(f => ({ ...f, enabled: e.target.value === 'enabled', rolloutPercentage: e.target.value === 'enabled' ? 25 : 0 }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <select id="select-admin-system-features-17" value={form.enabled ? 'enabled' : 'disabled'} onChange={e => setForm(f => ({ ...f, enabled: e.target.value === 'enabled', rolloutPercentage: e.target.value === 'enabled' ? 25 : 0 }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                         <option value="disabled">Disabled</option>
                                         <option value="enabled">Enabled</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Rollout %</label>
-                                    <input data-testid="input-number-admin-system-features" type="number" min="0" max="100" value={form.rolloutPercentage} onChange={e => setForm(f => ({ ...f, rolloutPercentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                    <input id="input-number-admin-system-features" type="number" min="0" max="100" value={form.rolloutPercentage} onChange={e => setForm(f => ({ ...f, rolloutPercentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2">
-                                <Button data-testid="btn-action-admin-system-features" variant="outline" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}>Cancel</Button>
-                                <Button data-testid="btn-submit-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={submitting}>
+                                <Button id="btn-action-admin-system-features" variant="outline" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}>Cancel</Button>
+                                <Button id="btn-submit-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={submitting}>
                                     {submitting ? (editingFlag ? 'Updating...' : 'Creating...') : (editingFlag ? 'Update Flag' : 'Create Flag')}
                                 </Button>
                             </div>
@@ -319,7 +319,7 @@ export default function FeatureFlagsPage() {
                 <CardContent className="p-4">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input data-testid="input-text-admin-system-features" type="text" placeholder="Search feature flags..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+                        id={`input-text-admin-system-features-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}atures" type="text" placeholder="Search feature flags..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
                     </div>
                 </CardContent>
             </Card>
@@ -363,25 +363,25 @@ export default function FeatureFlagsPage() {
                                                     <span>Rollout</span>
                                                     <span className="font-medium">{flag.rolloutPercentage}%</span>
                                                 </div>
-                                                <input data-testid="input-range-admin-system-features" type="range" min="0" max="100" step="5" value={flag.rolloutPercentage} onChange={(e) => updateRollout(flag, Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                                <input id="input-range-admin-system-features" type="range" min="0" max="100" step="5" value={flag.rolloutPercentage} onChange={(e) => updateRollout(flag, Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
                                                 <Progress value={flag.rolloutPercentage} className="h-1.5 mt-1" />
                                             </div>
 
-                                            <button data-testid="btn-admin-system-features-10" onClick={() => toggleFlag(flag)} className="flex items-center gap-2 shrink-0">
+                                            <button id="btn-admin-system-features-10" onClick={() => toggleFlag(flag)} className="flex items-center gap-2 shrink-0">
                                                 {flag.enabled ? <ToggleRight className="w-10 h-10 text-green-500" /> : <ToggleLeft className="w-10 h-10 text-gray-400" />}
                                             </button>
 
-                                            <Button data-testid="btn-open-edit-modal-admin-system-features" variant="ghost" size="sm" onClick={() => openEditModal(flag)} className="text-blue-500 hover:text-blue-700 shrink-0">
+                                            <Button id="btn-open-edit-modal-admin-system-features" variant="ghost" size="sm" onClick={() => openEditModal(flag)} className="text-blue-500 hover:text-blue-700 shrink-0">
                                                 <Edit2 className="w-4 h-4" />
                                             </Button>
 
                                             {deleteConfirm === flag.id ? (
                                                 <div className="flex items-center gap-1 shrink-0">
-                                                    <Button data-testid="btn-delete-admin-system-features" variant="ghost" size="sm" onClick={() => handleDelete(flag)} className="text-red-600 hover:text-red-800 text-xs">Confirm</Button>
-                                                    <Button data-testid="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)} className="text-gray-500 text-xs">Cancel</Button>
+                                                    <Button id="btn-delete-admin-system-features" variant="ghost" size="sm" onClick={() => handleDelete(flag)} className="text-red-600 hover:text-red-800 text-xs">Confirm</Button>
+                                                    <Button id="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)} className="text-gray-500 text-xs">Cancel</Button>
                                                 </div>
                                             ) : (
-                                                <Button data-testid="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(flag.id)} className="text-red-500 hover:text-red-700 shrink-0">
+                                                <Button id="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(flag.id)} className="text-red-500 hover:text-red-700 shrink-0">
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
                                             )}

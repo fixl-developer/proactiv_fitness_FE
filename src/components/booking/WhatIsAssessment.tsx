@@ -27,7 +27,7 @@ function AssessmentDetailsModal({ assessment, isOpen, onClose, onBookNow }: Asse
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent rounded-t-2xl"></div>
 
                     {/* Close Button */}
-                    <button
+                    <button id="assessment-modal-close-btn"
                         onClick={onClose}
                         className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                     >
@@ -120,13 +120,13 @@ function AssessmentDetailsModal({ assessment, isOpen, onClose, onBookNow }: Asse
 
                     {/* Action Buttons */}
                     <div className="flex gap-3">
-                        <button
+                        <button id="assessment-modal-dismiss-btn"
                             onClick={onClose}
                             className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                         >
                             Close
                         </button>
-                        <button
+                        <button id="assessment-modal-book-btn"
                             onClick={onBookNow}
                             className={`flex-1 py-3 px-4 rounded-lg text-white font-medium bg-gradient-to-r ${assessment.color} hover:shadow-lg transition-all duration-300 transform hover:scale-105`}
                         >
@@ -319,13 +319,13 @@ export default function WhatIsAssessment({ onStartBooking }: WhatIsAssessmentPro
 
                                     {/* Action Buttons - Always at bottom */}
                                     <div className="flex gap-2 mt-auto">
-                                        <button
+                                        <button id={`assessment-${assessment.id}-info-btn`}
                                             onClick={() => handleMoreInfo(assessment)}
                                             className="flex-1 py-2 px-3 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                                         >
                                             More Info
                                         </button>
-                                        <button
+                                        <button id={`assessment-${assessment.id}-book-btn`}
                                             onClick={() => {
                                                 if (!isAuthenticated) {
                                                     router.push('/login')

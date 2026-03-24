@@ -209,7 +209,7 @@ const CoachHomePage = () => {
                         Welcome back! Manage your classes and students
                     </p>
                 </div>
-                <Button data-testid="btn-window-coach" onClick={() => window.location.href = '/coach/dashboard'}>
+                <Button id="coach-goto-dashboard-btn" onClick={() => window.location.href = '/coach/dashboard'}>
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Go to Dashboard
                 </Button>
@@ -249,6 +249,7 @@ const CoachHomePage = () => {
                         transition={{ delay: 0.1 * index }}
                     >
                         <Card
+                            id={`coach-section-${section.title.toLowerCase()}-card`}
                             className={`hover:shadow-lg transition-all cursor-pointer group ${section.priority === 'high' ? 'ring-2 ring-blue-200' : ''
                                 }`}
                             onClick={() => window.location.href = section.href}
@@ -280,7 +281,7 @@ const CoachHomePage = () => {
                                     <span className="text-sm font-medium text-gray-500">
                                         {section.stats}
                                     </span>
-                                    <Button variant="ghost" size="sm" className="group-hover:bg-blue-50">
+                                    <Button id={`coach-section-${section.title.toLowerCase()}-open-btn`} variant="ghost" size="sm" className="group-hover:bg-blue-50">
                                         Open <ArrowRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>

@@ -228,14 +228,14 @@ export default function InventoryManagementPage() {
                     <p className="text-gray-600 mt-1">Track equipment and supplies</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <button id="admin-franchise-inventory-btn"
                         onClick={openAddModal}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         <Plus className="w-5 h-5" />
                         Add Item
                     </button>
-                    <button
+                    <button id="admin-franchise-inventory-btn-2"
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
@@ -314,7 +314,7 @@ export default function InventoryManagementPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-franchise-inventory-1"
+                            id="select-admin-franchise-inventory-1"
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -326,7 +326,7 @@ export default function InventoryManagementPage() {
                             ))}
                         </select>
                         <select
-                            data-testid="select-admin-franchise-inventory-2"
+                            id="select-admin-franchise-inventory-2"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -346,7 +346,7 @@ export default function InventoryManagementPage() {
                     <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <p className="text-sm text-yellow-800">Warning: {error}</p>
-                            <button onClick={() => setError(null)} className="text-yellow-600 hover:text-yellow-800">
+                            <button id="admin-franchise-inventory-btn-3" onClick={() => setError(null)} className="text-yellow-600 hover:text-yellow-800">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -419,21 +419,21 @@ export default function InventoryManagementPage() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex gap-2">
-                                                    <button
+                                                    <button id="admin-franchise-inventory-btn-4"
                                                         onClick={() => openViewModal(item)}
                                                         className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                                         title="View details"
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-franchise-inventory-btn-5"
                                                         onClick={() => openEditModal(item)}
                                                         className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                                         title="Edit item"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-franchise-inventory-btn-6"
                                                         onClick={() => setDeleteConfirmId(item.id)}
                                                         className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
                                                         title="Delete item"
@@ -456,7 +456,7 @@ export default function InventoryManagementPage() {
                                 Page {page} of {totalPages} ({total} total items)
                             </p>
                             <div className="flex items-center gap-2">
-                                <button
+                                <button id="admin-franchise-inventory-btn-7"
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={page <= 1}
                                     className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -476,7 +476,7 @@ export default function InventoryManagementPage() {
                                         pageNum = page - 2 + i
                                     }
                                     return (
-                                        <button
+                                        <button id="admin-franchise-inventory-btn-8"
                                             key={pageNum}
                                             onClick={() => setPage(pageNum)}
                                             className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
@@ -489,7 +489,7 @@ export default function InventoryManagementPage() {
                                         </button>
                                     )
                                 })}
-                                <button
+                                <button id="admin-franchise-inventory-btn-9"
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={page >= totalPages}
                                     className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -522,8 +522,8 @@ export default function InventoryManagementPage() {
 
             {/* Delete Confirmation Modal */}
             {deleteConfirmId && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteConfirmId(null)}>
-                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                <div id="admin-franchise-inventory-div-clickable" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteConfirmId(null)}>
+                    <div id="admin-franchise-inventory-div-clickable-2" className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-3 mb-4">
                             <div className="bg-red-100 p-2 rounded-lg">
                                 <Trash2 className="w-5 h-5 text-red-600" />
@@ -532,14 +532,14 @@ export default function InventoryManagementPage() {
                         </div>
                         <p className="text-gray-600 mb-6">Are you sure you want to delete this inventory item? This action cannot be undone.</p>
                         <div className="flex justify-end gap-3">
-                            <button
+                            <button id="admin-franchise-inventory-btn-10"
                                 onClick={() => setDeleteConfirmId(null)}
                                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                 disabled={isDeleting}
                             >
                                 Cancel
                             </button>
-                            <button
+                            <button id="admin-franchise-inventory-btn-11"
                                 onClick={() => handleDelete(deleteConfirmId)}
                                 disabled={isDeleting}
                                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
@@ -553,15 +553,15 @@ export default function InventoryManagementPage() {
 
             {/* Add / Edit / View Modal */}
             {modalMode && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
-                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div id="admin-franchise-inventory-div-clickable-3" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
+                    <div id="admin-franchise-inventory-div-clickable-4" className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-semibold text-gray-900">
                                 {modalMode === 'add' && 'Add New Item'}
                                 {modalMode === 'edit' && 'Edit Item'}
                                 {modalMode === 'view' && 'Item Details'}
                             </h3>
-                            <button onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
+                            <button id="admin-franchise-inventory-btn-12" onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
                                 <X className="w-5 h-5 text-gray-500" />
                             </button>
                         </div>
@@ -615,7 +615,7 @@ export default function InventoryManagementPage() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-4 border-t">
-                                    <button
+                                    <button id="admin-franchise-inventory-btn-close"
                                         onClick={closeModal}
                                         className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                     >
@@ -695,14 +695,14 @@ export default function InventoryManagementPage() {
                                     />
                                 </div>
                                 <div className="flex justify-end gap-3 pt-4 border-t">
-                                    <button
+                                    <button id="admin-franchise-inventory-btn-cancel"
                                         onClick={closeModal}
                                         className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                                         disabled={isSaving}
                                     >
                                         Cancel
                                     </button>
-                                    <button
+                                    <button id="admin-franchise-inventory-btn-13"
                                         onClick={handleSave}
                                         disabled={isSaving || !formData.name || !formData.category}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"

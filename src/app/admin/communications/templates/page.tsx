@@ -305,7 +305,7 @@ export default function TemplatesPage() {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>{title}</CardTitle>
-                        <Button data-testid="btn-on-close-admin-communications-templates" variant="ghost" size="sm" onClick={onClose}>
+                        <Button id="admin-templates-form-close-btn" variant="ghost" size="sm" onClick={onClose}>
                             <X className="w-4 h-4" />
                         </Button>
                     </div>
@@ -316,7 +316,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Name
                             </label>
-                            <input data-testid="input-text-admin-communications-templates"
+                            <input id="admin-templates-form-name-input"
                                 type="text"
                                 value={form.name}
                                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -328,7 +328,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Type
                             </label>
-                            <select data-testid="select-admin-communications-templates-6"
+                            <select id="admin-templates-form-type-select"
                                 value={form.type}
                                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
@@ -343,7 +343,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Category
                             </label>
-                            <select data-testid="select-admin-communications-templates-7"
+                            <select id="admin-templates-form-category-select"
                                 value={form.category}
                                 onChange={(e) =>
                                     setForm((f) => ({ ...f, category: e.target.value }))
@@ -361,7 +361,7 @@ export default function TemplatesPage() {
                             <label className="text-sm font-medium text-gray-700 mb-1 block">
                                 Status
                             </label>
-                            <select data-testid="select-admin-communications-templates-8"
+                            <select id="admin-templates-form-status-select"
                                 value={form.status}
                                 onChange={(e) =>
                                     setForm((f) => ({
@@ -380,7 +380,7 @@ export default function TemplatesPage() {
                         <label className="text-sm font-medium text-gray-700 mb-1 block">
                             Subject
                         </label>
-                        <input data-testid="input-text-admin-communications-templates"
+                        <input id="admin-templates-form-subject-input"
                             type="text"
                             value={form.subject}
                             onChange={(e) =>
@@ -403,10 +403,10 @@ export default function TemplatesPage() {
                         />
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button data-testid="btn-on-close-admin-communications-templates" variant="outline" size="sm" onClick={onClose}>
+                        <Button id="admin-templates-form-cancel-btn" variant="outline" size="sm" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button
+                        <Button id="admin-templates-form-save-btn"
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700"
                             onClick={onSubmit}
@@ -436,7 +436,7 @@ export default function TemplatesPage() {
                     animate={{ opacity: 1, x: 0 }}
                     className="flex items-center gap-2"
                 >
-                    <Button
+                    <Button id="admin-templates-create-btn"
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700"
                         onClick={() => {
@@ -505,7 +505,7 @@ export default function TemplatesPage() {
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input data-testid="input-text-admin-communications-templates"
+                            <input id="admin-templates-search-input"
                                 type="text"
                                 placeholder="Search templates..."
                                 value={searchQuery}
@@ -515,7 +515,7 @@ export default function TemplatesPage() {
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             {['All', 'EMAIL', 'SMS', 'PUSH', 'IN_APP'].map((t) => (
-                                <Button
+                                <Button id={`admin-templates-filter-type-${t.toLowerCase()}-btn`}
                                     key={t}
                                     variant={filterType === t ? 'default' : 'outline'}
                                     size="sm"
@@ -527,7 +527,7 @@ export default function TemplatesPage() {
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             {categories.map((c) => (
-                                <Button
+                                <Button id={`admin-templates-filter-category-${c.toLowerCase()}-btn`}
                                     key={c}
                                     variant={filterCategory === c ? 'default' : 'outline'}
                                     size="sm"
@@ -597,7 +597,7 @@ export default function TemplatesPage() {
                                             </div>
                                             {deleteConfirm === template._id ? (
                                                 <div className="flex items-center gap-1">
-                                                    <Button
+                                                    <Button id={`admin-templates-delete-confirm-${template._id}-btn`}
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-red-600 hover:text-red-700 text-xs px-2"
@@ -607,7 +607,7 @@ export default function TemplatesPage() {
                                                     >
                                                         Yes
                                                     </Button>
-                                                    <Button
+                                                    <Button id={`admin-templates-delete-cancel-${template._id}-btn`}
                                                         variant="ghost"
                                                         size="sm"
                                                         className="text-gray-500 text-xs px-2"
@@ -617,7 +617,7 @@ export default function TemplatesPage() {
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <Button
+                                                <Button id={`admin-templates-delete-${template._id}-btn`}
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() =>
@@ -653,7 +653,7 @@ export default function TemplatesPage() {
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                <Button
+                                                <Button id={`admin-templates-edit-${template._id}-btn`}
                                                     variant="outline"
                                                     size="sm"
                                                     className="flex-1"
@@ -661,7 +661,7 @@ export default function TemplatesPage() {
                                                 >
                                                     <Edit className="w-3.5 h-3.5 mr-1" /> Edit
                                                 </Button>
-                                                <Button
+                                                <Button id={`admin-templates-duplicate-${template._id}-btn`}
                                                     variant="outline"
                                                     size="sm"
                                                     className="flex-1"
@@ -669,7 +669,7 @@ export default function TemplatesPage() {
                                                 >
                                                     <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
                                                 </Button>
-                                                <Button
+                                                <Button id={`admin-templates-toggle-status-${template._id}-btn`}
                                                     variant="outline"
                                                     size="sm"
                                                     className="flex-1"

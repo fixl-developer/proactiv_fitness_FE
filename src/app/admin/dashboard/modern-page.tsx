@@ -83,6 +83,7 @@ export default function ModernAdminDashboard() {
                     {stats.map((stat, i) => (
                         <Card
                             key={i}
+                            id={`admin-modern-dashboard-stat-${stat.title.toLowerCase().replace(/\s+/g, '-')}-card`}
                             className="border-border/50 hover:border-primary/50 transition-colors cursor-pointer"
                             onClick={() => {
                                 if (stat.title.includes("Revenue")) router.push("/admin/payments")

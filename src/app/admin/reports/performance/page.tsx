@@ -285,7 +285,7 @@ export default function PerformanceAnalyticsPage() {
         >
           <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800">{error}</p>
-          <Button data-testid="btn-fetch-data-admin-reports-performance" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
+          <Button id={`btn-fetch-data-admin-reports-performance-${row}`} variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
             <RotateCcw className="h-3.5 w-3.5" /> Retry
           </Button>
         </motion.div>
@@ -301,10 +301,10 @@ export default function PerformanceAnalyticsPage() {
           <p className="text-gray-500 text-sm mt-1">Key performance indicators and operational metrics</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button data-testid="btn-export-admin-reports-performance" variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+          <Button id="btn-export-admin-reports-performance" variant="outline" size="sm" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" /> Export Report
           </Button>
-          <Button data-testid="btn-fetch-data-admin-reports-performance" variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
+          <Button id="btn-fetch-data-admin-reports-performance" variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
             <RotateCcw className="h-3.5 w-3.5" /> Refresh
           </Button>
         </div>
@@ -477,6 +477,7 @@ export default function PerformanceAnalyticsPage() {
                 <tbody>
                   {locationData.length > 0 ? locationData.map((loc, i) => (
                     <motion.tr
+                      id={`admin-reports-performance-location-${i}-row`}
                       key={loc.location}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}

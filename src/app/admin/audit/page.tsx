@@ -147,11 +147,11 @@ const AuditLogsPage = () => {
                     </p>
                 </div>
                 <div className={responsiveClasses.buttonGroup}>
-                    <Button variant="outline">
+                    <Button id="admin-audit-export-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Logs
                     </Button>
-                    <Button>
+                    <Button id="admin-audit-refresh-btn">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
@@ -215,7 +215,7 @@ const AuditLogsPage = () => {
                         </div>
 
                         {/* Date Range Filter */}
-                        <select data-testid="select-admin-audit-1"
+                        <select id="select-admin-audit-1"
                             value={dateRange}
                             onChange={(e) => setDateRange(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -229,7 +229,7 @@ const AuditLogsPage = () => {
                         {/* Category Filter */}
                         <div className="flex flex-wrap gap-2">
                             {auditCategories.map((category) => (
-                                <button
+                                <button id={`admin-audit-category-${category.id}-btn`}
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
                                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedCategory === category.id
@@ -309,7 +309,7 @@ const AuditLogsPage = () => {
                                                 </Badge>
                                             </td>
                                             <td className="p-4">
-                                                <Button variant="ghost" size="sm">
+                                                <Button id={`admin-audit-view-${log.id}-btn`} variant="ghost" size="sm">
                                                     <Eye className="w-4 h-4" />
                                                 </Button>
                                             </td>

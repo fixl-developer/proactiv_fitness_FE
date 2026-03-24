@@ -58,7 +58,7 @@ export default function SupportTickets() {
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Support Tickets</h1>
-                    <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button id="staff-tickets-btn" className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
                         <Plus className="w-5 h-5" />
                         New Ticket
                     </button>
@@ -85,13 +85,13 @@ export default function SupportTickets() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
-                        <button data-testid="btn-staff-tickets-1" onClick={handleSearch} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                        <button id="btn-staff-tickets-1" onClick={handleSearch} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
                             Search
                         </button>
                     </div>
 
                     <div className="flex gap-4">
-                        <select data-testid="select-staff-tickets-2"
+                        <select id="select-staff-tickets-2"
                             value={filters.status}
                             onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -103,7 +103,7 @@ export default function SupportTickets() {
                             <option value="closed">Closed</option>
                         </select>
 
-                        <select data-testid="select-staff-tickets-3"
+                        <select id="select-staff-tickets-3"
                             value={filters.priority}
                             onChange={(e) => setFilters({ ...filters, priority: e.target.value, page: 1 })}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -176,14 +176,14 @@ export default function SupportTickets() {
                 <div className="mt-6 flex justify-between items-center">
                     <p className="text-gray-600">Showing {tickets.length} of {total} tickets</p>
                     <div className="flex gap-2">
-                        <button
+                        <button id="staff-tickets-btn-2"
                             onClick={() => setFilters({ ...filters, page: Math.max(1, filters.page - 1) })}
                             disabled={filters.page === 1}
                             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                         >
                             Previous
                         </button>
-                        <button
+                        <button id="staff-tickets-btn-3"
                             onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                             disabled={tickets.length < filters.limit}
                             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"

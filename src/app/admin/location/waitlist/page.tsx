@@ -146,7 +146,7 @@ export default function LocationWaitlistPage() {
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input placeholder="Search students or parents..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} className="pl-10" />
                         </div>
-                        <select data-testid="select-admin-location-waitlist-1" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+                        <select id="select-admin-location-waitlist-1" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
@@ -210,12 +210,12 @@ export default function LocationWaitlistPage() {
                                     </div>
                                     <div className="flex gap-2">
                                         {entry.status?.toUpperCase() === 'ACTIVE' && (
-                                            <button onClick={() => handleOfferSpot(entry.id || entry._id)}
+                                            <button id="admin-location-waitlist-btn" onClick={() => handleOfferSpot(entry.id || entry._id)}
                                                 className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
                                                 Offer Spot
                                             </button>
                                         )}
-                                        <button onClick={() => handleRemoveFromWaitlist(entry.id || entry._id)}
+                                        <button id="admin-location-waitlist-btn-2" onClick={() => handleRemoveFromWaitlist(entry.id || entry._id)}
                                             className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -238,10 +238,10 @@ export default function LocationWaitlistPage() {
 
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                    <button id="admin-location-waitlist-btn-3" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
                     <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                    <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                    <button id="admin-location-waitlist-btn-4" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
                 </div>
             )}

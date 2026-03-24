@@ -60,7 +60,7 @@ export default function MetricsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Growth Metrics</h1>
                         <p className="text-gray-600">Detailed view of all growth metrics</p>
                     </div>
-                    <Button data-testid="btn-router-marketing-growth-metrics" onClick={() => router.push('/marketing/growth')} variant="outline">
+                    <Button id="btn-router-marketing-growth-metrics" onClick={() => router.push('/marketing/growth')} variant="outline">
                         Back to Overview
                     </Button>
                 </div>
@@ -74,7 +74,7 @@ export default function MetricsPage() {
 
                 <div className="mb-6 flex gap-2">
                     {['7d', '30d', '90d', '1y'].map((p) => (
-                        <Button
+                        <Button id={`growth-metrics-period-${p}-btn`}
                             key={p}
                             onClick={() => setPeriod(p)}
                             variant={period === p ? 'default' : 'outline'}

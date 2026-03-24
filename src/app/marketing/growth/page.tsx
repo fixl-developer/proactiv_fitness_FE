@@ -74,7 +74,7 @@ export default function GrowthOverviewPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Growth Overview</h1>
                         <p className="text-gray-600">Monitor your business growth metrics</p>
                     </div>
-                    <Button data-testid="btn-export-marketing-growth" onClick={handleExport} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="btn-export-marketing-growth" onClick={handleExport} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
@@ -172,16 +172,16 @@ export default function GrowthOverviewPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
-                                <Button data-testid="btn-router-marketing-growth" onClick={() => router.push('/marketing/growth/funnel')} className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
+                                <Button id="growth-funnel-nav-btn" onClick={() => router.push('/marketing/growth/funnel')} className="w-full justify-start bg-blue-50 text-blue-600 hover:bg-blue-100">
                                     View Funnel Analysis
                                 </Button>
-                                <Button data-testid="btn-router-marketing-growth" onClick={() => router.push('/marketing/growth/acquisition')} className="w-full justify-start bg-green-50 text-green-600 hover:bg-green-100">
+                                <Button id="growth-acquisition-nav-btn" onClick={() => router.push('/marketing/growth/acquisition')} className="w-full justify-start bg-green-50 text-green-600 hover:bg-green-100">
                                     View Acquisition Channels
                                 </Button>
-                                <Button data-testid="btn-router-marketing-growth" onClick={() => router.push('/marketing/growth/retention')} className="w-full justify-start bg-purple-50 text-purple-600 hover:bg-purple-100">
+                                <Button id="growth-retention-nav-btn" onClick={() => router.push('/marketing/growth/retention')} className="w-full justify-start bg-purple-50 text-purple-600 hover:bg-purple-100">
                                     View Retention Analysis
                                 </Button>
-                                <Button data-testid="btn-router-marketing-growth" onClick={() => router.push('/marketing/growth/metrics')} className="w-full justify-start bg-orange-50 text-orange-600 hover:bg-orange-100">
+                                <Button id="growth-metrics-nav-btn" onClick={() => router.push('/marketing/growth/metrics')} className="w-full justify-start bg-orange-50 text-orange-600 hover:bg-orange-100">
                                     View Detailed Metrics
                                 </Button>
                             </div>

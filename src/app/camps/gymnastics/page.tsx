@@ -145,10 +145,10 @@ const GymnasticsCampsPage = () => {
                                 Perfect for gymnasts of all levels to learn, grow, and make new friends during school breaks.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-upcoming-camps" href="#upcoming-camps" className="btn-secondary">
+                                <Link id="upcoming-camps" href="#upcoming-camps" className="btn-secondary">
                                     View Upcoming Camps
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-green-600">
+                                <Link id="contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-green-600">
                                     Get More Info
                                 </Link>
                             </div>
@@ -236,7 +236,7 @@ const GymnasticsCampsPage = () => {
                 </section>
 
                 {/* Upcoming Camps */}
-                <section id="upcoming-camps" className="section-padding bg-gray-50">
+                <section id={`upcoming-camps-${objective}`} className="section-padding bg-gray-50">
                     <div className="container-max">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -311,7 +311,7 @@ const GymnasticsCampsPage = () => {
                                         <div className="text-2xl font-bold text-green-600">
                                             {camp.price}
                                         </div>
-                                        <Link
+                                        <Link id="camps-gymnastics-nav-book-now"
                                             href={`/camps/book?camp=${camp.id}`}
                                             className="btn-primary"
                                         >
@@ -458,10 +458,10 @@ const GymnasticsCampsPage = () => {
                                 so secure your child's spot today and give them an unforgettable gymnastics adventure.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-camps-book" href="/camps/book" className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="camps-book" href="/camps/book" className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Camp Now
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-green-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-green-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                                     Ask Questions
                                 </Link>
                             </div>

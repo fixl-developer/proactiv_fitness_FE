@@ -50,7 +50,7 @@ export default function BookingStep1({ onNext, onBack }: BookingStep1Props) {
             {/* Students List */}
             <div className="space-y-4">
                 {students.map((student) => (
-                    <div
+                    <div id={`booking-step1-student-${student.id}-btn`}
                         key={student.id}
                         onClick={() => setSelectedStudent(student.id)}
                         className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedStudent === student.id
@@ -96,7 +96,7 @@ export default function BookingStep1({ onNext, onBack }: BookingStep1Props) {
             </div>
 
             {/* Add Student Button */}
-            <button
+            <button id="booking-step1-add-student-btn"
                 onClick={() => setShowAddStudent(true)}
                 className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors"
             >
@@ -105,13 +105,13 @@ export default function BookingStep1({ onNext, onBack }: BookingStep1Props) {
 
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-6">
-                <button
+                <button id="booking-step1-back-btn"
                     onClick={onBack}
                     className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                     Back to Class
                 </button>
-                <button
+                <button id="booking-step1-continue-btn"
                     onClick={handleNext}
                     disabled={!selectedStudent}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"

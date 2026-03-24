@@ -16,7 +16,7 @@ export default function UnauthorizedPage() {
                 <p className="text-gray-600 mb-6">
                     You don't have permission to access this page.
                 </p>
-                <button
+                <button id="unauthorized-btn"
                     onClick={() => router.push('/login')}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors"
                 >

@@ -116,11 +116,11 @@ const ManagerStudentsPage = () => {
                     <p className="text-gray-600 mt-2">Monitor student progress and enrollment</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="manager-students-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="manager-students-add-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Student
                     </Button>
@@ -196,7 +196,7 @@ const ManagerStudentsPage = () => {
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
                             </div>
-                            <select data-testid="select-manager-students-1"
+                            <select id="select-manager-students-1"
                                 value={selectedFilter}
                                 onChange={(e) => setSelectedFilter(e.target.value as any)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -239,13 +239,13 @@ const ManagerStudentsPage = () => {
                                     <p className="text-xs text-yellow-600">⭐ {student.rating}</p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-students-view-${student.id}-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-students-email-${student.id}-btn`} variant="ghost" size="sm">
                                         <Mail className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-students-edit-${student.id}-btn`} variant="ghost" size="sm">
                                         <Edit className="w-4 h-4" />
                                     </Button>
                                 </div>

@@ -38,7 +38,7 @@ export default function PartnerSettingsPage() {
 
             const partnerId = user?.id || 'partner-1'
             const response = await PartnerPortalService.getPartnerProfile(partnerId)
-            
+
             setSettings({
                 profile: {
                     organizationName: response?.businessName || 'Elite School Partners',
@@ -107,7 +107,7 @@ export default function PartnerSettingsPage() {
                     { id: 'api', name: 'API & Webhooks', icon: Key },
                     { id: 'notifications', name: 'Notifications', icon: Bell },
                 ].map((tab) => (
-                    <button
+                    <button id={`partner-settings-tab-${tab.id}-btn`}
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
@@ -193,7 +193,7 @@ export default function PartnerSettingsPage() {
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <button id="partner-settings-edit-profile-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                     <Edit2 className="w-4 h-4" />
                                     Edit Profile
                                 </button>

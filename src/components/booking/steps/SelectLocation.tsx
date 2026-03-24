@@ -49,7 +49,7 @@ export default function SelectLocation({ selectedLocation, onSelect }: SelectLoc
                     const isSelected = selectedLocation === location.id;
 
                     return (
-                        <button
+                        <button id={`select-location-${location.id}-btn`}
                             key={location.id}
                             onClick={() => onSelect(location.id)}
                             className={`w-full text-left p-6 rounded-2xl border-2 transition-all duration-300 ${isSelected
@@ -116,7 +116,7 @@ export default function SelectLocation({ selectedLocation, onSelect }: SelectLoc
 
             {/* Map Link */}
             <div className="mt-6 text-center">
-                <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                <button id="select-location-view-map-btn" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                     📍 View all locations on map
                 </button>
             </div>

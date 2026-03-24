@@ -120,7 +120,7 @@ function VerifyEmailContent() {
                         className="space-y-3"
                     >
                         <p className="text-sm text-gray-500">Redirecting to login in 3 seconds...</p>
-                        <Link
+                        <Link id="auth-verify-email-nav-login"
                             href="/login"
                             className="inline-block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors"
                         >
@@ -135,13 +135,13 @@ function VerifyEmailContent() {
                         animate={{ opacity: 1 }}
                         className="space-y-3"
                     >
-                        <Link
+                        <Link id="auth-verify-email-nav-login-2"
                             href="/login"
                             className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors"
                         >
                             Back to Login
                         </Link>
-                        <Link
+                        <Link id="auth-verify-email-nav-register"
                             href="/register"
                             className="inline-block w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 py-3 rounded-lg font-semibold transition-colors"
                         >

@@ -191,11 +191,11 @@ export default function RegionsPage() {
           <p className="text-gray-600 mt-2">Manage countries and their regional divisions</p>
         </div>
         <div className="flex gap-2">
-          <Button data-testid="btn-open-region-form-admin-business-config-regions" variant="outline" onClick={() => openRegionForm()}>
+          <Button id="btn-open-region-form-admin-business-config-regions" variant="outline" onClick={() => openRegionForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Region
           </Button>
-          <Button data-testid="btn-open-country-form-admin-business-config-regions" onClick={() => openCountryForm()}>
+          <Button id="btn-open-country-form-admin-business-config-regions" onClick={() => openCountryForm()}>
             <Plus className="w-4 h-4 mr-2" />
             Add Country
           </Button>
@@ -229,7 +229,7 @@ export default function RegionsPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input data-testid="input-text-admin-business-config-regions"
+              <input id="admin-business-config-regions-search-input"
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
@@ -238,13 +238,13 @@ export default function RegionsPage() {
               />
             </div>
             <div className="flex border rounded-lg overflow-hidden">
-              <button data-testid="btn-admin-business-config-regions-11"
+              <button id="btn-admin-business-config-regions-11"
                 onClick={() => setActiveTab('countries')}
                 className={`px-4 py-2 text-sm font-medium ${activeTab === 'countries' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
                 Countries ({countries.length})
               </button>
-              <button data-testid="btn-admin-business-config-regions-12"
+              <button id="btn-admin-business-config-regions-12"
                 onClick={() => setActiveTab('regions')}
                 className={`px-4 py-2 text-sm font-medium ${activeTab === 'regions' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               >
@@ -279,7 +279,7 @@ export default function RegionsPage() {
                 <Globe className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">No countries found</p>
                 <p className="text-gray-400 mt-1">Add your first country to get started</p>
-                <Button data-testid="btn-open-country-form-admin-business-config-regions" className="mt-4" onClick={() => openCountryForm()}>
+                <Button id="admin-business-config-regions-add-country-empty-btn" className="mt-4" onClick={() => openCountryForm()}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Country
                 </Button>
@@ -311,10 +311,10 @@ export default function RegionsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex justify-end gap-2">
-                            <Button data-testid="btn-open-country-form-admin-business-config-regions" variant="ghost" size="sm" onClick={() => openCountryForm(country)}>
+                            <Button id={`btn-open-country-form-admin-business-config-regions-${idx}`} variant="ghost" size="sm" onClick={() => openCountryForm(country)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
+                            <Button id={`admin-business-config-regions-delete-country-${country.id}-btn`}
                               variant="ghost"
                               size="sm"
                               className="text-red-600 hover:text-red-800"
@@ -346,7 +346,7 @@ export default function RegionsPage() {
                 <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">No regions found</p>
                 <p className="text-gray-400 mt-1">Add your first region to get started</p>
-                <Button data-testid="btn-open-region-form-admin-business-config-regions" className="mt-4" onClick={() => openRegionForm()}>
+                <Button id="admin-business-config-regions-add-region-empty-btn" className="mt-4" onClick={() => openRegionForm()}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Region
                 </Button>
@@ -370,10 +370,10 @@ export default function RegionsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex justify-end gap-2">
-                            <Button data-testid="btn-open-region-form-admin-business-config-regions" variant="ghost" size="sm" onClick={() => openRegionForm(region)}>
+                            <Button id={`btn-open-region-form-admin-business-config-regions-${region.name.toLowerCase().replace(/\s+/g, '-')}`} variant="ghost" size="sm" onClick={() => openRegionForm(region)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button
+                            <Button id={`admin-business-config-regions-delete-region-${region.id}-btn`}
                               variant="ghost"
                               size="sm"
                               className="text-red-600 hover:text-red-800"
@@ -402,10 +402,10 @@ export default function RegionsPage() {
               {editingCountry ? 'Update the country details below.' : 'Fill in the details to create a new country.'}
             </DialogDescription>
           </DialogHeader>
-          <form data-testid="form-admin-business-config-regions" onSubmit={handleCountrySubmit} className="space-y-4">
+          <form id="admin-business-config-regions-country-form" onSubmit={handleCountrySubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Country Name</label>
-              <input data-testid="input-text-admin-business-config-regions"
+              <input id="admin-business-config-regions-country-name-input"
                 type="text"
                 value={countryForm.name}
                 onChange={(e) => setCountryForm({ ...countryForm, name: e.target.value })}
@@ -416,7 +416,7 @@ export default function RegionsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Country Code</label>
-              <input data-testid="input-text-admin-business-config-regions"
+              <input id="admin-business-config-regions-country-code-input"
                 type="text"
                 value={countryForm.code}
                 onChange={(e) => setCountryForm({ ...countryForm, code: e.target.value.toUpperCase() })}
@@ -428,7 +428,7 @@ export default function RegionsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select data-testid="select-admin-business-config-regions-17"
+              <select id="select-admin-business-config-regions-17"
                 value={countryForm.status}
                 onChange={(e) => setCountryForm({ ...countryForm, status: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -438,10 +438,10 @@ export default function RegionsPage() {
               </select>
             </div>
             <DialogFooter>
-              <Button data-testid="btn-set-show-country-form-admin-business-config-regions" type="button" variant="outline" onClick={() => setShowCountryForm(false)}>
+              <Button id="btn-set-show-country-form-admin-business-config-regions" type="button" variant="outline" onClick={() => setShowCountryForm(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={savingCountry}>
+              <Button id="admin-business-config-regions-btn-3" type="submit" disabled={savingCountry}>
                 {savingCountry && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingCountry ? 'Update Country' : 'Create Country'}
               </Button>
@@ -459,10 +459,10 @@ export default function RegionsPage() {
               {editingRegion ? 'Update the region details below.' : 'Fill in the details to create a new region.'}
             </DialogDescription>
           </DialogHeader>
-          <form data-testid="form-admin-business-config-regions" onSubmit={handleRegionSubmit} className="space-y-4">
+          <form id="admin-business-config-regions-region-form" onSubmit={handleRegionSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Region Name</label>
-              <input data-testid="input-text-admin-business-config-regions"
+              <input id="admin-business-config-regions-region-name-input"
                 type="text"
                 value={regionForm.name}
                 onChange={(e) => setRegionForm({ ...regionForm, name: e.target.value })}
@@ -476,7 +476,7 @@ export default function RegionsPage() {
               {countries.length === 0 ? (
                 <p className="text-sm text-gray-500">No countries available. Please create a country first.</p>
               ) : (
-                <select data-testid="select-admin-business-config-regions-18"
+                <select id="select-admin-business-config-regions-18"
                   value={regionForm.countryId}
                   onChange={(e) => setRegionForm({ ...regionForm, countryId: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -492,10 +492,10 @@ export default function RegionsPage() {
               )}
             </div>
             <DialogFooter>
-              <Button data-testid="btn-set-show-region-form-admin-business-config-regions" type="button" variant="outline" onClick={() => setShowRegionForm(false)}>
+              <Button id="btn-set-show-region-form-admin-business-config-regions" type="button" variant="outline" onClick={() => setShowRegionForm(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={savingRegion || countries.length === 0}>
+              <Button id="admin-business-config-regions-btn-4" type="submit" disabled={savingRegion || countries.length === 0}>
                 {savingRegion && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingRegion ? 'Update Region' : 'Create Region'}
               </Button>
@@ -514,10 +514,10 @@ export default function RegionsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button data-testid="btn-set-delete-target-admin-business-config-regions" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button id="btn-set-delete-target-admin-business-config-regions" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button data-testid="btn-delete-admin-business-config-regions" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button id="btn-delete-admin-business-config-regions" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

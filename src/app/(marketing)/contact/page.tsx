@@ -115,7 +115,7 @@ export default function ContactPage() {
                                     </motion.div>
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Phone</h3>
                                     <p className="text-gray-600 text-sm mb-2">Give us a call</p>
-                                    <a
+                                    <a id="marketing-contact-link-tel1234567890"
                                         href="tel:+1234567890"
                                         className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
                                     >
@@ -143,7 +143,7 @@ export default function ContactPage() {
                                     </motion.div>
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Email</h3>
                                     <p className="text-gray-600 text-sm mb-2">Send us an email</p>
-                                    <a
+                                    <a id="marketing-contact-link-mailtoinfoproactivfitnesscom"
                                         href="mailto:info@proactivfitness.com"
                                         className="text-purple-600 font-semibold hover:text-purple-700 transition-colors break-all"
                                     >
@@ -220,7 +220,7 @@ export default function ContactPage() {
                                         Send Us a Message
                                     </h2>
 
-                                    <form data-testid="form-(marketing)-contact" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                                    <form id="form-(marketing)-contact" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                                         {/* Name */}
                                         <motion.div
                                             initial={{ opacity: 0, y: 20 }}
@@ -339,6 +339,7 @@ export default function ContactPage() {
 
                                         {/* Submit Button */}
                                         <motion.button
+                                            id="contact-submit-btn"
                                             initial={{ opacity: 0, y: 20 }}
                                             whileInView={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.6 }}

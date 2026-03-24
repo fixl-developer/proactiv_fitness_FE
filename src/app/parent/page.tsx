@@ -148,7 +148,7 @@ const ParentHomePage = () => {
                         Track your children's gymnastics journey
                     </p>
                 </div>
-                <Button data-testid="btn-window-parent" onClick={() => window.location.href = '/parent/dashboard'}>
+                <Button id="parent-goto-dashboard-btn" onClick={() => window.location.href = '/parent/dashboard'}>
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Go to Dashboard
                 </Button>
@@ -223,7 +223,7 @@ const ParentHomePage = () => {
                                             <Clock className="w-4 h-4 text-gray-400" />
                                             <span className="text-sm text-gray-600">Next class: {child.nextClass}</span>
                                         </div>
-                                        <Button variant="outline" size="sm">
+                                        <Button id={`parent-child-${child.name.toLowerCase()}-view-btn`} variant="outline" size="sm">
                                             View Details
                                         </Button>
                                     </div>
@@ -244,6 +244,7 @@ const ParentHomePage = () => {
                         transition={{ delay: 0.3 + 0.1 * index }}
                     >
                         <Card
+                            id={`parent-section-${section.title.toLowerCase()}-card`}
                             className={`hover:shadow-lg transition-all cursor-pointer group ${section.priority === 'high' ? 'ring-2 ring-blue-200' : ''
                                 }`}
                             onClick={() => window.location.href = section.href}
@@ -275,7 +276,7 @@ const ParentHomePage = () => {
                                     <span className="text-sm font-medium text-gray-500">
                                         {section.stats}
                                     </span>
-                                    <Button variant="ghost" size="sm" className="group-hover:bg-blue-50">
+                                    <Button id={`parent-section-${section.title.toLowerCase()}-open-btn`} variant="ghost" size="sm" className="group-hover:bg-blue-50">
                                         Open <ArrowRight className="w-4 h-4 ml-1" />
                                     </Button>
                                 </div>
@@ -298,7 +299,7 @@ const ParentHomePage = () => {
                             { icon: Star, label: 'View Progress', href: '/parent/children' },
                             { icon: Target, label: 'Set Goals', href: '/parent/dashboard' }
                         ].map((action, index) => (
-                            <Button
+                            <Button id={`parent-quick-${action.label.toLowerCase().replace(/\s+/g, '-')}-btn`}
                                 key={index}
                                 className="h-16 flex-col gap-2"
                                 variant="outline"

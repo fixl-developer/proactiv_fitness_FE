@@ -223,6 +223,7 @@ const Hero = () => {
                 >
                     {heroImages.map((_, index) => (
                         <motion.button
+                            id={`hero-slide-dot-${index}-btn`}
                             key={index}
                             onClick={() => goToSlide(index)}
                             className={`relative overflow-hidden rounded-full transition-all duration-500 ${index === currentSlide
@@ -246,7 +247,7 @@ const Hero = () => {
             </div>
 
             {/* Navigation Arrows - Outside background div for proper z-index */}
-            <button
+            <button id="sections-hero-btn"
                 onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -259,7 +260,7 @@ const Hero = () => {
                 <FiChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 pointer-events-none" />
             </button>
 
-            <button
+            <button id="sections-hero-btn-2"
                 onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -354,7 +355,7 @@ const Hero = () => {
                             whileHover={{ scale: 1.05, y: -5 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <Link
+                            <Link id="sections-hero-nav-book-trial"
                                 href="/book-trial"
                                 className="group relative overflow-hidden bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:from-orange-400 hover:via-pink-400 hover:to-purple-500 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-500 flex items-center space-x-2 sm:space-x-3 shadow-2xl hover:shadow-orange-500/25 w-full sm:w-auto justify-center pointer-events-auto"
                             >
@@ -365,6 +366,7 @@ const Hero = () => {
                         </motion.div>
 
                         <motion.button
+                            id="hero-watch-programs-btn"
                             className="group flex items-center space-x-3 text-white hover:text-yellow-300 transition-all duration-500 pointer-events-auto"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}

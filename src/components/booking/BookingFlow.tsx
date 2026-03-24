@@ -131,7 +131,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <button
+                    <button id="booking-booking-flow-btn"
                         onClick={onBack}
                         className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
                     >
@@ -160,7 +160,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
 
                 {/* Navigation */}
                 <div className="flex justify-between items-center">
-                    <button
+                    <button id="booking-booking-flow-btn-2"
                         onClick={prevStep}
                         disabled={currentStep === 1}
                         className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${currentStep === 1
@@ -173,7 +173,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                     </button>
 
                     {currentStep < totalSteps ? (
-                        <button
+                        <button id="booking-booking-flow-btn-next-step"
                             onClick={nextStep}
                             disabled={!isStepValid()}
                             className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${isStepValid()
@@ -185,7 +185,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                             <ArrowRight className="w-4 h-4" />
                         </button>
                     ) : (
-                        <button
+                        <button id="booking-booking-flow-btn-3"
                             onClick={handleComplete}
                             disabled={!isStepValid()}
                             className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${isStepValid()

@@ -238,24 +238,24 @@ export default function KnowledgeBasePage() {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>{title}</CardTitle>
-                        <Button data-testid="btn-on-close-admin-support-knowledge" variant="ghost" size="sm" onClick={onClose}><X className="w-4 h-4" /></Button>
+                        <Button id={`btn-on-close-admin-support-knowledge-${i}`} variant="ghost" size="sm" onClick={onClose}><X className="w-4 h-4" /></Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Title</label>
-                            <input data-testid="input-text-admin-support-knowledge" type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                            id={`input-text-admin-support-knowledge-${i}`}wledge" type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Article title" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Category</label>
-                            <select data-testid="select-admin-support-knowledge-11" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                            <select id="select-admin-support-knowledge-11" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                 {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
-                            <select data-testid="select-admin-support-knowledge-12" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                            <select id="select-admin-support-knowledge-12" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                 <option value="Draft">Draft</option>
                                 <option value="Published">Published</option>
                             </select>
@@ -263,15 +263,15 @@ export default function KnowledgeBasePage() {
                     </div>
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Author</label>
-                        <input data-testid="input-text-admin-support-knowledge" type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Author name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        <input id={`input-text-admin-support-knowledge-${c}`} type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Author name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Content</label>
                         <textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="Write article content..." rows={5} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button data-testid="btn-on-close-admin-support-knowledge" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-                        <Button data-testid="btn-on-submit-admin-support-knowledge" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onSubmit}>Save Article</Button>
+                        <Button id="btn-on-close-admin-support-knowledge" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+                        <Button id="btn-on-submit-admin-support-knowledge" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onSubmit}>Save Article</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -291,10 +291,10 @@ export default function KnowledgeBasePage() {
                     <p className="text-gray-600 mt-1">Create and manage help articles, guides, and FAQs</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-support-knowledge-btn" variant="outline" size="sm">
                         <Tag className="w-4 h-4 mr-2" /> Manage Categories
                     </Button>
-                    <Button data-testid="btn-action-admin-support-knowledge" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => { setForm({ title: '', category: 'Bookings', author: '', content: '', status: 'Draft' }); setShowCreateModal(true) }}>
+                    <Button id="btn-action-admin-support-knowledge" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => { setForm({ title: '', category: 'Bookings', author: '', content: '', status: 'Draft' }); setShowCreateModal(true) }}>
                         <Plus className="w-4 h-4 mr-2" /> Create Article
                     </Button>
                 </motion.div>
@@ -328,14 +328,14 @@ export default function KnowledgeBasePage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1">
-                            <button data-testid="btn-admin-support-knowledge-7" onClick={() => setActiveCategory('All')} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === 'All' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                            <button id="btn-admin-support-knowledge-7" onClick={() => setActiveCategory('All')} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === 'All' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                                 <div className="flex items-center justify-between">
                                     <span>All Articles</span>
                                     <Badge variant="outline" className="text-xs">{articles.length}</Badge>
                                 </div>
                             </button>
                             {categories.map((cat, i) => (
-                                <motion.button key={cat.name} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }} onClick={() => { setActiveCategory(cat.name); toggleCategory(cat.name) }} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === cat.name ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                                <motion.button id={`admin-support-knowledge-category-${cat.name.toLowerCase().replace(/\s+/g, '-')}-btn`} key={cat.name} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.05 }} onClick={() => { setActiveCategory(cat.name); toggleCategory(cat.name) }} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeCategory === cat.name ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`}></div>
@@ -357,7 +357,7 @@ export default function KnowledgeBasePage() {
                         <CardContent className="p-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input data-testid="input-text-admin-support-knowledge" type="text" placeholder="Search articles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+                                <input id="input-text-admin-support-knowledge" type="text" placeholder="Search articles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
                             </div>
                         </CardContent>
                     </Card>
@@ -390,13 +390,13 @@ export default function KnowledgeBasePage() {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2 shrink-0">
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-support-knowledge-btn-2" variant="outline" size="sm">
                                                     <Eye className="w-3.5 h-3.5 mr-1" /> View
                                                 </Button>
-                                                <Button data-testid="btn-start-edit-admin-support-knowledge" variant="outline" size="sm" onClick={() => startEdit(article)}>
+                                                <Button id="btn-start-edit-admin-support-knowledge" variant="outline" size="sm" onClick={() => startEdit(article)}>
                                                     <Edit className="w-3.5 h-3.5 mr-1" /> Edit
                                                 </Button>
-                                                <Button data-testid="btn-delete-admin-support-knowledge" variant="outline" size="sm" onClick={() => handleDelete(article.id)} className="text-red-500 hover:text-red-700">
+                                                <Button id="btn-delete-admin-support-knowledge" variant="outline" size="sm" onClick={() => handleDelete(article.id)} className="text-red-500 hover:text-red-700">
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
                                             </div>

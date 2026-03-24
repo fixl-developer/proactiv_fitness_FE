@@ -130,7 +130,7 @@ const AIAnalyticsDashboard = () => {
                 </div>
                 <div className="flex gap-2">
                     {(['7d', '30d', '90d'] as const).map((range) => (
-                        <Button
+                        <Button id={`ai-analytics-timerange-${range}-btn`}
                             key={range}
                             variant={timeRange === range ? 'default' : 'outline'}
                             size="sm"
@@ -289,7 +289,7 @@ const AIAnalyticsDashboard = () => {
                                         </div>
                                     </div>
                                     {insight.actionable && (
-                                        <Button size="sm" variant="outline">
+                                        <Button id={`ai-analytics-insight-${insight.id}-action-btn`} size="sm" variant="outline">
                                             Take Action
                                         </Button>
                                     )}

@@ -219,13 +219,13 @@ const WanChaiLocationPage = () => {
                             transition={{ delay: 0.8, duration: 0.8 }}
                             className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6"
                         >
-                            <Link
+                            <Link id="marketing-locations-wan-chai-nav-book-trial"
                                 href="/book-trial"
                                 className="group bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center space-x-3"
                             >
                                 <span>?? Book Free Trial</span>
                             </Link>
-                            <Link
+                            <Link id="marketing-locations-wan-chai-nav-contact-info"
                                 href="#contact-info"
                                 className="group bg-white/20 backdrop-blur-md border-2 border-white text-white hover:bg-white hover:text-gray-900 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center space-x-3"
                             >
@@ -305,7 +305,7 @@ const WanChaiLocationPage = () => {
                                         <span>wanchai@proactivsports.net</span>
                                     </div>
                                 </div>
-                                <Link
+                                <Link id="marketing-locations-wan-chai-nav-book-trial-2"
                                     href="/book-trial"
                                     className="inline-block bg-white text-secondary-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold mt-6 transition-colors duration-300"
                                 >
@@ -506,18 +506,18 @@ const WanChaiLocationPage = () => {
                             className="bg-white rounded-2xl p-8 text-gray-900"
                         >
                             <h3 className="text-2xl font-bold mb-6">Book Your Free Trial</h3>
-                            <form data-testid="form-(marketing)-locations-wan-chai" className="space-y-4">
+                            <form id="form-(marketing)-locations-wan-chai" className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Parent Name</label>
-                                    <input data-testid="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input id="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Child Name</label>
-                                    <input data-testid="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input id="input-text-(marketing)-locations-wan-chai" type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Child Age</label>
-                                    <select data-testid="select-(marketing)-locations-wan-chai-4" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent">
+                                    <select id="select-(marketing)-locations-wan-chai-4" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent">
                                         <option>2-3 years</option>
                                         <option>4-6 years</option>
                                         <option>7-10 years</option>
@@ -526,9 +526,9 @@ const WanChaiLocationPage = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Phone Number</label>
-                                    <input data-testid="input-tel-(marketing)-locations-wan-chai" type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
+                                    <input id="input-tel-(marketing)-locations-wan-chai" type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-transparent" />
                                 </div>
-                                <button type="submit" className="w-full bg-secondary-600 text-white py-3 rounded-lg font-semibold hover:bg-secondary-700 transition-colors duration-300">
+                                <button id="marketing-locations-wan-chai-btn-book-free-trial" type="submit" className="w-full bg-secondary-600 text-white py-3 rounded-lg font-semibold hover:bg-secondary-700 transition-colors duration-300">
                                     Book Free Trial
                                 </button>
                             </form>

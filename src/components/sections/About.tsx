@@ -386,13 +386,13 @@ const About = () => {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
 
                                 {/* Carousel Controls */}
-                                <button
+                                <button id="sections-about-btn"
                                     onClick={() => setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)}
                                     className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all z-10"
                                 >
                                     <FiChevronLeft className="w-5 h-5" />
                                 </button>
-                                <button
+                                <button id="sections-about-btn-2"
                                     onClick={() => setCurrentImageIndex((prev) => (prev + 1) % images.length)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all z-10"
                                 >
@@ -402,7 +402,7 @@ const About = () => {
                                 {/* Image Indicators */}
                                 <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                                     {images.map((_, index) => (
-                                        <button
+                                        <button id="sections-about-btn-3"
                                             key={index}
                                             onClick={() => setCurrentImageIndex(index)}
                                             className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'

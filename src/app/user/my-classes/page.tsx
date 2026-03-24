@@ -106,11 +106,11 @@ export default function MyClassesPage() {
                     <p className="text-gray-600 mt-2">View and manage your class schedule</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button data-testid="btn-refresh-user-my-classes" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                    <Button id="btn-refresh-user-my-classes" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="user-my-classes-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Book Class
                     </Button>
@@ -132,7 +132,7 @@ export default function MyClassesPage() {
                                 className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:outline-none"
                             />
                             {searchQuery && (
-                                <button
+                                <button id="user-my-classes-clear-search-btn"
                                     onClick={() => setSearchQuery('')}
                                     className="absolute right-3 top-1/2 transform -translate-y-1/2"
                                 >
@@ -144,7 +144,7 @@ export default function MyClassesPage() {
                         {/* Filter Tabs */}
                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                             {filters.map((filter) => (
-                                <button
+                                <button id={`user-my-classes-filter-${filter.key}-btn`}
                                     key={filter.key}
                                     onClick={() => setActiveFilter(filter.key as any)}
                                     className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeFilter === filter.key
@@ -174,7 +174,7 @@ export default function MyClassesPage() {
                                 {searchQuery ? 'Try adjusting your search or filters' : 'Book your first class to get started!'}
                             </p>
                             {!searchQuery && (
-                                <Button>
+                                <Button id="user-my-classes-browse-empty-btn">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Browse Classes
                                 </Button>
@@ -243,22 +243,22 @@ export default function MyClassesPage() {
                                     </div>
 
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" className="flex-1">
+                                        <Button id={`user-my-classes-view-${cls.id}-btn`} size="sm" variant="outline" className="flex-1">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View Details
                                         </Button>
                                         {cls.status === 'upcoming' && (
                                             <>
-                                                <Button size="sm" variant="outline">
+                                                <Button id={`user-my-classes-reschedule-${cls.id}-btn`} size="sm" variant="outline">
                                                     Reschedule
                                                 </Button>
-                                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                                <Button id={`user-my-classes-cancel-${cls.id}-btn`} size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                                     Cancel
                                                 </Button>
                                             </>
                                         )}
                                         {cls.status === 'completed' && (
-                                            <Button size="sm" variant="outline">
+                                            <Button id={`user-my-classes-feedback-${cls.id}-btn`} size="sm" variant="outline">
                                                 Leave Feedback
                                             </Button>
                                         )}

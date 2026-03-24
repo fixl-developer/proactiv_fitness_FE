@@ -314,14 +314,14 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button data-testid="btn-admin-users-1"
+          <button id="btn-admin-users-1"
             onClick={() => loadUsers()}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button data-testid="btn-admin-users-2"
+          <button id="btn-admin-users-2"
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
           >
@@ -329,7 +329,7 @@ export default function UsersPage() {
             Export
           </button>
           {currentUser && ROLE_HIERARCHY[currentUser.role] && (
-            <Link data-testid="link-admin-users-create"
+            <Link id="admin-users-create"
               href="/admin/users/create"
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
             >
@@ -365,7 +365,7 @@ export default function UsersPage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input data-testid="input-text-admin-users"
+            <input id={`input-text-admin-users-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}
               type="text"
               placeholder="Search users by name or email..."
               value={searchInput}
@@ -373,7 +373,7 @@ export default function UsersPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <button data-testid="btn-admin-users-3"
+          <button id="btn-admin-users-3"
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition ${
               showFilters ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
@@ -393,7 +393,7 @@ export default function UsersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-              <select data-testid="select-admin-users-21"
+              <select id="select-admin-users-21"
                 value={roleFilter}
                 onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -406,7 +406,7 @@ export default function UsersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select data-testid="select-admin-users-22"
+              <select id="select-admin-users-22"
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -419,7 +419,7 @@ export default function UsersPage() {
             </div>
             {(roleFilter !== 'all' || statusFilter !== 'all') && (
               <div className="md:col-span-2">
-                <button data-testid="btn-admin-users-4"
+                <button id="btn-admin-users-4"
                   onClick={() => { setRoleFilter('all'); setStatusFilter('all'); setPage(1) }}
                   className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
                 >
@@ -437,7 +437,7 @@ export default function UsersPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
-              <button data-testid="btn-admin-users-5" onClick={cancelEdit} className="p-1 hover:bg-gray-100 rounded">
+              <button id="btn-admin-users-5" onClick={cancelEdit} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -445,7 +445,7 @@ export default function UsersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                  <input data-testid="input-text-admin-users"
+                  <input id="input-text-admin-users"
                     type="text"
                     value={editingUser.firstName}
                     onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })}
@@ -457,7 +457,7 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input data-testid="input-text-admin-users"
+                  <input id="input-text-admin-users"
                     type="text"
                     value={editingUser.lastName}
                     onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
@@ -470,7 +470,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input data-testid="input-email-admin-users"
+                <input id="input-email-admin-users"
                   type="email"
                   value={editingUser.email}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
@@ -482,7 +482,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input data-testid="input-tel-admin-users"
+                <input id="input-tel-admin-users"
                   type="tel"
                   value={editingUser.phone}
                   onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
@@ -491,7 +491,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select data-testid="select-admin-users-23"
+                <select id="select-admin-users-23"
                   value={editingUser.role}
                   onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -510,14 +510,14 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
-              <button data-testid="btn-admin-users-6"
+              <button id="btn-admin-users-6"
                 onClick={cancelEdit}
                 disabled={editLoading}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition text-sm"
               >
                 Cancel
               </button>
-              <button data-testid="btn-admin-users-7"
+              <button id="btn-admin-users-7"
                 onClick={handleEditSave}
                 disabled={editLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm disabled:opacity-50"
@@ -647,14 +647,14 @@ export default function UsersPage() {
                         <div className="flex items-center justify-end gap-1">
                           {canManageRole(user.role) ? (
                             <>
-                              <button data-testid="btn-admin-users-8"
+                              <button id="btn-admin-users-8"
                                 onClick={() => startEdit(user)}
                                 className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded transition"
                                 title="Edit"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button data-testid="btn-admin-users-9"
+                              <button id="btn-admin-users-9"
                                 onClick={() => handleStatusToggle(user.id, user.status, `${user.firstName} ${user.lastName}`)}
                                 disabled={actionLoading === user.id}
                                 className={`p-2 rounded transition ${
@@ -672,7 +672,7 @@ export default function UsersPage() {
                                   <UserCheck className="w-4 h-4" />
                                 )}
                               </button>
-                              <button data-testid="btn-admin-users-10"
+                              <button id="btn-admin-users-10"
                                 onClick={() => handleDelete(user.id, `${user.firstName} ${user.lastName}`)}
                                 disabled={actionLoading === user.id}
                                 className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded transition"
@@ -696,7 +696,7 @@ export default function UsersPage() {
               <div className="text-center py-12">
                 <p className="text-gray-500">No users found matching your criteria</p>
                 {(roleFilter !== 'all' || statusFilter !== 'all' || searchTerm) && (
-                  <button data-testid="btn-admin-users-11"
+                  <button id="btn-admin-users-11"
                     onClick={() => {
                       setRoleFilter('all')
                       setStatusFilter('all')
@@ -722,14 +722,14 @@ export default function UsersPage() {
                 <span className="font-medium">{total}</span> users
               </div>
               <div className="flex items-center gap-2">
-                <button data-testid="btn-admin-users-12"
+                <button id="btn-admin-users-12"
                   onClick={() => setPage(1)}
                   disabled={page === 1}
                   className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
                 >
                   First
                 </button>
-                <button data-testid="btn-admin-users-13"
+                <button id="btn-admin-users-13"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
@@ -739,14 +739,14 @@ export default function UsersPage() {
                 <span className="px-3 py-2 text-sm text-gray-600">
                   Page {page} of {totalPages}
                 </span>
-                <button data-testid="btn-admin-users-14"
+                <button id="btn-admin-users-14"
                   onClick={() => setPage(p => p + 1)}
                   disabled={page >= totalPages}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   Next
                 </button>
-                <button data-testid="btn-admin-users-15"
+                <button id="btn-admin-users-15"
                   onClick={() => setPage(totalPages)}
                   disabled={page >= totalPages}
                   className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"

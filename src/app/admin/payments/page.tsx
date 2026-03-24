@@ -140,7 +140,7 @@ const AdminPaymentsPage = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
+                    <Button id="admin-payments-btn"
                         variant="outline"
                         size="sm"
                         onClick={() => setRefreshing(true)}
@@ -149,13 +149,13 @@ const AdminPaymentsPage = () => {
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="admin-payments-btn-2" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Payment
                     </Button>
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {['today', '7d', '30d'].map((range) => (
-                            <button
+                            <button id="admin-payments-btn-3"
                                 key={range}
                                 onClick={() => setSelectedTimeRange(range as any)}
                                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedTimeRange === range
@@ -290,7 +290,7 @@ const AdminPaymentsPage = () => {
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <select data-testid="select-admin-payments-1"
+                            <select id="select-admin-payments-1"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as any)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -300,7 +300,7 @@ const AdminPaymentsPage = () => {
                                 <option value="pending">Pending</option>
                                 <option value="failed">Failed</option>
                             </select>
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-payments-btn-4" variant="outline" size="sm">
                                 <Download className="w-4 h-4 mr-2" />
                                 Export
                             </Button>
@@ -339,10 +339,10 @@ const AdminPaymentsPage = () => {
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(payment.status)}
-                                    <Button variant="ghost" size="sm">
+                                    <Button id="admin-payments-btn-5" variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id="admin-payments-btn-6" variant="ghost" size="sm">
                                         <MoreHorizontal className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -359,19 +359,19 @@ const AdminPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="admin-payments-btn-7" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Add Payment</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="admin-payments-btn-8" className="h-20 flex-col gap-2" variant="outline">
                             <Download className="w-6 h-6" />
                             <span>Export Report</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="admin-payments-btn-9" className="h-20 flex-col gap-2" variant="outline">
                             <Mail className="w-6 h-6" />
                             <span>Send Reminder</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="admin-payments-btn-10" className="h-20 flex-col gap-2" variant="outline">
                             <FileText className="w-6 h-6" />
                             <span>Generate Invoice</span>
                         </Button>

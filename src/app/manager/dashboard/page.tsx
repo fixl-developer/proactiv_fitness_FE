@@ -219,14 +219,14 @@ const ManagerDashboard = () => {
                         <span className="text-xs sm:text-sm font-medium text-green-700">Live Data</span>
                     </div>
 
-                    <Button data-testid="btn-set-refreshing-manager-dashboard" variant="outline" size="sm" onClick={() => setRefreshing(true)} disabled={refreshing}>
+                    <Button id="manager-dashboard-refresh-btn" variant="outline" size="sm" onClick={() => setRefreshing(true)} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
 
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {['today', 'week', 'month'].map((range) => (
-                            <button
+                            <button id={`manager-dashboard-range-${range}-btn`}
                                 key={range}
                                 onClick={() => setSelectedTimeRange(range as any)}
                                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${selectedTimeRange === range
@@ -356,6 +356,7 @@ const ManagerDashboard = () => {
                                         initial={{ opacity: 0, x: -20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: index * 0.1 }}
+                                        id={`manager-dashboard-action-${action.id}-item`}
                                         className={`p-4 rounded-lg ${getActionColor(action.type)} hover:shadow-md transition-shadow cursor-pointer`}
                                         onClick={() => window.location.href = action.actionUrl}
                                     >
@@ -378,7 +379,7 @@ const ManagerDashboard = () => {
                                                     <span className="text-gray-500">{action.time}</span>
                                                 </div>
                                                 <div className="mt-2 flex items-center gap-2">
-                                                    <Button size="sm" variant="outline" className="text-xs h-6">
+                                                    <Button id={`manager-dashboard-action-${action.id}-btn`} size="sm" variant="outline" className="text-xs h-6">
                                                         {action.action}
                                                     </Button>
                                                     <ExternalLink className="w-3 h-3 text-gray-400" />
@@ -400,7 +401,7 @@ const ManagerDashboard = () => {
                                 <Calendar className="w-5 h-5 text-blue-600" />
                                 <CardTitle>Today's Classes</CardTitle>
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button id="manager-dashboard-add-class-btn" variant="outline" size="sm">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Class
                             </Button>
@@ -423,7 +424,7 @@ const ManagerDashboard = () => {
                                                 {classItem.status}
                                             </Badge>
                                         </div>
-                                        <Button variant="ghost" size="sm">
+                                        <Button id={`manager-dashboard-class-${classItem.id}-more-btn`} variant="ghost" size="sm">
                                             <MoreHorizontal className="w-4 h-4" />
                                         </Button>
                                     </div>
@@ -515,7 +516,7 @@ const ManagerDashboard = () => {
                                 { icon: DollarSign, label: 'Payment Follow-up', href: '/manager/payments' },
                                 { icon: BarChart3, label: 'View Reports', href: '/manager/reports' }
                             ].map((action, index) => (
-                                <Button
+                                <Button id={`manager-dashboard-quick-${action.label.toLowerCase().replace(/\s+/g, '-')}-btn`}
                                     key={index}
                                     className="h-16 flex-col gap-2"
                                     variant="outline"

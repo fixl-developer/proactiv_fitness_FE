@@ -156,6 +156,7 @@ const EventsHomePage = () => {
                             transition={{ delay: 0.1 * index }}
                         >
                             <Card
+                                id={`event-card-${event.id}`}
                                 className={`hover:shadow-lg transition-all cursor-pointer group h-full ${event.featured ? 'ring-2 ring-yellow-200' : ''
                                     }`}
                                 onClick={() => window.location.href = `/event/${event.id}`}
@@ -210,7 +211,7 @@ const EventsHomePage = () => {
                                         </div>
                                     </div>
 
-                                    <Button
+                                    <Button id="event-btn"
                                         className="w-full group-hover:bg-blue-600"
                                         variant={event.featured ? "default" : "outline"}
                                     >
@@ -264,7 +265,7 @@ const EventsHomePage = () => {
                             Events provide excellent opportunities for students to apply their skills
                             in new environments and gain valuable performance experience.
                         </p>
-                        <Button variant="outline">
+                        <Button id="event-btn-2" variant="outline">
                             <Ticket className="w-4 h-4 mr-2" />
                             View All Events
                         </Button>
@@ -283,7 +284,7 @@ const EventsHomePage = () => {
                             Connect with other families, celebrate achievements together,
                             and build lasting friendships within our gymnastics community.
                         </p>
-                        <Button variant="outline">
+                        <Button id="event-btn-3" variant="outline">
                             <Users className="w-4 h-4 mr-2" />
                             Join Community
                         </Button>

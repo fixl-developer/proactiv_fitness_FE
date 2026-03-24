@@ -141,7 +141,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
     return (
         <Sidebar>
             <SidebarHeader className="border-b border-sidebar-border p-4">
-                <Link data-testid="link-home" href="/" className="flex items-center gap-2">
+                <Link id="app-sidebar-link-home" href="/" className="flex items-center gap-2">
                     <Activity className="h-6 w-6 text-primary" />
                     <span className="font-semibold text-lg">ProActive Sports</span>
                 </Link>
@@ -154,7 +154,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
                             {items.map((item) => (
                                 <SidebarMenuItem key={item.href}>
                                     <SidebarMenuButton asChild isActive={pathname === item.href}>
-                                        <Link href={item.href}>
+                                        <Link id="layouts-app-sidebar-nav" href={item.href}>
                                             <item.icon />
                                             <span>{item.title}</span>
                                         </Link>
@@ -179,7 +179,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
                         <p className="text-xs text-muted-foreground truncate">{role.replace("_", " ")}</p>
                     </div>
                 </div>
-                <Button data-testid="btn-logout-components-layouts-app-sidebar" variant="outline" size="sm" className="w-full justify-start bg-transparent" onClick={handleLogout}>
+                <Button id="btn-logout-components-layouts-app-sidebar" variant="outline" size="sm" className="w-full justify-start bg-transparent" onClick={handleLogout}>
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                 </Button>

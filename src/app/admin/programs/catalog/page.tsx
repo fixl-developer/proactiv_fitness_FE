@@ -233,7 +233,7 @@ export default function ProgramCatalogPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Program Catalog</h1>
-        <button data-testid="btn-admin-programs-catalog-1"
+        <button id="btn-admin-programs-catalog-1"
           onClick={() => { showForm ? resetForm() : setShowForm(true) }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
@@ -261,26 +261,26 @@ export default function ProgramCatalogPage() {
       {/* Search + filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <input data-testid="input-text-admin-programs-catalog"
+          <input id={`input-text-admin-programs-catalog-${s.label.toLowerCase().replace(/\s+/g, '-')}`}
             type="text"
             placeholder="Search programs..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             className="px-4 py-2 border rounded-lg col-span-1 md:col-span-2"
           />
-          <select data-testid="select-admin-programs-catalog-16" value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
+          <select id="select-admin-programs-catalog-16" value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
             <option value="">All Types</option>
             <option value="gymnastics">Gymnastics</option>
             <option value="tumbling">Tumbling</option>
             <option value="ninja">Ninja</option>
           </select>
-          <select data-testid="select-admin-programs-catalog-17" value={filterLevel} onChange={(e) => { setFilterLevel(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
+          <select id="select-admin-programs-catalog-17" value={filterLevel} onChange={(e) => { setFilterLevel(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
             <option value="">All Levels</option>
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
           </select>
-          <select data-testid="select-admin-programs-catalog-18" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
+          <select id="select-admin-programs-catalog-18" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }} className="px-4 py-2 border rounded-lg">
             <option value="">All Statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -293,11 +293,11 @@ export default function ProgramCatalogPage() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Program' : 'Create Program'}</h2>
-          <form data-testid="form-admin-programs-catalog" onSubmit={handleSubmit} className="space-y-4">
+          <form id="form-admin-programs-catalog" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Program Name</label>
-                <input data-testid="input-text-admin-programs-catalog"
+                <input id="input-text-admin-programs-catalog"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -307,7 +307,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Type</label>
-                <select data-testid="select-admin-programs-catalog-19"
+                <select id="select-admin-programs-catalog-19"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg"
@@ -319,7 +319,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Age Group</label>
-                <input data-testid="input-text-admin-programs-catalog"
+                <input id="input-text-admin-programs-catalog"
                   type="text"
                   value={formData.ageGroup}
                   onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
@@ -330,7 +330,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Level</label>
-                <select data-testid="select-admin-programs-catalog-20"
+                <select id="select-admin-programs-catalog-20"
                   value={formData.level}
                   onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                   className="w-full px-4 py-2 border rounded-lg"
@@ -342,7 +342,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Capacity</label>
-                <input data-testid="input-number-admin-programs-catalog"
+                <input id="input-number-admin-programs-catalog"
                   type="number"
                   value={formData.capacity}
                   onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
@@ -353,7 +353,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Price ($)</label>
-                <input data-testid="input-number-admin-programs-catalog"
+                <input id="input-number-admin-programs-catalog"
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
@@ -365,7 +365,7 @@ export default function ProgramCatalogPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
-                <select data-testid="select-admin-programs-catalog-21"
+                <select id="select-admin-programs-catalog-21"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as Program['status'] })}
                   className="w-full px-4 py-2 border rounded-lg"
@@ -386,14 +386,14 @@ export default function ProgramCatalogPage() {
               />
             </div>
             <div className="flex gap-3">
-              <button
+              <button id="admin-programs-catalog-btn"
                 type="submit"
                 disabled={submitting}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {submitting ? 'Saving...' : editingId ? 'Update Program' : 'Create Program'}
               </button>
-              <button data-testid="btn-admin-programs-catalog-2" type="button" onClick={resetForm} className="px-6 py-2 border rounded-lg hover:bg-gray-50">
+              <button id="btn-admin-programs-catalog-2" type="button" onClick={resetForm} className="px-6 py-2 border rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
             </div>
@@ -449,16 +449,16 @@ export default function ProgramCatalogPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button data-testid="btn-admin-programs-catalog-3" onClick={() => startEdit(p)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50" title="Edit">
+                        <button id="btn-admin-programs-catalog-3" onClick={() => startEdit(p)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50" title="Edit">
                           Edit
                         </button>
-                        <button data-testid="btn-admin-programs-catalog-4" onClick={() => toggleStatus(p)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50" title="Toggle Status">
+                        <button id="btn-admin-programs-catalog-4" onClick={() => toggleStatus(p)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50" title="Toggle Status">
                           {p.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
-                        <button data-testid="btn-admin-programs-catalog-5" onClick={() => duplicateProgram(p)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50" title="Duplicate">
+                        <button id="btn-admin-programs-catalog-5" onClick={() => duplicateProgram(p)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50" title="Duplicate">
                           Duplicate
                         </button>
-                        <button data-testid="btn-admin-programs-catalog-6" onClick={() => setDeleteTarget(p)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50" title="Delete">
+                        <button id="btn-admin-programs-catalog-6" onClick={() => setDeleteTarget(p)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50" title="Delete">
                           Delete
                         </button>
                       </div>
@@ -472,7 +472,7 @@ export default function ProgramCatalogPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t px-4 py-3">
-              <button data-testid="btn-admin-programs-catalog-7"
+              <button id="btn-admin-programs-catalog-7"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
@@ -482,7 +482,7 @@ export default function ProgramCatalogPage() {
               <span className="text-sm text-gray-600">
                 Page {page} of {totalPages}
               </span>
-              <button data-testid="btn-admin-programs-catalog-8"
+              <button id="btn-admin-programs-catalog-8"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
@@ -503,10 +503,10 @@ export default function ProgramCatalogPage() {
               Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
-              <button data-testid="btn-admin-programs-catalog-9" onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              <button id="btn-admin-programs-catalog-9" onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
                 Cancel
               </button>
-              <button data-testid="btn-admin-programs-catalog-10" onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+              <button id="btn-admin-programs-catalog-10" onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                 Delete
               </button>
             </div>

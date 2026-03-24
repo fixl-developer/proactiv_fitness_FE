@@ -244,11 +244,11 @@ export default function NotificationsPage() {
                     </p>
                 </div>
                 <div className="flex space-x-3">
-                    <Button variant="outline">
+                    <Button id="admin-settings-notifications-btn" variant="outline">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    <Button id="admin-settings-notifications-btn-2" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>
@@ -356,7 +356,7 @@ export default function NotificationsPage() {
                                                 {channel.enabled ? 'Active' : 'Inactive'}
                                             </Badge>
                                             <div className="flex space-x-2">
-                                                <Button
+                                                <Button id="admin-settings-notifications-btn-3"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleConfigureChannel(channel)}
@@ -364,7 +364,7 @@ export default function NotificationsPage() {
                                                     <Settings className="w-4 h-4 mr-2" />
                                                     Configure
                                                 </Button>
-                                                <Button
+                                                <Button id="admin-settings-notifications-btn-4"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleTestNotification(channel.id)}
@@ -383,7 +383,7 @@ export default function NotificationsPage() {
                     <TabsContent value="templates" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Notification Templates</h3>
-                            <Button>
+                            <Button id="admin-settings-notifications-btn-5">
                                 <Plus className="w-4 h-4 mr-2" />
                                 New Template
                             </Button>
@@ -412,21 +412,21 @@ export default function NotificationsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex space-x-2">
-                                                <Button
+                                                <Button id="admin-settings-notifications-btn-6"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleEditTemplate(template)}
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
-                                                <Button
+                                                <Button id="admin-settings-notifications-btn-7"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleTestNotification(template.id)}
                                                 >
                                                     <TestTube className="w-4 h-4" />
                                                 </Button>
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-settings-notifications-btn-8" variant="outline" size="sm">
                                                     <Trash2 className="w-4 h-4 text-red-600" />
                                                 </Button>
                                             </div>
@@ -441,7 +441,7 @@ export default function NotificationsPage() {
                     <TabsContent value="rules" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Automation Rules</h3>
-                            <Button>
+                            <Button id="admin-settings-notifications-btn-9">
                                 <Plus className="w-4 h-4 mr-2" />
                                 New Rule
                             </Button>
@@ -470,10 +470,10 @@ export default function NotificationsPage() {
                                                 </div>
                                             </div>
                                             <div className="flex space-x-2">
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-settings-notifications-btn-10" variant="outline" size="sm">
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-settings-notifications-btn-11" variant="outline" size="sm">
                                                     <Trash2 className="w-4 h-4 text-red-600" />
                                                 </Button>
                                             </div>
@@ -511,7 +511,7 @@ export default function NotificationsPage() {
                                         <p className="text-gray-600">{selectedChannel.description}</p>
                                     </div>
                                 </div>
-                                <Button
+                                <Button id="admin-settings-notifications-btn-12"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsConfiguring(false)}
@@ -575,13 +575,13 @@ export default function NotificationsPage() {
                                 )}
 
                                 <div className="flex justify-end space-x-3">
-                                    <Button
+                                    <Button id="admin-settings-notifications-btn-cancel"
                                         variant="outline"
                                         onClick={() => setIsConfiguring(false)}
                                     >
                                         Cancel
                                     </Button>
-                                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
+                                    <Button id="admin-settings-notifications-btn-save-configuration" className="bg-gradient-to-r from-blue-600 to-purple-600">
                                         Save Configuration
                                     </Button>
                                 </div>

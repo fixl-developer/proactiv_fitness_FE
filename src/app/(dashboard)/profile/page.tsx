@@ -101,7 +101,7 @@ function ProfilePageContent() {
                             {user.firstName[0]}
                             {user.lastName[0]}
                         </div>
-                        <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white hover:bg-primary/90">
+                        <button id="dashboard-profile-change-photo-btn" className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white hover:bg-primary/90">
                             <Camera className="w-4 h-4" />
                         </button>
                     </div>
@@ -123,7 +123,7 @@ function ProfilePageContent() {
                     <h3 className="text-xl font-semibold text-gray-900">
                         Personal Information
                     </h3>
-                    <button
+                    <button id="dashboard-profile-edit-toggle-btn"
                         onClick={() => setIsEditingProfile(!isEditingProfile)}
                         className="text-primary hover:underline"
                     >
@@ -131,7 +131,7 @@ function ProfilePageContent() {
                     </button>
                 </div>
 
-                <form data-testid="form-(dashboard)-profile" onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
+                <form id="dashboard-profile-info-form" onSubmit={handleSubmitProfile(onSubmitProfile)} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -195,7 +195,7 @@ function ProfilePageContent() {
                     </div>
 
                     {isEditingProfile && (
-                        <button
+                        <button id="dashboard-profile-save-btn"
                             type="submit"
                             disabled={isLoadingProfile}
                             className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
@@ -222,7 +222,7 @@ function ProfilePageContent() {
                     <h3 className="text-xl font-semibold text-gray-900">
                         Change Password
                     </h3>
-                    <button
+                    <button id="dashboard-profile-password-toggle-btn"
                         onClick={() => setIsEditingPassword(!isEditingPassword)}
                         className="text-primary hover:underline"
                     >
@@ -231,7 +231,7 @@ function ProfilePageContent() {
                 </div>
 
                 {isEditingPassword && (
-                    <form data-testid="form-(dashboard)-profile"
+                    <form id="dashboard-profile-password-form"
                         onSubmit={handleSubmitPassword(onSubmitPassword)}
                         className="space-y-4"
                     >
@@ -286,7 +286,7 @@ function ProfilePageContent() {
                             )}
                         </div>
 
-                        <button
+                        <button id="dashboard-profile-change-password-btn"
                             type="submit"
                             disabled={isLoadingPassword}
                             className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"

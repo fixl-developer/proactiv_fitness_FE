@@ -270,7 +270,7 @@ const SchoolGymnasticsPage = () => {
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                             >
-                                                <Link
+                                                <Link id="school-gymnastics-nav-book-trial"
                                                     href="/book-trial"
                                                     className="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-lg text-center block hover:shadow-lg transition-all duration-300 hover:from-blue-700 hover:to-indigo-700"
                                                 >
@@ -305,10 +305,10 @@ const SchoolGymnasticsPage = () => {
                                 the thrill of achievement, and the confidence that comes with mastering new skills.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Free Trial
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                                     Get More Info
                                 </Link>
                             </div>

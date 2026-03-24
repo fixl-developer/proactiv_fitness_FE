@@ -62,13 +62,13 @@ export function RegisterStep4({
     };
 
     return (
-        <form data-testid="form-components-auth-RegisterStep4" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep4" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Student Information</h2>
                 <p className="text-gray-600 mt-2">
                     Add students who will be attending classes
                 </p>
-                <button
+                <button id="auth-register-step4-btn-skip-this-step-add-students-la"
                     type="button"
                     onClick={handleSkip}
                     className="text-sm text-primary hover:underline mt-2"
@@ -86,7 +86,7 @@ export function RegisterStep4({
                     >
                         {/* Remove Button */}
                         {fields.length > 1 && (
-                            <button
+                            <button id="auth-register-step4-btn"
                                 type="button"
                                 onClick={() => remove(index)}
                                 className="absolute top-4 right-4 text-red-500 hover:text-red-700"
@@ -169,7 +169,7 @@ export function RegisterStep4({
                                 </label>
                                 <div className="relative">
                                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <select data-testid="select-components-auth-RegisterStep4-1"
+                                    <select id="select-components-auth-RegisterStep4-1"
                                         {...register(`students.${index}.gender`)}
                                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                                     >
@@ -217,7 +217,7 @@ export function RegisterStep4({
             </div>
 
             {/* Add Student Button */}
-            <button
+            <button id="auth-register-step4-btn-2"
                 type="button"
                 onClick={addStudent}
                 className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
@@ -228,14 +228,14 @@ export function RegisterStep4({
 
             {/* Buttons */}
             <div className="flex gap-4">
-                <button
+                <button id="auth-register-step4-btn-back"
                     type="button"
                     onClick={onBack}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
-                <button
+                <button id="auth-register-step4-btn-continue"
                     type="submit"
                     className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >

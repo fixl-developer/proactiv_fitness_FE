@@ -18,7 +18,7 @@ export function ViewToggle({ currentView, onViewChange }: ViewToggleProps) {
     return (
         <div className="inline-flex bg-gray-100 rounded-lg p-1">
             {views.map((view) => (
-                <button
+                <button id={`booking-view-toggle-${view.mode}-btn`}
                     key={view.mode}
                     onClick={() => onViewChange(view.mode)}
                     className={`

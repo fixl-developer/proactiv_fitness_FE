@@ -105,7 +105,7 @@ const PaymentPage = () => {
                             <div>
                                 <h3 className="font-semibold text-red-900">Booking Not Found</h3>
                                 <p className="text-sm text-red-700 mt-1">The booking you're trying to pay for is no longer available.</p>
-                                <Button data-testid="btn-router-parent-bookings-id-payment" onClick={() => router.push('/parent/bookings')} className="mt-4">
+                                <Button id="parent-bookings-payment-back-btn" onClick={() => router.push('/parent/bookings')} className="mt-4">
                                     Back to My Bookings
                                 </Button>
                             </div>

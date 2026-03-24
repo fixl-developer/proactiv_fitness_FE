@@ -53,7 +53,7 @@ export default function SelectProgram({ selectedProgram, onSelect }: SelectProgr
                     const isSelected = selectedProgram === program.id;
 
                     return (
-                        <button
+                        <button id={`select-program-${program.id}-btn`}
                             key={program.id}
                             onClick={() => onSelect(program.id)}
                             className={`text-left p-6 rounded-2xl border-2 transition-all duration-300 ${isSelected

@@ -16,7 +16,7 @@ export function WhatsAppWidget() {
     return (
         <>
             {/* WhatsApp Button */}
-            <button
+            <button id="marketing-whats-app-widget-btn"
                 onClick={() => setIsOpen(!isOpen)}
                 className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110"
                 aria-label="WhatsApp Chat"
@@ -69,7 +69,7 @@ export function WhatsAppWidget() {
 
                     {/* Action Button */}
                     <div className="p-4 bg-white border-t">
-                        <button
+                        <button id="marketing-whats-app-widget-btn-2"
                             onClick={handleWhatsAppClick}
                             className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
                         >

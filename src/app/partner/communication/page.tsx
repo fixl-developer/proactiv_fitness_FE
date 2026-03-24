@@ -202,7 +202,7 @@ export default function PartnerCommunicationPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Communication Center</h1>
                     <p className="text-gray-600 mt-1">Manage messages, notifications, and communications</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-communication-new-message-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     New Message
                 </button>
@@ -269,7 +269,7 @@ export default function PartnerCommunicationPage() {
                     { id: 'messages', name: 'Messages', icon: MessageSquare },
                     { id: 'notifications', name: 'Notifications', icon: Bell },
                 ].map((tab) => (
-                    <button
+                    <button id={`partner-communication-tab-${tab.id}-btn`}
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${activeTab === tab.id
@@ -297,7 +297,7 @@ export default function PartnerCommunicationPage() {
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                             </div>
-                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                            <button id="partner-communication-filter-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                 <Filter className="w-4 h-4 text-gray-600" />
                             </button>
                         </div>
@@ -312,6 +312,7 @@ export default function PartnerCommunicationPage() {
                                     transition={{ delay: idx * 0.05 }}
                                 >
                                     <Card
+                                        id={`partner-communication-conversation-${message.id}-card`}
                                         className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedConversation === message.id ? 'ring-2 ring-blue-500' : ''
                                             }`}
                                         onClick={() => setSelectedConversation(message.id)}
@@ -358,13 +359,13 @@ export default function PartnerCommunicationPage() {
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                            <button id="partner-communication-star-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                                 <Star className="w-4 h-4 text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                            <button id="partner-communication-archive-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                                 <Archive className="w-4 h-4 text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                            <button id="partner-communication-more-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                                 <MoreHorizontal className="w-4 h-4 text-gray-600" />
                                             </button>
                                         </div>
@@ -398,13 +399,13 @@ export default function PartnerCommunicationPage() {
                                                 placeholder="Type your message..."
                                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                            <button id="partner-communication-attach-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                                 <Paperclip className="w-4 h-4 text-gray-600" />
                                             </button>
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                            <button id="partner-communication-emoji-btn" className="p-2 hover:bg-gray-100 rounded-lg">
                                                 <Smile className="w-4 h-4 text-gray-600" />
                                             </button>
-                                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                            <button id="partner-communication-send-btn" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                                 <Send className="w-4 h-4" />
                                             </button>
                                         </div>

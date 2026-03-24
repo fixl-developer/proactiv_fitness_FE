@@ -187,7 +187,7 @@ export default function PartnerSupportPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Support Center</h1>
                     <p className="text-gray-600 mt-1">Get help, submit tickets, and access resources</p>
                 </div>
-                <button
+                <button id="partner-support-create-ticket-btn"
                     onClick={handleCreateTicket}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -258,21 +258,21 @@ export default function PartnerSupportPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-live-chat-btn" className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
                             <MessageSquare className="w-6 h-6 text-blue-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Live Chat</p>
                                 <p className="text-sm text-gray-600">Chat with our support team</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-phone-btn" className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
                             <Phone className="w-6 h-6 text-green-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Phone Support</p>
                                 <p className="text-sm text-gray-600">Call us at +1 (555) 123-4567</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-email-btn" className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
                             <Mail className="w-6 h-6 text-purple-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Email Support</p>
@@ -290,7 +290,7 @@ export default function PartnerSupportPage() {
                     { id: 'faq', name: 'FAQ', icon: HelpCircle },
                     { id: 'resources', name: 'Help Resources', icon: Book },
                 ].map((tab) => (
-                    <button
+                    <button id={`partner-support-tab-${tab.id}-btn`}
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${activeTab === tab.id
@@ -319,6 +319,7 @@ export default function PartnerSupportPage() {
                                     transition={{ delay: idx * 0.05 }}
                                 >
                                     <Card
+                                        id={`partner-support-ticket-${ticket.id}-card`}
                                         className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedTicket === ticket.id ? 'ring-2 ring-blue-500' : ''
                                             }`}
                                         onClick={() => setSelectedTicket(ticket.id)}
@@ -402,7 +403,7 @@ export default function PartnerSupportPage() {
                                                 placeholder="Type your message..."
                                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
-                                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                            <button id="partner-support-send-message-btn" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                                 <Send className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -454,10 +455,10 @@ export default function PartnerSupportPage() {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors">
+                                                <button id={`partner-support-faq-helpful-${faq.id}-btn`} className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors">
                                                     <CheckCircle className="w-4 h-4" />
                                                 </button>
-                                                <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                                <button id={`partner-support-faq-link-${faq.id}-btn`} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
                                                     <ExternalLink className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -520,7 +521,7 @@ export default function PartnerSupportPage() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <button className="w-full mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                    <button id={`partner-support-explore-${idx}-btn`} className="w-full mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                                         Explore {resource.title}
                                     </button>
                                 </CardContent>

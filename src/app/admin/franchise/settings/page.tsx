@@ -200,7 +200,7 @@ export default function FranchiseSettingsPage() {
             <div className="flex flex-col items-center justify-center min-h-screen gap-4">
                 <AlertCircle className="w-12 h-12 text-red-500" />
                 <p className="text-lg text-gray-700">{loadError}</p>
-                <button
+                <button id="admin-franchise-settings-btn"
                     onClick={() => window.location.reload()}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -246,7 +246,7 @@ export default function FranchiseSettingsPage() {
             {/* Tabs */}
             <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
                 {tabs.map((tab) => (
-                    <button
+                    <button id="admin-franchise-settings-btn-2"
                         key={tab.id}
                         onClick={() => {
                             setActiveTab(tab.id)
@@ -401,7 +401,7 @@ export default function FranchiseSettingsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
                                     <select
-                                        data-testid="select-admin-franchise-settings-1"
+                                        id="select-admin-franchise-settings-1"
                                         value={settings.timezone}
                                         onChange={(e) => handleInputChange('timezone', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -415,7 +415,7 @@ export default function FranchiseSettingsPage() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
                                     <select
-                                        data-testid="select-admin-franchise-settings-2"
+                                        id="select-admin-franchise-settings-2"
                                         value={settings.currency}
                                         onChange={(e) => handleInputChange('currency', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -535,7 +535,7 @@ export default function FranchiseSettingsPage() {
                                         placeholder="Enter current password"
                                         className={validationErrors.currentPassword ? 'border-red-500' : ''}
                                     />
-                                    <button
+                                    <button id="admin-franchise-settings-btn-3"
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
@@ -603,7 +603,7 @@ export default function FranchiseSettingsPage() {
                                 )}
                             </div>
 
-                            <button
+                            <button id="admin-franchise-settings-btn-4"
                                 onClick={handleChangePassword}
                                 disabled={isChangingPassword}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -655,7 +655,7 @@ export default function FranchiseSettingsPage() {
 
             {/* Save Button */}
             <div className="flex gap-4">
-                <button
+                <button id="admin-franchise-settings-btn-5"
                     onClick={handleSaveSettings}
                     disabled={isSaving}
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"

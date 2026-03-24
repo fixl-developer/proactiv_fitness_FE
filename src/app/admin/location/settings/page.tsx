@@ -153,7 +153,7 @@ export default function LocationSettingsPage() {
             {/* Tabs */}
             <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
                 {tabs.map((tab) => (
-                    <button
+                    <button id="admin-location-settings-btn"
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
@@ -230,7 +230,7 @@ export default function LocationSettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                                    <select data-testid="select-admin-location-settings-1" value={settings.timezone} onChange={(e) => handleInputChange('timezone', e.target.value)}
+                                    <select id="select-admin-location-settings-1" value={settings.timezone} onChange={(e) => handleInputChange('timezone', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="America/New_York">Eastern Time (ET)</option>
                                         <option value="America/Chicago">Central Time (CT)</option>
@@ -240,7 +240,7 @@ export default function LocationSettingsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                                    <select data-testid="select-admin-location-settings-2" value={settings.currency} onChange={(e) => handleInputChange('currency', e.target.value)}
+                                    <select id="select-admin-location-settings-2" value={settings.currency} onChange={(e) => handleInputChange('currency', e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="USD">US Dollar (USD)</option>
                                         <option value="EUR">Euro (EUR)</option>
@@ -307,7 +307,7 @@ export default function LocationSettingsPage() {
                                 <div className="relative">
                                     <Input type={showPassword ? 'text' : 'password'} value={passwordData.currentPassword}
                                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} placeholder="Enter current password" />
-                                    <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                                    <button id="admin-location-settings-btn-2" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
@@ -322,7 +322,7 @@ export default function LocationSettingsPage() {
                                 <Input type="password" value={passwordData.confirmPassword}
                                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} placeholder="Confirm new password" />
                             </div>
-                            <button onClick={handleChangePassword}
+                            <button id="admin-location-settings-btn-update-password" onClick={handleChangePassword}
                                 disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                                 Update Password
@@ -351,7 +351,7 @@ export default function LocationSettingsPage() {
 
             {/* Save Button */}
             <div className="flex gap-4">
-                <button onClick={handleSaveSettings} disabled={isSaving}
+                <button id="admin-location-settings-btn-saving" onClick={handleSaveSettings} disabled={isSaving}
                     className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                     {isSaving ? (
                         <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Saving...</>

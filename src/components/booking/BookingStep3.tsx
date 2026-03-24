@@ -52,14 +52,14 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                 </p>
             </div>
 
-            <form data-testid="form-components-booking-BookingStep3" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form id="form-components-booking-BookingStep3" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Payment Method Selection */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                         Payment Method
                     </label>
                     <div className="grid grid-cols-3 gap-4">
-                        <button
+                        <button id="booking-booking-step3-btn"
                             type="button"
                             onClick={() => setPaymentMethod('card')}
                             className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'card'
@@ -83,7 +83,7 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                             </div>
                         </button>
 
-                        <button
+                        <button id="booking-booking-step3-btn-2"
                             type="button"
                             onClick={() => setPaymentMethod('cash')}
                             className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'cash'
@@ -107,7 +107,7 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                             </div>
                         </button>
 
-                        <button
+                        <button id="booking-booking-step3-btn-3"
                             type="button"
                             onClick={() => setPaymentMethod('bank_transfer')}
                             className={`p-4 border-2 rounded-lg transition-all ${paymentMethod === 'bank_transfer'
@@ -200,7 +200,7 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                             placeholder="Enter promo code"
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
-                        <button
+                        <button id="booking-booking-step3-btn-apply"
                             type="button"
                             className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                         >
@@ -229,14 +229,14 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between pt-6">
-                    <button
+                    <button id="booking-booking-step3-btn-back"
                         type="button"
                         onClick={onBack}
                         className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                         Back
                     </button>
-                    <button
+                    <button id="booking-booking-step3-btn-complete-booking"
                         type="submit"
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >

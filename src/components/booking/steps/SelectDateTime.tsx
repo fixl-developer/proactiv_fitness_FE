@@ -77,13 +77,13 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                     </h3>
 
                     <div className="grid grid-cols-7 gap-2">
-                        {dates.slice(0, 14).map((date) => {
+                        {dates.slice(0, 14).map((date, index) => {
                             const dateStr = formatDate(date);
                             const isSelected = selectedDate === dateStr;
                             const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
                             return (
-                                <button
+                                <button id={`select-datetime-date-${index}-btn`}
                                     key={dateStr}
                                     onClick={() => onSelect(dateStr, selectedTime)}
                                     className={`p-3 rounded-xl text-center transition-all ${isSelected
@@ -108,7 +108,7 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                     </div>
 
                     {/* Show more dates button */}
-                    <button className="w-full mt-4 py-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    <button id="select-datetime-show-more-btn" className="w-full mt-4 py-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
                         Show more dates →
                     </button>
                 </div>
@@ -126,7 +126,7 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                                 const isSelected = selectedTime === slot.id;
 
                                 return (
-                                    <button
+                                    <button id={`select-datetime-time-${slot.id}-btn`}
                                         key={slot.id}
                                         onClick={() => slot.available && onSelect(selectedDate, slot.id)}
                                         disabled={!slot.available}

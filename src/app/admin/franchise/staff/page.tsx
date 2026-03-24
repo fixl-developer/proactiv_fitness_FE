@@ -312,7 +312,7 @@ export default function FranchiseStaffPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-franchise-staff-1"
+                            id="select-admin-franchise-staff-1"
                             value={filterRole}
                             onChange={(e) => setFilterRole(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -323,7 +323,7 @@ export default function FranchiseStaffPage() {
                             ))}
                         </select>
                         <select
-                            data-testid="select-admin-franchise-staff-2"
+                            id="select-admin-franchise-staff-2"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -342,7 +342,7 @@ export default function FranchiseStaffPage() {
                     <Card className="border-red-200 bg-red-50">
                         <CardContent className="pt-4 pb-4 flex items-center justify-between">
                             <p className="text-sm text-red-800">{error}</p>
-                            <button onClick={fetchStaff} className="text-sm text-red-700 underline hover:text-red-900">
+                            <button id="admin-franchise-staff-btn-retry" onClick={fetchStaff} className="text-sm text-red-700 underline hover:text-red-900">
                                 Retry
                             </button>
                         </CardContent>
@@ -430,21 +430,21 @@ export default function FranchiseStaffPage() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex gap-1">
-                                                    <button
+                                                    <button id="admin-franchise-staff-btn"
                                                         onClick={() => openViewModal(member)}
                                                         title="View"
                                                         className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-franchise-staff-btn-2"
                                                         onClick={() => openEditModal(member)}
                                                         title="Edit"
                                                         className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-franchise-staff-btn-3"
                                                         onClick={() => openDeleteModal(member)}
                                                         title="Delete"
                                                         className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
@@ -465,7 +465,7 @@ export default function FranchiseStaffPage() {
             {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button
+                    <button id="admin-franchise-staff-btn-4"
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
@@ -483,7 +483,7 @@ export default function FranchiseStaffPage() {
                             typeof item === 'string' ? (
                                 <span key={`ellipsis-${i}`} className="px-2 text-gray-400">...</span>
                             ) : (
-                                <button
+                                <button id="admin-franchise-staff-btn-5"
                                     key={item}
                                     onClick={() => setPage(item)}
                                     className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
@@ -496,7 +496,7 @@ export default function FranchiseStaffPage() {
                                 </button>
                             )
                         )}
-                    <button
+                    <button id="admin-franchise-staff-btn-6"
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
@@ -527,7 +527,7 @@ export default function FranchiseStaffPage() {
                                 <div>
                                     <div className="flex items-center justify-between p-6 border-b border-gray-200">
                                         <h2 className="text-xl font-bold text-gray-900">Staff Details</h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-staff-btn-7" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -610,7 +610,7 @@ export default function FranchiseStaffPage() {
                                         )}
                                     </div>
                                     <div className="p-6 border-t border-gray-200">
-                                        <button
+                                        <button id="admin-franchise-staff-btn-close"
                                             onClick={closeModal}
                                             className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                                         >
@@ -627,7 +627,7 @@ export default function FranchiseStaffPage() {
                                         <h2 className="text-xl font-bold text-gray-900">
                                             {modalMode === 'add' ? 'Add New Staff' : 'Edit Staff'}
                                         </h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-staff-btn-8" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -685,14 +685,14 @@ export default function FranchiseStaffPage() {
                                         </div>
                                     </div>
                                     <div className="p-6 border-t border-gray-200 flex gap-3">
-                                        <button
+                                        <button id="admin-franchise-staff-btn-cancel"
                                             onClick={closeModal}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
                                         >
                                             Cancel
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-staff-btn-9"
                                             onClick={modalMode === 'add' ? handleCreate : handleUpdate}
                                             disabled={submitting || !formData.name.trim() || !formData.email.trim()}
                                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
@@ -709,7 +709,7 @@ export default function FranchiseStaffPage() {
                                 <div>
                                     <div className="flex items-center justify-between p-6 border-b border-gray-200">
                                         <h2 className="text-xl font-bold text-gray-900">Delete Staff Member</h2>
-                                        <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <button id="admin-franchise-staff-btn-10" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                             <X className="w-5 h-5 text-gray-500" />
                                         </button>
                                     </div>
@@ -734,14 +734,14 @@ export default function FranchiseStaffPage() {
                                         </div>
                                     </div>
                                     <div className="p-6 border-t border-gray-200 flex gap-3">
-                                        <button
+                                        <button id="admin-franchise-staff-btn-cancel-2"
                                             onClick={closeModal}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
                                         >
                                             Cancel
                                         </button>
-                                        <button
+                                        <button id="admin-franchise-staff-btn-11"
                                             onClick={handleDelete}
                                             disabled={submitting}
                                             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"

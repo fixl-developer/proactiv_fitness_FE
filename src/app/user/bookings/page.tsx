@@ -117,11 +117,11 @@ export default function BookingsPage() {
                     <p className="text-gray-600 mt-2">Manage your class bookings</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button data-testid="btn-refresh-user-bookings" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                    <Button id="user-bookings-refresh-btn" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="user-bookings-new-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         New Booking
                     </Button>
@@ -192,7 +192,7 @@ export default function BookingsPage() {
                 <CardContent className="p-6">
                     <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                         {filters.map((filter) => (
-                            <button
+                            <button id={`user-bookings-filter-${filter.key}-btn`}
                                 key={filter.key}
                                 onClick={() => setActiveFilter(filter.key as any)}
                                 className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeFilter === filter.key
@@ -220,7 +220,7 @@ export default function BookingsPage() {
                                     ? 'Book your first class to get started!'
                                     : `No ${activeFilter} bookings`}
                             </p>
-                            <Button>
+                            <Button id="user-bookings-book-class-btn">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Book a Class
                             </Button>
@@ -284,23 +284,23 @@ export default function BookingsPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="outline" className="flex-1">
+                                        <Button id={`user-bookings-view-${booking.id}-btn`} size="sm" variant="outline" className="flex-1">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View Details
                                         </Button>
                                         {booking.status === 'confirmed' && (
                                             <>
-                                                <Button size="sm" variant="outline">
+                                                <Button id={`user-bookings-modify-${booking.id}-btn`} size="sm" variant="outline">
                                                     Modify
                                                 </Button>
-                                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                                <Button id={`user-bookings-cancel-confirmed-${booking.id}-btn`} size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                                     <X className="w-4 h-4 mr-2" />
                                                     Cancel
                                                 </Button>
                                             </>
                                         )}
                                         {booking.status === 'pending' && (
-                                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                            <Button id={`user-bookings-cancel-pending-${booking.id}-btn`} size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                                 <X className="w-4 h-4 mr-2" />
                                                 Cancel
                                             </Button>

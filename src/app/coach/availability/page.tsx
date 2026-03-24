@@ -157,7 +157,7 @@ const CoachAvailabilityPage = () => {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>Weekly Schedule</CardTitle>
-                        <Button
+                        <Button id="coach-availability-reset-btn"
                             variant="outline"
                             size="sm"
                             onClick={handleResetToDefaults}
@@ -306,7 +306,7 @@ const CoachAvailabilityPage = () => {
                     )}
 
                     {/* Save Button */}
-                    <Button
+                    <Button id="coach-availability-save-btn"
                         onClick={handleSave}
                         disabled={isSaving || !coachId}
                         className="w-full mt-6"

@@ -99,7 +99,7 @@ export default function FinancialReportsPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen gap-4">
                 <p className="text-red-600 text-lg font-medium">{error}</p>
-                <button
+                <button id="admin-franchise-financial-reports-btn-retry"
                     onClick={() => fetchData(timeRange)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -167,7 +167,7 @@ export default function FinancialReportsPage() {
                 </div>
                 <div className="flex gap-2">
                     <select
-                        data-testid="select-admin-franchise-financial-reports-1"
+                        id="select-admin-franchise-financial-reports-1"
                         value={timeRange}
                         onChange={handleTimeRangeChange}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -176,7 +176,7 @@ export default function FinancialReportsPage() {
                         <option value="quarterly">Quarterly</option>
                         <option value="yearly">Yearly</option>
                     </select>
-                    <button
+                    <button id="admin-franchise-financial-reports-btn"
                         onClick={handleExport}
                         disabled={exporting}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"

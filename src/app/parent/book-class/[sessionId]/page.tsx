@@ -134,8 +134,8 @@ const BookClassPage = () => {
     return (
         <div className="space-y-6">
             {/* Back Button */}
-            <Button 
-                variant="outline" 
+            <Button id="parent-book-class-back-btn"
+                variant="outline"
                 onClick={() => router.back()}
                 className="flex items-center gap-2"
             >
@@ -209,8 +209,9 @@ const BookClassPage = () => {
                         <CardContent>
                             <div className="space-y-3">
                                 {children.map((child) => (
-                                    <label key={child.id} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                    <label key={child.id} id={`book-class-select-child-${child.id}-label`} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                                         <input
+                                            id={`book-class-select-child-${child.id}-radio`}
                                             type="radio"
                                             name="child"
                                             value={child.id}
@@ -254,7 +255,7 @@ const BookClassPage = () => {
                             {/* Payment Method */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                                <select data-testid="select-parent-book-class-id-1"
+                                <select id="select-parent-book-class-id-1"
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -265,7 +266,7 @@ const BookClassPage = () => {
                                 </select>
                             </div>
 
-                            <Button
+                            <Button id="parent-book-class-confirm-btn"
                                 onClick={handleBookClass}
                                 disabled={isBooking || !selectedChild}
                                 className="w-full"

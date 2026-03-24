@@ -131,7 +131,7 @@ export default function PartnerCompliancePage() {
                     <h1 className="text-3xl font-bold text-gray-900">Partner Compliance</h1>
                     <p className="text-gray-600 mt-1">Monitor compliance status and safety records</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-compliance-export-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Download className="w-5 h-5" />
                     Export Report
                 </button>
@@ -195,7 +195,7 @@ export default function PartnerCompliancePage() {
                                         <Badge className={getStatusColor(cert.status)}>
                                             {cert.status}
                                         </Badge>
-                                        <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                        <button id={`partner-compliance-view-cert-${cert.id}-btn`} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
                                             <Eye className="w-4 h-4" />
                                         </button>
                                     </div>

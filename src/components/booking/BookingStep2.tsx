@@ -74,7 +74,7 @@ export default function BookingStep2({ onNext, onBack }: BookingStep2Props) {
             {/* Packages Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {packages.map((pkg) => (
-                    <div
+                    <div id={`booking-step2-package-${pkg.id}-btn`}
                         key={pkg.id}
                         onClick={() => setSelectedPackage(pkg.id)}
                         className={`relative p-6 border-2 rounded-lg cursor-pointer transition-all ${selectedPackage === pkg.id
@@ -196,13 +196,13 @@ export default function BookingStep2({ onNext, onBack }: BookingStep2Props) {
 
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-6">
-                <button
+                <button id="booking-step2-back-btn"
                     onClick={onBack}
                     className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                     Back
                 </button>
-                <button
+                <button id="booking-step2-continue-btn"
                     onClick={handleNext}
                     disabled={!selectedPackage}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"

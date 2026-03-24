@@ -67,7 +67,7 @@ export default function LocationAttendancePage() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-location-attendance-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
@@ -177,7 +177,7 @@ export default function LocationAttendancePage() {
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input placeholder="Search students..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                         </div>
-                        <select data-testid="select-admin-location-attendance-1" value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
+                        <select id="select-admin-location-attendance-1" value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Classes</option>
                             <option value="beginner">Beginner</option>

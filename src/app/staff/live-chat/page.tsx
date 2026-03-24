@@ -88,7 +88,7 @@ export default function LiveChat() {
                                 </div>
                             ) : (
                                 messages.map((msg) => (
-                                    <div
+                                    <div id={`staff-live-chat-conversation-${msg.id}-item`}
                                         key={msg.id}
                                         onClick={() => setSelectedCustomer(msg)}
                                         className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${selectedCustomer?.id === msg.id ? 'bg-blue-50' : ''
@@ -127,7 +127,7 @@ export default function LiveChat() {
                                             placeholder="Type a message..."
                                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <button
+                                        <button id="staff-live-chat-send-btn"
                                             onClick={handleSendMessage}
                                             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
                                         >

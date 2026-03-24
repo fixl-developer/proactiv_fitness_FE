@@ -145,11 +145,11 @@ const ParentChildrenPage = () => {
                     <p className="text-gray-600 mt-2">Track your children's progress and development</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="parent-children-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="parent-children-add-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Child
                     </Button>
@@ -261,15 +261,15 @@ const ParentChildrenPage = () => {
 
                                     {/* Actions */}
                                     <div className="flex gap-2">
-                                        <Button className="flex-1" variant="outline" size="sm">
+                                        <Button id={`parent-children-view-${child.id}-btn`} className="flex-1" variant="outline" size="sm">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View Details
                                         </Button>
-                                        <Button className="flex-1" variant="outline" size="sm">
+                                        <Button id={`parent-children-edit-${child.id}-btn`} className="flex-1" variant="outline" size="sm">
                                             <Edit className="w-4 h-4 mr-2" />
                                             Edit Profile
                                         </Button>
-                                        <Button className="flex-1" variant="outline" size="sm">
+                                        <Button id={`parent-children-schedule-${child.id}-btn`} className="flex-1" variant="outline" size="sm">
                                             <Calendar className="w-4 h-4 mr-2" />
                                             Schedule
                                         </Button>
@@ -288,19 +288,19 @@ const ParentChildrenPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-children-quick-add-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Add Child</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-children-quick-book-btn" className="h-20 flex-col gap-2" variant="outline">
                             <BookOpen className="w-6 h-6" />
                             <span>Book Class</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-children-quick-assessment-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Star className="w-6 h-6" />
                             <span>Assessment</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-children-quick-progress-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Activity className="w-6 h-6" />
                             <span>Progress Report</span>
                         </Button>

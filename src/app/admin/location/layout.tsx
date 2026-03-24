@@ -65,7 +65,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
             <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
                 <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-4">
-                        <button
+                        <button id="admin-location-layout-btn"
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="p-2 hover:bg-gray-100 rounded-lg lg:hidden"
                         >
@@ -81,7 +81,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 hover:bg-gray-100 rounded-lg">
+                        <button id="admin-location-layout-btn-2" className="relative p-2 hover:bg-gray-100 rounded-lg">
                             <Bell className="w-5 h-5 text-gray-600" />
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
@@ -90,7 +90,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
-                            <button
+                            <button id="admin-location-layout-btn-3"
                                 onClick={handleLogout}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
@@ -108,7 +108,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
             >
                 <nav className="p-4 space-y-2">
                     {navigation.map((item) => (
-                        <Link
+                        <Link id="admin-location-layout-nav"
                             key={item.name}
                             href={item.href}
                             className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"

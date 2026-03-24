@@ -206,11 +206,11 @@ const InvoicesRefundsPage = () => {
                     <p className="text-gray-600 mt-2">Manage billing, payments, and refund requests</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button>
+                    <Button id="admin-payments-invoices-btn">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Invoice
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-payments-invoices-btn-2" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
@@ -280,7 +280,7 @@ const InvoicesRefundsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <select data-testid="select-admin-payments-invoices-1"
+                            <select id="select-admin-payments-invoices-1"
                                 value={selectedType}
                                 onChange={(e) => setSelectedType(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -289,7 +289,7 @@ const InvoicesRefundsPage = () => {
                                 <option value="invoice">Invoices</option>
                                 <option value="refund">Refunds</option>
                             </select>
-                            <select data-testid="select-admin-payments-invoices-2"
+                            <select id="select-admin-payments-invoices-2"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -357,11 +357,11 @@ const InvoicesRefundsPage = () => {
                                             <div className="text-sm text-gray-600">{transaction.location}</div>
                                         </div>
                                         <div className="flex flex-col gap-1 ml-4">
-                                            <Button variant="ghost" size="sm">
+                                            <Button id="admin-payments-invoices-btn-3" variant="ghost" size="sm">
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 View
                                             </Button>
-                                            <Button variant="ghost" size="sm">
+                                            <Button id="admin-payments-invoices-btn-4" variant="ghost" size="sm">
                                                 <Download className="w-4 h-4 mr-2" />
                                                 PDF
                                             </Button>
@@ -449,11 +449,11 @@ const InvoicesRefundsPage = () => {
                                                 <span>{transaction.customerPhone}</span>
                                             </div>
                                             <div className="flex gap-2 mt-3">
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-payments-invoices-btn-5" variant="outline" size="sm">
                                                     <Phone className="w-4 h-4 mr-2" />
                                                     Call
                                                 </Button>
-                                                <Button variant="outline" size="sm">
+                                                <Button id="admin-payments-invoices-btn-6" variant="outline" size="sm">
                                                     <Mail className="w-4 h-4 mr-2" />
                                                     Email
                                                 </Button>

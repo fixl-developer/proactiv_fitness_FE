@@ -169,11 +169,11 @@ const ParentBookingsPage = () => {
                     <p className="text-gray-600 mt-2">Manage your children's class bookings</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="parent-bookings-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="parent-bookings-book-new-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Book New Class
                     </Button>
@@ -201,7 +201,7 @@ const ParentBookingsPage = () => {
                                     { key: 'completed', label: 'Completed' },
                                     { key: 'cancelled', label: 'Cancelled' }
                                 ].map((filter) => (
-                                    <button
+                                    <button id={`parent-bookings-filter-${filter.key}-btn`}
                                         key={filter.key}
                                         onClick={() => setSelectedFilter(filter.key as any)}
                                         className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedFilter === filter.key
@@ -268,11 +268,11 @@ const ParentBookingsPage = () => {
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(booking.status)}
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`parent-bookings-view-${booking.id}-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
                                     {booking.status === 'confirmed' && (
-                                        <Button variant="ghost" size="sm">
+                                        <Button id={`parent-bookings-edit-${booking.id}-btn`} variant="ghost" size="sm">
                                             <Edit className="w-4 h-4" />
                                         </Button>
                                     )}
@@ -290,19 +290,19 @@ const ParentBookingsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-bookings-quick-book-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Book Class</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-bookings-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Calendar className="w-6 h-6" />
                             <span>View Schedule</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-bookings-quick-assessment-btn" className="h-20 flex-col gap-2" variant="outline">
                             <User className="w-6 h-6" />
                             <span>Assessment</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-bookings-quick-reschedule-btn" className="h-20 flex-col gap-2" variant="outline">
                             <RefreshCw className="w-6 h-6" />
                             <span>Reschedule</span>
                         </Button>

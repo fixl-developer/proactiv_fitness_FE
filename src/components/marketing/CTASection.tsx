@@ -15,7 +15,7 @@ export function CTASection() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Link
+                    <Link id="marketing-ctasection-nav-book-trial"
                         href="/book-trial"
                         className="inline-flex items-center justify-center gap-3 bg-white text-primary px-8 py-4 rounded-full text-lg font-bold hover:bg-gray-100 transition-all transform hover:scale-105"
                     >
@@ -23,7 +23,7 @@ export function CTASection() {
                         Book A Trial
                     </Link>
 
-                    <Link
+                    <Link id="marketing-ctasection-nav-contact"
                         href="/contact"
                         className="inline-flex items-center justify-center gap-3 bg-transparent border-2 border-white text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-white hover:text-primary transition-all transform hover:scale-105"
                     >

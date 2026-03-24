@@ -99,7 +99,7 @@ const BookNowContent = () => {
                     <BookingDashboardLayout currentSection={section}>
                         {/* Back to Booking Button */}
                         <div className="mb-6">
-                            <button
+                            <button id="book-now-back-to-booking-btn"
                                 onClick={() => {
                                     const currentUrl = new URL(window.location.href)
                                     currentUrl.searchParams.delete('section')
@@ -238,13 +238,13 @@ const BookNowContent = () => {
                                                 Your class has been booked successfully. Check your email for confirmation details.
                                             </p>
                                             <div className="space-y-4">
-                                                <button
+                                                <button id="book-now-view-bookings-btn"
                                                     onClick={() => window.location.href = '/book-now?section=bookings'}
                                                     className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                                                 >
                                                     View My Bookings
                                                 </button>
-                                                <button
+                                                <button id="book-now-book-another-btn"
                                                     onClick={() => {
                                                         setBookingStep('schedule')
                                                         setSelectedSlot(null)
@@ -399,7 +399,7 @@ const BookNowContent = () => {
 
                                                     {/* Book Button */}
                                                     <div className="mt-4">
-                                                        <button
+                                                        <button id={`book-now-program-${index}-btn`}
                                                             onClick={() => {
                                                                 if (!isAuthenticated) {
                                                                     router.push('/login')

@@ -100,7 +100,7 @@ export default function PartnerResourcesPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Resource Library</h1>
                     <p className="text-gray-600 mt-1">Access training materials, documentation, and marketing assets</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-resources-request-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <ExternalLink className="w-5 h-5" />
                     Request Resource
                 </button>
@@ -222,10 +222,10 @@ export default function PartnerResourcesPage() {
                                             <span className="text-sm font-medium">{resource.rating}</span>
                                         </div>
                                         <div className="flex gap-1">
-                                            <button className="p-1.5 hover:bg-red-50 rounded text-red-600 transition-colors">
+                                            <button id={`partner-resources-favorite-${resource.id}-btn`} className="p-1.5 hover:bg-red-50 rounded text-red-600 transition-colors">
                                                 <Heart className="w-3.5 h-3.5" />
                                             </button>
-                                            <button className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                                            <button id={`partner-resources-download-${resource.id}-btn`} className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
                                                 <Download className="w-3.5 h-3.5" />
                                             </button>
                                         </div>

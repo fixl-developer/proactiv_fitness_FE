@@ -231,7 +231,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                     )}
 
                     <div className="flex gap-2">
-                        <Button
+                        <Button id="booking-booking-management-btn"
                             size="sm"
                             variant="outline"
                             className="flex-1"
@@ -245,11 +245,11 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </Button>
                         {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
                             <>
-                                <Button size="sm" variant="outline" className="flex-1">
+                                <Button id="booking-booking-management-btn-2" size="sm" variant="outline" className="flex-1">
                                     <Edit className="w-4 h-4 mr-1" />
                                     Edit
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                                <Button id="booking-booking-management-btn-3" size="sm" variant="outline" className="text-red-600 hover:text-red-700">
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                             </>
@@ -284,15 +284,15 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                     <p className="text-gray-600">Manage all bookings and customer information</p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button id="booking-booking-management-btn-4" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="booking-booking-management-btn-5" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="booking-booking-management-btn-6" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         New Booking
                     </Button>
@@ -321,7 +321,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                            <select data-testid="select-components-booking-BookingManagement-2"
+                            <select id="select-components-booking-BookingManagement-2"
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -336,7 +336,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Program Type</label>
-                            <select data-testid="select-components-booking-BookingManagement-3"
+                            <select id="select-components-booking-BookingManagement-3"
                                 value={filters.programType}
                                 onChange={(e) => setFilters({ ...filters, programType: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -351,7 +351,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            <select data-testid="select-components-booking-BookingManagement-4"
+                            <select id="select-components-booking-BookingManagement-4"
                                 value={filters.location}
                                 onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -363,7 +363,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Payment</label>
-                            <select data-testid="select-components-booking-BookingManagement-5"
+                            <select id="select-components-booking-BookingManagement-5"
                                 value={filters.paymentStatus}
                                 onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -432,7 +432,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                                         <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
                                         <p className="text-gray-600">{selectedBooking.bookingNumber}</p>
                                     </div>
-                                    <Button data-testid="btn-set-show-details-components-booking-BookingManagement" variant="outline" onClick={() => setShowDetails(false)}>
+                                    <Button id="btn-set-show-details-components-booking-BookingManagement" variant="outline" onClick={() => setShowDetails(false)}>
                                         <XCircle className="w-4 h-4" />
                                     </Button>
                                 </div>

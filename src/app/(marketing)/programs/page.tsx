@@ -154,7 +154,7 @@ export default function ProgramsPage() {
                                         ))}
                                     </ul>
 
-                                    <Link
+                                    <Link id="marketing-programs-nav-learn-more"
                                         href={program.link}
                                         className={`inline-flex items-center gap-2 ${program.color} font-semibold hover:gap-3 transition-all`}
                                     >
@@ -178,7 +178,7 @@ export default function ProgramsPage() {
                         Book a free trial class and let our expert coaches help you find the
                         perfect fit!
                     </p>
-                    <Link
+                    <Link id="marketing-programs-nav-book-trial"
                         href="/book-trial"
                         className="inline-block bg-white text-primary px-8 py-4 rounded-full text-lg font-bold hover:bg-gray-100 transition-all transform hover:scale-105"
                     >
