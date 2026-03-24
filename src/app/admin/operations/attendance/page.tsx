@@ -191,7 +191,7 @@ export default function OperationsAttendancePage() {
         </div>
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-medium text-gray-500 mb-1">Session ID</label>
-          <input id={`input-text-admin-operations-attendance-${stat}`}
+          <input id="input-text-admin-operations-attendance-session"
             type="text"
             placeholder="Filter by session ID..."
             value={sessionFilter}

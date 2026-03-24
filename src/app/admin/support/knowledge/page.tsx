@@ -263,7 +263,7 @@ export default function KnowledgeBasePage() {
                     </div>
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Author</label>
-                        <input id={`input-text-admin-support-knowledge-${c}`} type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Author name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                        <input id="input-text-admin-support-knowledge-author" type="text" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="Author name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                     </div>
                     <div>
                         <label className="text-sm font-medium text-gray-700 mb-1 block">Content</label>

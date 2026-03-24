@@ -236,7 +236,7 @@ const GymnasticsCampsPage = () => {
                 </section>
 
                 {/* Upcoming Camps */}
-                <section id={`upcoming-camps-${objective}`} className="section-padding bg-gray-50">
+                <section id="upcoming-camps" className="section-padding bg-gray-50">
                     <div className="container-max">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}

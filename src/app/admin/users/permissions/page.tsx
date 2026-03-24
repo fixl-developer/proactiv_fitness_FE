@@ -465,7 +465,7 @@ export default function PermissionsMatrixPage() {
                     <Button id="btn-export-c-s-v-admin-users-permissions" variant="outline" onClick={exportCSV}>
                         <Download className="w-4 h-4 mr-2" /> Export CSV
                     </Button>
-                    <Button id={`btn-set-reset-confirm-open-admin-users-permissions-${c}`} variant="outline" onClick={() => setResetConfirmOpen(true)}>
+                    <Button id="btn-set-reset-confirm-open-admin-users-permissions" variant="outline" onClick={() => setResetConfirmOpen(true)}>
                         <RotateCcw className="w-4 h-4 mr-2" /> Reset to Defaults
                     </Button>
                     {!editMode ? (

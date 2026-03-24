@@ -365,7 +365,7 @@ export default function UsersPage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input id={`input-text-admin-users-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}
+            <input id="input-text-admin-users-search"
               type="text"
               placeholder="Search users by name or email..."
               value={searchInput}

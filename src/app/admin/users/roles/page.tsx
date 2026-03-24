@@ -557,7 +557,7 @@ export default function RolesManagementPage() {
                 <CardContent className="pt-6">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input id={`input-text-admin-users-roles-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}
+                        <input id="input-text-admin-users-roles-search"
                             type="text"
                             placeholder="Search roles by name or description..."
                             value={searchTerm}

@@ -261,7 +261,7 @@ export default function ProgramCatalogPage() {
       {/* Search + filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <input id={`input-text-admin-programs-catalog-${s.label.toLowerCase().replace(/\s+/g, '-')}`}
+          <input id="input-text-admin-programs-catalog-search"
             type="text"
             placeholder="Search programs..."
             value={search}

@@ -230,7 +230,7 @@ const PartiesPage = () => {
             </section>
 
             {/* Party Packages */}
-            <section id={`packages-${feature.title.toLowerCase().replace(/\s+/g, '-')}`} className="section-padding bg-gray-50">
+            <section id="packages" className="section-padding bg-gray-50">
                 <div className="container-max">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}

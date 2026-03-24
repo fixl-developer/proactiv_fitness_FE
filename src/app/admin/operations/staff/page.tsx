@@ -232,7 +232,7 @@ export default function OperationsStaffPage() {
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
-          <input id={`input-text-admin-operations-staff-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}
+          <input id="input-text-admin-operations-staff-search"
             type="text"
             placeholder="Name or email..."
             value={searchQuery}
@@ -321,7 +321,7 @@ export default function OperationsStaffPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
-                  <input id={`input-text-admin-operations-staff-${s}`} type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff-firstname" type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>

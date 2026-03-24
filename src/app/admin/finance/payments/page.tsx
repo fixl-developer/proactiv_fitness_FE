@@ -429,7 +429,7 @@ export default function PaymentsBillingPage() {
                 <thead>
                   <tr className="border-b bg-gray-50/50">
                     <th className="text-left p-3 w-10">
-                      <input id={`input-checkbox-admin-finance-payments-${s}`}
+                      <input id="input-checkbox-admin-finance-payments-select-all"
                         type="checkbox"
                         checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
                         onChange={toggleSelectAll}

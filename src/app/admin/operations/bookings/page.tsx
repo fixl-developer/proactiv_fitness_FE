@@ -221,7 +221,7 @@ export default function OperationsBookingsPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-          <input id={`input-date-admin-operations-bookings-${stat}`} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input id="input-date-admin-operations-bookings-from" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">To</label>

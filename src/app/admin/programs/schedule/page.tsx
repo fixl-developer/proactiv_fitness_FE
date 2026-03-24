@@ -638,7 +638,8 @@ export default function ProgramSchedulePage() {
                     <h3 className="text-sm font-medium text-gray-700 mb-3">Schedule Settings</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Mid={`input-number-admin-programs-schedule-${l}`}      id={`input-number-admin-programs-schedule-${l}`}s-schedule"
+                        <label className="block text-xs text-gray-500 mb-1">Max Sessions Per Day</label>
+                        <input id="input-number-admin-programs-schedule-max"
                           type="number"
                           min={1}
                           max={20}
