@@ -64,7 +64,7 @@ const BookingHeader = () => {
                                 />
                             </div>
                         ) : (
-                            <Link data-testid="link-home" href="/" className="flex items-center">
+                            <Link id="booking-header-link-home" href="/" className="flex items-center">
                                 <Image
                                     src="/images/colorlogo.webp"
                                     alt="ProActive Sports"
@@ -99,7 +99,7 @@ const BookingHeader = () => {
                             onMouseEnter={() => setIsLanguageOpen(true)}
                             onMouseLeave={() => setIsLanguageOpen(false)}
                         >
-                            <button className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 px-2 py-2">
+                            <button id="layout-booking-header-btn" className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 px-2 py-2">
                                 <div className="w-6 h-4 rounded-sm flex items-center justify-center">
                                     <span className="text-base">
                                         {languageOptions.find(lang => lang.code === selectedLanguage)?.flag}
@@ -113,7 +113,7 @@ const BookingHeader = () => {
                             {isLanguageOpen && (
                                 <div className="absolute top-full right-0 mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                                     {languageOptions.map((language) => (
-                                        <button
+                                        <button id="layout-booking-header-btn-2"
                                             key={language.code}
                                             onClick={() => handleLanguageSelect(language.code)}
                                             className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200 flex items-center space-x-3 ${selectedLanguage === language.code ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
@@ -131,7 +131,7 @@ const BookingHeader = () => {
                         </div>
 
                         {/* Notifications */}
-                        <button className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
+                        <button id="layout-booking-header-btn-3" className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
                             <FiBell className="w-5 h-5" />
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                         </button>
@@ -143,7 +143,7 @@ const BookingHeader = () => {
                                 onMouseEnter={() => setIsUserMenuOpen(true)}
                                 onMouseLeave={() => setIsUserMenuOpen(false)}
                             >
-                                <button className="flex items-center space-x-3 p-2 text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-50">
+                                <button id="layout-booking-header-btn-4" className="flex items-center space-x-3 p-2 text-gray-600 hover:text-gray-800 transition-colors rounded-lg hover:bg-gray-50">
                                     {isAuthenticated && user ? (
                                         <>
                                             {/* Profile Avatar with Initials */}
@@ -189,14 +189,14 @@ const BookingHeader = () => {
                                                 {/* Menu Items for Parent */}
                                                 {user.role === 'PARENT' && (
                                                     <>
-                                                        <button
+                                                        <button id="layout-booking-header-btn-5"
                                                             onClick={() => handleSectionNavigation('profile')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                                         >
                                                             <FiUser className="w-4 h-4 mr-3" />
                                                             <span>My Profile</span>
                                                         </button>
-                                                        <button
+                                                        <button id="layout-booking-header-btn-6"
                                                             onClick={() => handleSectionNavigation('bookings')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                                         >
@@ -205,7 +205,7 @@ const BookingHeader = () => {
                                                             </svg>
                                                             <span>My Bookings</span>
                                                         </button>
-                                                        <button
+                                                        <button id="layout-booking-header-btn-7"
                                                             onClick={() => handleSectionNavigation('children')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                                         >
@@ -214,7 +214,7 @@ const BookingHeader = () => {
                                                             </svg>
                                                             <span>My Children</span>
                                                         </button>
-                                                        <button
+                                                        <button id="layout-booking-header-btn-8"
                                                             onClick={() => handleSectionNavigation('payments')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                                         >
@@ -223,7 +223,7 @@ const BookingHeader = () => {
                                                             </svg>
                                                             <span>Payments</span>
                                                         </button>
-                                                        <button
+                                                        <button id="layout-booking-header-btn-9"
                                                             onClick={() => handleSectionNavigation('dashboard')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                                         >
@@ -235,7 +235,7 @@ const BookingHeader = () => {
 
                                                         <div className="border-t border-gray-100 my-2"></div>
 
-                                                        <button
+                                                        <button id="layout-booking-header-btn-10"
                                                             onClick={() => handleSectionNavigation('settings')}
                                                             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                                                         >
@@ -248,7 +248,7 @@ const BookingHeader = () => {
                                                     </>
                                                 )}
 
-                                                <button
+                                                <button id="layout-booking-header-btn-11"
                                                     onClick={logout}
                                                     className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
                                                 >
@@ -257,7 +257,7 @@ const BookingHeader = () => {
                                                 </button>
                                             </>
                                         ) : (
-                                            <Link
+                                            <Link id="layout-booking-header-nav-login"
                                                 href="/login"
                                                 className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
                                             >

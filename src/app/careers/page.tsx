@@ -403,7 +403,7 @@ const CareersPage = () => {
                                             whileTap={{ scale: 0.95 }}
                                             className="flex justify-center"
                                         >
-                                            <Link
+                                            <Link id="careers-nav-contact"
                                                 href="#contact"
                                                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg hover:shadow-xl inline-block"
                                             >
@@ -511,13 +511,13 @@ const CareersPage = () => {
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="font-medium mb-2">Email Your Resume</h4>
-                                        <a href="mailto:careers@proactivsports.net" className="text-primary-200 hover:text-white transition-colors duration-200">
+                                        <a id="careers-link-mailtocareersproactivsportsnet" href="mailto:careers@proactivsports.net" className="text-primary-200 hover:text-white transition-colors duration-200">
                                             careers@proactivsports.net
                                         </a>
                                     </div>
                                     <div>
                                         <h4 className="font-medium mb-2">Call Us</h4>
-                                        <a href="tel:+85212345678" className="text-primary-200 hover:text-white transition-colors duration-200">
+                                        <a id="careers-link-tel85212345678" href="tel:+85212345678" className="text-primary-200 hover:text-white transition-colors duration-200">
                                             +852 1234 5678
                                         </a>
                                     </div>
@@ -542,7 +542,7 @@ const CareersPage = () => {
                                 <h3 className="text-xl font-heading font-semibold mb-6">
                                     Quick Application
                                 </h3>
-                                <form data-testid="form-careers" className="space-y-4">
+                                <form id="form-careers" className="space-y-4">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <input
                                             type="text"
@@ -560,7 +560,7 @@ const CareersPage = () => {
                                         placeholder="Phone Number"
                                         className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
                                     />
-                                    <select data-testid="select-careers-1" className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <select id="select-careers-1" className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-white/50">
                                         <option value="">Select Position</option>
                                         <option value="gymnastics-coach">Gymnastics Coach</option>
                                         <option value="assistant-coach">Assistant Coach</option>
@@ -572,7 +572,7 @@ const CareersPage = () => {
                                         placeholder="Tell us about yourself and why you're interested in joining our team..."
                                         className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
                                     />
-                                    <button
+                                    <button id="careers-btn"
                                         type="submit"
                                         className="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-3 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center space-x-2"
                                     >

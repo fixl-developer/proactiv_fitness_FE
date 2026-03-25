@@ -16,7 +16,7 @@ class ApiClient {
     // Get auth token from localStorage
     private getAuthToken(): string | null {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('authToken')
+            return localStorage.getItem('token') || localStorage.getItem('accessToken')
         }
         return null
     }

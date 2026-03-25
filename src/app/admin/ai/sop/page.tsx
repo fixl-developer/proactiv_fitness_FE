@@ -215,11 +215,11 @@ const SOPDocumentsPage = () => {
                     <p className="text-gray-600 mt-2">Manage standard operating procedures and documentation</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button>
+                    <Button id="admin-ai-sop-create-btn">
                         <Plus className="w-4 h-4 mr-2" />
                         Create SOP
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-ai-sop-upload-btn" variant="outline" size="sm">
                         <Upload className="w-4 h-4 mr-2" />
                         Upload
                     </Button>
@@ -289,7 +289,7 @@ const SOPDocumentsPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <select data-testid="select-admin-ai-sop-1"
+                            <select id="select-admin-ai-sop-1"
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -299,7 +299,7 @@ const SOPDocumentsPage = () => {
                                     <option key={category} value={category}>{category}</option>
                                 ))}
                             </select>
-                            <select data-testid="select-admin-ai-sop-2"
+                            <select id="select-admin-ai-sop-2"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -352,15 +352,15 @@ const SOPDocumentsPage = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="sm">
+                                        <Button id={`admin-ai-sop-view-${document.id}-btn`} variant="ghost" size="sm">
                                             <Eye className="w-4 h-4 mr-2" />
                                             View
                                         </Button>
-                                        <Button variant="ghost" size="sm">
+                                        <Button id={`admin-ai-sop-download-${document.id}-btn`} variant="ghost" size="sm">
                                             <Download className="w-4 h-4 mr-2" />
                                             Download
                                         </Button>
-                                        <Button variant="ghost" size="sm">
+                                        <Button id={`admin-ai-sop-edit-${document.id}-btn`} variant="ghost" size="sm">
                                             <Edit className="w-4 h-4 mr-2" />
                                             Edit
                                         </Button>

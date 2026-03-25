@@ -177,11 +177,11 @@ const BrowseClassesPage = () => {
                         </div>
                     </div>
                     <div className="flex gap-3 mt-4">
-                        <Button data-testid="btn-search-parent-browse-classes" onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
+                        <Button id="btn-search-parent-browse-classes" onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
                             <Search className="w-4 h-4 mr-2" />
                             Search
                         </Button>
-                        <Button data-testid="btn-reset-parent-browse-classes" onClick={handleReset} variant="outline">
+                        <Button id="btn-reset-parent-browse-classes" onClick={handleReset} variant="outline">
                             Reset
                         </Button>
                     </div>
@@ -237,7 +237,7 @@ const BrowseClassesPage = () => {
                                         <DollarSign className="w-4 h-4" />
                                         <span className="text-sm font-semibold">{session.price || 'Price'}</span>
                                     </div>
-                                    <Button
+                                    <Button id={`parent-browse-classes-book-${session.id}-btn`}
                                         onClick={() => handleBook(session.id)}
                                         className="w-full bg-blue-600 hover:bg-blue-700 mt-4"
                                     >

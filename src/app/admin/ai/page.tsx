@@ -107,11 +107,11 @@ const AIManagementPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-ai-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button>
+                    <Button id="admin-ai-settings-btn">
                         <Settings className="w-4 h-4 mr-2" />
                         AI Settings
                     </Button>
@@ -149,7 +149,7 @@ const AIManagementPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 * index }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = system.href}>
+                        <Card id={`admin-ai-system-${system.name.toLowerCase().replace(/\s+/g, '-')}-card`} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => window.location.href = system.href}>
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -179,11 +179,11 @@ const AIManagementPage = () => {
                                         <Progress value={system.usage} className="h-2" />
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <Button variant="outline" size="sm">
+                                        <Button id={`admin-ai-${system.name.toLowerCase().replace(/\s+/g, '-')}-analytics-btn`} variant="outline" size="sm">
                                             <BarChart3 className="w-4 h-4 mr-2" />
                                             Analytics
                                         </Button>
-                                        <Button variant="outline" size="sm">
+                                        <Button id={`admin-ai-${system.name.toLowerCase().replace(/\s+/g, '-')}-configure-btn`} variant="outline" size="sm">
                                             <Settings className="w-4 h-4 mr-2" />
                                             Configure
                                         </Button>
@@ -209,6 +209,7 @@ const AIManagementPage = () => {
                             { icon: Zap, label: 'Automation Rules', href: '/admin/ai/automation' }
                         ].map((action, index) => (
                             <Button
+                                id={`admin-ai-quickaction-${action.label.toLowerCase().replace(/\s+/g, '-')}-btn`}
                                 key={index}
                                 className="h-20 flex-col gap-2"
                                 variant="outline"

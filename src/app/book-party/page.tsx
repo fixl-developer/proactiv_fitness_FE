@@ -183,7 +183,7 @@ const BookPartyPage = () => {
 
                             <div className="grid md:grid-cols-3 gap-6 mb-8">
                                 {packages.map((pkg) => (
-                                    <div
+                                    <div id={`book-party-package-${pkg.id}-btn`}
                                         key={pkg.id}
                                         className={`relative border-2 rounded-lg p-6 cursor-pointer transition-all duration-300 ${selectedPackage === pkg.id
                                                 ? 'border-purple-500 bg-purple-50'
@@ -234,7 +234,7 @@ const BookPartyPage = () => {
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Add-On Services</h3>
                             <div className="grid md:grid-cols-3 gap-4 mb-8">
                                 {addons.map((addon) => (
-                                    <div
+                                    <div id={`book-party-addon-${addon.id}-btn`}
                                         key={addon.id}
                                         className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-300 ${selectedAddons.includes(addon.id)
                                                 ? 'border-purple-500 bg-purple-50'
@@ -260,7 +260,7 @@ const BookPartyPage = () => {
 
                             {/* Booking Form */}
                             <h3 className="text-xl font-bold text-gray-800 mb-4">Party Details</h3>
-                            <form data-testid="form-book-party" onSubmit={handleSubmit} className="space-y-6">
+                            <form id="form-book-party" onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -295,7 +295,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Child's Age *
                                         </label>
-                                        <select data-testid="select-book-party-1"
+                                        <select id="book-party-child-age-select"
                                             name="childAge"
                                             value={formData.childAge}
                                             onChange={handleInputChange}
@@ -312,7 +312,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Number of Children *
                                         </label>
-                                        <select data-testid="select-book-party-2"
+                                        <select id="book-party-num-children-select"
                                             name="numberOfChildren"
                                             value={formData.numberOfChildren}
                                             onChange={handleInputChange}
@@ -374,7 +374,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Preferred Time *
                                         </label>
-                                        <select data-testid="select-book-party-3"
+                                        <select id="book-party-time-select"
                                             name="partyTime"
                                             value={formData.partyTime}
                                             onChange={handleInputChange}
@@ -392,7 +392,7 @@ const BookPartyPage = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Location *
                                         </label>
-                                        <select data-testid="select-book-party-4"
+                                        <select id="book-party-location-select"
                                             name="location"
                                             value={formData.location}
                                             onChange={handleInputChange}
@@ -459,7 +459,7 @@ const BookPartyPage = () => {
                                 </div>
                             )}
 
-                            <button
+                            <button id="book-party-submit-btn"
                                 onClick={handleSubmit}
                                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center"
                             >
@@ -471,7 +471,7 @@ const BookPartyPage = () => {
                                 <p className="text-sm text-gray-600 mb-2">
                                     Need help choosing?
                                 </p>
-                                <Link data-testid="link-contact" href="/contact" className="text-purple-600 hover:text-purple-700 font-medium">
+                                <Link id="book-party-contact-link" href="/contact" className="text-purple-600 hover:text-purple-700 font-medium">
                                     Contact us for assistance
                                 </Link>
                             </div>

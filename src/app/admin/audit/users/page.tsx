@@ -192,11 +192,11 @@ const UserActivityLogsPage = () => {
                     </p>
                 </div>
                 <div className={responsiveClasses.buttonGroup}>
-                    <Button variant="outline">
+                    <Button id="admin-audit-users-export-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Activity
                     </Button>
-                    <Button>
+                    <Button id="admin-audit-users-refresh-btn">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
@@ -260,7 +260,7 @@ const UserActivityLogsPage = () => {
                         </div>
 
                         {/* Date Range */}
-                        <select data-testid="select-admin-audit-users-1"
+                        <select id="select-admin-audit-users-1"
                             value={dateRange}
                             onChange={(e) => setDateRange(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -273,7 +273,7 @@ const UserActivityLogsPage = () => {
                         {/* Activity Filter */}
                         <div className="flex flex-wrap gap-2">
                             {activityTypes.map((type) => (
-                                <button
+                                <button id={`admin-audit-users-activity-${type.id}-btn`}
                                     key={type.id}
                                     onClick={() => setSelectedActivity(type.id)}
                                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedActivity === type.id
@@ -372,7 +372,7 @@ const UserActivityLogsPage = () => {
                                                 </span>
                                             </td>
                                             <td className="p-4">
-                                                <Button variant="ghost" size="sm">
+                                                <Button id={`admin-audit-users-view-${activity.id}-btn`} variant="ghost" size="sm">
                                                     <Eye className="w-4 h-4" />
                                                 </Button>
                                             </td>

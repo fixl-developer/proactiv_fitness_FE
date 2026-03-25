@@ -76,7 +76,7 @@ export default function MarketplacePage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration Marketplace</h1>
                         <p className="text-gray-600">Discover and install integrations</p>
                     </div>
-                    <Button data-testid="btn-router-integrations-marketplace" onClick={() => router.push('/integrations')} variant="outline">
+                    <Button id="btn-router-integrations-marketplace" onClick={() => router.push('/integrations')} variant="outline">
                         Back to Integrations
                     </Button>
                 </div>
@@ -136,7 +136,7 @@ export default function MarketplacePage() {
                                 </CardContent>
 
                                 <div className="border-t pt-4">
-                                    <Button
+                                    <Button id={`marketplace-install-${integration.id}-btn`}
                                         onClick={() => handleInstall(integration.id)}
                                         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                                     >

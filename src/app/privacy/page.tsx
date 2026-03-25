@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
             <div className="bg-white shadow-sm border-b">
                 <div className="container-max px-4 py-6">
                     <div className="flex items-center space-x-4">
-                        <Link
+                        <Link id="privacy-nav"
                             href="/"
                             className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
                         >
@@ -327,13 +327,13 @@ export default function PrivacyPolicyPage() {
                                 please contact us. We're committed to protecting your privacy.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Link
+                                <Link id="privacy-nav-contact"
                                     href="/contact"
                                     className="bg-white text-green-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition-colors duration-300"
                                 >
                                     Contact Privacy Officer
                                 </Link>
-                                <Link
+                                <Link id="privacy-nav-terms"
                                     href="/terms"
                                     className="border-2 border-white text-white hover:bg-white hover:text-green-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300"
                                 >

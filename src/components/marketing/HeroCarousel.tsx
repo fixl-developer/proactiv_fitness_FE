@@ -107,7 +107,7 @@ export function HeroCarousel() {
                             <p className="text-xl md:text-2xl text-white mb-8 animate-fade-in-delay">
                                 {slide.subtitle}
                             </p>
-                            <Link
+                            <Link id="marketing-hero-carousel-nav"
                                 href={slide.ctaLink}
                                 className="inline-block bg-primary hover:bg-primary/90 text-white px-12 py-4 rounded-full text-lg font-bold transition-all transform hover:scale-105 animate-fade-in-delay-2"
                             >
@@ -119,7 +119,7 @@ export function HeroCarousel() {
             ))}
 
             {/* Navigation Arrows */}
-            <button
+            <button id="marketing-hero-carousel-btn-previous-slide"
                 onClick={prevSlide}
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
                 aria-label="Previous slide"
@@ -127,7 +127,7 @@ export function HeroCarousel() {
                 <ChevronLeft className="w-6 h-6" />
             </button>
 
-            <button
+            <button id="marketing-hero-carousel-btn-next-slide"
                 onClick={nextSlide}
                 className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
                 aria-label="Next slide"
@@ -138,7 +138,7 @@ export function HeroCarousel() {
             {/* Dots Indicator */}
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
                 {slides.map((_, index) => (
-                    <button
+                    <button id="marketing-hero-carousel-btn"
                         key={index}
                         onClick={() => goToSlide(index)}
                         className={`w-3 h-3 rounded-full transition-all ${index === currentSlide

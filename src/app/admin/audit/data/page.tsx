@@ -186,11 +186,11 @@ const DataChangesPage = () => {
                     </p>
                 </div>
                 <div className={responsiveClasses.buttonGroup}>
-                    <Button variant="outline">
+                    <Button id="admin-audit-data-export-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Changes
                     </Button>
-                    <Button>
+                    <Button id="admin-audit-data-refresh-btn">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
@@ -254,7 +254,7 @@ const DataChangesPage = () => {
                         </div>
 
                         {/* Table Filter */}
-                        <select data-testid="select-admin-audit-data-1"
+                        <select id="select-admin-audit-data-1"
                             value={selectedTable}
                             onChange={(e) => setSelectedTable(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +267,7 @@ const DataChangesPage = () => {
                         </select>
 
                         {/* Operation Filter */}
-                        <select data-testid="select-admin-audit-data-2"
+                        <select id="select-admin-audit-data-2"
                             value={selectedOperation}
                             onChange={(e) => setSelectedOperation(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -367,10 +367,10 @@ const DataChangesPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex gap-2">
-                                                    <Button variant="ghost" size="sm">
+                                                    <Button id={`admin-audit-data-view-${change.id}-btn`} variant="ghost" size="sm">
                                                         <Eye className="w-4 h-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="sm">
+                                                    <Button id={`admin-audit-data-sort-${change.id}-btn`} variant="ghost" size="sm">
                                                         <ArrowUpDown className="w-4 h-4" />
                                                     </Button>
                                                 </div>

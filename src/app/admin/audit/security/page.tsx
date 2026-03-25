@@ -186,11 +186,11 @@ const SecurityEventsPage = () => {
                     </p>
                 </div>
                 <div className={responsiveClasses.buttonGroup}>
-                    <Button variant="outline">
+                    <Button id="admin-audit-security-export-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Report
                     </Button>
-                    <Button>
+                    <Button id="admin-audit-security-refresh-btn">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
@@ -254,7 +254,7 @@ const SecurityEventsPage = () => {
                         </div>
 
                         {/* Event Type Filter */}
-                        <select data-testid="select-admin-audit-security-1"
+                        <select id="select-admin-audit-security-1"
                             value={selectedEventType}
                             onChange={(e) => setSelectedEventType(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +267,7 @@ const SecurityEventsPage = () => {
                         </select>
 
                         {/* Severity Filter */}
-                        <select data-testid="select-admin-audit-security-2"
+                        <select id="select-admin-audit-security-2"
                             value={selectedSeverity}
                             onChange={(e) => setSelectedSeverity(e.target.value)}
                             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -375,10 +375,10 @@ const SecurityEventsPage = () => {
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex gap-2">
-                                                    <Button variant="ghost" size="sm">
+                                                    <Button id={`admin-audit-security-view-${event.id}-btn`} variant="ghost" size="sm">
                                                         <Eye className="w-4 h-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="sm">
+                                                    <Button id={`admin-audit-security-ban-${event.id}-btn`} variant="ghost" size="sm">
                                                         <Ban className="w-4 h-4" />
                                                     </Button>
                                                 </div>

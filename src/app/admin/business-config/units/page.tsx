@@ -136,7 +136,7 @@ export default function BusinessUnitsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Business Units</h1>
           <p className="text-gray-600 mt-2">Manage your organization's business units</p>
         </div>
-        <Button data-testid="btn-open-form-admin-business-config-units" onClick={() => openForm()}>
+        <Button id="admin-units-add-btn" onClick={() => openForm()}>
           <Plus className="w-4 h-4 mr-2" />
           Add Business Unit
         </Button>
@@ -169,7 +169,7 @@ export default function BusinessUnitsPage() {
         <CardContent className="p-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input data-testid="input-text-admin-business-config-units"
+            <input id="admin-units-search-input"
               type="text"
               placeholder="Search business units..."
               value={searchTerm}
@@ -200,7 +200,7 @@ export default function BusinessUnitsPage() {
                 {searchTerm ? 'Try a different search term' : 'Add your first business unit to get started'}
               </p>
               {!searchTerm && (
-                <Button data-testid="btn-open-form-admin-business-config-units" className="mt-4" onClick={() => openForm()}>
+                <Button id="admin-units-add-empty-btn" className="mt-4" onClick={() => openForm()}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Business Unit
                 </Button>
@@ -237,10 +237,10 @@ export default function BusinessUnitsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex justify-end gap-2">
-                          <Button data-testid="btn-open-form-admin-business-config-units" variant="ghost" size="sm" onClick={() => openForm(unit)}>
+                          <Button id={`admin-units-edit-${unit.id}-btn`} variant="ghost" size="sm" onClick={() => openForm(unit)}>
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
+                          <Button id={`admin-units-delete-${unit.id}-btn`}
                             variant="ghost"
                             size="sm"
                             className="text-red-600 hover:text-red-800"
@@ -268,10 +268,10 @@ export default function BusinessUnitsPage() {
               {editingUnit ? 'Update the business unit details below.' : 'Fill in the details to create a new business unit.'}
             </DialogDescription>
           </DialogHeader>
-          <form data-testid="form-admin-business-config-units" onSubmit={handleSubmit} className="space-y-4">
+          <form id="admin-units-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Unit Name</label>
-              <input data-testid="input-text-admin-business-config-units"
+              <input id="admin-units-name-input"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -282,7 +282,7 @@ export default function BusinessUnitsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Type</label>
-              <select data-testid="select-admin-business-config-units-9"
+              <select id="admin-units-type-select"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -304,7 +304,7 @@ export default function BusinessUnitsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
-              <select data-testid="select-admin-business-config-units-10"
+              <select id="admin-units-status-select"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
@@ -314,10 +314,10 @@ export default function BusinessUnitsPage() {
               </select>
             </div>
             <DialogFooter>
-              <Button data-testid="btn-set-show-form-admin-business-config-units" type="button" variant="outline" onClick={() => setShowForm(false)}>
+              <Button id="admin-units-form-cancel-btn" type="button" variant="outline" onClick={() => setShowForm(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button id="admin-units-form-submit-btn" type="submit" disabled={saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingUnit ? 'Update Unit' : 'Create Unit'}
               </Button>
@@ -336,10 +336,10 @@ export default function BusinessUnitsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button data-testid="btn-set-delete-target-admin-business-config-units" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            <Button id="admin-units-delete-cancel-btn" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button data-testid="btn-delete-admin-business-config-units" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button id="admin-units-delete-confirm-btn" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
               {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Delete
             </Button>

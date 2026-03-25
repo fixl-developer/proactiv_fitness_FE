@@ -32,7 +32,7 @@ export default function CancelBookingModal({
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
             {/* Backdrop */}
-            <div
+            <div id="booking-cancel-booking-modal-div-clickable"
                 className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
                 onClick={onClose}
             />
@@ -41,7 +41,7 @@ export default function CancelBookingModal({
             <div className="flex min-h-full items-center justify-center p-4">
                 <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                     {/* Close Button */}
-                    <button
+                    <button id="booking-cancel-booking-modal-btn"
                         onClick={onClose}
                         className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
                     >
@@ -134,14 +134,14 @@ export default function CancelBookingModal({
 
                     {/* Action Buttons */}
                     <div className="flex gap-3">
-                        <button
+                        <button id="booking-cancel-booking-modal-btn-keep-booking"
                             onClick={onClose}
                             disabled={isSubmitting}
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             Keep Booking
                         </button>
-                        <button
+                        <button id="booking-cancel-booking-modal-btn-2"
                             onClick={handleConfirm}
                             disabled={isSubmitting}
                             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

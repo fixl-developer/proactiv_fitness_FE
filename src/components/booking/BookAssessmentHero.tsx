@@ -51,7 +51,7 @@ export default function BookAssessmentHero({ onStartBooking }: BookAssessmentHer
                     </div>
 
                     {/* CTA Button */}
-                    <button
+                    <button id="booking-book-assessment-hero-btn-start-booking-now"
                         onClick={onStartBooking}
                         className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold text-lg px-8 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                     >

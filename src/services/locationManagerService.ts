@@ -4,12 +4,14 @@ import apiClient, { ApiResponse } from '@/lib/apiClient'
 export interface LocationClass {
     id: string
     name: string
-    level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'ELITE'
+    level: string
     coach: string
     schedule: string
     capacity: number
     enrolled: number
-    status: 'ACTIVE' | 'INACTIVE'
+    students?: number
+    room?: string
+    status: string
     createdAt: string
 }
 
@@ -18,8 +20,8 @@ export interface LocationStaff {
     name: string
     email: string
     phone: string
-    role: 'COACH' | 'MANAGER' | 'SUPPORT_STAFF'
-    status: 'ACTIVE' | 'INACTIVE'
+    role: string
+    status: string
     utilization: number
     satisfaction: number
     createdAt: string
@@ -30,23 +32,83 @@ export interface Facility {
     name: string
     type: string
     capacity: number
-    status: 'OPERATIONAL' | 'MAINTENANCE' | 'CLOSED'
+    status: string
     lastMaintenance: string
     nextMaintenance: string
-    condition: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR'
+    condition: string
     issues: number
     createdAt: string
 }
 
+export interface WaitlistEntry {
+    id: string
+    studentName: string
+    parentName: string
+    parentEmail: string
+    parentPhone: string
+    className: string
+    classTime: string
+    position: number
+    joinedDate: string
+    status: string
+    priority: string
+    notes: string
+}
+
+export interface EmergencyContact {
+    id: string
+    studentName: string
+    parentName: string
+    contactName: string
+    relationship: string
+    primaryPhone: string
+    alternatePhone: string | null
+    email: string
+    address: string
+    isAuthorizedPickup: boolean
+    medicalInfo: string
+    lastUpdated: string
+    status: string
+}
+
+export interface AttendanceRecord {
+    id: string
+    studentName: string
+    className: string
+    date: string
+    checkInTime: string
+    checkOutTime: string | null
+    status: string
+}
+
+export interface AttendanceData {
+    summary: {
+        totalEnrolled: number
+        presentToday: number
+        absentToday: number
+        avgAttendance: number
+    }
+    weeklyTrend: Array<{ week: string; attended: number; enrolled: number; rate: number }>
+    classAttendance: Array<{ name: string; enrolled: number; attended: number; rate: number; trend: string }>
+    records: AttendanceRecord[]
+}
+
 export interface LocationAnalytics {
-    students: {
+    totalStudents?: number
+    avgAttendance?: number
+    classesPerWeek?: number
+    satisfaction?: number
+    attendanceData?: Array<{ week: string; attended: number; enrolled: number; noshow: number }>
+    classPerformance?: Array<{ name: string; students: number; attendance: number; satisfaction: number }>
+    peakHours?: Array<{ time: string; utilization: number; classes: number }>
+    revenueData?: Array<{ week: string; revenue: number }>
+    students?: {
         total: number
         growth: Array<{ week: string; attended: number; enrolled: number; noshow: number }>
     }
-    classes: {
+    classes?: {
         performance: Array<{ name: string; students: number; attendance: number; satisfaction: number }>
     }
-    peakHours: Array<{ time: string; utilization: number; classes: number }>
 }
 
 export interface LocationSettings {
@@ -309,6 +371,246 @@ export class LocationManagerService {
         } catch (error: any) {
             console.error('Failed to schedule maintenance:', error)
             throw new Error(error.response?.data?.message || 'Failed to schedule maintenance')
+        }
+    }
+
+    // ==================== CLASS CRUD ====================
+
+    static async createClass(data: Partial<LocationClass>): Promise<LocationClass> {
+        try {
+            const response = await apiClient.post<LocationClass>('/admin/location/classes', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to create class:', error)
+            throw new Error(error.response?.data?.message || 'Failed to create class')
+        }
+    }
+
+    static async updateClass(classId: string, data: Partial<LocationClass>): Promise<LocationClass> {
+        try {
+            const response = await apiClient.put<LocationClass>(`/admin/location/classes/${classId}`, data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to update class:', error)
+            throw new Error(error.response?.data?.message || 'Failed to update class')
+        }
+    }
+
+    static async deleteClass(classId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/location/classes/${classId}`)
+        } catch (error: any) {
+            console.error('Failed to delete class:', error)
+            throw new Error(error.response?.data?.message || 'Failed to delete class')
+        }
+    }
+
+    // ==================== STAFF CRUD ====================
+
+    static async createStaff(data: any): Promise<LocationStaff> {
+        try {
+            const response = await apiClient.post<LocationStaff>('/admin/location/staff', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to create staff:', error)
+            throw new Error(error.response?.data?.message || 'Failed to create staff')
+        }
+    }
+
+    static async updateStaff(staffId: string, data: Partial<LocationStaff>): Promise<LocationStaff> {
+        try {
+            const response = await apiClient.put<LocationStaff>(`/admin/location/staff/${staffId}`, data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to update staff:', error)
+            throw new Error(error.response?.data?.message || 'Failed to update staff')
+        }
+    }
+
+    static async deleteStaff(staffId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/location/staff/${staffId}`)
+        } catch (error: any) {
+            console.error('Failed to delete staff:', error)
+            throw new Error(error.response?.data?.message || 'Failed to delete staff')
+        }
+    }
+
+    // ==================== ATTENDANCE ====================
+
+    static async getAttendance(timeRange?: string, search?: string, classFilter?: string): Promise<any> {
+        try {
+            const params = new URLSearchParams()
+            if (timeRange) params.append('timeRange', timeRange)
+            if (search) params.append('search', search)
+            if (classFilter && classFilter !== 'all') params.append('class', classFilter)
+            const response = await apiClient.get(`/admin/location/attendance?${params.toString()}`)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to fetch attendance:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch attendance')
+        }
+    }
+
+    static async checkInStudent(data: { studentId: string; sessionId?: string; checkInMethod?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/location/attendance/check-in', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to check in student:', error)
+            throw new Error(error.response?.data?.message || 'Failed to check in student')
+        }
+    }
+
+    // ==================== WAITLIST CRUD ====================
+
+    static async getWaitlist(
+        page: number = 1,
+        pageSize: number = 10,
+        search?: string,
+        status?: string
+    ): Promise<PaginatedResponse<WaitlistEntry>> {
+        try {
+            const params = new URLSearchParams()
+            params.append('page', page.toString())
+            params.append('pageSize', pageSize.toString())
+            if (search) params.append('search', search)
+            if (status && status !== 'all') params.append('status', status)
+            const response = await apiClient.get<PaginatedResponse<WaitlistEntry>>(
+                `/admin/location/waitlist?${params.toString()}`
+            )
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to fetch waitlist:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch waitlist')
+        }
+    }
+
+    static async addToWaitlist(data: any): Promise<WaitlistEntry> {
+        try {
+            const response = await apiClient.post<WaitlistEntry>('/admin/location/waitlist', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to add to waitlist:', error)
+            throw new Error(error.response?.data?.message || 'Failed to add to waitlist')
+        }
+    }
+
+    static async offerWaitlistSpot(entryId: string): Promise<WaitlistEntry> {
+        try {
+            const response = await apiClient.put<WaitlistEntry>(`/admin/location/waitlist/${entryId}/offer`)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to offer spot:', error)
+            throw new Error(error.response?.data?.message || 'Failed to offer spot')
+        }
+    }
+
+    static async removeFromWaitlist(entryId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/location/waitlist/${entryId}`)
+        } catch (error: any) {
+            console.error('Failed to remove from waitlist:', error)
+            throw new Error(error.response?.data?.message || 'Failed to remove from waitlist')
+        }
+    }
+
+    // ==================== FACILITY CRUD ====================
+
+    static async createFacility(data: Partial<Facility>): Promise<Facility> {
+        try {
+            const response = await apiClient.post<Facility>('/admin/location/facilities', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to create facility:', error)
+            throw new Error(error.response?.data?.message || 'Failed to create facility')
+        }
+    }
+
+    static async deleteFacility(facilityId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/location/facilities/${facilityId}`)
+        } catch (error: any) {
+            console.error('Failed to delete facility:', error)
+            throw new Error(error.response?.data?.message || 'Failed to delete facility')
+        }
+    }
+
+    // ==================== EMERGENCY CONTACTS CRUD ====================
+
+    static async getEmergencyContacts(
+        page: number = 1,
+        pageSize: number = 10,
+        search?: string,
+        status?: string
+    ): Promise<PaginatedResponse<EmergencyContact>> {
+        try {
+            const params = new URLSearchParams()
+            params.append('page', page.toString())
+            params.append('pageSize', pageSize.toString())
+            if (search) params.append('search', search)
+            if (status && status !== 'all') params.append('status', status)
+            const response = await apiClient.get<PaginatedResponse<EmergencyContact>>(
+                `/admin/location/emergency-contacts?${params.toString()}`
+            )
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to fetch emergency contacts:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch emergency contacts')
+        }
+    }
+
+    static async createEmergencyContact(data: Partial<EmergencyContact>): Promise<EmergencyContact> {
+        try {
+            const response = await apiClient.post<EmergencyContact>('/admin/location/emergency-contacts', data)
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to create emergency contact:', error)
+            throw new Error(error.response?.data?.message || 'Failed to create emergency contact')
+        }
+    }
+
+    static async updateEmergencyContact(contactId: string, data: Partial<EmergencyContact>): Promise<EmergencyContact> {
+        try {
+            const response = await apiClient.put<EmergencyContact>(
+                `/admin/location/emergency-contacts/${contactId}`, data
+            )
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to update emergency contact:', error)
+            throw new Error(error.response?.data?.message || 'Failed to update emergency contact')
+        }
+    }
+
+    static async verifyEmergencyContact(contactId: string): Promise<EmergencyContact> {
+        try {
+            const response = await apiClient.put<EmergencyContact>(
+                `/admin/location/emergency-contacts/${contactId}/verify`
+            )
+            return response.data
+        } catch (error: any) {
+            console.error('Failed to verify contact:', error)
+            throw new Error(error.response?.data?.message || 'Failed to verify contact')
+        }
+    }
+
+    static async deleteEmergencyContact(contactId: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/location/emergency-contacts/${contactId}`)
+        } catch (error: any) {
+            console.error('Failed to delete emergency contact:', error)
+            throw new Error(error.response?.data?.message || 'Failed to delete emergency contact')
+        }
+    }
+
+    // ==================== PASSWORD ====================
+
+    static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        try {
+            await apiClient.put('/admin/location/password', { currentPassword, newPassword })
+        } catch (error: any) {
+            console.error('Failed to change password:', error)
+            throw new Error(error.response?.data?.message || 'Failed to change password')
         }
     }
 }

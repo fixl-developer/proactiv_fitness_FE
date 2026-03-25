@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, Clock, CheckCircle, XCircle, AlertCircle,
@@ -9,6 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { LocationManagerService } from '@/services/locationManagerService'
 
 export default function LocationWaitlistPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -16,85 +17,33 @@ export default function LocationWaitlistPage() {
     const [waitlistEntries, setWaitlistEntries] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
 
-    useEffect(() => {
-        fetchWaitlistEntries()
-    }, [searchTerm, filterStatus])
-
-    const fetchWaitlistEntries = async () => {
+    const fetchWaitlistEntries = useCallback(async () => {
         try {
             setIsLoading(true)
             setError(null)
-            // Mock data for development
-            setWaitlistEntries([
-                {
-                    id: '1',
-                    studentName: 'Emma Johnson',
-                    parentName: 'Sarah Johnson',
-                    parentEmail: 'sarah.johnson@email.com',
-                    parentPhone: '+852 9876 5432',
-                    className: 'Beginner Gymnastics',
-                    classTime: 'Monday 4:00 PM',
-                    position: 1,
-                    joinedDate: '2024-03-10',
-                    status: 'ACTIVE',
-                    priority: 'HIGH',
-                    notes: 'Flexible with timing'
-                },
-                {
-                    id: '2',
-                    studentName: 'Alex Chen',
-                    parentName: 'Michael Chen',
-                    parentEmail: 'michael.chen@email.com',
-                    parentPhone: '+852 9876 5433',
-                    className: 'Intermediate Gymnastics',
-                    classTime: 'Wednesday 5:00 PM',
-                    position: 2,
-                    joinedDate: '2024-03-08',
-                    status: 'ACTIVE',
-                    priority: 'MEDIUM',
-                    notes: 'Prefers evening classes'
-                },
-                {
-                    id: '3',
-                    studentName: 'Lily Wong',
-                    parentName: 'Jenny Wong',
-                    parentEmail: 'jenny.wong@email.com',
-                    parentPhone: '+852 9876 5434',
-                    className: 'Advanced Gymnastics',
-                    classTime: 'Friday 6:00 PM',
-                    position: 1,
-                    joinedDate: '2024-03-05',
-                    status: 'OFFERED',
-                    priority: 'HIGH',
-                    notes: 'Spot offered, awaiting response'
-                },
-                {
-                    id: '4',
-                    studentName: 'Ryan Lee',
-                    parentName: 'David Lee',
-                    parentEmail: 'david.lee@email.com',
-                    parentPhone: '+852 9876 5435',
-                    className: 'Beginner Gymnastics',
-                    classTime: 'Saturday 10:00 AM',
-                    position: 3,
-                    joinedDate: '2024-03-01',
-                    status: 'EXPIRED',
-                    priority: 'LOW',
-                    notes: 'Offer expired, no response'
-                }
-            ])
+            const statusParam = filterStatus !== 'all' ? filterStatus.toUpperCase() : undefined
+            const result = await LocationManagerService.getWaitlist(page, 10, searchTerm || undefined, statusParam)
+            setWaitlistEntries(result?.data || [])
+            setTotalPages(result?.totalPages || 1)
         } catch (err: any) {
             console.error('Error fetching waitlist entries:', err)
             setError(err.message || 'Failed to fetch waitlist entries')
+            setWaitlistEntries([])
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [page, searchTerm, filterStatus])
+
+    useEffect(() => {
+        fetchWaitlistEntries()
+    }, [fetchWaitlistEntries])
+
     const handleOfferSpot = async (entryId: string) => {
         try {
-            // API call would go here
-            alert('Spot offered successfully!')
+            await LocationManagerService.offerWaitlistSpot(entryId)
             fetchWaitlistEntries()
         } catch (err: any) {
             alert('Failed to offer spot: ' + err.message)
@@ -104,7 +53,7 @@ export default function LocationWaitlistPage() {
     const handleRemoveFromWaitlist = async (entryId: string) => {
         if (confirm('Are you sure you want to remove this entry from the waitlist?')) {
             try {
-                // API call would go here
+                await LocationManagerService.removeFromWaitlist(entryId)
                 fetchWaitlistEntries()
             } catch (err: any) {
                 alert('Failed to remove from waitlist: ' + err.message)
@@ -113,22 +62,30 @@ export default function LocationWaitlistPage() {
     }
 
     const getStatusColor = (status: string) => {
-        switch (status) {
+        switch (status?.toUpperCase()) {
             case 'ACTIVE': return 'bg-green-100 text-green-800'
             case 'OFFERED': return 'bg-blue-100 text-blue-800'
             case 'EXPIRED': return 'bg-red-100 text-red-800'
+            case 'CANCELLED': return 'bg-gray-100 text-gray-800'
+            case 'ENROLLED': return 'bg-purple-100 text-purple-800'
             default: return 'bg-gray-100 text-gray-800'
         }
     }
 
     const getPriorityColor = (priority: string) => {
-        switch (priority) {
+        switch (priority?.toUpperCase()) {
             case 'HIGH': return 'bg-red-100 text-red-800'
             case 'MEDIUM': return 'bg-yellow-100 text-yellow-800'
             case 'LOW': return 'bg-gray-100 text-gray-800'
             default: return 'bg-gray-100 text-gray-800'
         }
     }
+
+    // Compute summary from data
+    const totalWaitlisted = waitlistEntries.length
+    const activeEntries = waitlistEntries.filter(e => e.status?.toUpperCase() === 'ACTIVE').length
+    const offeredEntries = waitlistEntries.filter(e => e.status?.toUpperCase() === 'OFFERED').length
+    const expiredEntries = waitlistEntries.filter(e => e.status?.toUpperCase() === 'EXPIRED').length
 
     if (isLoading) {
         return (
@@ -137,6 +94,7 @@ export default function LocationWaitlistPage() {
             </div>
         )
     }
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -144,50 +102,25 @@ export default function LocationWaitlistPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Waitlist Management</h1>
                     <p className="text-gray-600 mt-1">Manage class waitlists and student enrollment</p>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <Plus className="w-5 h-5" />
-                    Add to Waitlist
-                </button>
             </div>
+
+            {error && (
+                <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-4">
+                        <p className="text-sm text-red-800">{error}</p>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Waitlist Summary */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                    {
-                        title: 'Total Waitlisted',
-                        value: '4',
-                        icon: Users,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50'
-                    },
-                    {
-                        title: 'Active Entries',
-                        value: '2',
-                        icon: Clock,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50'
-                    },
-                    {
-                        title: 'Spots Offered',
-                        value: '1',
-                        icon: CheckCircle,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50'
-                    },
-                    {
-                        title: 'Expired Offers',
-                        value: '1',
-                        icon: XCircle,
-                        color: 'text-red-600',
-                        bgColor: 'bg-red-50'
-                    },
+                    { title: 'Total Waitlisted', value: totalWaitlisted, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+                    { title: 'Active Entries', value: activeEntries, icon: Clock, color: 'text-green-600', bgColor: 'bg-green-50' },
+                    { title: 'Spots Offered', value: offeredEntries, icon: CheckCircle, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+                    { title: 'Expired Offers', value: expiredEntries, icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
                 ].map((metric, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
                         <Card className="hover:shadow-lg transition-shadow">
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
@@ -204,24 +137,17 @@ export default function LocationWaitlistPage() {
                     </motion.div>
                 ))}
             </div>
+
             {/* Search & Filter */}
             <Card>
                 <CardContent className="pt-6">
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                            <Input
-                                placeholder="Search students or parents..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
+                            <Input placeholder="Search students or parents..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} className="pl-10" />
                         </div>
-                        <select data-testid="select-admin-location-waitlist-1"
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
+                        <select id="select-admin-location-waitlist-1" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Status</option>
                             <option value="active">Active</option>
                             <option value="offered">Offered</option>
@@ -234,52 +160,45 @@ export default function LocationWaitlistPage() {
             {/* Waitlist Entries */}
             <div className="space-y-4">
                 {waitlistEntries.map((entry, idx) => (
-                    <motion.div
-                        key={entry.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                    >
+                    <motion.div key={entry.id || entry._id || idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
                         <Card className="hover:shadow-lg transition-shadow">
                             <CardContent className="pt-6">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-semibold text-gray-900">{entry.studentName}</h3>
-                                            <Badge className={getStatusColor(entry.status)}>
-                                                {entry.status}
-                                            </Badge>
-                                            <Badge className={getPriorityColor(entry.priority)}>
-                                                {entry.priority}
-                                            </Badge>
-                                            <span className="text-sm text-gray-600">Position #{entry.position}</span>
+                                            <h3 className="text-lg font-semibold text-gray-900">{entry.studentName || 'N/A'}</h3>
+                                            <Badge className={getStatusColor(entry.status)}>{entry.status || 'N/A'}</Badge>
+                                            <Badge className={getPriorityColor(entry.priority)}>{entry.priority || 'N/A'}</Badge>
+                                            <span className="text-sm text-gray-600">Position #{entry.position || 'N/A'}</span>
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-3">
                                             <div>
                                                 <p className="text-xs text-gray-600">Parent</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.parentName}</p>
+                                                <p className="text-sm font-medium text-gray-900">{entry.parentName || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600">Class</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.className}</p>
+                                                <p className="text-sm font-medium text-gray-900">{entry.className || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600">Time</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.classTime}</p>
+                                                <p className="text-sm font-medium text-gray-900">{entry.classTime || 'N/A'}</p>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-3">
                                             <div>
                                                 <p className="text-xs text-gray-600">Email</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.parentEmail}</p>
+                                                <p className="text-sm font-medium text-gray-900">{entry.parentEmail || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600">Phone</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.parentPhone}</p>
+                                                <p className="text-sm font-medium text-gray-900">{entry.parentPhone || 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-xs text-gray-600">Joined</p>
-                                                <p className="text-sm font-medium text-gray-900">{entry.joinedDate}</p>
+                                                <p className="text-sm font-medium text-gray-900">
+                                                    {entry.joinedDate ? new Date(entry.joinedDate).toLocaleDateString() : 'N/A'}
+                                                </p>
                                             </div>
                                         </div>
                                         {entry.notes && (
@@ -290,24 +209,14 @@ export default function LocationWaitlistPage() {
                                         )}
                                     </div>
                                     <div className="flex gap-2">
-                                        {entry.status === 'ACTIVE' && (
-                                            <button
-                                                onClick={() => handleOfferSpot(entry.id)}
-                                                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                                            >
+                                        {entry.status?.toUpperCase() === 'ACTIVE' && (
+                                            <button id="admin-location-waitlist-btn" onClick={() => handleOfferSpot(entry.id || entry._id)}
+                                                className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
                                                 Offer Spot
                                             </button>
                                         )}
-                                        <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
-                                            <Eye className="w-4 h-4" />
-                                        </button>
-                                        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
-                                            <Edit2 className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleRemoveFromWaitlist(entry.id)}
-                                            className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
-                                        >
+                                        <button id="admin-location-waitlist-btn-2" onClick={() => handleRemoveFromWaitlist(entry.id || entry._id)}
+                                            className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -318,7 +227,7 @@ export default function LocationWaitlistPage() {
                 ))}
             </div>
 
-            {waitlistEntries.length === 0 && (
+            {waitlistEntries.length === 0 && !error && (
                 <Card>
                     <CardContent className="pt-12 pb-12 text-center">
                         <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -327,14 +236,14 @@ export default function LocationWaitlistPage() {
                 </Card>
             )}
 
-            {error && (
-                <Card className="border-yellow-200 bg-yellow-50">
-                    <CardContent className="pt-4">
-                        <p className="text-sm text-yellow-800">
-                            ⚠️ {error} - Showing mock data for development
-                        </p>
-                    </CardContent>
-                </Card>
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                    <button id="admin-location-waitlist-btn-3" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
+                    <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
+                    <button id="admin-location-waitlist-btn-4" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
+                </div>
             )}
         </div>
     )

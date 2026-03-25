@@ -79,7 +79,7 @@ export default function BulkOperationsPage() {
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Operation</label>
-                                        <select data-testid="select-advanced-data-bulk-1"
+                                        <select id="bulk-operation-select"
                                             value={operation}
                                             onChange={(e) => setOperation(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -92,7 +92,7 @@ export default function BulkOperationsPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Entity</label>
-                                        <select data-testid="select-advanced-data-bulk-2"
+                                        <select id="bulk-entity-select"
                                             value={entity}
                                             onChange={(e) => setEntity(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -103,7 +103,7 @@ export default function BulkOperationsPage() {
                                         </select>
                                     </div>
 
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Button id="bulk-execute-btn" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                         <Zap className="w-4 h-4 mr-2" />
                                         Execute
                                     </Button>

@@ -83,7 +83,7 @@ export default function TemplatesPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm text-gray-600 mb-4">{template.description}</p>
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Button id={`campaigns-templates-use-${template.id}-btn`} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                         <Plus className="w-4 h-4 mr-2" />
                                         Use Template
                                     </Button>

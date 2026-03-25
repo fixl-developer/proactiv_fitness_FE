@@ -30,7 +30,7 @@ export function RegisterStep2({
     });
 
     return (
-        <form data-testid="form-components-auth-RegisterStep2" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep2" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
                 <p className="text-gray-600 mt-2">Tell us about yourself</p>
@@ -125,7 +125,7 @@ export function RegisterStep2({
                     </label>
                     <div className="relative">
                         <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <select data-testid="select-components-auth-RegisterStep2-1"
+                        <select id="select-components-auth-RegisterStep2-1"
                             {...register('gender')}
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                         >
@@ -143,14 +143,14 @@ export function RegisterStep2({
 
             {/* Buttons */}
             <div className="flex gap-4">
-                <button
+                <button id="auth-register-step2-btn-back"
                     type="button"
                     onClick={onBack}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
-                <button
+                <button id="auth-register-step2-btn-continue"
                     type="submit"
                     className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >

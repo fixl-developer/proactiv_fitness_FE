@@ -94,6 +94,8 @@ export default function HorizontalSection({
         }
     }
 
+    const sectionSlug = title.replace(/\s+/g, '-').toLowerCase()
+
     return (
         <div className="mb-12">
             {/* Section Header */}
@@ -108,7 +110,7 @@ export default function HorizontalSection({
                 <div className="flex items-center gap-3">
                     {/* Navigation Arrows */}
                     <div className="flex items-center gap-2">
-                        <button
+                        <button id={`assessment-horizontal-${sectionSlug}-scroll-left-btn`}
                             onClick={() => scroll('left')}
                             disabled={!canScrollLeft}
                             className={`p-2 rounded-full border transition-all duration-200 ${canScrollLeft
@@ -118,7 +120,7 @@ export default function HorizontalSection({
                         >
                             <ChevronLeft className="w-5 h-5" />
                         </button>
-                        <button
+                        <button id={`assessment-horizontal-${sectionSlug}-scroll-right-btn`}
                             onClick={() => scroll('right')}
                             disabled={!canScrollRight}
                             className={`p-2 rounded-full border transition-all duration-200 ${canScrollRight
@@ -132,7 +134,7 @@ export default function HorizontalSection({
 
                     {/* View All Button */}
                     {showViewAll && (
-                        <button
+                        <button id={`assessment-horizontal-${sectionSlug}-view-all-btn`}
                             onClick={onViewAll}
                             className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
                         >

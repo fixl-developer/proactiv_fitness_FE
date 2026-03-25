@@ -173,7 +173,7 @@ export default function OperationsBookingsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Bookings Management</h1>
-        <button data-testid="btn-admin-operations-bookings-1" onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button id="btn-admin-operations-bookings-1" onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
           + New Booking
         </button>
       </div>
@@ -211,7 +211,7 @@ export default function OperationsBookingsPage() {
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-          <select data-testid="select-admin-operations-bookings-12" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="select-admin-operations-bookings-12" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All</option>
             <option value="confirmed">Confirmed</option>
             <option value="pending">Pending</option>
@@ -221,13 +221,13 @@ export default function OperationsBookingsPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-          <input data-testid="input-date-admin-operations-bookings" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input id="input-date-admin-operations-bookings-from" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
-          <input data-testid="input-date-admin-operations-bookings" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input id="input-date-admin-operations-bookings" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <button data-testid="btn-admin-operations-bookings-2" onClick={() => { setStatusFilter(''); setDateFrom(''); setDateTo(''); setPage(1) }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
+        <button id="btn-admin-operations-bookings-2" onClick={() => { setStatusFilter(''); setDateFrom(''); setDateTo(''); setPage(1) }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
           Clear
         </button>
       </div>
@@ -264,7 +264,7 @@ export default function OperationsBookingsPage() {
                   <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{b.notes || '-'}</td>
                   <td className="px-4 py-3 text-right">
                     {b.status !== 'cancelled' && b.status !== 'completed' && (
-                      <button data-testid="btn-admin-operations-bookings-3" onClick={() => handleCancel(b._id)} className="text-red-600 hover:text-red-800 font-medium text-sm">
+                      <button id="btn-admin-operations-bookings-3" onClick={() => handleCancel(b._id)} className="text-red-600 hover:text-red-800 font-medium text-sm">
                         Cancel
                       </button>
                     )}
@@ -279,11 +279,11 @@ export default function OperationsBookingsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-4">
-          <button data-testid="btn-admin-operations-bookings-4" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
+          <button id="btn-admin-operations-bookings-4" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
             Previous
           </button>
           <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-          <button data-testid="btn-admin-operations-bookings-5" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
+          <button id="btn-admin-operations-bookings-5" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
             Next
           </button>
         </div>
@@ -297,11 +297,11 @@ export default function OperationsBookingsPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">User ID *</label>
-                <input data-testid="input-text-admin-operations-bookings" type="text" value={createForm.userId} onChange={(e) => setCreateForm({ ...createForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-bookings" type="text" value={createForm.userId} onChange={(e) => setCreateForm({ ...createForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Session ID *</label>
-                <input data-testid="input-text-admin-operations-bookings" type="text" value={createForm.sessionId} onChange={(e) => setCreateForm({ ...createForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-bookings" type="text" value={createForm.sessionId} onChange={(e) => setCreateForm({ ...createForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
@@ -309,8 +309,8 @@ export default function OperationsBookingsPage() {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button data-testid="btn-admin-operations-bookings-6" onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button data-testid="btn-admin-operations-bookings-7" onClick={handleCreate} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
+              <button id="btn-admin-operations-bookings-6" onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
+              <button id="btn-admin-operations-bookings-7" onClick={handleCreate} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
                 {submitting ? 'Creating...' : 'Create Booking'}
               </button>
             </div>

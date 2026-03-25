@@ -30,7 +30,7 @@ export function RegisterStep3({
     });
 
     return (
-        <form data-testid="form-components-auth-RegisterStep3" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep3" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Address Details</h2>
                 <p className="text-gray-600 mt-2">Where are you located?</p>
@@ -145,14 +145,14 @@ export function RegisterStep3({
 
             {/* Buttons */}
             <div className="flex gap-4">
-                <button
+                <button id="auth-register-step3-btn-back"
                     type="button"
                     onClick={onBack}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
-                <button
+                <button id="auth-register-step3-btn-continue"
                     type="submit"
                     className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >

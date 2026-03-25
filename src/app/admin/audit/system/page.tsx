@@ -148,11 +148,11 @@ const SystemLogsPage = () => {
                     </p>
                 </div>
                 <div className={responsiveClasses.buttonGroup}>
-                    <Button variant="outline">
+                    <Button id="admin-audit-system-export-btn" variant="outline">
                         <Download className="w-4 h-4 mr-2" />
                         Export Logs
                     </Button>
-                    <Button>
+                    <Button id="admin-audit-system-refresh-btn">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
@@ -220,7 +220,7 @@ const SystemLogsPage = () => {
                         {/* Service Filter */}
                         <div className="flex flex-wrap gap-2">
                             {systemServices.map((service) => (
-                                <button
+                                <button id={`admin-audit-system-service-${service.id}-btn`}
                                     key={service.id}
                                     onClick={() => setSelectedService(service.id)}
                                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedService === service.id

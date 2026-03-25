@@ -84,7 +84,7 @@ export default function MyBookingsPage() {
                 <div className="bg-white rounded-lg shadow-sm mb-6">
                     <div className="border-b border-gray-200">
                         <nav className="flex -mb-px">
-                            <button
+                            <button id="booking-my-bookings-btn"
                                 onClick={() => setActiveTab('upcoming')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'upcoming'
                                     ? 'border-blue-500 text-blue-600'
@@ -97,7 +97,7 @@ export default function MyBookingsPage() {
                                 </span>
                             </button>
 
-                            <button
+                            <button id="booking-my-bookings-btn-2"
                                 onClick={() => setActiveTab('past')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'past'
                                     ? 'border-blue-500 text-blue-600'
@@ -107,7 +107,7 @@ export default function MyBookingsPage() {
                                 Past
                             </button>
 
-                            <button
+                            <button id="booking-my-bookings-btn-3"
                                 onClick={() => setActiveTab('cancelled')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'cancelled'
                                     ? 'border-blue-500 text-blue-600'
@@ -156,7 +156,7 @@ export default function MyBookingsPage() {
                             {activeTab === 'cancelled' &&
                                 "You don't have any cancelled bookings."}
                         </p>
-                        <a
+                        <a id="booking-my-bookings-link-classes"
                             href="/classes"
                             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >

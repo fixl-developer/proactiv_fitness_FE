@@ -107,11 +107,11 @@ const OrganizationManagementPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-organization-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button>
+                    <Button id="admin-organization-btn-2">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Unit
                     </Button>
@@ -171,11 +171,11 @@ const OrganizationManagementPage = () => {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center justify-between">
-                                    <Button variant="outline" size="sm">
+                                    <Button id="admin-organization-btn-3" variant="outline" size="sm">
                                         <BarChart3 className="w-4 h-4 mr-2" />
                                         View Details
                                     </Button>
-                                    <Button variant="outline" size="sm">
+                                    <Button id="admin-organization-btn-4" variant="outline" size="sm">
                                         <Settings className="w-4 h-4 mr-2" />
                                         Configure
                                     </Button>

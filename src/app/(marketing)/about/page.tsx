@@ -328,7 +328,7 @@ export default function AboutPage() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <Link
+                            <Link id="marketing-about-nav-book-trial"
                                 href="/book-trial"
                                 className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full text-sm md:text-base font-bold hover:shadow-xl transition-all shadow-lg"
                             >

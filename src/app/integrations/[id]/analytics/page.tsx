@@ -62,7 +62,7 @@ export default function IntegrationAnalyticsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Integration Analytics</h1>
                         <p className="text-gray-600">Performance and usage metrics</p>
                     </div>
-                    <Button data-testid="btn-router-integrations-id-analytics" onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
+                    <Button id="btn-router-integrations-id-analytics" onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
                         Back to Integration
                     </Button>
                 </div>
@@ -76,7 +76,7 @@ export default function IntegrationAnalyticsPage() {
 
                 <div className="mb-6 flex gap-2">
                     {['7d', '30d', '90d', '1y'].map((p) => (
-                        <Button
+                        <Button id={`integration-analytics-period-${p}-btn`}
                             key={p}
                             onClick={() => setPeriod(p)}
                             variant={period === p ? 'default' : 'outline'}

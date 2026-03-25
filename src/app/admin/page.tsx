@@ -161,7 +161,7 @@ const AdminHomePage = () => {
                         Manage all aspects of your <span className="font-semibold text-violet-600">gymnastics business</span>
                     </motion.p>
                 </div>
-                <Button
+                <Button id="admin-go-to-dashboard-btn"
                     onClick={() => window.location.href = '/admin/dashboard'}
                     className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
@@ -182,6 +182,7 @@ const AdminHomePage = () => {
                         className="group"
                     >
                         <Card
+                            id={`admin-section-${section.title.toLowerCase().replace(/\s+/g, '-')}-card`}
                             className="hover:shadow-2xl transition-all duration-500 cursor-pointer group border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm admin-card-hover"
                             onClick={() => window.location.href = section.href}
                         >
@@ -205,7 +206,7 @@ const AdminHomePage = () => {
                                     <span className="text-sm font-medium text-gray-500 group-hover:text-violet-600 transition-colors">
                                         {section.stats}
                                     </span>
-                                    <Button
+                                    <Button id={`admin-section-${section.title.toLowerCase().replace(/\s+/g, '-')}-open-btn`}
                                         variant="ghost"
                                         size="sm"
                                         className="group-hover:bg-gradient-to-r group-hover:from-violet-50 group-hover:to-purple-50 group-hover:text-violet-600 transition-all duration-300 transform group-hover:scale-105"

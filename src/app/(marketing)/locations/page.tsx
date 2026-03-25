@@ -131,7 +131,7 @@ export default function LocationsPage() {
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Phone</p>
-                                            <a
+                                            <a id="marketing-locations-link"
                                                 href={`tel:${location.phone}`}
                                                 className="text-gray-900 font-semibold hover:text-primary"
                                             >
@@ -147,7 +147,7 @@ export default function LocationsPage() {
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Email</p>
-                                            <a
+                                            <a id="marketing-locations-link-2"
                                                 href={`mailto:${location.email}`}
                                                 className="text-gray-900 font-semibold hover:text-primary"
                                             >
@@ -170,7 +170,7 @@ export default function LocationsPage() {
 
                                     {/* Actions */}
                                     <div className="flex gap-3 pt-4">
-                                        <a
+                                        <a id="marketing-locations-link-3"
                                             href={location.mapUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -179,7 +179,7 @@ export default function LocationsPage() {
                                             <Navigation className="w-5 h-5" />
                                             Get Directions
                                         </a>
-                                        <Link
+                                        <Link id="marketing-locations-nav-book-trial"
                                             href="/book-trial"
                                             className="flex-1 bg-gray-100 text-gray-900 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-center"
                                         >
@@ -226,7 +226,7 @@ export default function LocationsPage() {
                     <p className="text-xl mb-8 max-w-2xl mx-auto">
                         Book a free trial class at your nearest location today!
                     </p>
-                    <Link
+                    <Link id="marketing-locations-nav-book-trial-2"
                         href="/book-trial"
                         className="inline-block bg-white text-primary px-8 py-4 rounded-full text-lg font-bold hover:bg-gray-100 transition-all transform hover:scale-105"
                     >

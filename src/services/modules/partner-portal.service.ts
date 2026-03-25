@@ -142,6 +142,45 @@ export class PartnerPortalService {
     }
 
     /**
+     * Create a partner program
+     */
+    static async createPartnerProgram(partnerId: string, data: Partial<PartnerProgram>): Promise<PartnerProgram> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/programs`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error creating partner program:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Update a partner program
+     */
+    static async updatePartnerProgram(partnerId: string, programId: string, data: Partial<PartnerProgram>): Promise<PartnerProgram> {
+        try {
+            const response = await apiClient.put(`/partner/${partnerId}/programs/${programId}`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error updating partner program:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Delete a partner program
+     */
+    static async deletePartnerProgram(partnerId: string, programId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/partner/${partnerId}/programs/${programId}`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error deleting partner program:', error)
+            throw error
+        }
+    }
+
+    /**
      * Get partner students
      */
     static async getPartnerStudents(partnerId: string, filters?: { page?: number; limit?: number }): Promise<{ students: PartnerStudent[]; total: number }> {
@@ -150,6 +189,45 @@ export class PartnerPortalService {
             return (response as any)?.data || { students: [], total: 0 }
         } catch (error) {
             console.error('Error fetching partner students:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Create a partner student
+     */
+    static async createPartnerStudent(partnerId: string, data: Partial<PartnerStudent>): Promise<PartnerStudent> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/students`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error creating partner student:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Update a partner student
+     */
+    static async updatePartnerStudent(partnerId: string, studentId: string, data: Partial<PartnerStudent>): Promise<PartnerStudent> {
+        try {
+            const response = await apiClient.put(`/partner/${partnerId}/students/${studentId}`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error updating partner student:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Delete a partner student
+     */
+    static async deletePartnerStudent(partnerId: string, studentId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/partner/${partnerId}/students/${studentId}`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error deleting partner student:', error)
             throw error
         }
     }
@@ -283,6 +361,165 @@ export class PartnerPortalService {
             return (response as any)?.data || []
         } catch (error) {
             console.error('Error fetching partner agreements:', error)
+            throw error
+        }
+    }
+    /**
+     * Get marketing campaigns
+     */
+    static async getMarketingCampaigns(partnerId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/marketing/campaigns`)
+            return (response as any)?.data || { campaigns: [], total: 0 }
+        } catch (error) {
+            console.error('Error fetching marketing campaigns:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get marketing leads
+     */
+    static async getMarketingLeads(partnerId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/marketing/leads`)
+            return (response as any)?.data || { leads: [], total: 0 }
+        } catch (error) {
+            console.error('Error fetching marketing leads:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get support tickets
+     */
+    static async getSupportTickets(partnerId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/support/tickets`)
+            return (response as any)?.data || { tickets: [], total: 0 }
+        } catch (error) {
+            console.error('Error fetching support tickets:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Create a support ticket (resource request)
+     */
+    static async createSupportTicket(partnerId: string, data: { subject: string; description: string; priority: string; category: string }): Promise<any> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/support/tickets`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error creating support ticket:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Add message to a support ticket
+     */
+    static async addTicketMessage(ticketId: string, data: { message: string; sender?: string; senderType?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post(`/partner/support/tickets/${ticketId}/messages`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error adding ticket message:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Get partner settings
+     */
+    static async getPartnerSettings(partnerId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/settings`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error fetching partner settings:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Update partner settings
+     */
+    static async updatePartnerSettings(partnerId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.patch(`/partner/${partnerId}/settings`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error updating partner settings:', error)
+            throw error
+        }
+    }
+    // ===== Partner Reports =====
+
+    static async getPartnerReports(partnerId: string, filters?: { period?: string; status?: string; reportType?: string }): Promise<{ reports: any[]; total: number }> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/reports`, { params: filters })
+            return (response as any)?.data || { reports: [], total: 0 }
+        } catch (error) {
+            console.error('Error fetching partner reports:', error)
+            throw error
+        }
+    }
+
+    static async getPartnerReportsSummary(partnerId: string, period?: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/reports/summary`, { params: { period } })
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error fetching reports summary:', error)
+            throw error
+        }
+    }
+
+    static async createPartnerReport(partnerId: string, data: {
+        reportName: string
+        reportType: string
+        description?: string
+        format?: string
+        dateFrom?: string
+        dateTo?: string
+        dataSources?: string[]
+    }): Promise<any> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/reports`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error creating partner report:', error)
+            throw error
+        }
+    }
+
+    static async getPartnerReportById(partnerId: string, reportId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/reports/${reportId}`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error fetching partner report:', error)
+            throw error
+        }
+    }
+
+    static async deletePartnerReport(partnerId: string, reportId: string): Promise<any> {
+        try {
+            const response = await apiClient.delete(`/partner/${partnerId}/reports/${reportId}`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error deleting partner report:', error)
+            throw error
+        }
+    }
+
+    static async downloadPartnerReport(partnerId: string, reportId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/reports/${reportId}/download`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error downloading partner report:', error)
             throw error
         }
     }

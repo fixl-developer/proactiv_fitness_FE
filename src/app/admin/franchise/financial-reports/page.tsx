@@ -1,60 +1,91 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     BarChart3, DollarSign, TrendingUp, TrendingDown, Download,
-    Calendar, Filter, PieChart, LineChart as LineChartIcon
+    PieChart, LineChart as LineChartIcon
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import {
+    LineChart, Line, PieChart as RechartsPie, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts'
+import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
+
+interface MonthlyDataItem {
+    month: string
+    revenue: number
+    expenses: number
+    profit: number
+}
+
+interface BreakdownItem {
+    name: string
+    value: number
+    percentage: number
+}
+
+interface FinancialData {
+    totalRevenue: number
+    totalExpenses: number
+    totalProfit: number
+    profitMargin: number
+    avgMonthlyProfit: number
+    monthlyData: MonthlyDataItem[]
+    revenueByProgram: BreakdownItem[]
+    expenseBreakdown: BreakdownItem[]
+}
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 export default function FinancialReportsPage() {
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [timeRange, setTimeRange] = useState('monthly')
-    const [reportType, setReportType] = useState('overview')
+    const [exporting, setExporting] = useState(false)
+    const [financialData, setFinancialData] = useState<FinancialData | null>(null)
 
-    useEffect(() => {
-        setTimeout(() => {
+    const fetchData = useCallback(async (range: string) => {
+        setIsLoading(true)
+        setError(null)
+        try {
+            const response = await FranchiseOwnerService.getFinancialReports(range)
+            setFinancialData(response.data)
+        } catch (err: any) {
+            setError(err.message || 'Failed to load financial reports')
+        } finally {
             setIsLoading(false)
-        }, 1000)
+        }
     }, [])
 
-    // Monthly financial data
-    const monthlyData = [
-        { month: 'January', revenue: 45000, expenses: 28000, profit: 17000 },
-        { month: 'February', revenue: 48000, expenses: 29000, profit: 19000 },
-        { month: 'March', revenue: 52000, expenses: 30000, profit: 22000 },
-        { month: 'April', revenue: 55000, expenses: 31000, profit: 24000 },
-        { month: 'May', revenue: 58000, expenses: 32000, profit: 26000 },
-        { month: 'June', revenue: 62000, expenses: 33000, profit: 29000 },
-    ]
+    useEffect(() => {
+        fetchData(timeRange)
+    }, [timeRange, fetchData])
 
-    // Revenue breakdown by program
-    const revenueByProgram = [
-        { name: 'Classes', value: 180000, percentage: 45 },
-        { name: 'Birthday Parties', value: 120000, percentage: 30 },
-        { name: 'Private Coaching', value: 80000, percentage: 20 },
-        { name: 'Camps', value: 20000, percentage: 5 },
-    ]
+    const handleExport = async () => {
+        setExporting(true)
+        try {
+            const blob = await FranchiseOwnerService.exportFinancialReport('csv')
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `financial-report-${timeRange}.csv`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
+        } catch (err: any) {
+            console.error('Export failed:', err)
+        } finally {
+            setExporting(false)
+        }
+    }
 
-    // Expense breakdown
-    const expenseBreakdown = [
-        { name: 'Staff Salaries', value: 120000, percentage: 55 },
-        { name: 'Facility Rent', value: 40000, percentage: 18 },
-        { name: 'Equipment', value: 25000, percentage: 11 },
-        { name: 'Utilities', value: 15000, percentage: 7 },
-        { name: 'Marketing', value: 18000, percentage: 8 },
-    ]
-
-    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
-
-    // Financial metrics
-    const totalRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0)
-    const totalExpenses = monthlyData.reduce((sum, m) => sum + m.expenses, 0)
-    const totalProfit = totalRevenue - totalExpenses
-    const profitMargin = ((totalProfit / totalRevenue) * 100).toFixed(1)
+    const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setTimeRange(e.target.value)
+    }
 
     if (isLoading) {
         return (
@@ -63,6 +94,68 @@ export default function FinancialReportsPage() {
             </div>
         )
     }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+                <p className="text-red-600 text-lg font-medium">{error}</p>
+                <button id="admin-franchise-financial-reports-btn-retry"
+                    onClick={() => fetchData(timeRange)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                    Retry
+                </button>
+            </div>
+        )
+    }
+
+    if (!financialData) return null
+
+    const {
+        totalRevenue,
+        totalExpenses,
+        totalProfit,
+        profitMargin,
+        avgMonthlyProfit,
+        monthlyData,
+        revenueByProgram,
+        expenseBreakdown,
+    } = financialData
+
+    const metrics = [
+        {
+            title: 'Total Revenue',
+            value: `$${(totalRevenue / 1000).toFixed(0)}K`,
+            icon: DollarSign,
+            cardGradient: 'bg-gradient-to-br from-green-50 to-green-100',
+            iconGradient: 'bg-gradient-to-br from-green-500 to-green-600',
+            change: `+${profitMargin.toFixed(1)}% margin`,
+        },
+        {
+            title: 'Total Expenses',
+            value: `$${(totalExpenses / 1000).toFixed(0)}K`,
+            icon: TrendingDown,
+            cardGradient: 'bg-gradient-to-br from-orange-50 to-orange-100',
+            iconGradient: 'bg-gradient-to-br from-orange-500 to-orange-600',
+            change: `${((totalExpenses / totalRevenue) * 100).toFixed(1)}% of revenue`,
+        },
+        {
+            title: 'Net Profit',
+            value: `$${(totalProfit / 1000).toFixed(0)}K`,
+            icon: TrendingUp,
+            cardGradient: 'bg-gradient-to-br from-blue-50 to-blue-100',
+            iconGradient: 'bg-gradient-to-br from-blue-500 to-blue-600',
+            change: `${profitMargin.toFixed(1)}% margin`,
+        },
+        {
+            title: 'Avg Monthly Profit',
+            value: `$${(avgMonthlyProfit / 1000).toFixed(0)}K`,
+            icon: BarChart3,
+            cardGradient: 'bg-gradient-to-br from-purple-50 to-purple-100',
+            iconGradient: 'bg-gradient-to-br from-purple-500 to-purple-600',
+            change: 'Net profit/month',
+        },
+    ]
 
     return (
         <div className="space-y-6">
@@ -73,65 +166,37 @@ export default function FinancialReportsPage() {
                     <p className="text-gray-600 mt-1">Detailed financial analysis and insights</p>
                 </div>
                 <div className="flex gap-2">
-                    <select data-testid="select-admin-franchise-financial-reports-1"
+                    <select
+                        id="select-admin-franchise-financial-reports-1"
                         value={timeRange}
-                        onChange={(e) => setTimeRange(e.target.value)}
+                        onChange={handleTimeRangeChange}
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
                         <option value="yearly">Yearly</option>
                     </select>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <button id="admin-franchise-financial-reports-btn"
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
                         <Download className="w-5 h-5" />
-                        Export
+                        {exporting ? 'Exporting...' : 'Export'}
                     </button>
                 </div>
             </div>
 
             {/* Key Financial Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    {
-                        title: 'Total Revenue',
-                        value: `$${(totalRevenue / 1000).toFixed(0)}K`,
-                        icon: DollarSign,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50',
-                        change: '+12.5% vs last period'
-                    },
-                    {
-                        title: 'Total Expenses',
-                        value: `$${(totalExpenses / 1000).toFixed(0)}K`,
-                        icon: TrendingDown,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50',
-                        change: '+8.2% vs last period'
-                    },
-                    {
-                        title: 'Net Profit',
-                        value: `$${(totalProfit / 1000).toFixed(0)}K`,
-                        icon: TrendingUp,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50',
-                        change: `${profitMargin}% margin`
-                    },
-                    {
-                        title: 'Avg Monthly',
-                        value: `$${(totalProfit / 6 / 1000).toFixed(0)}K`,
-                        icon: BarChart3,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50',
-                        change: 'Net profit/month'
-                    },
-                ].map((metric, idx) => (
+                {metrics.map((metric, idx) => (
                     <motion.div
                         key={idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`${metric.cardGradient} border-0 hover:shadow-lg transition-shadow`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -139,8 +204,8 @@ export default function FinancialReportsPage() {
                                         <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
                                         <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className={`${metric.iconGradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-6 h-6 text-white" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -185,10 +250,21 @@ export default function FinancialReportsPage() {
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <RechartsPie data={revenueByProgram} cx="50%" cy="50%" labelLine={false} label={({ name, percentage }) => `${name}: ${percentage}%`} outerRadius={80}>
-                                {revenueByProgram.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
+                            <RechartsPie>
+                                <Pie
+                                    data={revenueByProgram}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                                    outerRadius={80}
+                                    dataKey="value"
+                                >
+                                    {revenueByProgram.map((_, index) => (
+                                        <Cell key={`rev-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => typeof value === 'number' ? `$${(value / 1000).toFixed(0)}K` : value} />
                             </RechartsPie>
                         </ResponsiveContainer>
                     </CardContent>
@@ -204,10 +280,21 @@ export default function FinancialReportsPage() {
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <RechartsPie data={expenseBreakdown} cx="50%" cy="50%" labelLine={false} label={({ name, percentage }) => `${name}: ${percentage}%`} outerRadius={80}>
-                                {expenseBreakdown.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
+                            <RechartsPie>
+                                <Pie
+                                    data={expenseBreakdown}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                                    outerRadius={80}
+                                    dataKey="value"
+                                >
+                                    {expenseBreakdown.map((_, index) => (
+                                        <Cell key={`exp-cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => typeof value === 'number' ? `$${(value / 1000).toFixed(0)}K` : value} />
                             </RechartsPie>
                         </ResponsiveContainer>
                     </CardContent>
@@ -289,7 +376,7 @@ export default function FinancialReportsPage() {
                                         <td className="py-3 px-4 text-blue-600 font-medium">${(item.profit / 1000).toFixed(0)}K</td>
                                         <td className="py-3 px-4">
                                             <Badge variant="outline">
-                                                {((item.profit / item.revenue) * 100).toFixed(1)}%
+                                                {item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : '0.0'}%
                                             </Badge>
                                         </td>
                                     </tr>

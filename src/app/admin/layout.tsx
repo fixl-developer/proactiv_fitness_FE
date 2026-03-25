@@ -271,7 +271,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 {item.submenu ? (
                                     // Menu item with submenu
                                     <div className="relative">
-                                        <button
+                                        <button id="admin-layout-btn"
                                             onClick={() => toggleSubmenu(item.href)}
                                             className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                 ? `bg-gray-100 ${colors.text}`
@@ -302,7 +302,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                                 className="mt-2 ml-8 space-y-1 bg-gray-50 rounded-lg p-2 border border-gray-200"
                                             >
                                                 {item.submenu?.map((subItem: { label: string; href: string }) => (
-                                                    <button
+                                                    <button id="admin-layout-btn-2"
                                                         key={subItem.href}
                                                         onClick={(e) => handleNavigation(subItem.href, e)}
                                                         className={`w-full text-left block p-2 rounded-md text-sm transition-all duration-200 hover:bg-white hover:shadow-sm ${pathname === subItem.href
@@ -318,7 +318,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                     </div>
                                 ) : (
                                     // Regular menu item
-                                    <button
+                                    <button id="admin-layout-btn-3"
                                         onClick={(e) => handleNavigation(item.href, e)}
                                         className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${isActiveLink(item.href)
                                             ? `bg-gray-100 ${colors.text}`
@@ -356,7 +356,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
-                            <Button
+                            <Button id="admin-layout-btn-4"
                                 variant="outline"
                                 size="sm"
                                 className="flex-1 text-gray-600 hover:text-gray-900"
@@ -364,7 +364,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 <Bell className="w-4 h-4 mr-2" />
                                 Alerts
                             </Button>
-                            <Button
+                            <Button id="admin-layout-btn-5"
                                 variant="outline"
                                 size="sm"
                                 onClick={handleLogoutClick}
@@ -401,11 +401,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         </div>
 
                         <div className="flex items-center space-x-3">
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-layout-btn-6" variant="outline" size="sm">
                                 <Bell className="w-4 h-4 mr-2" />
                                 Notifications
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button id="admin-layout-btn-7" variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </Button>

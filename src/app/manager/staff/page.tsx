@@ -143,11 +143,11 @@ const ManagerStaffPage = () => {
                     <p className="text-gray-600 mt-2">Manage coaches and staff members</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="manager-staff-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="manager-staff-add-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Staff
                     </Button>
@@ -215,7 +215,7 @@ const ManagerStaffPage = () => {
                     <div className="flex items-center justify-between">
                         <CardTitle>Staff Members</CardTitle>
                         <div className="flex items-center gap-3">
-                            <select data-testid="select-manager-staff-1"
+                            <select id="select-manager-staff-1"
                                 value={selectedFilter}
                                 onChange={(e) => setSelectedFilter(e.target.value as any)}
                                 className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -261,13 +261,13 @@ const ManagerStaffPage = () => {
                                     <p className="text-xs text-gray-500">Joined: {staff.joinDate}</p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-staff-view-${staff.id}-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-staff-email-${staff.id}-btn`} variant="ghost" size="sm">
                                         <Mail className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-staff-edit-${staff.id}-btn`} variant="ghost" size="sm">
                                         <Edit className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -284,19 +284,19 @@ const ManagerStaffPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-staff-quick-add-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Add Staff</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-staff-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Calendar className="w-6 h-6" />
                             <span>Schedule</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-staff-quick-performance-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Award className="w-6 h-6" />
                             <span>Performance</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="manager-staff-quick-message-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Mail className="w-6 h-6" />
                             <span>Send Message</span>
                         </Button>

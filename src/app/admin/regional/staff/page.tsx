@@ -75,7 +75,7 @@ function StaffFormModal({
     if (!open) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+        <div id="admin-regional-staff-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -87,7 +87,7 @@ function StaffFormModal({
                     <h2 className="text-xl font-semibold text-gray-900">
                         {initial ? 'Edit Staff Member' : 'Add Staff Member'}
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button id="admin-regional-staff-btn" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -152,7 +152,7 @@ function StaffFormModal({
                         />
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t">
-                        <button
+                        <button id="admin-regional-staff-btn-cancel"
                             type="button"
                             onClick={onClose}
                             className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -160,7 +160,7 @@ function StaffFormModal({
                         >
                             Cancel
                         </button>
-                        <button
+                        <button id="admin-regional-staff-btn-2"
                             type="submit"
                             disabled={submitting}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -188,7 +188,7 @@ function StaffDetailModal({
     if (!open || !staff) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+        <div id="admin-regional-staff-div-clickable-2" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -198,7 +198,7 @@ function StaffDetailModal({
             >
                 <div className="flex items-center justify-between p-6 border-b">
                     <h2 className="text-xl font-semibold text-gray-900">Staff Details</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button id="admin-regional-staff-btn-3" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -264,7 +264,7 @@ function StaffDetailModal({
                     </div>
                 </div>
                 <div className="flex justify-end p-6 border-t">
-                    <button
+                    <button id="admin-regional-staff-btn-close"
                         onClick={onClose}
                         className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
@@ -293,7 +293,7 @@ function DeleteConfirmModal({
     if (!open || !staff) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+        <div id="admin-regional-staff-div-clickable-3" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -311,14 +311,14 @@ function DeleteConfirmModal({
                     </p>
                 </div>
                 <div className="flex gap-3 p-6 border-t">
-                    <button
+                    <button id="admin-regional-staff-btn-cancel-2"
                         onClick={onClose}
                         disabled={deleting}
                         className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                         Cancel
                     </button>
-                    <button
+                    <button id="admin-regional-staff-btn--delete"
                         onClick={onConfirm}
                         disabled={deleting}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
@@ -468,7 +468,7 @@ export default function RegionalStaffPage() {
                         {!loading && <span className="ml-1">({total} total)</span>}
                     </p>
                 </div>
-                <button
+                <button id="admin-regional-staff-btn-4"
                     onClick={openAdd}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -491,7 +491,7 @@ export default function RegionalStaffPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-regional-staff-1"
+                            id="select-admin-regional-staff-1"
                             value={filterRole}
                             onChange={handleRoleChange}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -513,7 +513,7 @@ export default function RegionalStaffPage() {
                         <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
                         <p className="text-red-600 font-medium mb-2">Error loading staff</p>
                         <p className="text-gray-500 text-sm mb-4">{error}</p>
-                        <button
+                        <button id="admin-regional-staff-btn-retry"
                             onClick={fetchStaff}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
@@ -598,21 +598,21 @@ export default function RegionalStaffPage() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="flex gap-2">
-                                                    <button
+                                                    <button id="admin-regional-staff-btn-5"
                                                         onClick={() => openView(member)}
                                                         className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors"
                                                         title="View details"
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-regional-staff-btn-6"
                                                         onClick={() => openEdit(member)}
                                                         className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors"
                                                         title="Edit"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    <button id="admin-regional-staff-btn-7"
                                                         onClick={() => openDelete(member)}
                                                         className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors"
                                                         title="Delete"
@@ -652,7 +652,7 @@ export default function RegionalStaffPage() {
                         Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} staff
                     </p>
                     <div className="flex items-center gap-2">
-                        <button
+                        <button id="admin-regional-staff-btn-8"
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             disabled={page === 1}
                             className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -671,7 +671,7 @@ export default function RegionalStaffPage() {
                                 typeof item === 'string' ? (
                                     <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
                                 ) : (
-                                    <button
+                                    <button id="admin-regional-staff-btn-9"
                                         key={item}
                                         onClick={() => setPage(item)}
                                         className={`px-3 py-2 text-sm rounded-lg transition-colors ${
@@ -684,7 +684,7 @@ export default function RegionalStaffPage() {
                                     </button>
                                 )
                         )}
-                        <button
+                        <button id="admin-regional-staff-btn-10"
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             disabled={page === totalPages}
                             className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

@@ -8,7 +8,8 @@ import { motion } from 'framer-motion'
 import {
     HelpCircle, MessageSquare, Phone, Mail, Clock, Search,
     Plus, CheckCircle, AlertCircle, XCircle, Star, Send,
-    Book, Video, FileText, ExternalLink, Zap, Users
+    Book, Video, FileText, ExternalLink, Zap, Users, X,
+    Package, Dumbbell, Wrench, ShoppingCart, Laptop, Headphones
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,19 @@ export default function PartnerSupportPage() {
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState('overview')
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
+    const [replyText, setReplyText] = useState('')
+    const [sendingReply, setSendingReply] = useState(false)
+    const [showCreateTicketModal, setShowCreateTicketModal] = useState(false)
+    const [creatingTicket, setCreatingTicket] = useState(false)
+    const [ticketForm, setTicketForm] = useState({
+        resourceType: '',
+        subject: '',
+        description: '',
+        priority: 'MEDIUM',
+        quantity: '1',
+        preferredDate: '',
+        additionalNotes: ''
+    })
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -38,61 +52,26 @@ export default function PartnerSupportPage() {
             setError(null)
 
             const partnerId = user?.id || 'partner-1'
-            const response = await PartnerPortalService.getPartnerNotifications(partnerId)
+            const response = await PartnerPortalService.getSupportTickets(partnerId)
 
-            setTickets([
-                {
-                    id: '1',
-                    title: 'Integration Setup Issue',
-                    description: 'Having trouble setting up Google Calendar integration',
-                    status: 'OPEN',
-                    priority: 'HIGH',
-                    category: 'Technical',
-                    createdDate: '2024-03-15',
-                    lastUpdate: '2024-03-15',
-                    assignedTo: 'Sarah Johnson',
-                    messages: [
-                        {
-                            id: 'm1',
-                            sender: 'You',
-                            content: 'I am having trouble setting up the Google Calendar integration. The webhook URL is not working.',
-                            timestamp: '2024-03-15 10:30 AM',
-                            isOwn: true
-                        },
-                        {
-                            id: 'm2',
-                            sender: 'Sarah Johnson',
-                            content: 'Hi! I can help you with that. Can you please share the exact error message you are seeing?',
-                            timestamp: '2024-03-15 11:15 AM',
-                            isOwn: false
-                        }
-                    ]
-                },
-                {
-                    id: '2',
-                    title: 'Commission Calculation Question',
-                    description: 'Need clarification on how commissions are calculated',
-                    status: 'IN_PROGRESS',
-                    priority: 'MEDIUM',
-                    category: 'Billing',
-                    createdDate: '2024-03-14',
-                    lastUpdate: '2024-03-14',
-                    assignedTo: 'Mike Chen',
-                    messages: []
-                },
-                {
-                    id: '3',
-                    title: 'Student Enrollment Process',
-                    description: 'Questions about the student enrollment workflow',
-                    status: 'RESOLVED',
-                    priority: 'LOW',
-                    category: 'General',
-                    createdDate: '2024-03-13',
-                    lastUpdate: '2024-03-13',
-                    assignedTo: 'Lisa Wong',
-                    messages: []
-                }
-            ])
+            setTickets((response?.tickets || []).map((t: any) => ({
+                id: t.id,
+                title: t.subject,
+                description: t.description,
+                status: t.status?.toUpperCase().replace(' ', '_') || 'OPEN',
+                priority: t.priority?.toUpperCase() || 'MEDIUM',
+                category: t.category || 'General',
+                createdDate: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A',
+                lastUpdate: t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'N/A',
+                assignedTo: t.assignedTo || 'Support Team',
+                messages: (t.messages || []).map((m: any) => ({
+                    id: m.id,
+                    sender: m.sender,
+                    content: m.message,
+                    timestamp: m.createdAt ? new Date(m.createdAt).toLocaleString() : 'N/A',
+                    isOwn: m.senderType === 'partner'
+                }))
+            })))
 
             setFaqs([
                 {
@@ -130,6 +109,7 @@ export default function PartnerSupportPage() {
             ])
         } catch (err: any) {
             console.error('Error fetching support data:', err)
+            setError('Failed to load support data')
         } finally {
             setIsLoading(false)
         }
@@ -165,11 +145,60 @@ export default function PartnerSupportPage() {
     }
 
     const handleCreateTicket = () => {
-        alert('Opening ticket creation form...')
+        setShowCreateTicketModal(true)
     }
 
-    const handleSendMessage = (ticketId: string, message: string) => {
-        alert(`Sending message to ticket ${ticketId}: ${message}`)
+    const handleSubmitTicket = async () => {
+        if (!ticketForm.subject.trim() || !ticketForm.description.trim() || !ticketForm.resourceType) return
+        try {
+            setCreatingTicket(true)
+            const partnerId = user?.id || 'partner-1'
+            await PartnerPortalService.createSupportTicket(partnerId, {
+                subject: `[Resource Request - ${ticketForm.resourceType}] ${ticketForm.subject}`,
+                description: `Resource Type: ${ticketForm.resourceType}\nQuantity: ${ticketForm.quantity}\nPreferred Date: ${ticketForm.preferredDate || 'N/A'}\n\n${ticketForm.description}\n\nAdditional Notes: ${ticketForm.additionalNotes || 'None'}`,
+                priority: ticketForm.priority.toLowerCase(),
+                category: 'Resource Request'
+            })
+            setShowCreateTicketModal(false)
+            setTicketForm({ resourceType: '', subject: '', description: '', priority: 'MEDIUM', quantity: '1', preferredDate: '', additionalNotes: '' })
+            fetchSupportData()
+        } catch (err) {
+            console.error('Error creating ticket:', err)
+        } finally {
+            setCreatingTicket(false)
+        }
+    }
+
+    const handleSendMessage = async (ticketId: string) => {
+        if (!replyText.trim()) return
+        try {
+            setSendingReply(true)
+            const newMsg = await PartnerPortalService.addTicketMessage(ticketId, {
+                message: replyText,
+                sender: 'Partner Admin',
+                senderType: 'partner'
+            })
+            setTickets(prev => prev.map(t => {
+                if (t.id === ticketId) {
+                    return {
+                        ...t,
+                        messages: [...t.messages, {
+                            id: newMsg.id,
+                            sender: newMsg.sender,
+                            content: newMsg.message,
+                            timestamp: new Date(newMsg.createdAt).toLocaleString(),
+                            isOwn: true
+                        }]
+                    }
+                }
+                return t
+            }))
+            setReplyText('')
+        } catch (err) {
+            console.error('Error sending message:', err)
+        } finally {
+            setSendingReply(false)
+        }
     }
 
     if (isLoading) {
@@ -187,7 +216,7 @@ export default function PartnerSupportPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Support Center</h1>
                     <p className="text-gray-600 mt-1">Get help, submit tickets, and access resources</p>
                 </div>
-                <button
+                <button id="partner-support-create-ticket-btn"
                     onClick={handleCreateTicket}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -201,31 +230,43 @@ export default function PartnerSupportPage() {
                 {[
                     {
                         title: 'Open Tickets',
-                        value: '1',
+                        value: String(tickets.filter(t => t.status === 'OPEN').length),
                         icon: AlertCircle,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50'
+                        iconColor: 'text-white',
+                        iconBg: 'bg-blue-500',
+                        gradient: 'bg-gradient-to-br from-blue-500 to-blue-700',
+                        textColor: 'text-white',
+                        subtextColor: 'text-blue-100'
                     },
                     {
-                        title: 'Avg Response Time',
-                        value: '2.5h',
+                        title: 'In Progress',
+                        value: String(tickets.filter(t => t.status === 'IN_PROGRESS').length),
                         icon: Clock,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50'
+                        iconColor: 'text-white',
+                        iconBg: 'bg-amber-500',
+                        gradient: 'bg-gradient-to-br from-amber-400 to-orange-600',
+                        textColor: 'text-white',
+                        subtextColor: 'text-amber-100'
                     },
                     {
-                        title: 'Resolution Rate',
-                        value: '98%',
+                        title: 'Resolved',
+                        value: String(tickets.filter(t => t.status === 'RESOLVED').length),
                         icon: CheckCircle,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50'
+                        iconColor: 'text-white',
+                        iconBg: 'bg-emerald-500',
+                        gradient: 'bg-gradient-to-br from-emerald-400 to-green-700',
+                        textColor: 'text-white',
+                        subtextColor: 'text-emerald-100'
                     },
                     {
-                        title: 'Satisfaction Score',
-                        value: '4.9/5',
+                        title: 'Total Tickets',
+                        value: String(tickets.length),
                         icon: Star,
-                        color: 'text-yellow-600',
-                        bgColor: 'bg-yellow-50'
+                        iconColor: 'text-white',
+                        iconBg: 'bg-purple-500',
+                        gradient: 'bg-gradient-to-br from-purple-500 to-indigo-700',
+                        textColor: 'text-white',
+                        subtextColor: 'text-purple-100'
                     },
                 ].map((metric, idx) => (
                     <motion.div
@@ -234,15 +275,15 @@ export default function PartnerSupportPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`hover:shadow-xl transition-all hover:scale-105 ${metric.gradient} border-0`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                                        <p className={`text-sm font-medium ${metric.subtextColor}`}>{metric.title}</p>
+                                        <p className={`text-3xl font-bold ${metric.textColor} mt-2`}>{metric.value}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
+                                        <metric.icon className={`w-7 h-7 ${metric.iconColor}`} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -258,21 +299,21 @@ export default function PartnerSupportPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-live-chat-btn" className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-left">
                             <MessageSquare className="w-6 h-6 text-blue-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Live Chat</p>
                                 <p className="text-sm text-gray-600">Chat with our support team</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-phone-btn" className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-left">
                             <Phone className="w-6 h-6 text-green-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Phone Support</p>
                                 <p className="text-sm text-gray-600">Call us at +1 (555) 123-4567</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
+                        <button id="partner-support-email-btn" className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-left">
                             <Mail className="w-6 h-6 text-purple-600" />
                             <div>
                                 <p className="font-medium text-gray-900">Email Support</p>
@@ -290,7 +331,7 @@ export default function PartnerSupportPage() {
                     { id: 'faq', name: 'FAQ', icon: HelpCircle },
                     { id: 'resources', name: 'Help Resources', icon: Book },
                 ].map((tab) => (
-                    <button
+                    <button id={`partner-support-tab-${tab.id}-btn`}
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${activeTab === tab.id
@@ -319,6 +360,7 @@ export default function PartnerSupportPage() {
                                     transition={{ delay: idx * 0.05 }}
                                 >
                                     <Card
+                                        id={`partner-support-ticket-${ticket.id}-card`}
                                         className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedTicket === ticket.id ? 'ring-2 ring-blue-500' : ''
                                             }`}
                                         onClick={() => setSelectedTicket(ticket.id)}
@@ -400,9 +442,17 @@ export default function PartnerSupportPage() {
                                             <input
                                                 type="text"
                                                 placeholder="Type your message..."
+                                                value={replyText}
+                                                onChange={(e) => setReplyText(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && !sendingReply && handleSendMessage(selectedTicket!)}
                                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
-                                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                            <button
+                                                id="partner-support-send-message-btn"
+                                                onClick={() => handleSendMessage(selectedTicket!)}
+                                                disabled={sendingReply || !replyText.trim()}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                            >
                                                 <Send className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -454,10 +504,10 @@ export default function PartnerSupportPage() {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors">
+                                                <button id={`partner-support-faq-helpful-${faq.id}-btn`} className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors">
                                                     <CheckCircle className="w-4 h-4" />
                                                 </button>
-                                                <button className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
+                                                <button id={`partner-support-faq-link-${faq.id}-btn`} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors">
                                                     <ExternalLink className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -520,13 +570,169 @@ export default function PartnerSupportPage() {
                                             </li>
                                         ))}
                                     </ul>
-                                    <button className="w-full mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                    <button id={`partner-support-explore-${idx}-btn`} className="w-full mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                                         Explore {resource.title}
                                     </button>
                                 </CardContent>
                             </Card>
                         </motion.div>
                     ))}
+                </div>
+            )}
+
+            {/* Create Resource Request Ticket Modal */}
+            {showCreateTicketModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
+                    >
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 rounded-t-2xl flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Request Resources</h2>
+                                <p className="text-blue-100 text-sm mt-1">Submit a resource request ticket for your partner needs</p>
+                            </div>
+                            <button
+                                onClick={() => setShowCreateTicketModal(false)}
+                                className="text-white/80 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-5">
+                            {/* Resource Type Selection */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-3">Resource Type *</label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    {[
+                                        { value: 'Equipment', icon: Dumbbell, color: 'border-blue-500 bg-blue-50 text-blue-700' },
+                                        { value: 'Marketing Materials', icon: Package, color: 'border-purple-500 bg-purple-50 text-purple-700' },
+                                        { value: 'Software/Tools', icon: Laptop, color: 'border-emerald-500 bg-emerald-50 text-emerald-700' },
+                                        { value: 'Maintenance', icon: Wrench, color: 'border-amber-500 bg-amber-50 text-amber-700' },
+                                        { value: 'Supplies', icon: ShoppingCart, color: 'border-rose-500 bg-rose-50 text-rose-700' },
+                                        { value: 'IT Support', icon: Headphones, color: 'border-cyan-500 bg-cyan-50 text-cyan-700' },
+                                    ].map((type) => (
+                                        <button
+                                            key={type.value}
+                                            type="button"
+                                            onClick={() => setTicketForm(prev => ({ ...prev, resourceType: type.value }))}
+                                            className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                                                ticketForm.resourceType === type.value
+                                                    ? `${type.color} border-current shadow-md scale-105`
+                                                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                                            }`}
+                                        >
+                                            <type.icon className="w-5 h-5" />
+                                            <span className="text-xs font-medium text-center">{type.value}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Subject */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Subject *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Brief title for your resource request"
+                                    value={ticketForm.subject}
+                                    onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Description *</label>
+                                <textarea
+                                    placeholder="Describe what resources you need and why..."
+                                    rows={4}
+                                    value={ticketForm.description}
+                                    onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                />
+                            </div>
+
+                            {/* Priority & Quantity Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Priority</label>
+                                    <select
+                                        value={ticketForm.priority}
+                                        onChange={(e) => setTicketForm(prev => ({ ...prev, priority: e.target.value }))}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    >
+                                        <option value="LOW">Low</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="CRITICAL">Critical</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={ticketForm.quantity}
+                                        onChange={(e) => setTicketForm(prev => ({ ...prev, quantity: e.target.value }))}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Date</label>
+                                    <input
+                                        type="date"
+                                        value={ticketForm.preferredDate}
+                                        onChange={(e) => setTicketForm(prev => ({ ...prev, preferredDate: e.target.value }))}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Additional Notes */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Additional Notes</label>
+                                <textarea
+                                    placeholder="Any additional information or special requirements..."
+                                    rows={2}
+                                    value={ticketForm.additionalNotes}
+                                    onChange={(e) => setTicketForm(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 bg-gray-50 rounded-b-2xl flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setShowCreateTicketModal(false)}
+                                className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmitTicket}
+                                disabled={creatingTicket || !ticketForm.subject.trim() || !ticketForm.description.trim() || !ticketForm.resourceType}
+                                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {creatingTicket ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send className="w-4 h-4" />
+                                        Submit Request
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
                 </div>
             )}
         </div>

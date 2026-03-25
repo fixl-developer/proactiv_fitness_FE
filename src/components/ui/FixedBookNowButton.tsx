@@ -14,6 +14,7 @@ const FixedBookNowButton = () => {
                 className="fixed right-0 top-1/4 -translate-y-1/2 z-50 hidden md:block"
             >
                 <motion.button
+                    id="fixed-book-now-desktop-btn"
                     onClick={() => window.location.href = '/book-now'}
                     className="bg-[#1e3a8a] hover:bg-[#1e40af] text-white rounded-l-3xl shadow-2xl transition-all duration-300 flex flex-col items-center justify-center group"
                     style={{
@@ -57,6 +58,7 @@ const FixedBookNowButton = () => {
                 className="fixed bottom-4 left-4 right-4 z-50 md:hidden"
             >
                 <motion.button
+                    id="fixed-book-now-mobile-btn"
                     onClick={() => window.location.href = '/book-now'}
                     className="w-full bg-[#1e3a8a] hover:bg-[#1e40af] text-white rounded-2xl shadow-2xl transition-all duration-300 flex items-center justify-center py-4 group"
                     whileHover={{ scale: 1.02 }}

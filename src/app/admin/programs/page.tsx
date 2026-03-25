@@ -50,7 +50,7 @@ export default function ProgramsPage() {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Programs</h1>
-                <Link
+                <Link id="admin-programs-nav-admin-programs-catalog"
                     href="/admin/programs/catalog"
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
                 >
@@ -74,13 +74,13 @@ export default function ProgramsPage() {
                                 <p className="text-lg font-bold text-blue-600">${program.price}</p>
                             </div>
                             <div className="mt-4 flex gap-2">
-                                <Link
+                                <Link id="admin-programs-nav-edit"
                                     href={`/admin/programs/${program.id}`}
                                     className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-center"
                                 >
                                     Edit
                                 </Link>
-                                <button
+                                <button id="admin-programs-btn"
                                     onClick={() => handleDelete(program.id)}
                                     className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50"
                                 >

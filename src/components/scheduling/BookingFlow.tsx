@@ -225,7 +225,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     return (
         <div className="max-w-2xl mx-auto p-6">
             <div className="flex items-center justify-between mb-6">
-                <Button data-testid="btn-on-cancel-components-scheduling-BookingFlow" variant="ghost" onClick={onCancel}>
+                <Button id="scheduling-booking-flow-back-btn" variant="ghost" onClick={onCancel}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Schedule
                 </Button>
@@ -261,7 +261,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                         </label>
                                         <div className="space-y-2">
                                             {existingChildren.map((child) => (
-                                                <div
+                                                <div id={`scheduling-booking-flow-child-${child.id}-btn`}
                                                     key={child.id}
                                                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${bookingData.child?.id === child.id
                                                         ? 'border-blue-500 bg-blue-50'
@@ -507,7 +507,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                 ) : (
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-1 gap-4">
-                                            <div
+                                            <div id="scheduling-booking-flow-pay-card-btn"
                                                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${bookingData.paymentMethod === 'card'
                                                     ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-300 hover:border-gray-400'
@@ -523,7 +523,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                                 </div>
                                             </div>
 
-                                            <div
+                                            <div id="scheduling-booking-flow-pay-package-btn"
                                                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${bookingData.paymentMethod === 'package'
                                                     ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-300 hover:border-gray-400'
@@ -544,7 +544,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                                 </div>
                                             </div>
 
-                                            <div
+                                            <div id="scheduling-booking-flow-pay-trial-btn"
                                                 className={`p-4 border rounded-lg cursor-pointer transition-colors ${bookingData.paymentMethod === 'trial'
                                                     ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-300 hover:border-gray-400'
@@ -604,7 +604,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                                         <p><strong>Coach:</strong> {selectedSlot.coach}</p>
                                     </div>
                                 </div>
-                                <Button data-testid="btn-window-components-scheduling-BookingFlow" onClick={() => window.location.href = '/parent/dashboard'} className="w-full">
+                                <Button id="scheduling-booking-flow-go-to-bookings-btn" onClick={() => window.location.href = '/parent/dashboard'} className="w-full">
                                     Go to My Bookings
                                 </Button>
                             </CardContent>
@@ -616,7 +616,7 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
             {/* Navigation Buttons */}
             {currentStep < 4 && (
                 <div className="flex justify-between mt-8">
-                    <Button
+                    <Button id="scheduling-booking-flow-prev-btn"
                         variant="outline"
                         onClick={prevStep}
                         disabled={currentStep === 1}
@@ -626,12 +626,12 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
                     </Button>
 
                     {currentStep < 3 ? (
-                        <Button data-testid="btn-next-step-components-scheduling-BookingFlow" onClick={nextStep}>
+                        <Button id="scheduling-booking-flow-next-btn" onClick={nextStep}>
                             Next
                             <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                     ) : (
-                        <Button
+                        <Button id="scheduling-booking-flow-confirm-btn"
                             onClick={handleSubmit}
                             disabled={isSubmitting}
                             className="bg-green-600 hover:bg-green-700"

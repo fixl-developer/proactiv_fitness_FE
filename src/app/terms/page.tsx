@@ -105,7 +105,7 @@ export default function TermsAndConditionsPage() {
                 <div className="bg-white shadow-sm border-b">
                     <div className="container-max px-4 py-6">
                         <div className="flex items-center space-x-4">
-                            <Link
+                            <Link id="terms-nav"
                                 href="/"
                                 className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
                             >
@@ -373,13 +373,13 @@ export default function TermsAndConditionsPage() {
                                         transition={{ delay: 0.4 }}
                                         className="flex flex-col sm:flex-row gap-4 justify-center"
                                     >
-                                        <Link
+                                        <Link id="terms-nav-contact"
                                             href="/contact"
                                             className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
                                         >
                                             Contact Us
                                         </Link>
-                                        <Link
+                                        <Link id="terms-nav-about"
                                             href="/about"
                                             className="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
                                         >

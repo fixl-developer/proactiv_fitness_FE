@@ -86,7 +86,7 @@ export default function WorkflowTemplatesPage() {
                                     <div className="mb-4">
                                         <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full">{template.category}</span>
                                     </div>
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Button id={`workflows-templates-use-${template.id}-btn`} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                         <Plus className="w-4 h-4 mr-2" />
                                         Use Template
                                     </Button>

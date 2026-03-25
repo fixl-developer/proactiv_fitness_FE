@@ -76,11 +76,11 @@ export default function WorkflowDetailsPage() {
                         <p className="text-gray-600">{workflow.description}</p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="outline">
+                        <Button id="advanced-workflows-id-btn" variant="outline">
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                         </Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button id="advanced-workflows-id-btn-2" className="bg-blue-600 hover:bg-blue-700 text-white">
                             <Play className="w-4 h-4 mr-2" />
                             Execute
                         </Button>

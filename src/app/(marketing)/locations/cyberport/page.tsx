@@ -281,7 +281,7 @@ const CyberportLocationPage = () => {
                                 whileHover={{ scale: 1.05, y: -3 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                <Link
+                                <Link id="marketing-locations-cyberport-nav-book-trial"
                                     href="/book-trial"
                                     className="group relative overflow-hidden bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg transition-all duration-300 shadow-2xl flex items-center justify-center space-x-2 w-full sm:w-auto"
                                 >
@@ -307,7 +307,7 @@ const CyberportLocationPage = () => {
                                 whileHover={{ scale: 1.05, y: -3 }}
                                 whileTap={{ scale: 0.95 }}
                             >
-                                <Link
+                                <Link id="marketing-locations-cyberport-nav-contact-info"
                                     href="#contact-info"
                                     className="group relative overflow-hidden border-2 border-white text-white hover:bg-white hover:text-primary-600 px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg transition-all duration-300 flex items-center justify-center space-x-2 w-full sm:w-auto backdrop-blur-sm bg-white/5 hover:bg-white"
                                 >
@@ -758,7 +758,7 @@ const CyberportLocationPage = () => {
                             whileHover={{ scale: 1.05, y: -3 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <Link
+                            <Link id="marketing-locations-cyberport-nav-book-trial-2"
                                 href="/book-trial"
                                 className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl"
                             >
@@ -872,10 +872,10 @@ const CyberportLocationPage = () => {
                         className="text-center mt-12"
                     >
                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                            <Link data-testid="link-book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                            <Link id="book-trial" href="/book-trial" className="bg-white text-primary-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                 Book Free Trial
                             </Link>
-                            <Link data-testid="link-contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                            <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                                 Contact Us
                             </Link>
                         </div>

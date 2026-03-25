@@ -101,7 +101,7 @@ export default function WebhooksPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Webhooks</h1>
                         <p className="text-gray-600">Manage integration webhooks</p>
                     </div>
-                    <Button data-testid="btn-router-integrations-id-webhooks" onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
+                    <Button id="btn-router-integrations-id-webhooks" onClick={() => router.push(`/integrations/${params.id}`)} variant="outline">
                         Back to Integration
                     </Button>
                 </div>
@@ -153,10 +153,10 @@ export default function WebhooksPage() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button data-testid="btn-create-webhook-integrations-id-webhooks" onClick={handleCreateWebhook} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Button id="btn-create-webhook-integrations-id-webhooks" onClick={handleCreateWebhook} className="bg-blue-600 hover:bg-blue-700 text-white">
                                         Create Webhook
                                     </Button>
-                                    <Button data-testid="btn-set-show-form-integrations-id-webhooks" onClick={() => setShowForm(false)} variant="outline">
+                                    <Button id="webhooks-cancel-create-btn" onClick={() => setShowForm(false)} variant="outline">
                                         Cancel
                                     </Button>
                                 </div>
@@ -166,7 +166,7 @@ export default function WebhooksPage() {
                 )}
 
                 <div className="mb-6">
-                    <Button data-testid="btn-set-show-form-integrations-id-webhooks" onClick={() => setShowForm(!showForm)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="webhooks-add-webhook-btn" onClick={() => setShowForm(!showForm)} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Webhook
                     </Button>
@@ -203,7 +203,7 @@ export default function WebhooksPage() {
                                     )}
 
                                     <div className="flex gap-2">
-                                        <Button
+                                        <Button id="webhooks-test-btn"
                                             size="sm"
                                             variant="outline"
                                             onClick={() => handleTestWebhook(webhook.id)}
@@ -211,7 +211,7 @@ export default function WebhooksPage() {
                                             <Play className="w-4 h-4 mr-2" />
                                             Test
                                         </Button>
-                                        <Button
+                                        <Button id="webhooks-delete-btn"
                                             size="sm"
                                             variant="outline"
                                             onClick={() => handleDeleteWebhook(webhook.id)}
@@ -230,7 +230,7 @@ export default function WebhooksPage() {
                     <div className="text-center py-12">
                         <WebhookIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">No webhooks configured</p>
-                        <Button data-testid="btn-set-show-form-integrations-id-webhooks" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button id="webhooks-create-first-btn" onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus className="w-4 h-4 mr-2" />
                             Create First Webhook
                         </Button>

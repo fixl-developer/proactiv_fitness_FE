@@ -93,7 +93,7 @@ export default function ExportPage() {
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Entity</label>
-                                        <select data-testid="select-advanced-data-export-2"
+                                        <select id="export-entity-select"
                                             value={entity}
                                             onChange={(e) => setEntity(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -106,7 +106,7 @@ export default function ExportPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Format</label>
-                                        <select data-testid="select-advanced-data-export-3"
+                                        <select id="export-format-select"
                                             value={format}
                                             onChange={(e) => setFormat(e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -117,7 +117,7 @@ export default function ExportPage() {
                                         </select>
                                     </div>
 
-                                    <Button data-testid="btn-export-advanced-data-export" onClick={handleExport} disabled={exporting} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                                    <Button id="export-submit-btn" onClick={handleExport} disabled={exporting} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                                         <Download className="w-4 h-4 mr-2" />
                                         {exporting ? 'Exporting...' : 'Export'}
                                     </Button>

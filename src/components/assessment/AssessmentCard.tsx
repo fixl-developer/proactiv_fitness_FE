@@ -144,7 +144,7 @@ export default function AssessmentCard({
                         )}
                     </div>
 
-                    <button
+                    <button id={`assessment-card-${id}-book-btn`}
                         onClick={() => onBook(id)}
                         disabled={isFull}
                         className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${isFull

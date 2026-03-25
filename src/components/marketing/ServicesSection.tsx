@@ -70,7 +70,7 @@ export function ServicesSection() {
                 {/* Service Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {services.map((service) => (
-                        <Link
+                        <Link id="marketing-services-section-nav"
                             key={service.id}
                             href={service.link}
                             className="group relative bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"

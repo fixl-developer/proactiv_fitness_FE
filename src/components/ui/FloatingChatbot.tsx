@@ -35,6 +35,7 @@ const FloatingChatbot = () => {
         <>
             {/* Floating Chatbot Icon - Bottom Right */}
             <motion.button
+                id="chatbot-toggle-btn"
                 onClick={() => setIsOpen(!isOpen)}
                 className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-2xl flex items-center justify-center hover:shadow-3xl transition-all duration-300"
                 whileHover={{ scale: 1.1 }}

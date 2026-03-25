@@ -62,11 +62,11 @@ function LocationFormModal({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+        <div id="admin-regional-locations-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div id="admin-regional-locations-div-clickable-2" className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-6 border-b">
                     <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button id="admin-regional-locations-btn" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -122,10 +122,10 @@ function LocationFormModal({
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        <button id="admin-regional-locations-btn-cancel" type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
-                        <button
+                        <button id="admin-regional-locations-btn-2"
                             type="submit"
                             disabled={submitting}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
@@ -160,11 +160,11 @@ function LocationDetailModal({
     )
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
+        <div id="admin-regional-locations-div-clickable-3" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div id="admin-regional-locations-div-clickable-4" className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-6 border-b">
                     <h2 className="text-xl font-bold text-gray-900">Location Details</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button id="admin-regional-locations-btn-3" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
@@ -190,7 +190,7 @@ function LocationDetailModal({
                     {infoRow('Created', location.createdAt ? new Date(location.createdAt).toLocaleDateString() : undefined)}
                 </div>
                 <div className="flex justify-end p-6 border-t">
-                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <button id="admin-regional-locations-btn-close" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                         Close
                     </button>
                 </div>
@@ -216,8 +216,8 @@ function DeleteConfirmModal({
     if (!open) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4" onClick={e => e.stopPropagation()}>
+        <div id="admin-regional-locations-div-clickable-5" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div id="admin-regional-locations-div-clickable-6" className="bg-white rounded-xl shadow-2xl w-full max-w-md m-4" onClick={e => e.stopPropagation()}>
                 <div className="p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="p-3 bg-red-50 rounded-full">
@@ -229,10 +229,10 @@ function DeleteConfirmModal({
                         Are you sure you want to delete <span className="font-semibold">{locationName}</span>? This action cannot be undone.
                     </p>
                     <div className="flex justify-end gap-3">
-                        <button onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        <button id="admin-regional-locations-btn-cancel-2" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                             Cancel
                         </button>
-                        <button
+                        <button id="admin-regional-locations-btn-4"
                             onClick={onConfirm}
                             disabled={deleting}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
@@ -423,7 +423,7 @@ export default function RegionalLocationsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Regional Locations</h1>
                     <p className="text-gray-600 mt-1">Manage all locations in your region</p>
                 </div>
-                <button
+                <button id="admin-regional-locations-btn-5"
                     onClick={openAddModal}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
@@ -446,7 +446,7 @@ export default function RegionalLocationsPage() {
                             />
                         </div>
                         <select
-                            data-testid="select-admin-regional-locations-1"
+                            id="select-admin-regional-locations-1"
                             value={filterStatus}
                             onChange={(e) => handleStatusChange(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -475,7 +475,7 @@ export default function RegionalLocationsPage() {
                     <CardContent className="py-12 text-center">
                         <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-4" />
                         <p className="text-red-600 mb-4">{error}</p>
-                        <button
+                        <button id="admin-regional-locations-btn-6"
                             onClick={() => fetchLocations(page, searchTerm, filterStatus)}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
@@ -566,21 +566,21 @@ export default function RegionalLocationsPage() {
 
                                         {/* Actions */}
                                         <div className="flex gap-2 w-full lg:w-auto">
-                                            <button
+                                            <button id="admin-regional-locations-btn-7"
                                                 onClick={() => openViewModal(location)}
                                                 className="flex-1 lg:flex-none px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <Eye className="w-4 h-4" />
                                                 <span className="hidden sm:inline">View</span>
                                             </button>
-                                            <button
+                                            <button id="admin-regional-locations-btn-8"
                                                 onClick={() => openEditModal(location)}
                                                 className="flex-1 lg:flex-none px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                                 <span className="hidden sm:inline">Edit</span>
                                             </button>
-                                            <button
+                                            <button id="admin-regional-locations-btn-9"
                                                 onClick={() => openDeleteModal(location)}
                                                 className="flex-1 lg:flex-none px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                                             >
@@ -603,7 +603,7 @@ export default function RegionalLocationsPage() {
                         Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} of {total} locations
                     </p>
                     <div className="flex items-center gap-2">
-                        <button
+                        <button id="admin-regional-locations-btn-10"
                             onClick={() => handlePageChange(page - 1)}
                             disabled={page <= 1}
                             className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -621,7 +621,7 @@ export default function RegionalLocationsPage() {
                                 item === '...' ? (
                                     <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
                                 ) : (
-                                    <button
+                                    <button id="admin-regional-locations-btn-11"
                                         key={item}
                                         onClick={() => handlePageChange(item as number)}
                                         className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -634,7 +634,7 @@ export default function RegionalLocationsPage() {
                                     </button>
                                 ),
                             )}
-                        <button
+                        <button id="admin-regional-locations-btn-12"
                             onClick={() => handlePageChange(page + 1)}
                             disabled={page >= totalPages}
                             className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

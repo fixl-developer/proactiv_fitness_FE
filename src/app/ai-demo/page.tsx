@@ -38,7 +38,7 @@ const AIDemoPage = () => {
                 {/* Demo Navigation */}
                 <div className="flex justify-center mb-8">
                     <div className="bg-white rounded-lg shadow-md p-1 inline-flex">
-                        <button
+                        <button id="ai-demo-btn"
                             onClick={() => setActiveDemo('chatbot')}
                             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${activeDemo === 'chatbot'
                                     ? 'bg-blue-600 text-white'
@@ -48,7 +48,7 @@ const AIDemoPage = () => {
                             <FiMessageCircle className="inline mr-2" />
                             AI Chatbot
                         </button>
-                        <button
+                        <button id="ai-demo-btn-2"
                             onClick={() => setActiveDemo('recommendations')}
                             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${activeDemo === 'recommendations'
                                     ? 'bg-blue-600 text-white'
@@ -58,7 +58,7 @@ const AIDemoPage = () => {
                             <FiStar className="inline mr-2" />
                             Recommendations
                         </button>
-                        <button
+                        <button id="ai-demo-btn-3"
                             onClick={() => setActiveDemo('scheduling')}
                             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${activeDemo === 'scheduling'
                                     ? 'bg-blue-600 text-white'

@@ -261,7 +261,7 @@ const ParentDashboard = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
+                    <Button id="parent-dashboard-refresh-btn"
                         variant="outline"
                         size="sm"
                         onClick={() => setRefreshing(true)}
@@ -272,7 +272,7 @@ const ParentDashboard = () => {
                     </Button>
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {['today', '7d', '30d'].map((range) => (
-                            <button
+                            <button id={`parent-dashboard-range-${range}-btn`}
                                 key={range}
                                 onClick={() => setSelectedTimeRange(range as any)}
                                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedTimeRange === range
@@ -421,7 +421,7 @@ const ParentDashboard = () => {
                                             <strong>Next Class:</strong> {child.nextClass}
                                         </p>
                                     </div>
-                                    <Button className="w-full" variant="outline">
+                                    <Button id={`parent-dashboard-child-${child.id}-details-btn`} className="w-full" variant="outline">
                                         View Details
                                     </Button>
                                 </div>
@@ -440,7 +440,7 @@ const ParentDashboard = () => {
                             <CardTitle>Upcoming Classes</CardTitle>
                             <Badge>{upcomingClasses.length} classes</Badge>
                         </div>
-                        <Button variant="outline" size="sm">Book New Class</Button>
+                        <Button id="parent-dashboard-book-new-class-btn" variant="outline" size="sm">Book New Class</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -467,7 +467,7 @@ const ParentDashboard = () => {
                                     <Badge className={getStatusColor(session.status)} variant="outline">
                                         {session.status}
                                     </Badge>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`parent-dashboard-class-${session.id}-view-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -485,7 +485,7 @@ const ParentDashboard = () => {
                             <CreditCard className="w-5 h-5 text-green-600" />
                             <CardTitle>Recent Payments</CardTitle>
                         </div>
-                        <Button variant="outline" size="sm">View All</Button>
+                        <Button id="parent-dashboard-view-all-payments-btn" variant="outline" size="sm">View All</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -527,7 +527,7 @@ const ParentDashboard = () => {
                             <Bell className="w-5 h-5 text-blue-600" />
                             <CardTitle>Alerts & Notifications</CardTitle>
                         </div>
-                        <Button variant="outline" size="sm">View All</Button>
+                        <Button id="parent-dashboard-view-all-alerts-btn" variant="outline" size="sm">View All</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -560,19 +560,19 @@ const ParentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-dashboard-quick-book-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Book Class</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-dashboard-quick-payment-btn" className="h-20 flex-col gap-2" variant="outline">
                             <CreditCard className="w-6 h-6" />
                             <span>Make Payment</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-dashboard-quick-contact-btn" className="h-20 flex-col gap-2" variant="outline">
                             <MessageSquare className="w-6 h-6" />
                             <span>Contact Coach</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-dashboard-quick-download-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Download className="w-6 h-6" />
                             <span>Download Report</span>
                         </Button>

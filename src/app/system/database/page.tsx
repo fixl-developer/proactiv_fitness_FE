@@ -83,7 +83,7 @@ export default function DatabasePage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Database Optimization</h1>
                         <p className="text-gray-600">Monitor and optimize database performance</p>
                     </div>
-                    <Button data-testid="btn-optimize-system-database" onClick={handleOptimize} disabled={optimizing} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="btn-optimize-system-database" onClick={handleOptimize} disabled={optimizing} className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Zap className="w-4 h-4 mr-2" />
                         {optimizing ? 'Optimizing...' : 'Optimize Database'}
                     </Button>

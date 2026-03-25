@@ -175,7 +175,7 @@ const AdminSettingsPage = () => {
                                 {setting.label}
                             </label>
                             {setting.type === 'select' ? (
-                                <select data-testid="select-admin-settings-1" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <select id="select-admin-settings-1" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     {setting.options?.map((option) => (
                                         <option key={option} value={option} selected={option === setting.value}>
                                             {option}
@@ -237,7 +237,7 @@ const AdminSettingsPage = () => {
                                 <p className="text-sm text-gray-600 mb-3">{integration.description}</p>
                                 <div className="flex items-center justify-between text-xs text-gray-500">
                                     <span>Last sync: {integration.lastSync}</span>
-                                    <Button variant="outline" size="sm">
+                                    <Button id="admin-settings-btn" variant="outline" size="sm">
                                         {integration.status === 'connected' ? 'Configure' : 'Connect'}
                                     </Button>
                                 </div>
@@ -277,11 +277,11 @@ const AdminSettingsPage = () => {
                     <p className="text-gray-600 mt-2">Configure system-wide settings and preferences</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline">
+                    <Button id="admin-settings-btn-2" variant="outline">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Reset to Defaults
                     </Button>
-                    <Button>
+                    <Button id="admin-settings-btn-3">
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>
@@ -295,7 +295,7 @@ const AdminSettingsPage = () => {
                         {settingsCategories.map((category) => {
                             const IconComponent = category.icon
                             return (
-                                <button
+                                <button id="admin-settings-btn-4"
                                     key={category.id}
                                     onClick={() => setActiveTab(category.id)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === category.id

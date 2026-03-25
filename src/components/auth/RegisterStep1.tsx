@@ -29,7 +29,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
     });
 
     return (
-        <form data-testid="form-components-auth-RegisterStep1" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep1" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Account Details</h2>
                 <p className="text-gray-600 mt-2">
@@ -69,7 +69,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="••••••••"
                     />
-                    <button
+                    <button id="auth-register-step1-btn"
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -102,7 +102,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="••••••••"
                     />
-                    <button
+                    <button id="auth-register-step1-btn-2"
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -122,7 +122,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
             </div>
 
             {/* Submit Button */}
-            <button
+            <button id="auth-register-step1-btn-continue"
                 type="submit"
                 className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >

@@ -96,11 +96,11 @@ const ManagerSchedulePage = () => {
                     <p className="text-gray-600 mt-2">Manage classes and coaching sessions</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="manager-schedule-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="manager-schedule-add-class-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Class
                     </Button>
@@ -112,17 +112,17 @@ const ManagerSchedulePage = () => {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button variant="outline" size="sm">
+                            <Button id="manager-schedule-prev-btn" variant="outline" size="sm">
                                 <ChevronLeft className="w-4 h-4" />
                             </Button>
                             <h2 className="text-xl font-semibold">January 2024</h2>
-                            <Button variant="outline" size="sm">
+                            <Button id="manager-schedule-next-btn" variant="outline" size="sm">
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
                         </div>
                         <div className="flex items-center gap-2">
                             {['day', 'week', 'month'].map((view) => (
-                                <Button
+                                <Button id={`manager-schedule-view-${view}-btn`}
                                     key={view}
                                     variant={selectedView === view ? 'default' : 'outline'}
                                     size="sm"
@@ -150,7 +150,7 @@ const ManagerSchedulePage = () => {
                                     className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button id="manager-schedule-filter-btn" variant="outline" size="sm">
                                 <Filter className="w-4 h-4 mr-2" />
                                 Filter
                             </Button>
@@ -187,10 +187,10 @@ const ManagerSchedulePage = () => {
                                     <p className="text-sm text-gray-600">Students</p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-schedule-view-${session.id}-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`manager-schedule-edit-${session.id}-btn`} variant="ghost" size="sm">
                                         <Edit className="w-4 h-4" />
                                     </Button>
                                 </div>

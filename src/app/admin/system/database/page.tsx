@@ -222,13 +222,13 @@ export default function DatabaseHealthPage() {
                     <p className="text-gray-600 mt-1">Monitor database performance, storage, and operations</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button data-testid="btn-action-admin-system-database" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadData() }}>
+                    <Button id="btn-action-admin-system-database" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadData() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button data-testid="btn-toast-admin-system-database" variant="outline" size="sm" onClick={() => toast.info('Optimize triggered')}>
+                    <Button id={`btn-toast-admin-system-database-${i}`} variant="outline" size="sm" onClick={() => toast.info('Optimize triggered')}>
                         <Zap className="w-4 h-4 mr-2" /> Optimize
                     </Button>
-                    <Button data-testid="btn-toast-admin-system-database" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info('Backup initiated')}>
+                    <Button id="btn-toast-admin-system-database" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.info('Backup initiated')}>
                         <Download className="w-4 h-4 mr-2" /> Backup Now
                     </Button>
                 </motion.div>

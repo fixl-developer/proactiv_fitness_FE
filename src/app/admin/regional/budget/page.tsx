@@ -99,7 +99,7 @@ export default function RegionalBudgetPage() {
                     <p className="text-gray-600 mt-1">Track and manage regional budget allocation</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <button id="admin-regional-budget-btn"
                         onClick={async () => {
                             try {
                                 const blob = await RegionalAdminService.exportReport('budget', 'csv')
@@ -120,7 +120,7 @@ export default function RegionalBudgetPage() {
                         <Download className="w-5 h-5" />
                         Export
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <button id="admin-regional-budget-btn-2" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                         <Plus className="w-5 h-5" />
                         New Budget
                     </button>
@@ -130,7 +130,7 @@ export default function RegionalBudgetPage() {
             {/* Period Selection */}
             <div className="flex gap-2 overflow-x-auto">
                 {['Q1-2024', 'Q2-2024', 'Q3-2024', 'Q4-2024'].map((period) => (
-                    <button
+                    <button id="admin-regional-budget-btn-3"
                         key={period}
                         onClick={() => setSelectedPeriod(period)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${selectedPeriod === period
@@ -264,10 +264,10 @@ export default function RegionalBudgetPage() {
                                         </td>
                                         <td className="py-3 px-4">
                                             <div className="flex gap-1">
-                                                <button className="p-1 hover:bg-blue-50 rounded text-blue-600">
+                                                <button id="admin-regional-budget-btn-4" className="p-1 hover:bg-blue-50 rounded text-blue-600">
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
-                                                <button className="p-1 hover:bg-red-50 rounded text-red-600">
+                                                <button id="admin-regional-budget-btn-5" className="p-1 hover:bg-red-50 rounded text-red-600">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -348,21 +348,21 @@ export default function RegionalBudgetPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <button id="admin-regional-budget-btn-6" className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <Plus className="w-5 h-5 text-blue-600" />
                             <div className="text-left">
                                 <p className="font-medium text-gray-900">Add Budget Item</p>
                                 <p className="text-sm text-gray-600">Create new budget category</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <button id="admin-regional-budget-btn-7" className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <Filter className="w-5 h-5 text-green-600" />
                             <div className="text-left">
                                 <p className="font-medium text-gray-900">Budget Review</p>
                                 <p className="text-sm text-gray-600">Review quarterly budget</p>
                             </div>
                         </button>
-                        <button className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <button id="admin-regional-budget-btn-8" className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <Download className="w-5 h-5 text-purple-600" />
                             <div className="text-left">
                                 <p className="font-medium text-gray-900">Export Report</p>

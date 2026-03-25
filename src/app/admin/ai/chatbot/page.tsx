@@ -179,11 +179,11 @@ const ChatbotManagementPage = () => {
                     <p className="text-gray-600 mt-2">Manage AI chatbots and conversation analytics</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button>
+                    <Button id="admin-ai-chatbot-create-btn">
                         <Plus className="w-4 h-4 mr-2" />
                         Create Bot
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-ai-chatbot-sync-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Sync Data
                     </Button>
@@ -264,6 +264,7 @@ const ChatbotManagementPage = () => {
                                         ? 'bg-blue-50 border-2 border-blue-200'
                                         : 'bg-gray-50 hover:bg-gray-100'
                                         }`}
+                                    id={`admin-ai-chatbot-select-${bot.id}-btn`}
                                     onClick={() => setSelectedBot(bot.id)}
                                 >
                                     <div className="flex items-center justify-between mb-2">
@@ -289,11 +290,11 @@ const ChatbotManagementPage = () => {
                         <div className="flex items-center justify-between">
                             <CardTitle>{selectedBotData.name}</CardTitle>
                             <div className="flex gap-2">
-                                <Button variant="ghost" size="sm">
+                                <Button id="admin-ai-chatbot-edit-btn" variant="ghost" size="sm">
                                     <Edit className="w-4 h-4 mr-2" />
                                     Edit
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button id="admin-ai-chatbot-configure-btn" variant="ghost" size="sm">
                                     <Settings className="w-4 h-4 mr-2" />
                                     Configure
                                 </Button>
@@ -477,11 +478,11 @@ const ChatbotManagementPage = () => {
                                     </Badge>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="sm" className="text-xs h-6">
+                                    <Button id={`admin-ai-chatbot-view-responses-${index}-btn`} variant="ghost" size="sm" className="text-xs h-6">
                                         <Eye className="w-3 h-3 mr-1" />
                                         View Responses
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="text-xs h-6">
+                                    <Button id={`admin-ai-chatbot-improve-${index}-btn`} variant="ghost" size="sm" className="text-xs h-6">
                                         <Edit className="w-3 h-3 mr-1" />
                                         Improve
                                     </Button>

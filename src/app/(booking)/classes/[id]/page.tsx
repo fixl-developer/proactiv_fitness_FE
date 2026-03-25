@@ -318,14 +318,14 @@ export default function ClassDetailPage() {
 
                             {/* CTA Buttons */}
                             <div className="space-y-3">
-                                <Link
+                                <Link id="booking-classes-id-nav"
                                     href={`/classes/${classId}/book`}
                                     className="block w-full bg-primary text-white py-4 rounded-lg font-semibold text-center hover:bg-primary/90 transition-colors"
                                 >
                                     {isFull ? 'Join Waitlist' : 'Book This Class'}
                                 </Link>
 
-                                <Link
+                                <Link id="booking-classes-id-nav-classes"
                                     href="/classes"
                                     className="block w-full bg-gray-100 text-gray-700 py-4 rounded-lg font-semibold text-center hover:bg-gray-200 transition-colors"
                                 >

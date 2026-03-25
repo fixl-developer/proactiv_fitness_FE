@@ -44,7 +44,7 @@ export function ScheduleView({ timeSlots, isLoading }: ScheduleViewProps) {
                     {/* Classes List */}
                     <div className="divide-y">
                         {slot.classes.map((classItem) => (
-                            <Link
+                            <Link id="booking-schedule-view-nav"
                                 key={classItem.id}
                                 href={`/classes/${classItem.id}`}
                                 className="block p-6 hover:bg-gray-50 transition-colors"
@@ -87,7 +87,7 @@ export function ScheduleView({ timeSlots, isLoading }: ScheduleViewProps) {
                                         <p className="text-2xl font-bold text-primary mb-2">
                                             ${classItem.pricing.singleClass}
                                         </p>
-                                        <button className="px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors">
+                                        <button id="booking-schedule-view-btn" className="px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors">
                                             {classItem.capacity.available === 0 ? 'Waitlist' : 'Book'}
                                         </button>
                                     </div>

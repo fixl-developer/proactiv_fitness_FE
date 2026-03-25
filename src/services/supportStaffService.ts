@@ -260,6 +260,11 @@ class SupportStaffService {
         return response.data || response
     }
 
+    async createChatSession(data: { customerName: string; customerEmail?: string; initialMessage?: string }): Promise<any> {
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/live-chat/sessions', data)
+        return response.data || response
+    }
+
     // Escalations Methods
     async getEscalations(filters?: any): Promise<any> {
         try {
@@ -307,7 +312,7 @@ class SupportStaffService {
     // Schedules Methods
     async getSchedules(filters?: any): Promise<any> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>('/staff/schedules')
+            const response = await apiClient.get<{ success: boolean; data: any }>('/staff/schedules-advanced')
             return response.data || response
         } catch (error) {
             console.error('Error fetching schedules:', error)

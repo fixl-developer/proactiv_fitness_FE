@@ -92,11 +92,11 @@ const ManagerSettingsPage = () => {
                     <p className="text-gray-600 mt-2">Manage location configuration and preferences</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="manager-settings-reset-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Reset
                     </Button>
-                    <Button size="sm">
+                    <Button id="manager-settings-save-btn" size="sm">
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>
@@ -108,7 +108,7 @@ const ManagerSettingsPage = () => {
                 <CardHeader>
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                         {tabs.map((tab) => (
-                            <button
+                            <button id={`manager-settings-tab-${tab.id}-btn`}
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id
@@ -147,7 +147,7 @@ const ManagerSettingsPage = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                                    <select data-testid="select-manager-settings-7" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <select id="select-manager-settings-7" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
                                         <option value="active">Active</option>
                                         <option value="maintenance">Maintenance</option>
                                         <option value="closed">Closed</option>
@@ -322,21 +322,21 @@ const ManagerSettingsPage = () => {
                                         <h4 className="font-medium">Email Notifications</h4>
                                         <p className="text-sm text-gray-600">Receive updates via email</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input id="manager-settings-email-notifications-checkbox" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">SMS Notifications</h4>
                                         <p className="text-sm text-gray-600">Receive updates via SMS</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input id="manager-settings-sms-notifications-checkbox" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Class Reminders</h4>
                                         <p className="text-sm text-gray-600">Send reminders to students</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input id="manager-settings-class-reminders-checkbox" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                             </div>
                         </CardContent>
@@ -362,21 +362,21 @@ const ManagerSettingsPage = () => {
                                         <h4 className="font-medium">Schedule Management</h4>
                                         <p className="text-sm text-gray-600">Allow staff to modify schedules</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input id="manager-settings-schedule-management-checkbox" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Student Records</h4>
                                         <p className="text-sm text-gray-600">Access to student information</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" defaultChecked />
+                                    <input id="manager-settings-student-records-checkbox" type="checkbox" className="w-4 h-4" defaultChecked />
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h4 className="font-medium">Payment Processing</h4>
                                         <p className="text-sm text-gray-600">Handle payment transactions</p>
                                     </div>
-                                    <input data-testid="input-checkbox-manager-settings" type="checkbox" className="w-4 h-4" />
+                                    <input id="manager-settings-payment-processing-checkbox" type="checkbox" className="w-4 h-4" />
                                 </div>
                             </div>
                         </CardContent>

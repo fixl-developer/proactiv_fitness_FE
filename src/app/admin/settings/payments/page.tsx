@@ -204,11 +204,11 @@ export default function PaymentSettingsPage() {
                     </p>
                 </div>
                 <div className="flex space-x-3">
-                    <Button variant="outline">
+                    <Button id="admin-settings-payments-btn" variant="outline">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Sync Rates
                     </Button>
-                    <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
+                    <Button id="admin-settings-payments-btn-2" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>
@@ -291,7 +291,7 @@ export default function PaymentSettingsPage() {
                     <TabsContent value="gateways" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Payment Gateways</h3>
-                            <Button>
+                            <Button id="admin-settings-payments-btn-3">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Gateway
                             </Button>
@@ -361,7 +361,7 @@ export default function PaymentSettingsPage() {
 
                                             {/* Actions */}
                                             <div className="flex space-x-2 pt-2">
-                                                <Button
+                                                <Button id="admin-settings-payments-btn-4"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleConfigureGateway(gateway)}
@@ -370,7 +370,7 @@ export default function PaymentSettingsPage() {
                                                     <Settings className="w-4 h-4 mr-2" />
                                                     Configure
                                                 </Button>
-                                                <Button
+                                                <Button id="admin-settings-payments-btn-5"
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => toggleApiKeyVisibility(gateway.id)}
@@ -418,7 +418,7 @@ export default function PaymentSettingsPage() {
                     <TabsContent value="currencies" className="space-y-6">
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Supported Currencies</h3>
-                            <Button>
+                            <Button id="admin-settings-payments-btn-6">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Add Currency
                             </Button>
@@ -548,7 +548,7 @@ export default function PaymentSettingsPage() {
                                         <p className="text-gray-600">{selectedGateway.description}</p>
                                     </div>
                                 </div>
-                                <Button
+                                <Button id="admin-settings-payments-btn-7"
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setIsConfiguring(false)}
@@ -573,13 +573,13 @@ export default function PaymentSettingsPage() {
                                 ))}
 
                                 <div className="flex justify-end space-x-3">
-                                    <Button
+                                    <Button id="admin-settings-payments-btn-cancel"
                                         variant="outline"
                                         onClick={() => setIsConfiguring(false)}
                                     >
                                         Cancel
                                     </Button>
-                                    <Button className="bg-gradient-to-r from-green-600 to-blue-600">
+                                    <Button id="admin-settings-payments-btn-save-configuration" className="bg-gradient-to-r from-green-600 to-blue-600">
                                         Save Configuration
                                     </Button>
                                 </div>

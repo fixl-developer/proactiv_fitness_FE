@@ -62,7 +62,7 @@ export function RegisterStep5({
     };
 
     return (
-        <form data-testid="form-components-auth-RegisterStep5" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep5" onSubmit={handleSubmit(onComplete)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                     Guardian & Emergency Contacts
@@ -70,7 +70,7 @@ export function RegisterStep5({
                 <p className="text-gray-600 mt-2">
                     Add guardians and emergency contacts
                 </p>
-                <button
+                <button id="auth-register-step5-btn-skip-this-step-add-contacts-la"
                     type="button"
                     onClick={handleSkip}
                     className="text-sm text-primary hover:underline mt-2"
@@ -88,7 +88,7 @@ export function RegisterStep5({
                     >
                         {/* Remove Button */}
                         {fields.length > 1 && (
-                            <button
+                            <button id="auth-register-step5-btn"
                                 type="button"
                                 onClick={() => remove(index)}
                                 className="absolute top-4 right-4 text-red-500 hover:text-red-700"
@@ -151,7 +151,7 @@ export function RegisterStep5({
                             </label>
                             <div className="relative">
                                 <Heart className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <select data-testid="select-components-auth-RegisterStep5-1"
+                                <select id="select-components-auth-RegisterStep5-1"
                                     {...register(`guardians.${index}.relationship`)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                                 >
@@ -229,7 +229,7 @@ export function RegisterStep5({
             </div>
 
             {/* Add Guardian Button */}
-            <button
+            <button id="auth-register-step5-btn-2"
                 type="button"
                 onClick={addGuardian}
                 className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
@@ -240,14 +240,14 @@ export function RegisterStep5({
 
             {/* Buttons */}
             <div className="flex gap-4">
-                <button
+                <button id="auth-register-step5-btn-back"
                     type="button"
                     onClick={onBack}
                     className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
-                <button
+                <button id="auth-register-step5-btn-continue"
                     type="submit"
                     className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >

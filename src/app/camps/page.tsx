@@ -121,6 +121,7 @@ const CampsHomePage = () => {
                         transition={{ delay: 0.1 * index }}
                     >
                         <Card
+                            id={`camps-program-${camp.title.toLowerCase().replace(/\s+/g, '-')}-card`}
                             className={`hover:shadow-lg transition-all cursor-pointer group h-full ${camp.featured ? 'ring-2 ring-blue-200' : ''
                                 }`}
                             onClick={() => window.location.href = camp.href}
@@ -154,7 +155,7 @@ const CampsHomePage = () => {
                                         <span className="text-sm text-gray-600">{camp.ages}</span>
                                     </div>
                                 </div>
-                                <Button
+                                <Button id="camps-btn-learn-more"
                                     className="w-full group-hover:bg-blue-600"
                                     variant={camp.featured ? "default" : "outline"}
                                 >
@@ -206,7 +207,7 @@ const CampsHomePage = () => {
                             Join our exciting summer gymnastics camps with outdoor activities,
                             swimming, and intensive skill development programs.
                         </p>
-                        <Button data-testid="btn-window-camps" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
+                        <Button id={`btn-window-camps-${index}`} variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
                             View Summer Programs
                         </Button>
                     </CardContent>
@@ -224,7 +225,7 @@ const CampsHomePage = () => {
                             Special holiday programs during school breaks with themed activities,
                             competitions, and skill assessments.
                         </p>
-                        <Button data-testid="btn-window-camps" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
+                        <Button id="btn-window-camps" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
                             View Holiday Programs
                         </Button>
                     </CardContent>

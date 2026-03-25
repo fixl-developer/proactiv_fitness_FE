@@ -502,7 +502,7 @@ export default function RolesManagementPage() {
                     <p className="text-gray-600 mt-1">Manage user roles and permissions across the system</p>
                 </div>
                 {activeTab === 'roles' && (
-                    <Button data-testid="btn-open-create-modal-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
+                    <Button id="btn-open-create-modal-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
                         <Plus className="w-4 h-4 mr-2" />
                         Create Custom Role
                     </Button>
@@ -511,14 +511,14 @@ export default function RolesManagementPage() {
 
             {/* Tabs */}
             <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
-                <button data-testid="btn-admin-users-roles-12"
+                <button id="btn-admin-users-roles-12"
                     onClick={() => setActiveTab('roles')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'roles' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                     <Shield className="w-4 h-4 inline-block mr-1.5 -mt-0.5" />
                     Roles
                 </button>
-                <button data-testid="btn-admin-users-roles-13"
+                <button id="btn-admin-users-roles-13"
                     onClick={() => setActiveTab('matrix')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'matrix' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
                 >
@@ -557,7 +557,7 @@ export default function RolesManagementPage() {
                 <CardContent className="pt-6">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input data-testid="input-text-admin-users-roles"
+                        <input id="input-text-admin-users-roles-search"
                             type="text"
                             placeholder="Search roles by name or description..."
                             value={searchTerm}
@@ -620,10 +620,10 @@ export default function RolesManagementPage() {
 
                                                     {/* Action buttons */}
                                                     <div className="flex items-center gap-1 pt-2 border-t">
-                                                        <Button data-testid="btn-open-view-modal-admin-users-roles" variant="ghost" size="sm" onClick={() => openViewModal(role)} title="View permissions">
+                                                        <Button id="btn-open-view-modal-admin-users-roles" variant="ghost" size="sm" onClick={() => openViewModal(role)} title="View permissions">
                                                             <Eye className="w-4 h-4 mr-1" /> View
                                                         </Button>
-                                                        <Button data-testid="btn-open-edit-modal-admin-users-roles" variant="ghost" size="sm" onClick={() => openEditModal(role)} title="Edit permissions">
+                                                        <Button id="btn-open-edit-modal-admin-users-roles" variant="ghost" size="sm" onClick={() => openEditModal(role)} title="Edit permissions">
                                                             <Edit className="w-4 h-4 mr-1" /> Edit
                                                         </Button>
                                                         <div className="ml-auto flex items-center gap-1">
@@ -632,7 +632,7 @@ export default function RolesManagementPage() {
                                                                 onCheckedChange={() => toggleRoleStatus(role)}
                                                             />
                                                             {role.isCustom && (
-                                                                <Button data-testid="btn-confirm-delete-admin-users-roles" variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => confirmDelete(role)} title="Delete role">
+                                                                <Button id="btn-confirm-delete-admin-users-roles" variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => confirmDelete(role)} title="Delete role">
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </Button>
                                                             )}
@@ -677,7 +677,7 @@ export default function RolesManagementPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role Name (identifier)</label>
-                                    <input data-testid="input-text-admin-users-roles"
+                                    <input id="input-text-admin-users-roles"
                                         type="text"
                                         value={newRoleName}
                                         onChange={(e) => setNewRoleName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, ''))}
@@ -687,7 +687,7 @@ export default function RolesManagementPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-                                    <input data-testid="input-text-admin-users-roles"
+                                    <input id="input-text-admin-users-roles"
                                         type="text"
                                         value={newRoleDisplayName}
                                         onChange={(e) => setNewRoleDisplayName(e.target.value)}
@@ -698,7 +698,7 @@ export default function RolesManagementPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <input data-testid="input-text-admin-users-roles"
+                                <input id="input-text-admin-users-roles"
                                     type="text"
                                     value={newRoleDescription}
                                     onChange={(e) => setNewRoleDescription(e.target.value)}
@@ -708,7 +708,7 @@ export default function RolesManagementPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Clone Permissions From (optional)</label>
-                                <select data-testid="select-admin-users-roles-19"
+                                <select id="select-admin-users-roles-19"
                                     value={newRoleBaseRole}
                                     onChange={(e) => handleBaseRoleChange(e.target.value)}
                                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
@@ -733,7 +733,7 @@ export default function RolesManagementPage() {
                             return (
                                 <div key={cat.name} className="border rounded-lg overflow-hidden">
                                     {/* Category header */}
-                                    <div
+                                    <div id="admin-users-roles-div-clickable"
                                         role="button"
                                         tabIndex={0}
                                         className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left cursor-pointer"
@@ -756,7 +756,7 @@ export default function RolesManagementPage() {
                                                 ))}
                                             </div>
                                             {(modalMode === 'edit' || modalMode === 'create') && (
-                                                <span
+                                                <span id="admin-users-roles-span-clickable"
                                                     role="button"
                                                     tabIndex={0}
                                                     className="inline-flex items-center justify-center whitespace-nowrap font-medium text-xs h-6 px-2 rounded-md hover:bg-gray-200 transition-colors cursor-pointer"
@@ -787,7 +787,7 @@ export default function RolesManagementPage() {
                                                                 key={perm.key}
                                                                 className={`flex items-start gap-3 p-2 rounded-lg border transition-colors ${editable ? 'cursor-pointer hover:bg-gray-50' : ''} ${checked ? 'border-green-200 bg-green-50/50' : 'border-gray-200'}`}
                                                             >
-                                                                <input data-testid="input-checkbox-admin-users-roles"
+                                                                <input id="input-checkbox-admin-users-roles"
                                                                     type="checkbox"
                                                                     checked={checked}
                                                                     onChange={() => editable && togglePermission(perm.key)}
@@ -813,20 +813,20 @@ export default function RolesManagementPage() {
 
                     <DialogFooter>
                         {modalMode === 'view' && (
-                            <Button data-testid="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Close</Button>
+                            <Button id="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Close</Button>
                         )}
                         {modalMode === 'edit' && (
                             <>
-                                <Button data-testid="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-                                <Button data-testid="btn-save-edit-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveEdit}>
+                                <Button id="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+                                <Button id="btn-save-edit-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={handleSaveEdit}>
                                     Save Permissions
                                 </Button>
                             </>
                         )}
                         {modalMode === 'create' && (
                             <>
-                                <Button data-testid="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-                                <Button data-testid="btn-create-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate}>
+                                <Button id="btn-set-modal-open-admin-users-roles" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+                                <Button id="btn-create-admin-users-roles" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate}>
                                     <Plus className="w-4 h-4 mr-1" /> Create Role
                                 </Button>
                             </>
@@ -845,8 +845,8 @@ export default function RolesManagementPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button data-testid="btn-set-delete-confirm-open-admin-users-roles" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-                        <Button data-testid="btn-delete-admin-users-roles" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>
+                        <Button id="btn-set-delete-confirm-open-admin-users-roles" variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                        <Button id="btn-delete-admin-users-roles" className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>
                             <Trash2 className="w-4 h-4 mr-1" /> Delete
                         </Button>
                     </DialogFooter>

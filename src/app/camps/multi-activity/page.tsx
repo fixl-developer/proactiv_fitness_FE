@@ -144,10 +144,10 @@ const MultiActivityCampsPage = () => {
                                 Perfect for children who love variety and want to explore different activities in a fun, supportive environment.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-upcoming-camps" href="#upcoming-camps" className="btn-secondary">
+                                <Link id="upcoming-camps" href="#upcoming-camps" className="btn-secondary">
                                     View Upcoming Camps
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-purple-600">
+                                <Link id="contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-purple-600">
                                     Get More Info
                                 </Link>
                             </div>
@@ -365,7 +365,7 @@ const MultiActivityCampsPage = () => {
                                         <div className="text-2xl font-bold text-purple-600">
                                             {camp.price}
                                         </div>
-                                        <Link
+                                        <Link id="camps-multi-activity-nav-book-now"
                                             href={`/camps/book?camp=${camp.id}`}
                                             className="btn-primary"
                                         >
@@ -511,10 +511,10 @@ const MultiActivityCampsPage = () => {
                                 Book now to secure your child's spot in an unforgettable holiday experience!
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link data-testid="link-camps-book" href="/camps/book" className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="camps-book" href="/camps/book" className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Camp Now
                                 </Link>
-                                <Link data-testid="link-contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-purple-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                                <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-purple-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">
                                     Ask Questions
                                 </Link>
                             </div>

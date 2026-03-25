@@ -118,7 +118,7 @@ const WaitlistPage = () => {
                             <p className="text-gray-600 mb-4">
                                 You're not on any waitlists. When a class is full, you can join the waitlist to be notified when a spot opens up.
                             </p>
-                            <Button data-testid="btn-router-parent-waitlist" onClick={() => router.push('/parent/browse-classes')}>
+                            <Button id="parent-waitlist-browse-classes-btn" onClick={() => router.push('/parent/browse-classes')}>
                                 Browse Classes
                             </Button>
                         </CardContent>
@@ -205,7 +205,7 @@ const WaitlistPage = () => {
                                                 )}
 
                                                 {/* Remove Button */}
-                                                <Button
+                                                <Button id={`parent-waitlist-remove-${entry._id}-btn`}
                                                     onClick={() => handleRemoveFromWaitlist(entry._id)}
                                                     disabled={removingId === entry._id}
                                                     variant="outline"

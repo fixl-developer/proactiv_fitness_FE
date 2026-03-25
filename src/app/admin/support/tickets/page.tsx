@@ -207,10 +207,10 @@ export default function SupportTicketsPage() {
                     <p className="text-gray-600 mt-1">Track, assign, and resolve support requests</p>
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button data-testid="btn-action-admin-support-tickets" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadTickets() }}>
+                    <Button id="btn-action-admin-support-tickets" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadTickets() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button data-testid="btn-set-show-create-modal-admin-support-tickets" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
+                    <Button id={`btn-set-show-create-modal-admin-support-tickets-${i}`} size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Create Ticket
                     </Button>
                 </motion.div>
@@ -222,18 +222,18 @@ export default function SupportTicketsPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Create Support Ticket</CardTitle>
-                                <Button data-testid="btn-set-show-create-modal-admin-support-tickets" variant="ghost" size="sm" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /></Button>
+                                <Button id="btn-set-show-create-modal-admin-support-tickets" variant="ghost" size="sm" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /></Button>
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Subject</label>
-                                    <input data-testid="input-text-admin-support-tickets" type="text" value={createForm.subject} onChange={e => setCreateForm(f => ({ ...f, subject: e.target.value }))} placeholder="Brief description of the issue" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                    <input id="input-text-admin-support-tickets" type="text" value={createForm.subject} onChange={e => setCreateForm(f => ({ ...f, subject: e.target.value }))} placeholder="Brief description of the issue" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Priority</label>
-                                    <select data-testid="select-admin-support-tickets-12" value={createForm.priority} onChange={e => setCreateForm(f => ({ ...f, priority: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <select id="select-admin-support-tickets-12" value={createForm.priority} onChange={e => setCreateForm(f => ({ ...f, priority: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
                                         <option value="Low">Low</option>
                                         <option value="Medium">Medium</option>
                                         <option value="High">High</option>
@@ -243,15 +243,15 @@ export default function SupportTicketsPage() {
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700 mb-1 block">Requester</label>
-                                <input data-testid="input-text-admin-support-tickets" type="text" value={createForm.requester} onChange={e => setCreateForm(f => ({ ...f, requester: e.target.value }))} placeholder="Requester name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                                <input id="input-text-admin-support-tickets" type="text" value={createForm.requester} onChange={e => setCreateForm(f => ({ ...f, requester: e.target.value }))} placeholder="Requester name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
                                 <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} placeholder="Detailed description..." rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
                             </div>
                             <div className="flex justify-end gap-2">
-                                <Button data-testid="btn-set-show-create-modal-admin-support-tickets" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                                <Button data-testid="btn-create-admin-support-tickets" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Ticket'}</Button>
+                                <Button id="btn-set-show-create-modal-admin-support-tickets" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+                                <Button id="btn-create-admin-support-tickets" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Ticket'}</Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -279,11 +279,11 @@ export default function SupportTicketsPage() {
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input data-testid="input-text-admin-support-tickets" type="text" placeholder="Search tickets by ID, subject, or requester..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+                            <input id={`input-text-admin-support-tickets-${i}`} type="text" placeholder="Search tickets by ID, subject, or requester..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
                         </div>
                         <div className="flex gap-2">
                             {['All', 'Open', 'In Progress', 'Resolved'].map(s => (
-                                <Button data-testid="btn-set-filter-status-admin-support-tickets" key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>{s}</Button>
+                                <Button id="btn-set-filter-status-admin-support-tickets" key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>{s}</Button>
                             ))}
                         </div>
                     </div>
@@ -331,21 +331,21 @@ export default function SupportTicketsPage() {
                                             </div>
                                             <div className="flex gap-1">
                                                 {ticket.status === 'Open' && (
-                                                    <Button data-testid="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'In Progress')}>
+                                                    <Button id="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'In Progress')}>
                                                         Start
                                                     </Button>
                                                 )}
                                                 {ticket.status === 'In Progress' && (
-                                                    <Button data-testid="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'Resolved')}>
+                                                    <Button id="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'Resolved')}>
                                                         Resolve
                                                     </Button>
                                                 )}
                                                 {ticket.assignee === 'Unassigned' && (
-                                                    <Button variant="outline" size="sm">
+                                                    <Button id="admin-support-tickets-btn" variant="outline" size="sm">
                                                         <UserPlus className="w-3.5 h-3.5 mr-1" /> Assign
                                                     </Button>
                                                 )}
-                                                <Button variant="ghost" size="sm">
+                                                <Button id="admin-support-tickets-btn-2" variant="ghost" size="sm">
                                                     <MoreVertical className="w-4 h-4" />
                                                 </Button>
                                             </div>

@@ -123,13 +123,13 @@ export default function BookingStep4({
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                <Link
+                <Link id="booking-booking-step4-nav-my-bookings"
                     href="/my-bookings"
                     className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
                     View My Bookings
                 </Link>
-                <Link
+                <Link id="booking-booking-step4-nav-classes"
                     href="/classes"
                     className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-center"
                 >
@@ -139,7 +139,7 @@ export default function BookingStep4({
 
             {/* Download/Print Options */}
             <div className="flex justify-center gap-4 pt-4">
-                <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                <button id="booking-booking-step4-btn" className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
                     <svg
                         className="w-4 h-4 mr-1"
                         fill="none"
@@ -153,7 +153,7 @@ export default function BookingStep4({
                     </svg>
                     Download Receipt
                 </button>
-                <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                <button id="booking-booking-step4-btn-2" className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
                     <svg
                         className="w-4 h-4 mr-1"
                         fill="none"

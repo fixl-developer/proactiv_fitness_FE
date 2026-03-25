@@ -10,7 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { LocationManagerService } from '@/services/locationManagerService'
 
 const FALLBACK_LOCATION = {
@@ -24,6 +24,8 @@ export default function LocationManagerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
+    const [revenueData, setRevenueData] = useState<any[]>([])
+    const [todayClassSchedule, setTodayClassSchedule] = useState<any[]>([])
 
     useEffect(() => {
         const loadData = async () => {
@@ -34,22 +36,37 @@ export default function LocationManagerDashboard() {
                 ])
                 const data = overview.status === 'fulfilled' ? overview.value : {}
                 const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+
                 setDashboardData({
                     locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
-                    totalClasses: data?.totalClasses ?? stats?.totalClasses ?? FALLBACK_LOCATION.totalClasses,
+                    totalClasses: data?.totalClasses ?? stats?.classesPerWeek ?? FALLBACK_LOCATION.totalClasses,
                     totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
                     totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
-                    monthlyRevenue: data?.monthlyRevenue ?? stats?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
-                    revenueGrowth: data?.revenueGrowth ?? stats?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
-                    occupancyRate: data?.occupancyRate ?? stats?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
+                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
+                    revenueGrowth: data?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
+                    occupancyRate: data?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
                     staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
-                    customerSatisfaction: data?.customerSatisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
+                    customerSatisfaction: data?.customerSatisfaction ?? stats?.satisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
                     todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
                     todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
                     pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
                     criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
                     warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
                 })
+
+                // Set revenue data from analytics
+                if (stats?.revenueData && Array.isArray(stats.revenueData)) {
+                    setRevenueData(stats.revenueData)
+                } else {
+                    setRevenueData(data?.revenueData || [])
+                }
+
+                // Set today's class schedule from dashboard overview
+                if (data?.todaySchedule && Array.isArray(data.todaySchedule)) {
+                    setTodayClassSchedule(data.todaySchedule)
+                } else if (data?.classes && Array.isArray(data.classes)) {
+                    setTodayClassSchedule(data.classes)
+                }
             } catch (error) {
                 console.error('Error loading location dashboard:', error)
                 setDashboardData(FALLBACK_LOCATION)
@@ -59,26 +76,6 @@ export default function LocationManagerDashboard() {
         }
         loadData()
     }, [timeRange])
-
-    // Daily revenue data
-    const revenueData = [
-        { day: 'Mon', revenue: 28000, target: 30000 },
-        { day: 'Tue', revenue: 29500, target: 30000 },
-        { day: 'Wed', revenue: 31000, target: 30000 },
-        { day: 'Thu', revenue: 30500, target: 30000 },
-        { day: 'Fri', revenue: 32000, target: 30000 },
-        { day: 'Sat', revenue: 34000, target: 35000 },
-    ]
-
-    // Class schedule
-    const todayClasses = [
-        { time: '09:00 AM', name: 'Beginner Gymnastics', coach: 'Sarah', students: 12, room: 'A1' },
-        { time: '10:30 AM', name: 'Intermediate Gymnastics', coach: 'Mike', students: 15, room: 'A2' },
-        { time: '12:00 PM', name: 'Advanced Gymnastics', coach: 'John', students: 10, room: 'A1' },
-        { time: '02:00 PM', name: 'Kids Gymnastics', coach: 'Emma', students: 18, room: 'B1' },
-        { time: '03:30 PM', name: 'Teen Gymnastics', coach: 'David', students: 14, room: 'B2' },
-        { time: '05:00 PM', name: 'Adult Fitness', coach: 'Lisa', students: 8, room: 'A1' },
-    ]
 
     if (isLoading) {
         return (
@@ -98,7 +95,7 @@ export default function LocationManagerDashboard() {
                 </div>
                 <div className="flex gap-2">
                     {['7d', '30d', '90d'].map((range) => (
-                        <button
+                        <button id="admin-location-dashboard-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
@@ -115,45 +112,17 @@ export default function LocationManagerDashboard() {
             {/* Top KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    {
-                        title: 'Total Classes',
-                        value: dashboardData?.totalClasses,
-                        icon: Calendar,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50',
-                        change: 'This month'
-                    },
-                    {
-                        title: 'Total Students',
-                        value: dashboardData?.totalStudents,
-                        icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50',
-                        change: '+15 this month'
-                    },
-                    {
-                        title: 'Staff Members',
-                        value: dashboardData?.totalStaff,
-                        icon: Users,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50',
-                        change: 'Full team'
-                    },
+                    { title: 'Total Classes', value: dashboardData?.totalClasses, icon: Calendar, color: 'text-blue-600', bgColor: 'bg-blue-50', change: 'This month' },
+                    { title: 'Total Students', value: dashboardData?.totalStudents, icon: Users, color: 'text-green-600', bgColor: 'bg-green-50', change: 'Active students' },
+                    { title: 'Staff Members', value: dashboardData?.totalStaff, icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-50', change: 'Full team' },
                     {
                         title: 'Monthly Revenue',
-                        value: `${(dashboardData?.monthlyRevenue / 1000).toFixed(0)}K`,
-                        icon: DollarSign,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50',
-                        change: `+${dashboardData?.revenueGrowth}% vs last month`
+                        value: dashboardData?.monthlyRevenue ? `${(dashboardData.monthlyRevenue / 1000).toFixed(0)}K` : '0',
+                        icon: DollarSign, color: 'text-orange-600', bgColor: 'bg-orange-50',
+                        change: dashboardData?.revenueGrowth ? `+${dashboardData.revenueGrowth}% vs last month` : 'No data'
                     },
                 ].map((metric, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
                         <Card className="hover:shadow-lg transition-shadow">
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
@@ -235,10 +204,10 @@ export default function LocationManagerDashboard() {
                             </div>
                             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="text-xs">Alert</Badge>
-                                    <span className="text-sm font-medium text-yellow-900">Facility Status</span>
+                                    <Badge variant="secondary" className="text-xs">Pending</Badge>
+                                    <span className="text-sm font-medium text-yellow-900">Pending Approvals</span>
                                 </div>
-                                <p className="text-xs text-yellow-700">All systems operational</p>
+                                <p className="text-xs text-yellow-700">{dashboardData?.pendingApprovals || 0} items pending</p>
                             </div>
                         </div>
                     </CardContent>
@@ -254,74 +223,79 @@ export default function LocationManagerDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2">
-                            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                                Check In Students
-                            </button>
-                            <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                                Mark Attendance
-                            </button>
-                            <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
-                                Report Issue
-                            </button>
-                            <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
+                            <a id="admin-location-dashboard-link-admin-location-attendance" href="/admin/location/attendance" className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium text-center">
+                                View Attendance
+                            </a>
+                            <a id="admin-location-dashboard-link-admin-location-classes" href="/admin/location/classes" className="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium text-center">
+                                Manage Classes
+                            </a>
+                            <a id="admin-location-dashboard-link-admin-location-facilities" href="/admin/location/facilities" className="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium text-center">
+                                Facilities Status
+                            </a>
+                            <a id="admin-location-dashboard-link-admin-location-analytics" href="/admin/location/analytics" className="block w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium text-center">
                                 View Reports
-                            </button>
+                            </a>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Revenue Trend Chart */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-blue-600" />
-                        Weekly Revenue vs Target
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={revenueData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => typeof value === 'number' ? `${(value / 1000).toFixed(0)}K` : value} />
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#3b82f6" name="Actual Revenue" />
-                            <Bar dataKey="target" fill="#10b981" name="Target Revenue" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
+            {revenueData.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-blue-600" />
+                            Revenue Trend
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={revenueData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="week" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => typeof value === 'number' ? `${(value / 1000).toFixed(0)}K` : value} />
+                                <Legend />
+                                <Bar dataKey="revenue" fill="#3b82f6" name="Revenue" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Today's Class Schedule */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-blue-600" />
-                        Today's Class Schedule
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        {todayClasses.map((cls, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-gray-900">{cls.time}</span>
-                                        <span className="font-medium text-gray-900">{cls.name}</span>
+            {todayClassSchedule.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            Today's Class Schedule
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {todayClassSchedule.map((cls: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="font-bold text-gray-900">{cls.time || cls.timeSlot || 'N/A'}</span>
+                                            <span className="font-medium text-gray-900">{cls.name || cls.sessionName || 'N/A'}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-600">
+                                            Coach: {cls.coach || 'N/A'} {cls.room ? `• Room: ${cls.room}` : ''}
+                                        </p>
                                     </div>
-                                    <p className="text-xs text-gray-600">Coach: {cls.coach} • Room: {cls.room}</p>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-gray-900">{cls.students ?? cls.enrolled ?? 0}</p>
+                                        <p className="text-xs text-gray-600">students</p>
+                                    </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-bold text-gray-900">{cls.students}</p>
-                                    <p className="text-xs text-gray-600">students</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

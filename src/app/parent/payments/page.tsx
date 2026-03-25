@@ -164,11 +164,11 @@ const ParentPaymentsPage = () => {
                     <p className="text-gray-600 mt-2">Manage your payments and view transaction history</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="parent-payments-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button size="sm">
+                    <Button id="parent-payments-make-payment-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Make Payment
                     </Button>
@@ -247,7 +247,7 @@ const ParentPaymentsPage = () => {
                                     { key: 'pending', label: 'Pending' },
                                     { key: 'failed', label: 'Failed' }
                                 ].map((filter) => (
-                                    <button
+                                    <button id={`parent-payments-filter-${filter.key}-btn`}
                                         key={filter.key}
                                         onClick={() => setSelectedFilter(filter.key as any)}
                                         className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedFilter === filter.key
@@ -259,7 +259,7 @@ const ParentPaymentsPage = () => {
                                     </button>
                                 ))}
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button id="parent-payments-export-btn" variant="outline" size="sm">
                                 <Download className="w-4 h-4 mr-2" />
                                 Export
                             </Button>
@@ -298,10 +298,10 @@ const ParentPaymentsPage = () => {
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(payment.status)}
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm">
+                                    <Button id={`parent-payments-receipt-${payment.id}-btn`} variant="ghost" size="sm">
                                         <Receipt className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -318,19 +318,19 @@ const ParentPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-pay-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Plus className="w-6 h-6" />
                             <span>Make Payment</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-receipt-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Download className="w-6 h-6" />
                             <span>Download Receipt</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-methods-btn" className="h-20 flex-col gap-2" variant="outline">
                             <CreditCard className="w-6 h-6" />
                             <span>Payment Methods</span>
                         </Button>
-                        <Button className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline">
                             <Calendar className="w-6 h-6" />
                             <span>Payment Schedule</span>
                         </Button>

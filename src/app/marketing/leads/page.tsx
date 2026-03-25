@@ -62,7 +62,7 @@ export default function LeadsPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Leads</h1>
                         <p className="text-gray-600">Manage and track leads</p>
                     </div>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button id="marketing-leads-btn" className="bg-blue-600 hover:bg-blue-700 text-white">
                         <Plus className="w-4 h-4 mr-2" />
                         Add Lead
                     </Button>

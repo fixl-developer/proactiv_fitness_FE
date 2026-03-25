@@ -170,7 +170,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                         </h2>
                         <p className="text-gray-600">AI-powered time slot recommendations</p>
                     </div>
-                    <Button
+                    <Button id="ai-smart-scheduling-filters-btn"
                         variant="outline"
                         onClick={() => setShowFilters(!showFilters)}
                         className="flex items-center gap-2"
@@ -203,7 +203,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">Experience Level</label>
-                                    <select data-testid="select-components-ai-SmartScheduling-1"
+                                    <select id="ai-smart-scheduling-experience-select"
                                         value={filters.experienceLevel || ''}
                                         onChange={(e) => setFilters(prev => ({
                                             ...prev,
@@ -219,7 +219,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">Location</label>
-                                    <select data-testid="select-components-ai-SmartScheduling-2"
+                                    <select id="ai-smart-scheduling-location-select"
                                         value={filters.location || ''}
                                         onChange={(e) => setFilters(prev => ({
                                             ...prev,
@@ -253,6 +253,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                     filteredSlots.map((slot) => (
                         <Card
                             key={slot.id}
+                            id={`ai-smart-scheduling-slot-${slot.id}-card`}
                             className={`cursor-pointer transition-all duration-300 ${selectedSlot === slot.id
                                 ? 'border-blue-500 bg-blue-50'
                                 : 'hover:border-blue-300 hover:shadow-md'
@@ -353,7 +354,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
                                         </span>
                                     </div>
 
-                                    <Button
+                                    <Button id={`ai-smart-scheduling-select-${slot.id}-btn`}
                                         className={selectedSlot === slot.id ? 'bg-blue-600' : ''}
                                         onClick={(e) => {
                                             e.stopPropagation();

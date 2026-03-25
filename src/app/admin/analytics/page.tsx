@@ -119,6 +119,7 @@ const AnalyticsPage = () => {
                 <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                     {['7d', '30d', '90d', '1y'].map((range) => (
                         <button
+                            id={`admin-analytics-timerange-${range}-btn`}
                             key={range}
                             onClick={() => setTimeRange(range as any)}
                             className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${timeRange === range

@@ -184,15 +184,15 @@ const CustomerAssessmentsPage = () => {
                     <p className="text-gray-600 mt-2">Manage and track student skill assessments</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-assessments-filter-btn" variant="outline" size="sm">
                         <Filter className="w-4 h-4 mr-2" />
                         Filter
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-assessments-export-btn" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>
-                    <Button size="sm">
+                    <Button id="admin-assessments-schedule-btn" size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         Schedule Assessment
                     </Button>
@@ -250,7 +250,7 @@ const CustomerAssessmentsPage = () => {
             <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                     {['all', 'pending', 'completed', 'overdue'].map((filter) => (
-                        <button
+                        <button id={`admin-assessments-filter-${filter}-btn`}
                             key={filter}
                             onClick={() => setSelectedFilter(filter as any)}
                             className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedFilter === filter
@@ -265,6 +265,7 @@ const CustomerAssessmentsPage = () => {
                 <div className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-gray-400" />
                     <input
+                        id="admin-assessments-search-input"
                         type="text"
                         placeholder="Search assessments..."
                         className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -354,12 +355,12 @@ const CustomerAssessmentsPage = () => {
                                 )}
 
                                 <div className="flex justify-end gap-2 mt-3">
-                                    <Button variant="outline" size="sm">
+                                    <Button id={`admin-assessments-view-${assessment.id}-btn`} variant="outline" size="sm">
                                         <Eye className="w-4 h-4 mr-2" />
                                         View Details
                                     </Button>
                                     {assessment.status === 'pending' && (
-                                        <Button size="sm">
+                                        <Button id={`admin-assessments-complete-${assessment.id}-btn`} size="sm">
                                             Complete Assessment
                                         </Button>
                                     )}

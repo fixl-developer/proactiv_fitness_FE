@@ -98,7 +98,7 @@ function BookAssessmentContent() {
                     <BookingDashboardLayout currentSection={section}>
                         {/* Back to Assessment Button */}
                         <div className="mb-6">
-                            <button
+                            <button id="book-assessment-btn"
                                 onClick={() => {
                                     const currentUrl = new URL(window.location.href)
                                     currentUrl.searchParams.delete('section')

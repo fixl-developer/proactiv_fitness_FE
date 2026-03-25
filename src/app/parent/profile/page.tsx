@@ -175,17 +175,17 @@ const ProfilePage = () => {
                     <p className="text-gray-600">Manage your account information and preferences</p>
                 </div>
                 {!isEditing ? (
-                    <Button data-testid="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">
+                    <Button id="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">
                         <Edit className="w-4 h-4" />
                         Edit Profile
                     </Button>
                 ) : (
                     <div className="flex gap-2">
-                        <Button data-testid="btn-cancel-parent-profile" variant="outline" onClick={handleCancel} className="flex items-center gap-2">
+                        <Button id="btn-cancel-parent-profile" variant="outline" onClick={handleCancel} className="flex items-center gap-2">
                             <X className="w-4 h-4" />
                             Cancel
                         </Button>
-                        <Button data-testid="btn-save-parent-profile" onClick={handleSave} className="flex items-center gap-2">
+                        <Button id="btn-save-parent-profile" onClick={handleSave} className="flex items-center gap-2">
                             <Save className="w-4 h-4" />
                             Save Changes
                         </Button>
@@ -444,7 +444,7 @@ const ProfilePage = () => {
                                 {profile.firstName} {profile.lastName}
                             </h3>
                             <p className="text-sm text-gray-600 mb-4">Parent Account</p>
-                            <Button variant="outline" size="sm" className="flex items-center gap-2 mx-auto">
+                            <Button id="parent-profile-change-photo-btn" variant="outline" size="sm" className="flex items-center gap-2 mx-auto">
                                 <Camera className="w-4 h-4" />
                                 Change Photo
                             </Button>
@@ -482,7 +482,7 @@ const ProfilePage = () => {
                             <CardTitle>Quick Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <Button
+                            <Button id="parent-profile-manage-children-btn"
                                 variant="outline"
                                 className="w-full justify-start"
                                 onClick={() => window.location.href = '/parent/children'}
@@ -490,7 +490,7 @@ const ProfilePage = () => {
                                 <Users className="w-4 h-4 mr-2" />
                                 Manage Children
                             </Button>
-                            <Button
+                            <Button id="parent-profile-payment-history-btn"
                                 variant="outline"
                                 className="w-full justify-start"
                                 onClick={() => window.location.href = '/parent/payments'}
@@ -498,7 +498,7 @@ const ProfilePage = () => {
                                 <CreditCard className="w-4 h-4 mr-2" />
                                 Payment History
                             </Button>
-                            <Button
+                            <Button id="parent-profile-book-class-btn"
                                 variant="outline"
                                 className="w-full justify-start"
                                 onClick={() => window.location.href = '/book-now'}

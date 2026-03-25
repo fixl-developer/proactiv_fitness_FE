@@ -70,6 +70,7 @@ const AIAnalyticsPage = () => {
                     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1 flex-1 sm:flex-none">
                         {['24h', '7d', '30d'].map((range) => (
                             <button
+                                id={`admin-ai-analytics-timerange-${range}-btn`}
                                 key={range}
                                 onClick={() => setSelectedTimeRange(range)}
                                 className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-colors ${selectedTimeRange === range
@@ -81,11 +82,11 @@ const AIAnalyticsPage = () => {
                             </button>
                         ))}
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-ai-analytics-refresh-btn" variant="outline" size="sm">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id="admin-ai-analytics-export-btn" variant="outline" size="sm">
                         <Download className="w-4 h-4 mr-2" />
                         Export
                     </Button>

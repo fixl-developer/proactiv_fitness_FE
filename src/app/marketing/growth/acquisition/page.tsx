@@ -63,7 +63,7 @@ export default function AcquisitionPage() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">User Acquisition</h1>
                         <p className="text-gray-600">Analyze acquisition channels and ROI</p>
                     </div>
-                    <Button data-testid="btn-router-marketing-growth-acquisition" onClick={() => router.push('/marketing/growth')} variant="outline">
+                    <Button id="btn-router-marketing-growth-acquisition" onClick={() => router.push('/marketing/growth')} variant="outline">
                         Back to Overview
                     </Button>
                 </div>

@@ -78,7 +78,7 @@ function ResetPasswordForm() {
 
                 {/* Form Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <form data-testid="form-reset-password" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <form id="form-reset-password" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                         {/* New Password */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -93,7 +93,7 @@ function ResetPasswordForm() {
                                     placeholder="••••••••"
                                     disabled={isLoading}
                                 />
-                                <button
+                                <button id="auth-reset-password-btn"
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -130,7 +130,7 @@ function ResetPasswordForm() {
                                     placeholder="••••••••"
                                     disabled={isLoading}
                                 />
-                                <button
+                                <button id="auth-reset-password-btn-2"
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -151,7 +151,7 @@ function ResetPasswordForm() {
                         </div>
 
                         {/* Submit Button */}
-                        <button
+                        <button id="auth-reset-password-btn-3"
                             type="submit"
                             disabled={isLoading}
                             className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -172,7 +172,7 @@ function ResetPasswordForm() {
 
                     {/* Back to Login */}
                     <div className="mt-6 text-center">
-                        <Link data-testid="link-login" href="/login" className="text-primary hover:underline">
+                        <Link id="login" href="/login" className="text-primary hover:underline">
                             Back to Login
                         </Link>
                     </div>

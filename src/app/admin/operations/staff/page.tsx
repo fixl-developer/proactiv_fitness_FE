@@ -194,7 +194,7 @@ export default function OperationsStaffPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Staff Management</h1>
-        <button data-testid="btn-admin-operations-staff-1" onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button id="btn-admin-operations-staff-1" onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
           + Add Staff
         </button>
       </div>
@@ -232,7 +232,7 @@ export default function OperationsStaffPage() {
       <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[200px]">
           <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
-          <input data-testid="input-text-admin-operations-staff"
+          <input id="input-text-admin-operations-staff-search"
             type="text"
             placeholder="Name or email..."
             value={searchQuery}
@@ -242,7 +242,7 @@ export default function OperationsStaffPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-          <select data-testid="select-admin-operations-staff-12" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="select-admin-operations-staff-12" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All Roles</option>
             {uniqueRoles.map((r) => (
               <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
@@ -251,7 +251,7 @@ export default function OperationsStaffPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Location</label>
-          <select data-testid="select-admin-operations-staff-13" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="select-admin-operations-staff-13" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All Locations</option>
             {uniqueLocations.map((l) => (
               <option key={l.id} value={l.id}>{l.name}</option>
@@ -260,7 +260,7 @@ export default function OperationsStaffPage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-          <select data-testid="select-admin-operations-staff-14" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="select-admin-operations-staff-14" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="">All</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -303,7 +303,7 @@ export default function OperationsStaffPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{(s.certifications ?? []).join(', ') || '-'}</td>
                   <td className="px-4 py-3 text-right">
-                    <button data-testid="btn-admin-operations-staff-2" onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800 font-medium text-sm">Edit</button>
+                    <button id="btn-admin-operations-staff-2" onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800 font-medium text-sm">Edit</button>
                   </td>
                 </tr>
               ))}
@@ -321,25 +321,25 @@ export default function OperationsStaffPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
-                  <input data-testid="input-text-admin-operations-staff" type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff-firstname" type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
-                  <input data-testid="input-text-admin-operations-staff" type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff" type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-                <input data-testid="input-email-admin-operations-staff" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-email-admin-operations-staff" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                <input data-testid="input-text-admin-operations-staff" type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-staff" type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-                  <select data-testid="select-admin-operations-staff-15" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select id="select-admin-operations-staff-15" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="trainer">Trainer</option>
                     <option value="manager">Manager</option>
                     <option value="receptionist">Receptionist</option>
@@ -348,17 +348,17 @@ export default function OperationsStaffPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Location ID</label>
-                  <input data-testid="input-text-admin-operations-staff" type="text" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} placeholder="e.g. loc-1" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff" type="text" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} placeholder="e.g. loc-1" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Certifications (comma-separated)</label>
-                <input data-testid="input-text-admin-operations-staff" type="text" value={form.certifications} onChange={(e) => setForm({ ...form, certifications: e.target.value })} placeholder="CPT, Yoga, Pilates" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-staff" type="text" value={form.certifications} onChange={(e) => setForm({ ...form, certifications: e.target.value })} placeholder="CPT, Yoga, Pilates" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button data-testid="btn-admin-operations-staff-3" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button data-testid="btn-admin-operations-staff-4" onClick={handleSubmit} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
+              <button id="btn-admin-operations-staff-3" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
+              <button id="btn-admin-operations-staff-4" onClick={handleSubmit} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
                 {submitting ? 'Saving...' : editingStaff ? 'Update' : 'Create'}
               </button>
             </div>

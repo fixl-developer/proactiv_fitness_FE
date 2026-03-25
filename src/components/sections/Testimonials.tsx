@@ -366,6 +366,7 @@ const Testimonials = () => {
 
                                 {/* Enhanced Navigation Arrows */}
                                 <motion.button
+                                    id="testimonials-prev-btn"
                                     onClick={goToPrevious}
                                     className="absolute left-6 top-1/2 transform -translate-y-1/2 w-14 h-14 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-blue-600 transition-all duration-500 shadow-xl group"
                                     aria-label="Previous testimonial"
@@ -377,6 +378,7 @@ const Testimonials = () => {
                                 </motion.button>
 
                                 <motion.button
+                                    id="testimonials-next-btn"
                                     onClick={goToNext}
                                     className="absolute right-6 top-1/2 transform -translate-y-1/2 w-14 h-14 bg-white/90 backdrop-blur-md border border-gray-200/50 rounded-2xl flex items-center justify-center text-gray-600 hover:bg-white hover:text-blue-600 transition-all duration-500 shadow-xl group"
                                     aria-label="Next testimonial"
@@ -398,6 +400,7 @@ const Testimonials = () => {
                             >
                                 {testimonials.map((_, index) => (
                                     <motion.button
+                                        id={`testimonials-dot-${index}-btn`}
                                         key={index}
                                         onClick={() => goToTestimonial(index)}
                                         className={`relative overflow-hidden rounded-full transition-all duration-500 ${index === currentTestimonial
@@ -555,7 +558,7 @@ const Testimonials = () => {
                                         className="flex flex-col sm:flex-row gap-6 justify-center"
                                     >
                                         <motion.div whileHover={{ scale: 1.08, y: -5 }} whileTap={{ scale: 0.95 }}>
-                                            <a
+                                            <a id="sections-testimonials-link-book-trial"
                                                 href="/book-trial"
                                                 className="group relative overflow-hidden bg-white text-blue-600 hover:bg-gray-50 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center space-x-2 border-2 border-white"
                                             >
@@ -570,7 +573,7 @@ const Testimonials = () => {
                                             </a>
                                         </motion.div>
                                         <motion.div whileHover={{ scale: 1.08, y: -5 }} whileTap={{ scale: 0.95 }}>
-                                            <a
+                                            <a id="sections-testimonials-link-contact"
                                                 href="/contact"
                                                 className="group border-2 border-white text-white hover:bg-white hover:text-blue-600 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center space-x-2 hover:shadow-2xl"
                                             >

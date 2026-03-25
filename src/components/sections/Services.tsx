@@ -347,7 +347,7 @@ const Services = () => {
                                             ))}
                                         </div>
 
-                                        <Link
+                                        <Link id="sections-services-nav"
                                             href={service.href}
                                             className={`inline-flex items-center justify-center space-x-2 ${service.color === 'green' ? 'bg-green-500 hover:bg-green-600' :
                                                 service.color === 'red' ? 'bg-red-500 hover:bg-red-600' :
@@ -408,7 +408,7 @@ const Services = () => {
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
                                 <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}>
-                                    <Link
+                                    <Link id="sections-services-nav-book-trial"
                                         href="/book-trial"
                                         className="group bg-white text-blue-600 hover:bg-gray-50 px-6 py-3 sm:px-10 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 shadow-xl flex items-center space-x-2"
                                     >
@@ -417,7 +417,7 @@ const Services = () => {
                                     </Link>
                                 </motion.div>
                                 <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.95 }}>
-                                    <Link
+                                    <Link id="sections-services-nav-contact"
                                         href="/contact"
                                         className="group border-2 border-white text-white hover:bg-white hover:text-blue-600 px-6 py-3 sm:px-10 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 flex items-center space-x-2"
                                     >
