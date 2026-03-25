@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import UserProfileService from '@/services/modules/user-profile.service'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null)
@@ -24,6 +25,18 @@ export default function ProfilePage() {
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
     const profileService = new UserProfileService()
+
+    const isDirty = isEditing && JSON.stringify(profile) !== JSON.stringify(originalProfile)
+
+    const saveForLogout = useCallback(async () => {
+        if (!isDirty) return
+        const profileService = new UserProfileService()
+        await profileService.updateProfile(profile)
+        setOriginalProfile(profile)
+        setIsEditing(false)
+    }, [profile, isDirty])
+
+    useTrackUnsavedChanges('user-profile', 'User Profile', isDirty, saveForLogout)
 
     const loadProfile = useCallback(async () => {
         try {

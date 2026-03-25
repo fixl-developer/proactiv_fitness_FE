@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Clock, Save, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService, CoachAvailability } from '@/services/modules/coach.service'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 const DEFAULT_AVAILABILITY: CoachAvailability = {
     monday: { start: '09:00', end: '17:00', available: true },
@@ -28,6 +29,7 @@ const CoachAvailabilityPage = () => {
     const [saveError, setSaveError] = useState<string | null>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [availability, setAvailability] = useState<CoachAvailability>({ ...DEFAULT_AVAILABILITY })
+    const originalAvailabilityRef = useRef<string>('')
 
     const coachId = user?.id
 
@@ -48,6 +50,7 @@ const CoachAvailabilityPage = () => {
             setLoadError(null)
             const data = await coachService.getAvailability(coachId)
             setAvailability(data)
+            originalAvailabilityRef.current = JSON.stringify(data)
         } catch (error) {
             console.error('Error loading availability:', error)
             setLoadError('Failed to load availability from server. Using default schedule.')
@@ -56,6 +59,16 @@ const CoachAvailabilityPage = () => {
             setIsLoading(false)
         }
     }
+
+    const isDirty = originalAvailabilityRef.current !== '' && JSON.stringify(availability) !== originalAvailabilityRef.current
+
+    const saveForLogout = useCallback(async () => {
+        if (!coachId) return
+        await coachService.saveAvailability(coachId, availability)
+        originalAvailabilityRef.current = JSON.stringify(availability)
+    }, [availability, coachId])
+
+    useTrackUnsavedChanges('coach-availability', 'Coach Availability', isDirty, saveForLogout)
 
     const handleAvailabilityChange = (day: string, field: string, value: string | boolean) => {
         setSaveSuccess(false)
@@ -76,6 +89,7 @@ const CoachAvailabilityPage = () => {
             setSaveSuccess(false)
             setSaveError(null)
             await coachService.saveAvailability(coachId, availability)
+            originalAvailabilityRef.current = JSON.stringify(availability)
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 5000)
         } catch (error) {

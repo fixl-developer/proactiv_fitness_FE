@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
@@ -26,11 +27,7 @@ export default function RegionalAdminDashboard() {
     const [pendingActions, setPendingActions] = useState<any[]>([])
     const [timeRange, setTimeRange] = useState('30d')
 
-    useEffect(() => {
-        loadDashboard()
-    }, [timeRange])
-
-    const loadDashboard = async () => {
+    const loadDashboard = useCallback(async () => {
         try {
             setIsLoading(true)
             setError(null)
@@ -82,7 +79,13 @@ export default function RegionalAdminDashboard() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [timeRange])
+
+    useRealtimeRefresh(['location', 'staff', 'program', 'booking', 'payment'], loadDashboard)
+
+    useEffect(() => {
+        loadDashboard()
+    }, [loadDashboard])
 
     function formatRelativeDate(dateStr: string): string {
         try {

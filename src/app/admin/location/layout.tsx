@@ -8,12 +8,16 @@ import {
     LayoutDashboard, Building2, Users, Settings, BarChart3,
     Calendar, Zap, Bell, LogOut, Menu, X, UserCheck, Clock, Phone
 } from 'lucide-react'
+import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 
 export default function LocationManagerLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const [user, setUser] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     useEffect(() => {
         // Check authentication and role
@@ -33,11 +37,6 @@ export default function LocationManagerLayout({ children }: { children: React.Re
 
         setUser(parsedUser)
     }, [router])
-
-    const handleLogout = () => {
-        localStorage.clear()
-        window.location.href = '/login/staff'
-    }
 
     const navigation = [
         { name: 'Dashboard', href: '/admin/location/dashboard', icon: LayoutDashboard },
@@ -81,6 +80,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <NotificationBell />
                         <button id="admin-location-layout-btn-2" className="relative p-2 hover:bg-gray-100 rounded-lg">
                             <Bell className="w-5 h-5 text-gray-600" />
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -91,7 +91,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                             <button id="admin-location-layout-btn-3"
-                                onClick={handleLogout}
+                                onClick={handleLogoutClick}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
                                 <LogOut className="w-5 h-5" />
@@ -126,6 +126,15 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                     {children}
                 </div>
             </main>
+
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={closeLogoutModal}
+                onSaveAndLogout={handleSaveAndLogout}
+                onPermanentLogout={handlePermanentLogout}
+                userName={user?.name?.split(' ')[0]}
+                unsavedPages={unsavedPages}
+            />
         </div>
     )
 }

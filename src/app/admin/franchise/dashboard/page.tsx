@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
@@ -27,44 +28,47 @@ export default function FranchiseOwnerDashboard() {
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const response = await FranchiseOwnerService.getDashboardOverview()
-                // Backend returns { success: true, data: { ... } }
-                const data = response?.data ?? response ?? {}
-                setDashboardData({
-                    franchiseName: data.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
-                    totalLocations: data.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
-                    totalStaff: data.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
-                    totalStudents: data.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
-                    totalRevenue: data.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
-                    monthlyRevenue: data.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
-                    revenueGrowth: data.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
-                    occupancyRate: data.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
-                    staffUtilization: data.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
-                    customerSatisfaction: data.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
-                    pendingApprovals: data.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
-                    criticalAlerts: data.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
-                    warnings: data.warnings ?? FALLBACK_FRANCHISE.warnings,
-                    locationsChange: data.locationsChange ?? FALLBACK_FRANCHISE.locationsChange,
-                    studentsChange: data.studentsChange ?? FALLBACK_FRANCHISE.studentsChange,
-                    staffChange: data.staffChange ?? FALLBACK_FRANCHISE.staffChange,
-                    revenueChange: data.revenueChange ?? FALLBACK_FRANCHISE.revenueChange,
-                    revenueTrend: data.revenueTrend ?? FALLBACK_FRANCHISE.revenueTrend,
-                    locationPerformance: data.locationPerformance ?? FALLBACK_FRANCHISE.locationPerformance,
-                    pendingActions: data.pendingActions ?? FALLBACK_FRANCHISE.pendingActions,
-                    alerts: data.alerts ?? FALLBACK_FRANCHISE.alerts,
-                })
-            } catch (error) {
-                console.error('Error loading franchise dashboard:', error)
-                setDashboardData(FALLBACK_FRANCHISE)
-            } finally {
-                setIsLoading(false)
-            }
+    const loadData = useCallback(async () => {
+        try {
+            const response = await FranchiseOwnerService.getDashboardOverview()
+            // Backend returns { success: true, data: { ... } }
+            const data = response?.data ?? response ?? {}
+            setDashboardData({
+                franchiseName: data.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
+                totalLocations: data.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
+                totalStaff: data.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
+                totalStudents: data.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
+                totalRevenue: data.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
+                monthlyRevenue: data.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
+                revenueGrowth: data.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
+                occupancyRate: data.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
+                staffUtilization: data.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
+                customerSatisfaction: data.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
+                pendingApprovals: data.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
+                criticalAlerts: data.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
+                warnings: data.warnings ?? FALLBACK_FRANCHISE.warnings,
+                locationsChange: data.locationsChange ?? FALLBACK_FRANCHISE.locationsChange,
+                studentsChange: data.studentsChange ?? FALLBACK_FRANCHISE.studentsChange,
+                staffChange: data.staffChange ?? FALLBACK_FRANCHISE.staffChange,
+                revenueChange: data.revenueChange ?? FALLBACK_FRANCHISE.revenueChange,
+                revenueTrend: data.revenueTrend ?? FALLBACK_FRANCHISE.revenueTrend,
+                locationPerformance: data.locationPerformance ?? FALLBACK_FRANCHISE.locationPerformance,
+                pendingActions: data.pendingActions ?? FALLBACK_FRANCHISE.pendingActions,
+                alerts: data.alerts ?? FALLBACK_FRANCHISE.alerts,
+            })
+        } catch (error) {
+            console.error('Error loading franchise dashboard:', error)
+            setDashboardData(FALLBACK_FRANCHISE)
+        } finally {
+            setIsLoading(false)
         }
-        loadData()
     }, [timeRange])
+
+    useRealtimeRefresh(['location', 'staff', 'program', 'booking', 'payment'], loadData)
+
+    useEffect(() => {
+        loadData()
+    }, [loadData])
 
     if (isLoading) {
         return (

@@ -153,21 +153,21 @@ export default function LocationEmergencyContactsPage() {
             {/* Emergency Contact Summary */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                    { title: 'Total Contacts', value: totalContacts, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-                    { title: 'Verified', value: verified, icon: Shield, color: 'text-green-600', bgColor: 'bg-green-50' },
-                    { title: 'Pending Verification', value: pending, icon: Clock, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
-                    { title: 'Expired', value: expired, icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
+                    { title: 'Total Contacts', value: totalContacts, icon: Users, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+                    { title: 'Verified', value: verified, icon: Shield, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
+                    { title: 'Pending Verification', value: pending, icon: Clock, cardBg: 'bg-gradient-to-br from-yellow-50 to-yellow-100', iconBg: 'bg-gradient-to-br from-yellow-500 to-yellow-600', titleColor: 'text-yellow-700', valueColor: 'text-yellow-900' },
+                    { title: 'Expired', value: expired, icon: AlertTriangle, cardBg: 'bg-gradient-to-br from-red-50 to-red-100', iconBg: 'bg-gradient-to-br from-red-500 to-red-600', titleColor: 'text-red-700', valueColor: 'text-red-900' },
                 ].map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`${metric.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                                        <p className={`text-sm font-medium ${metric.titleColor}`}>{metric.title}</p>
+                                        <p className={`text-2xl font-bold ${metric.valueColor} mt-2`}>{metric.value}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className={`${metric.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
                                 </div>
                             </CardContent>

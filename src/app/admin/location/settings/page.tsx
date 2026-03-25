@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Settings, Bell, Lock, Mail, Save, AlertCircle, CheckCircle, Eye, EyeOff
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 export default function LocationSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -41,6 +42,8 @@ export default function LocationSettingsPage() {
         maintenanceMode: false,
     })
 
+    const originalSettingsRef = useRef<string>('')
+
     useEffect(() => {
         const loadSettings = async () => {
             try {
@@ -48,36 +51,50 @@ export default function LocationSettingsPage() {
                 setError(null)
                 const data = await LocationManagerService.getSettings()
                 if (data) {
-                    setSettings(prev => ({
-                        ...prev,
-                        locationName: data.locationName || prev.locationName,
-                        locationCode: data.locationCode || prev.locationCode,
-                        managerName: data.managerName || prev.managerName,
-                        managerEmail: data.managerEmail || prev.managerEmail,
-                        managerPhone: data.managerPhone || prev.managerPhone,
-                        businessPhone: data.businessPhone || prev.businessPhone,
-                        address: data.address || prev.address,
-                        city: data.city || prev.city,
-                        state: data.state || prev.state,
-                        zipCode: data.zipCode || prev.zipCode,
-                        timezone: data.timezone || prev.timezone,
-                        currency: data.currency || prev.currency,
-                        operatingHours: data.operatingHours || prev.operatingHours,
-                        notificationsEmail: data.notificationsEmail ?? prev.notificationsEmail,
-                        notificationsSMS: data.notificationsSMS ?? prev.notificationsSMS,
-                        notificationsPush: data.notificationsPush ?? prev.notificationsPush,
-                        maintenanceMode: data.maintenanceMode ?? prev.maintenanceMode,
-                    }))
+                    const merged = {
+                        ...settings,
+                        locationName: data.locationName || settings.locationName,
+                        locationCode: data.locationCode || settings.locationCode,
+                        managerName: data.managerName || settings.managerName,
+                        managerEmail: data.managerEmail || settings.managerEmail,
+                        managerPhone: data.managerPhone || settings.managerPhone,
+                        businessPhone: data.businessPhone || settings.businessPhone,
+                        address: data.address || settings.address,
+                        city: data.city || settings.city,
+                        state: data.state || settings.state,
+                        zipCode: data.zipCode || settings.zipCode,
+                        timezone: data.timezone || settings.timezone,
+                        currency: data.currency || settings.currency,
+                        operatingHours: data.operatingHours || settings.operatingHours,
+                        notificationsEmail: data.notificationsEmail ?? settings.notificationsEmail,
+                        notificationsSMS: data.notificationsSMS ?? settings.notificationsSMS,
+                        notificationsPush: data.notificationsPush ?? settings.notificationsPush,
+                        maintenanceMode: data.maintenanceMode ?? settings.maintenanceMode,
+                    }
+                    setSettings(merged)
+                    originalSettingsRef.current = JSON.stringify(merged)
+                } else {
+                    originalSettingsRef.current = JSON.stringify(settings)
                 }
             } catch (err: any) {
                 console.error('Error loading settings:', err)
                 setError(err.message || 'Failed to load settings')
+                originalSettingsRef.current = JSON.stringify(settings)
             } finally {
                 setIsLoading(false)
             }
         }
         loadSettings()
     }, [])
+
+    const isDirty = !isLoading && originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveForLogout = useCallback(async () => {
+        await LocationManagerService.updateSettings(settings)
+        originalSettingsRef.current = JSON.stringify(settings)
+    }, [settings])
+
+    useTrackUnsavedChanges('location-settings', 'Location Settings', isDirty, saveForLogout)
 
     const handleInputChange = (field: string, value: any) => {
         setSettings(prev => ({ ...prev, [field]: value }))
@@ -88,6 +105,7 @@ export default function LocationSettingsPage() {
             setIsSaving(true)
             setSaveSuccess(false)
             await LocationManagerService.updateSettings(settings)
+            originalSettingsRef.current = JSON.stringify(settings)
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 3000)
         } catch (err: any) {

@@ -86,21 +86,21 @@ export default function LocationAnalyticsPage() {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                    { title: 'Total Students', value: totalStudents, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-                    { title: 'Avg Attendance', value: `${avgAttendance}%`, icon: BarChart3, color: 'text-green-600', bgColor: 'bg-green-50' },
-                    { title: 'Classes/Week', value: classesPerWeek, icon: Calendar, color: 'text-purple-600', bgColor: 'bg-purple-50' },
-                    { title: 'Satisfaction', value: satisfaction ? `${satisfaction}/5.0` : 'N/A', icon: TrendingUp, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+                    { title: 'Total Students', value: totalStudents, icon: Users, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+                    { title: 'Avg Attendance', value: `${avgAttendance}%`, icon: BarChart3, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
+                    { title: 'Classes/Week', value: classesPerWeek, icon: Calendar, cardBg: 'bg-gradient-to-br from-purple-50 to-purple-100', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', titleColor: 'text-purple-700', valueColor: 'text-purple-900' },
+                    { title: 'Satisfaction', value: satisfaction ? `${satisfaction}/5.0` : 'N/A', icon: TrendingUp, cardBg: 'bg-gradient-to-br from-orange-50 to-orange-100', iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600', titleColor: 'text-orange-700', valueColor: 'text-orange-900' },
                 ].map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`${metric.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                                        <p className={`text-sm font-medium ${metric.titleColor}`}>{metric.title}</p>
+                                        <p className={`text-2xl font-bold ${metric.valueColor} mt-2`}>{metric.value}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className={`${metric.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
                                 </div>
                             </CardContent>

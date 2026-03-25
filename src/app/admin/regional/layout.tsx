@@ -8,13 +8,15 @@ import {
     MapPin, Shield, TrendingUp, Bell, LogOut, Menu, DollarSign, ShieldCheck, Target
 } from 'lucide-react'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 
 export default function RegionalAdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
     const [user, setUser] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     useEffect(() => {
         const userData = localStorage.getItem('user')
@@ -34,32 +36,6 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
 
         setUser(parsedUser)
     }, [router])
-
-    const handleSaveAndLogout = () => {
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
 
     const navigation = [
         { name: 'Dashboard', href: '/admin/regional/dashboard', icon: LayoutDashboard },
@@ -104,6 +80,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <NotificationBell />
                         <button id="admin-regional-layout-btn" className="relative p-2 hover:bg-gray-100 rounded-lg">
                             <Bell className="w-5 h-5 text-gray-600" />
                             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -114,7 +91,7 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                             <button id="btn-admin-regional-2"
-                                onClick={() => setShowLogoutModal(true)}
+                                onClick={handleLogoutClick}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
                                 <LogOut className="w-5 h-5" />
@@ -159,10 +136,11 @@ export default function RegionalAdminLayout({ children }: { children: React.Reac
             {/* Logout Modal */}
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={user.name?.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

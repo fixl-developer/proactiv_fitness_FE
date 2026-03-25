@@ -161,10 +161,17 @@ export class FranchiseOwnerService {
             if (role) params.append('role', role)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<FranchiseStaff>>(
+            const response = await apiClient.get(
                 `/admin/franchise/staff?${params.toString()}`
             )
-            return response.data
+            // apiClient.get() already unwraps axios response.data, so response = { success, data, total, page, pageSize, totalPages }
+            return {
+                data: response.data || [],
+                total: response.total ?? 0,
+                page: response.page ?? page,
+                pageSize: response.pageSize ?? pageSize,
+                totalPages: response.totalPages ?? 0,
+            } as PaginatedResponse<FranchiseStaff>
         } catch (error: any) {
             console.error('Failed to fetch staff:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch staff')
@@ -406,11 +413,11 @@ export class FranchiseOwnerService {
      */
     static async exportFinancialReport(format: 'pdf' | 'csv' | 'xlsx'): Promise < Blob > {
     try {
-        const response = await apiClient.get(
+        const blob = await apiClient.get(
             `/admin/franchise/financial-reports/export?format=${format}`,
             { responseType: 'blob' }
         )
-            return response.data
+            return blob as unknown as Blob
     } catch(error: any) {
         console.error('Failed to export financial report:', error)
         throw new Error(error.response?.data?.message || 'Failed to export financial report')

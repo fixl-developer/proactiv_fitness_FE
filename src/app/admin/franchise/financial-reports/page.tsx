@@ -51,8 +51,10 @@ export default function FinancialReportsPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const response = await FranchiseOwnerService.getFinancialReports(range)
-            setFinancialData(response.data)
+            const result = await FranchiseOwnerService.getFinancialReports(range)
+            // Handle both { totalRevenue, ... } and { success, data: { totalRevenue, ... } } shapes
+            const data = result?.totalRevenue !== undefined ? result : result?.data ?? result
+            setFinancialData(data)
         } catch (err: any) {
             setError(err.message || 'Failed to load financial reports')
         } finally {
@@ -111,16 +113,14 @@ export default function FinancialReportsPage() {
 
     if (!financialData) return null
 
-    const {
-        totalRevenue,
-        totalExpenses,
-        totalProfit,
-        profitMargin,
-        avgMonthlyProfit,
-        monthlyData,
-        revenueByProgram,
-        expenseBreakdown,
-    } = financialData
+    const totalRevenue = financialData.totalRevenue ?? 0
+    const totalExpenses = financialData.totalExpenses ?? 0
+    const totalProfit = financialData.totalProfit ?? 0
+    const profitMargin = financialData.profitMargin ?? 0
+    const avgMonthlyProfit = financialData.avgMonthlyProfit ?? 0
+    const monthlyData = financialData.monthlyData ?? []
+    const revenueByProgram = financialData.revenueByProgram ?? []
+    const expenseBreakdown = financialData.expenseBreakdown ?? []
 
     const metrics = [
         {
@@ -137,7 +137,7 @@ export default function FinancialReportsPage() {
             icon: TrendingDown,
             cardGradient: 'bg-gradient-to-br from-orange-50 to-orange-100',
             iconGradient: 'bg-gradient-to-br from-orange-500 to-orange-600',
-            change: `${((totalExpenses / totalRevenue) * 100).toFixed(1)}% of revenue`,
+            change: `${totalRevenue > 0 ? ((totalExpenses / totalRevenue) * 100).toFixed(1) : '0.0'}% of revenue`,
         },
         {
             title: 'Net Profit',

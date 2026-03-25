@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle
@@ -127,6 +128,8 @@ export default function AdminDashboard() {
             setIsLoading(false)
         }
     }, [timeRange])
+
+    useRealtimeRefresh(['booking', 'payment', 'program', 'attendance', 'staff', 'location', 'schedule', 'ticket'], loadDashboardData)
 
     useEffect(() => {
         if (authLoading) return

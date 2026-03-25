@@ -92,19 +92,26 @@ export default function LocationAttendancePage() {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {[
-                    { label: 'Total Enrolled', value: totalEnrolled, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { label: 'Present Today', value: presentToday, color: 'text-green-600', bg: 'bg-green-50' },
-                    { label: 'Absent Today', value: absentToday, color: 'text-red-600', bg: 'bg-red-50' },
-                    { label: 'Avg Attendance', value: `${avgAttendance}%`, color: 'text-purple-600', bg: 'bg-purple-50' },
+                    { label: 'Total Enrolled', value: totalEnrolled, icon: Users, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+                    { label: 'Present Today', value: presentToday, icon: CheckCircle, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
+                    { label: 'Absent Today', value: absentToday, icon: XCircle, cardBg: 'bg-gradient-to-br from-red-50 to-red-100', iconBg: 'bg-gradient-to-br from-red-500 to-red-600', titleColor: 'text-red-700', valueColor: 'text-red-900' },
+                    { label: 'Avg Attendance', value: `${avgAttendance}%`, icon: TrendingUp, cardBg: 'bg-gradient-to-br from-purple-50 to-purple-100', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', titleColor: 'text-purple-700', valueColor: 'text-purple-900' },
                 ].map((stat, idx) => (
-                    <Card key={idx}>
-                        <CardContent className="pt-6">
-                            <div className={`${stat.bg} p-4 rounded-lg`}>
-                                <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
-                                <p className={`text-3xl font-bold ${stat.color} mt-2`}>{stat.value}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+                        <Card className={`${stat.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className={`text-sm font-medium ${stat.titleColor}`}>{stat.label}</p>
+                                        <p className={`text-3xl font-bold ${stat.valueColor} mt-2`}>{stat.value}</p>
+                                    </div>
+                                    <div className={`${stat.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <stat.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 ))}
             </div>
 

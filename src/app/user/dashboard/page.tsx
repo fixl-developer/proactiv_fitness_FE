@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -79,6 +80,8 @@ export default function UserDashboardPage() {
             setIsLoading(false)
         }
     }, [])
+
+    useRealtimeRefresh(['booking', 'attendance', 'payment', 'program'], loadDashboard)
 
     useEffect(() => {
         if (!isAuthenticated) {

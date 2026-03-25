@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     User, Mail, Phone, MapPin, Calendar, Edit, Save, RefreshCw,
@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import ParentEngagementService from '@/services/modules/parent-engagement.service'
 import AuthService from '@/services/modules/auth.service'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 interface UserProfile {
     id: string
@@ -46,6 +47,20 @@ const ProfilePage = () => {
     const router = useRouter()
 
     const parentId = user?.id || 'parent-1'
+
+    const isDirty = isEditing && JSON.stringify(editedProfile) !== JSON.stringify(profile)
+
+    const saveForLogout = useCallback(async () => {
+        if (!isDirty || !editedProfile) return
+
+        const engagementService = new ParentEngagementService()
+        await engagementService.updateEngagementPreferences(parentId, editedProfile.preferences)
+
+        setProfile(editedProfile)
+        setIsEditing(false)
+    }, [editedProfile, isDirty, parentId])
+
+    useTrackUnsavedChanges('parent-profile', 'Parent Profile', isDirty, saveForLogout)
 
     useEffect(() => {
         if (!isAuthenticated) {

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
 import { motion } from 'framer-motion'
 import {
@@ -23,6 +24,7 @@ export default function PartnerSettingsPage() {
     const [settings, setSettings] = useState<any>({})
     const [saving, setSaving] = useState(false)
     const [saveSuccess, setSaveSuccess] = useState(false)
+    const originalSettingsRef = useRef<string>('')
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -42,6 +44,7 @@ export default function PartnerSettingsPage() {
             const response = await PartnerPortalService.getPartnerSettings(partnerId)
 
             setSettings(response || {})
+            originalSettingsRef.current = JSON.stringify(response || {})
         } catch (err) {
             console.error('Error fetching settings:', err)
             setError('Failed to load settings')
@@ -50,6 +53,16 @@ export default function PartnerSettingsPage() {
         }
     }
 
+    const isDirty = !isLoading && originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveForLogout = useCallback(async () => {
+        const partnerId = user?.id || 'partner-1'
+        const updated = await PartnerPortalService.updatePartnerSettings(partnerId, settings)
+        originalSettingsRef.current = JSON.stringify(updated)
+    }, [settings, user?.id])
+
+    useTrackUnsavedChanges('partner-settings', 'Partner Settings', isDirty, saveForLogout)
+
     const handleSaveSettings = async () => {
         try {
             setSaving(true)
@@ -57,6 +70,7 @@ export default function PartnerSettingsPage() {
             const partnerId = user?.id || 'partner-1'
             const updated = await PartnerPortalService.updatePartnerSettings(partnerId, settings)
             setSettings(updated)
+            originalSettingsRef.current = JSON.stringify(updated)
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 3000)
         } catch (err) {

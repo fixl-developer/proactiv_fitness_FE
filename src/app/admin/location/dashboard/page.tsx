@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
@@ -27,55 +28,58 @@ export default function LocationManagerDashboard() {
     const [revenueData, setRevenueData] = useState<any[]>([])
     const [todayClassSchedule, setTodayClassSchedule] = useState<any[]>([])
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [overview, analytics] = await Promise.allSettled([
-                    LocationManagerService.getDashboardOverview(),
-                    LocationManagerService.getAnalytics(timeRange)
-                ])
-                const data = overview.status === 'fulfilled' ? overview.value : {}
-                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+    const loadData = useCallback(async () => {
+        try {
+            const [overview, analytics] = await Promise.allSettled([
+                LocationManagerService.getDashboardOverview(),
+                LocationManagerService.getAnalytics(timeRange)
+            ])
+            const data = overview.status === 'fulfilled' ? overview.value : {}
+            const stats = analytics.status === 'fulfilled' ? analytics.value : {}
 
-                setDashboardData({
-                    locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
-                    totalClasses: data?.totalClasses ?? stats?.classesPerWeek ?? FALLBACK_LOCATION.totalClasses,
-                    totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
-                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
-                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
-                    revenueGrowth: data?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
-                    occupancyRate: data?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
-                    staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
-                    customerSatisfaction: data?.customerSatisfaction ?? stats?.satisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
-                    todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
-                    todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
-                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
-                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
-                    warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
-                })
+            setDashboardData({
+                locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
+                totalClasses: data?.totalClasses ?? stats?.classesPerWeek ?? FALLBACK_LOCATION.totalClasses,
+                totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
+                totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
+                monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
+                revenueGrowth: data?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
+                occupancyRate: data?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
+                staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
+                customerSatisfaction: data?.customerSatisfaction ?? stats?.satisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
+                todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
+                todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
+                pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
+                criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
+                warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
+            })
 
-                // Set revenue data from analytics
-                if (stats?.revenueData && Array.isArray(stats.revenueData)) {
-                    setRevenueData(stats.revenueData)
-                } else {
-                    setRevenueData(data?.revenueData || [])
-                }
-
-                // Set today's class schedule from dashboard overview
-                if (data?.todaySchedule && Array.isArray(data.todaySchedule)) {
-                    setTodayClassSchedule(data.todaySchedule)
-                } else if (data?.classes && Array.isArray(data.classes)) {
-                    setTodayClassSchedule(data.classes)
-                }
-            } catch (error) {
-                console.error('Error loading location dashboard:', error)
-                setDashboardData(FALLBACK_LOCATION)
-            } finally {
-                setIsLoading(false)
+            // Set revenue data from analytics
+            if (stats?.revenueData && Array.isArray(stats.revenueData)) {
+                setRevenueData(stats.revenueData)
+            } else {
+                setRevenueData(data?.revenueData || [])
             }
+
+            // Set today's class schedule from dashboard overview
+            if (data?.todaySchedule && Array.isArray(data.todaySchedule)) {
+                setTodayClassSchedule(data.todaySchedule)
+            } else if (data?.classes && Array.isArray(data.classes)) {
+                setTodayClassSchedule(data.classes)
+            }
+        } catch (error) {
+            console.error('Error loading location dashboard:', error)
+            setDashboardData(FALLBACK_LOCATION)
+        } finally {
+            setIsLoading(false)
         }
-        loadData()
     }, [timeRange])
+
+    useRealtimeRefresh(['attendance', 'booking', 'staff', 'schedule'], loadData)
+
+    useEffect(() => {
+        loadData()
+    }, [loadData])
 
     if (isLoading) {
         return (
@@ -112,27 +116,27 @@ export default function LocationManagerDashboard() {
             {/* Top KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { title: 'Total Classes', value: dashboardData?.totalClasses, icon: Calendar, color: 'text-blue-600', bgColor: 'bg-blue-50', change: 'This month' },
-                    { title: 'Total Students', value: dashboardData?.totalStudents, icon: Users, color: 'text-green-600', bgColor: 'bg-green-50', change: 'Active students' },
-                    { title: 'Staff Members', value: dashboardData?.totalStaff, icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-50', change: 'Full team' },
+                    { title: 'Total Classes', value: dashboardData?.totalClasses, icon: Calendar, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900', change: 'This month' },
+                    { title: 'Total Students', value: dashboardData?.totalStudents, icon: Users, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900', change: 'Active students' },
+                    { title: 'Staff Members', value: dashboardData?.totalStaff, icon: Users, cardBg: 'bg-gradient-to-br from-purple-50 to-purple-100', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', titleColor: 'text-purple-700', valueColor: 'text-purple-900', change: 'Full team' },
                     {
                         title: 'Monthly Revenue',
                         value: dashboardData?.monthlyRevenue ? `${(dashboardData.monthlyRevenue / 1000).toFixed(0)}K` : '0',
-                        icon: DollarSign, color: 'text-orange-600', bgColor: 'bg-orange-50',
+                        icon: DollarSign, cardBg: 'bg-gradient-to-br from-orange-50 to-orange-100', iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600', titleColor: 'text-orange-700', valueColor: 'text-orange-900',
                         change: dashboardData?.revenueGrowth ? `+${dashboardData.revenueGrowth}% vs last month` : 'No data'
                     },
                 ].map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`${metric.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                                        <p className={`text-sm font-medium ${metric.titleColor}`}>{metric.title}</p>
+                                        <p className={`text-2xl font-bold ${metric.valueColor} mt-2`}>{metric.value}</p>
                                         <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className={`${metric.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
                                 </div>
                             </CardContent>

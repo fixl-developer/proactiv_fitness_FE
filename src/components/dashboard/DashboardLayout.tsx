@@ -7,6 +7,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 import {
     Home,
     Calendar,
@@ -214,7 +216,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     const { logout, softLogout } = useAuth()
     const router = useRouter()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {
@@ -245,37 +247,6 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
             }
         }
         return pathname === href
-    }
-
-    const handleLogoutClick = () => {
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        // Save session FIRST before clearing anything
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
     }
 
     return (
@@ -454,6 +425,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                         </div>
 
                         <div className="flex items-center space-x-3">
+                            <NotificationBell />
                             <Button id="dashboard-dashboard-layout-btn-4" variant="outline" size="sm">
                                 <Bell className="w-4 h-4 mr-2" />
                                 Notifications
@@ -480,10 +452,11 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={userName?.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

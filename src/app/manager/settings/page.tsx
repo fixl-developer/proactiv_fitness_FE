@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Settings, MapPin, Clock, Users, DollarSign, Bell, Shield, Save,
@@ -9,10 +9,51 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { LocationManagerService } from '@/services/locationManagerService'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 const ManagerSettingsPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<'location' | 'operations' | 'notifications' | 'staff'>('location')
+
+    const defaultSettings = {
+        locationSettings: {
+            name: 'Cyberport Center',
+            address: 'Shop 315, Level 3, Cyberport 1, 100 Cyberport Road, Hong Kong',
+            phone: '+852 2234 5678',
+            email: 'cyberport@proactivsports.net',
+            capacity: 120,
+            currentStudents: 89,
+            operatingHours: {
+                weekdays: '9:00 AM - 8:00 PM',
+                weekends: '9:00 AM - 6:00 PM'
+            },
+            facilities: ['Gymnastics Floor', 'Tumbling Area', 'Beam Section', 'Vault Area', 'Reception'],
+            status: 'active'
+        },
+        operationalSettings: {
+            classSize: {
+                beginner: 12,
+                intermediate: 10,
+                advanced: 8,
+                private: 1
+            },
+            pricing: {
+                beginner: 1800,
+                intermediate: 2100,
+                advanced: 2400,
+                private: 800
+            },
+            bookingSettings: {
+                advanceBooking: 30,
+                cancellationPolicy: 24,
+                waitlistEnabled: true
+            }
+        }
+    }
+
+    const [settings, setSettings] = useState(defaultSettings)
+    const originalSettingsRef = useRef<string>('')
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -23,43 +64,21 @@ const ManagerSettingsPage = () => {
                 return
             }
         }
+        // Initialize with default settings and record original state
+        originalSettingsRef.current = JSON.stringify(defaultSettings)
         setTimeout(() => setIsLoading(false), 1000)
     }, [])
 
-    const locationSettings = {
-        name: 'Cyberport Center',
-        address: 'Shop 315, Level 3, Cyberport 1, 100 Cyberport Road, Hong Kong',
-        phone: '+852 2234 5678',
-        email: 'cyberport@proactivsports.net',
-        capacity: 120,
-        currentStudents: 89,
-        operatingHours: {
-            weekdays: '9:00 AM - 8:00 PM',
-            weekends: '9:00 AM - 6:00 PM'
-        },
-        facilities: ['Gymnastics Floor', 'Tumbling Area', 'Beam Section', 'Vault Area', 'Reception'],
-        status: 'active'
-    }
+    const { locationSettings, operationalSettings } = settings
 
-    const operationalSettings = {
-        classSize: {
-            beginner: 12,
-            intermediate: 10,
-            advanced: 8,
-            private: 1
-        },
-        pricing: {
-            beginner: 1800,
-            intermediate: 2100,
-            advanced: 2400,
-            private: 800
-        },
-        bookingSettings: {
-            advanceBooking: 30,
-            cancellationPolicy: 24,
-            waitlistEnabled: true
-        }
-    }
+    const isDirty = originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveForLogout = useCallback(async () => {
+        await LocationManagerService.updateSettings(settings as any)
+        originalSettingsRef.current = JSON.stringify(settings)
+    }, [settings])
+
+    useTrackUnsavedChanges('manager-settings', 'Manager Settings', isDirty, saveForLogout)
 
     const tabs = [
         { id: 'location', label: 'Location Info', icon: MapPin },
@@ -96,7 +115,14 @@ const ManagerSettingsPage = () => {
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Reset
                     </Button>
-                    <Button id="manager-settings-save-btn" size="sm">
+                    <Button id="manager-settings-save-btn" size="sm" onClick={async () => {
+                        try {
+                            await LocationManagerService.updateSettings(settings as any)
+                            originalSettingsRef.current = JSON.stringify(settings)
+                        } catch (error) {
+                            console.error('Failed to save settings:', error)
+                        }
+                    }}>
                         <Save className="w-4 h-4 mr-2" />
                         Save Changes
                     </Button>

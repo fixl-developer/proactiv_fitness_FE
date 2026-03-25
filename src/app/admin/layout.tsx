@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 import {
     Home,
     Calendar,
@@ -145,7 +147,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const router = useRouter()
     const { logout, softLogout } = useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
     const [userName, setUserName] = useState('Admin User')
     const [userEmail, setUserEmail] = useState('admin@proactiv.com')
 
@@ -196,40 +198,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const handleNavigation = (href: string, e: React.MouseEvent) => {
         e.preventDefault()
         router.push(href)
-    }
-
-    const handleLogoutClick = () => {
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        // Save session FIRST before clearing anything
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        // Clear auth tokens
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        // Full page redirect BEFORE React state changes trigger other redirects
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        // Clear everything including saved session
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
     }
 
     return (
@@ -401,6 +369,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         </div>
 
                         <div className="flex items-center space-x-3">
+                            <NotificationBell />
                             <Button id="admin-layout-btn-6" variant="outline" size="sm">
                                 <Bell className="w-4 h-4 mr-2" />
                                 Notifications
@@ -429,10 +398,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={userName.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

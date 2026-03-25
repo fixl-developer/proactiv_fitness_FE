@@ -72,8 +72,7 @@ export default function FranchiseRevenuePage() {
         try {
             setIsLoading(true)
             setError(null)
-            const response = await FranchiseOwnerService.getRevenue(range)
-            const data = response.data
+            const data = await FranchiseOwnerService.getRevenue(range)
             setRevenueData({
                 total: data.total ?? 0,
                 monthlyAverage: data.monthlyAverage ?? 0,

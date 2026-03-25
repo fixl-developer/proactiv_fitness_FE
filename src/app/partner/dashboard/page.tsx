@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
 import CommissionService from '@/services/modules/commission.service'
 import PartnerAnalyticsService from '@/services/modules/partner-analytics.service'
@@ -106,6 +107,8 @@ export default function PartnerDashboard() {
 
         setLoading(false)
     }
+
+    useRealtimeRefresh(['program', 'booking', 'crm', 'payment'], loadDashboardData)
 
     if (!isAuthenticated) return null
 

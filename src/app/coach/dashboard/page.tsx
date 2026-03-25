@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Users, Calendar, TrendingUp, Award, Clock, AlertCircle,
     CheckCircle, BarChart3, Target, Zap, BookOpen, MessageSquare
@@ -102,6 +103,8 @@ const CoachDashboard = () => {
         setIsLoading(false)
     }
 
+    useRealtimeRefresh(['schedule', 'attendance', 'booking', 'program'], loadDashboardData)
+
     const handleRefresh = async () => {
         setRefreshing(true)
         await loadDashboardData()
@@ -170,7 +173,7 @@ const CoachDashboard = () => {
                 <div>
                     <h1 className={responsiveClasses.headerTitle}>Coach Dashboard</h1>
                     <p className={responsiveClasses.headerSubtitle}>
-                        Welcome back{user?.id ? '!' : '!'} Here&apos;s your coaching overview
+                        Welcome back, {(user as any)?.firstName || (user as any)?.name || 'Coach'}! Here&apos;s your coaching overview
                     </p>
                 </div>
                 <Button id="coach-dashboard-refresh-btn"

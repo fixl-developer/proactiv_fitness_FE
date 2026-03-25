@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Users, Calendar, DollarSign, RefreshCw, Eye, Plus, BarChart3, MessageSquare,
     ArrowUp, User, BookOpen, CreditCard, Download, TrendingUp, CheckCircle, AlertTriangle, Bell
@@ -69,6 +70,8 @@ const ParentDashboard = () => {
             setIsLoading(false)
         }
     }
+
+    useRealtimeRefresh(['booking', 'attendance', 'payment'], loadDashboardData)
 
     const handleRefresh = async () => {
         setRefreshing(true)

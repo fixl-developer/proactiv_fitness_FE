@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import { supportStaffService } from '@/services/supportStaffService'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { AlertCircle, CheckCircle, Clock, TrendingUp, AlertTriangle, Zap, Target, Ticket } from 'lucide-react'
@@ -16,75 +17,77 @@ export default function StaffDashboard() {
     const [recentTickets, setRecentTickets] = useState<any[]>([])
     const [chartData, setChartData] = useState<any[]>([])
 
+    const loadDashboardData = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+
+        const [dashRes, ticketsRes, analyticsRes] = await Promise.allSettled([
+            supportStaffService.getDashboardData(),
+            supportStaffService.getTickets({}),
+            supportStaffService.getAnalytics('7d')
+        ])
+
+        // Dashboard stats
+        setDashboardData(
+            dashRes.status === 'fulfilled' ? dashRes.value : {
+                totalTickets: 0,
+                openTickets: 0,
+                resolvedTickets: 0,
+                pendingReview: 0,
+                escalatedTickets: 0,
+                customerSatisfaction: 0,
+                responseTime: 0,
+                resolutionRate: 0
+            }
+        )
+
+        // Recent tickets
+        const tickets = ticketsRes.status === 'fulfilled'
+            ? (ticketsRes.value?.tickets || [])
+            : []
+        setRecentTickets(tickets.slice(0, 5))
+
+        // Chart data from analytics, with fallback to calculate from tickets
+        if (analyticsRes.status === 'fulfilled' && analyticsRes.value?.ticketTrends?.length) {
+            setChartData(analyticsRes.value.ticketTrends.map((t: any) => ({
+                name: t.date,
+                tickets: t.tickets,
+                resolved: t.resolved
+            })))
+        } else {
+            // Fallback: derive trend from tickets by grouping by date
+            const dayMap: Record<string, { tickets: number; resolved: number }> = {}
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            tickets.forEach((t: any) => {
+                const d = new Date(t.created || t.createdAt)
+                const label = days[d.getDay()]
+                if (!dayMap[label]) dayMap[label] = { tickets: 0, resolved: 0 }
+                dayMap[label].tickets++
+                if (t.status === 'resolved' || t.status === 'closed') dayMap[label].resolved++
+            })
+            const fallback = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }))
+            setChartData(fallback.length > 0 ? fallback : [
+                { name: 'Mon', tickets: 0, resolved: 0 },
+                { name: 'Tue', tickets: 0, resolved: 0 },
+                { name: 'Wed', tickets: 0, resolved: 0 },
+                { name: 'Thu', tickets: 0, resolved: 0 },
+                { name: 'Fri', tickets: 0, resolved: 0 }
+            ])
+        }
+
+        setLoading(false)
+    }, [])
+
+    useRealtimeRefresh(['ticket'], loadDashboardData)
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/login')
             return
         }
 
-        const loadDashboardData = async () => {
-            setLoading(true)
-            setError(null)
-
-            const [dashRes, ticketsRes, analyticsRes] = await Promise.allSettled([
-                supportStaffService.getDashboardData(),
-                supportStaffService.getTickets({}),
-                supportStaffService.getAnalytics('7d')
-            ])
-
-            // Dashboard stats
-            setDashboardData(
-                dashRes.status === 'fulfilled' ? dashRes.value : {
-                    totalTickets: 0,
-                    openTickets: 0,
-                    resolvedTickets: 0,
-                    pendingReview: 0,
-                    escalatedTickets: 0,
-                    customerSatisfaction: 0,
-                    responseTime: 0,
-                    resolutionRate: 0
-                }
-            )
-
-            // Recent tickets
-            const tickets = ticketsRes.status === 'fulfilled'
-                ? (ticketsRes.value?.tickets || [])
-                : []
-            setRecentTickets(tickets.slice(0, 5))
-
-            // Chart data from analytics, with fallback to calculate from tickets
-            if (analyticsRes.status === 'fulfilled' && analyticsRes.value?.ticketTrends?.length) {
-                setChartData(analyticsRes.value.ticketTrends.map((t: any) => ({
-                    name: t.date,
-                    tickets: t.tickets,
-                    resolved: t.resolved
-                })))
-            } else {
-                // Fallback: derive trend from tickets by grouping by date
-                const dayMap: Record<string, { tickets: number; resolved: number }> = {}
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                tickets.forEach((t: any) => {
-                    const d = new Date(t.created || t.createdAt)
-                    const label = days[d.getDay()]
-                    if (!dayMap[label]) dayMap[label] = { tickets: 0, resolved: 0 }
-                    dayMap[label].tickets++
-                    if (t.status === 'resolved' || t.status === 'closed') dayMap[label].resolved++
-                })
-                const fallback = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }))
-                setChartData(fallback.length > 0 ? fallback : [
-                    { name: 'Mon', tickets: 0, resolved: 0 },
-                    { name: 'Tue', tickets: 0, resolved: 0 },
-                    { name: 'Wed', tickets: 0, resolved: 0 },
-                    { name: 'Thu', tickets: 0, resolved: 0 },
-                    { name: 'Fri', tickets: 0, resolved: 0 }
-                ])
-            }
-
-            setLoading(false)
-        }
-
         loadDashboardData()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, router, loadDashboardData])
 
     if (!isAuthenticated) return null
 
