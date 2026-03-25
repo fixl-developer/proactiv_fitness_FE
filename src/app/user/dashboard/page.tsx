@@ -1,27 +1,84 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw } from 'lucide-react'
+import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import UserClassesService from '@/services/modules/user-classes.service'
+import UserProgressService from '@/services/modules/user-progress.service'
+import UserAchievementsService from '@/services/modules/user-achievements.service'
+import { apiClient } from '@/services/api/client'
 
 export default function UserDashboardPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [stats, setStats] = useState({
-        upcomingClasses: 3,
-        completedClasses: 24,
-        totalBookings: 27,
-        achievements: 5
+        upcomingClasses: 0,
+        completedClasses: 0,
+        totalBookings: 0,
+        achievements: 0,
+        currentStreak: 0,
+        totalPoints: 0
     })
     const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
+    const [progressData, setProgressData] = useState<any>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
+
+    const loadDashboard = useCallback(async () => {
+        try {
+            setIsLoading(true)
+
+            const classesService = new UserClassesService()
+            const progressService = new UserProgressService()
+            const achievementsService = new UserAchievementsService()
+
+            // Fetch all data in parallel from backend
+            const [dashboardRes, upcomingRes, allClassesRes, progressRes, achievementsStatsRes] = await Promise.allSettled([
+                apiClient.get<any>('/user/dashboard').catch(() => null),
+                classesService.getUpcomingClasses().catch(() => []),
+                classesService.getClasses().catch(() => []),
+                progressService.getProgress().catch(() => null),
+                achievementsService.getStats().catch(() => null)
+            ])
+
+            // Dashboard stats from API
+            const dashboard = dashboardRes.status === 'fulfilled' ? dashboardRes.value : null
+            const upcoming = upcomingRes.status === 'fulfilled' ? upcomingRes.value : []
+            const allClasses = allClassesRes.status === 'fulfilled' ? allClassesRes.value : []
+            const progress = progressRes.status === 'fulfilled' ? progressRes.value : null
+            const achievementsStats = achievementsStatsRes.status === 'fulfilled' ? achievementsStatsRes.value : null
+
+            // Set upcoming classes
+            setUpcomingClasses(Array.isArray(upcoming) ? upcoming.slice(0, 5) : [])
+
+            // Calculate stats from real data
+            const completedCount = Array.isArray(allClasses) ? allClasses.filter((c: any) => c.status === 'completed').length : 0
+            const upcomingCount = Array.isArray(upcoming) ? upcoming.length : 0
+            const totalCount = Array.isArray(allClasses) ? allClasses.length : 0
+
+            setStats({
+                upcomingClasses: dashboard?.data?.stats?.upcomingClasses ?? upcomingCount,
+                completedClasses: dashboard?.data?.stats?.completedClasses ?? completedCount,
+                totalBookings: dashboard?.data?.stats?.totalBookings ?? totalCount,
+                achievements: achievementsStats?.unlockedAchievements ?? achievementsStats?.totalPoints ?? 0,
+                currentStreak: progress?.currentStreak ?? 0,
+                totalPoints: achievementsStats?.totalPoints ?? 0
+            })
+
+            // Set progress data
+            setProgressData(progress)
+        } catch (err) {
+            console.error('Error loading dashboard:', err)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -29,23 +86,7 @@ export default function UserDashboardPage() {
             return
         }
         loadDashboard()
-    }, [isAuthenticated, router])
-
-    const loadDashboard = async () => {
-        try {
-            setIsLoading(true)
-            // Mock data for dashboard
-            setUpcomingClasses([
-                { id: '1', className: 'Gymnastics Basics', coach: 'Coach Sarah', date: '2026-03-25', time: '10:00 AM', location: 'Wan Chai', status: 'confirmed' },
-                { id: '2', className: 'Advanced Tumbling', coach: 'Coach Mike', date: '2026-03-26', time: '2:00 PM', location: 'Cyberport', status: 'confirmed' },
-                { id: '3', className: 'Flexibility Training', coach: 'Coach Lisa', date: '2026-03-28', time: '11:00 AM', location: 'Wan Chai', status: 'pending' }
-            ])
-        } catch (err) {
-            console.error('Error loading dashboard:', err)
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    }, [isAuthenticated, router, loadDashboard])
 
     const handleRefresh = async () => {
         setRefreshing(true)
@@ -68,6 +109,41 @@ export default function UserDashboardPage() {
         )
     }
 
+    const statCards = [
+        {
+            title: 'Upcoming Classes',
+            value: stats.upcomingClasses,
+            icon: Calendar,
+            gradient: 'from-blue-500 to-blue-600',
+            bgGradient: 'from-blue-50 to-blue-100',
+            change: `${stats.upcomingClasses} scheduled`
+        },
+        {
+            title: 'Completed',
+            value: stats.completedClasses,
+            icon: TrendingUp,
+            gradient: 'from-green-500 to-emerald-600',
+            bgGradient: 'from-green-50 to-emerald-100',
+            change: 'classes done'
+        },
+        {
+            title: 'Total Bookings',
+            value: stats.totalBookings,
+            icon: BookOpen,
+            gradient: 'from-purple-500 to-purple-600',
+            bgGradient: 'from-purple-50 to-purple-100',
+            change: 'all time'
+        },
+        {
+            title: 'Achievements',
+            value: stats.achievements,
+            icon: Award,
+            gradient: 'from-amber-500 to-orange-600',
+            bgGradient: 'from-amber-50 to-orange-100',
+            change: `${stats.totalPoints} pts`
+        }
+    ]
+
     const quickActions = [
         { label: 'Book a Class', href: '/user/my-classes', icon: BookOpen },
         { label: 'View Bookings', href: '/user/bookings', icon: Calendar },
@@ -89,63 +165,28 @@ export default function UserDashboardPage() {
                 </Button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="border-l-4 border-l-blue-500">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Upcoming Classes</p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.upcomingClasses}</p>
+            {/* Colorful Stats Cards - Admin Style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {statCards.map((metric, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-600 bg-white/60 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
                                 </div>
-                                <Calendar className="w-10 h-10 text-blue-500 opacity-50" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="border-l-4 border-l-green-500">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600">Completed</p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.completedClasses}</p>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
-                                <TrendingUp className="w-10 h-10 text-green-500 opacity-50" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Card className="border-l-4 border-l-purple-500">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Total Bookings</p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalBookings}</p>
-                                </div>
-                                <BookOpen className="w-10 h-10 text-purple-500 opacity-50" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                    <Card className="border-l-4 border-l-amber-500">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-600">Achievements</p>
-                                    <p className="text-3xl font-bold text-gray-900 mt-1">{stats.achievements}</p>
-                                </div>
-                                <Award className="w-10 h-10 text-amber-500 opacity-50" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ))}
             </div>
 
             {/* Quick Actions */}
@@ -185,35 +226,53 @@ export default function UserDashboardPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {upcomingClasses.map((cls, index) => (
-                            <motion.div
-                                key={cls.id}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold">
-                                        {cls.date.split('-')[2]}
+                    {upcomingClasses.length === 0 ? (
+                        <div className="text-center py-8">
+                            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500 font-medium">No upcoming classes</p>
+                            <p className="text-gray-400 text-sm mt-1">Book a class to get started!</p>
+                            <Button id="user-dashboard-book-class-empty-btn" size="sm" className="mt-4" onClick={() => router.push('/user/my-classes')}>
+                                <BookOpen className="w-4 h-4 mr-2" />
+                                Browse Classes
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {upcomingClasses.map((cls, index) => (
+                                <motion.div
+                                    key={cls.id || index}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            {cls.schedule?.date?.split('-')[2] || cls.date?.split('-')[2] || '?'}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">{cls.className}</h4>
+                                            <p className="text-sm text-gray-500">
+                                                {cls.coach} • {cls.schedule?.time || cls.time} • {cls.location}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-gray-900">{cls.className}</h4>
-                                        <p className="text-sm text-gray-500">{cls.coach} • {cls.time} • {cls.location}</p>
+                                    <div className="flex items-center gap-3">
+                                        <Badge className={
+                                            (cls.status === 'confirmed' || cls.status === 'upcoming')
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                        }>
+                                            {cls.status}
+                                        </Badge>
+                                        <Button id={`user-dashboard-view-class-${cls.id}-btn`} variant="outline" size="sm" onClick={() => router.push('/user/my-classes')}>
+                                            View
+                                        </Button>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Badge className={cls.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                                        {cls.status}
-                                    </Badge>
-                                    <Button id={`user-dashboard-view-class-${cls.id}-btn`} variant="outline" size="sm" onClick={() => router.push(`/user/my-classes`)}>
-                                        View
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -228,29 +287,56 @@ export default function UserDashboardPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">Monthly Attendance</span>
-                                <span className="text-sm text-emerald-600 font-bold">85%</span>
+                    {progressData ? (
+                        <div className="space-y-4">
+                            <div>
+                                <div className="flex justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                                    <span className="text-sm text-emerald-600 font-bold">{progressData.overallProgress || 0}%</span>
+                                </div>
+                                <Progress value={progressData.overallProgress || 0} className="h-2" />
                             </div>
-                            <Progress value={85} className="h-2" />
+                            {progressData.skillsProgress?.slice(0, 3).map((skill: any, i: number) => (
+                                <div key={i}>
+                                    <div className="flex justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700">{skill.skillName}</span>
+                                        <span className="text-sm text-emerald-600 font-bold">{skill.progress}%</span>
+                                    </div>
+                                    <Progress value={skill.progress} className="h-2" />
+                                </div>
+                            ))}
+                            {(!progressData.skillsProgress || progressData.skillsProgress.length === 0) && (
+                                <>
+                                    <div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">Monthly Attendance</span>
+                                            <span className="text-sm text-emerald-600 font-bold">
+                                                {progressData.performanceMetrics?.attendance || 0}%
+                                            </span>
+                                        </div>
+                                        <Progress value={progressData.performanceMetrics?.attendance || 0} className="h-2" />
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-700">Participation</span>
+                                            <span className="text-sm text-emerald-600 font-bold">
+                                                {progressData.performanceMetrics?.participation || 0}%
+                                            </span>
+                                        </div>
+                                        <Progress value={progressData.performanceMetrics?.participation || 0} className="h-2" />
+                                    </div>
+                                </>
+                            )}
                         </div>
-                        <div>
-                            <div className="flex justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">Skill Level</span>
-                                <span className="text-sm text-emerald-600 font-bold">Intermediate</span>
-                            </div>
-                            <Progress value={60} className="h-2" />
+                    ) : (
+                        <div className="text-center py-6">
+                            <Target className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-gray-500 text-sm">No progress data yet. Start attending classes!</p>
+                            <Button id="user-dashboard-start-progress-btn" size="sm" variant="outline" className="mt-3" onClick={() => router.push('/user/progress')}>
+                                View Progress
+                            </Button>
                         </div>
-                        <div>
-                            <div className="flex justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">Goals Completed</span>
-                                <span className="text-sm text-emerald-600 font-bold">3/5</span>
-                            </div>
-                            <Progress value={60} className="h-2" />
-                        </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

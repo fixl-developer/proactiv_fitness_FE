@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, Filter, TrendingUp } from 'lucide-react'
+import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, TrendingUp, Medal } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -20,8 +20,35 @@ export default function AchievementsPage() {
     const [refreshing, setRefreshing] = useState(false)
     const [activeFilter, setActiveFilter] = useState<'all' | 'unlocked' | 'locked'>('all')
     const [categoryFilter, setCategoryFilter] = useState<string>('all')
+    const [claimingId, setClaimingId] = useState<string | null>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
+    const achievementsService = new UserAchievementsService()
+
+    const loadAchievements = useCallback(async () => {
+        try {
+            const [achievementsData, statsData, leaderboardData] = await Promise.allSettled([
+                achievementsService.getAchievements(),
+                achievementsService.getStats(),
+                achievementsService.getLeaderboard()
+            ])
+
+            const achList = achievementsData.status === 'fulfilled' ? achievementsData.value : []
+            const statsResult = statsData.status === 'fulfilled' ? statsData.value : null
+            const lbResult = leaderboardData.status === 'fulfilled' ? leaderboardData.value : []
+
+            setAchievements(Array.isArray(achList) ? achList : [])
+            setStats(statsResult)
+            setLeaderboard(Array.isArray(lbResult) ? lbResult.slice(0, 5) : [])
+        } catch (err) {
+            console.error('Error loading achievements:', err)
+            setAchievements([])
+            setStats(null)
+            setLeaderboard([])
+        } finally {
+            setIsLoading(false)
+        }
+    }, [])
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -29,104 +56,11 @@ export default function AchievementsPage() {
             return
         }
         loadAchievements()
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, router, loadAchievements])
 
     useEffect(() => {
         filterAchievements()
     }, [achievements, activeFilter, categoryFilter])
-
-    const loadAchievements = async () => {
-        try {
-            const service = new UserAchievementsService()
-            const [achievementsData, statsData, leaderboardData] = await Promise.all([
-                service.getAchievements(),
-                service.getStats(),
-                service.getLeaderboard().catch(() => [])
-            ])
-            setAchievements(achievementsData)
-            setStats(statsData)
-            setLeaderboard(leaderboardData.slice(0, 5))
-        } catch (err) {
-            // Mock data
-            setAchievements([
-                {
-                    id: '1',
-                    title: 'First Class',
-                    description: 'Completed your first gymnastics class',
-                    icon: '🎯',
-                    category: 'milestone',
-                    points: 50,
-                    achieved: true,
-                    achievedAt: '2026-01-15'
-                },
-                {
-                    id: '2',
-                    title: 'Perfect Attendance',
-                    description: 'Attended 10 classes in a row',
-                    icon: '⭐',
-                    category: 'attendance',
-                    points: 100,
-                    achieved: true,
-                    achievedAt: '2026-02-20'
-                },
-                {
-                    id: '3',
-                    title: 'Skill Master',
-                    description: 'Master 5 different skills',
-                    icon: '🏆',
-                    category: 'skill',
-                    points: 150,
-                    achieved: false,
-                    progress: 60
-                },
-                {
-                    id: '4',
-                    title: 'Early Bird',
-                    description: 'Book 5 classes in advance',
-                    icon: '🌅',
-                    category: 'special',
-                    points: 75,
-                    achieved: true,
-                    achievedAt: '2026-03-01'
-                },
-                {
-                    id: '5',
-                    title: 'Consistency Champion',
-                    description: 'Maintain a 30-day streak',
-                    icon: '🔥',
-                    category: 'attendance',
-                    points: 200,
-                    achieved: false,
-                    progress: 40
-                },
-                {
-                    id: '6',
-                    title: 'Team Player',
-                    description: 'Participate in 5 group classes',
-                    icon: '👥',
-                    category: 'special',
-                    points: 80,
-                    achieved: true,
-                    achievedAt: '2026-02-10'
-                }
-            ])
-            setStats({
-                totalAchievements: 20,
-                unlockedAchievements: 12,
-                totalPoints: 850,
-                badges: 8
-            })
-            setLeaderboard([
-                { rank: 1, userId: 'u1', userName: 'Sarah Chen', points: 1250, achievements: 18 },
-                { rank: 2, userId: 'u2', userName: 'Mike Wong', points: 1100, achievements: 16 },
-                { rank: 3, userId: user?.id || 'u3', userName: user?.name || 'You', points: 850, achievements: 12 },
-                { rank: 4, userId: 'u4', userName: 'Lisa Zhang', points: 720, achievements: 11 },
-                { rank: 5, userId: 'u5', userName: 'John Smith', points: 650, achievements: 10 }
-            ])
-        } finally {
-            setIsLoading(false)
-        }
-    }
 
     const handleRefresh = async () => {
         setRefreshing(true)
@@ -134,17 +68,29 @@ export default function AchievementsPage() {
         setRefreshing(false)
     }
 
+    const handleClaimReward = async (achievementId: string) => {
+        try {
+            setClaimingId(achievementId)
+            await achievementsService.unlockAchievement(achievementId)
+            // Refresh after claim
+            await loadAchievements()
+        } catch (err) {
+            console.error('Error claiming reward:', err)
+            alert('Failed to claim reward. Please try again.')
+        } finally {
+            setClaimingId(null)
+        }
+    }
+
     const filterAchievements = () => {
         let filtered = achievements
 
-        // Apply status filter
         if (activeFilter === 'unlocked') {
-            filtered = filtered.filter(a => a.achieved)
+            filtered = filtered.filter(a => a.achieved || a.isCompleted)
         } else if (activeFilter === 'locked') {
-            filtered = filtered.filter(a => !a.achieved)
+            filtered = filtered.filter(a => !a.achieved && !a.isCompleted)
         }
 
-        // Apply category filter
         if (categoryFilter !== 'all') {
             filtered = filtered.filter(a => a.category === categoryFilter)
         }
@@ -153,23 +99,14 @@ export default function AchievementsPage() {
     }
 
     const getCategoryColor = (category: string) => {
-        const colors = {
+        const colors: Record<string, string> = {
             attendance: 'bg-blue-100 text-blue-800',
             skill: 'bg-purple-100 text-purple-800',
             milestone: 'bg-green-100 text-green-800',
-            special: 'bg-yellow-100 text-yellow-800'
+            special: 'bg-yellow-100 text-yellow-800',
+            performance: 'bg-orange-100 text-orange-800'
         }
-        return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-    }
-
-    const getCategoryIcon = (category: string) => {
-        const icons = {
-            attendance: <Star className="w-5 h-5" />,
-            skill: <Zap className="w-5 h-5" />,
-            milestone: <Target className="w-5 h-5" />,
-            special: <Trophy className="w-5 h-5" />
-        }
-        return icons[category as keyof typeof icons] || <Award className="w-5 h-5" />
+        return colors[category] || 'bg-gray-100 text-gray-800'
     }
 
     const categories = [
@@ -186,12 +123,19 @@ export default function AchievementsPage() {
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-gray-200 rounded w-1/3"></div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>)}
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
                     </div>
                 </div>
             </div>
         )
     }
+
+    const statCards = [
+        { title: 'Total Points', value: stats?.totalPoints || 0, icon: Trophy, gradient: 'from-amber-500 to-yellow-600', bgGradient: 'from-amber-50 to-yellow-100', change: 'earned' },
+        { title: 'Unlocked', value: `${stats?.unlockedAchievements || 0}/${stats?.totalAchievements || 0}`, icon: Award, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: 'achievements' },
+        { title: 'Badges', value: stats?.badges || 0, icon: Star, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: 'collected' },
+        { title: 'Completion', value: `${Math.round(((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100)}%`, icon: Target, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: 'progress' }
+    ]
 
     return (
         <div className="space-y-6">
@@ -207,77 +151,34 @@ export default function AchievementsPage() {
                 </Button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                    <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Total Points</CardTitle>
-                            <Trophy className="h-5 w-5 text-yellow-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats?.totalPoints || 0}</div>
-                            <p className="text-xs text-yellow-600 font-medium mt-1">Keep earning!</p>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Unlocked</CardTitle>
-                            <Award className="h-5 w-5 text-green-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">
-                                {stats?.unlockedAchievements || 0}/{stats?.totalAchievements || 0}
-                            </div>
-                            <Progress
-                                value={((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100}
-                                className="mt-3 h-2"
-                            />
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Badges</CardTitle>
-                            <Star className="h-5 w-5 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{stats?.badges || 0}</div>
-                            <p className="text-xs text-blue-600 font-medium mt-1">Collected</p>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Progress</CardTitle>
-                            <Target className="h-5 w-5 text-purple-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">
-                                {Math.round(((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100)}%
-                            </div>
-                            <p className="text-xs text-purple-600 font-medium mt-1">Complete</p>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+            {/* Colorful Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {statCards.map((metric, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-600 bg-white/60 px-2 py-1 rounded-full">
+                                        {metric.change}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ))}
             </div>
 
             {/* Filters */}
             <Card>
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                        {/* Status Filter */}
                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                             {['all', 'unlocked', 'locked'].map((filter) => (
                                 <button id={`user-achievements-status-${filter}-btn`}
@@ -293,8 +194,6 @@ export default function AchievementsPage() {
                                 </button>
                             ))}
                         </div>
-
-                        {/* Category Filter */}
                         <div className="flex items-center gap-2 flex-wrap">
                             {categories.map((cat) => (
                                 <button id={`user-achievements-category-${cat.key}-btn`}
@@ -316,86 +215,117 @@ export default function AchievementsPage() {
             </Card>
 
             {/* Achievements Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredAchievements.map((achievement, index) => (
-                    <motion.div
-                        key={achievement.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                    >
-                        <Card className={`hover:shadow-xl transition-all ${
-                            achievement.achieved
-                                ? 'border-2 border-green-200 bg-gradient-to-br from-white to-green-50/30'
-                                : 'border-2 border-gray-200'
-                        }`}>
-                            <CardContent className="p-6">
-                                <div className="flex items-start gap-4">
-                                    {/* Icon */}
-                                    <motion.div
-                                        className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl ${
-                                            achievement.achieved
-                                                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg'
-                                                : 'bg-gray-200 grayscale'
-                                        }`}
-                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                        transition={{ type: 'spring', stiffness: 300 }}
-                                    >
-                                        {achievement.achieved ? achievement.icon : <Lock className="w-8 h-8 text-gray-400" />}
-                                    </motion.div>
+            {filteredAchievements.length === 0 ? (
+                <Card>
+                    <CardContent className="p-12 text-center">
+                        <Medal className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No achievements found</h3>
+                        <p className="text-gray-500 mb-4">
+                            {achievements.length === 0
+                                ? 'Start attending classes to unlock achievements!'
+                                : 'Try adjusting your filters'}
+                        </p>
+                        {achievements.length === 0 && (
+                            <Button onClick={() => router.push('/user/my-classes')}>Browse Classes</Button>
+                        )}
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredAchievements.map((achievement, index) => (
+                        <motion.div
+                            key={achievement.id || index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                        >
+                            <Card className={`hover:shadow-xl transition-all ${
+                                (achievement.achieved || achievement.isCompleted)
+                                    ? 'border-2 border-green-200 bg-gradient-to-br from-white to-green-50/30'
+                                    : 'border-2 border-gray-200'
+                            }`}>
+                                <CardContent className="p-6">
+                                    <div className="flex items-start gap-4">
+                                        <motion.div
+                                            className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl ${
+                                                (achievement.achieved || achievement.isCompleted)
+                                                    ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg'
+                                                    : 'bg-gray-200 grayscale'
+                                            }`}
+                                            whileHover={{ scale: 1.1, rotate: 5 }}
+                                            transition={{ type: 'spring', stiffness: 300 }}
+                                        >
+                                            {(achievement.achieved || achievement.isCompleted) ? (achievement.icon || '🏆') : <Lock className="w-8 h-8 text-gray-400" />}
+                                        </motion.div>
 
-                                    {/* Content */}
-                                    <div className="flex-1">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <h3 className="font-semibold text-lg text-gray-900">{achievement.title}</h3>
-                                                <p className="text-sm text-gray-600 mt-1">{achievement.description}</p>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h3 className="font-semibold text-lg text-gray-900">{achievement.title || achievement.name}</h3>
+                                                    <p className="text-sm text-gray-600 mt-1">{achievement.description}</p>
+                                                </div>
+                                                {achievement.category && (
+                                                    <Badge className={getCategoryColor(achievement.category)}>
+                                                        {achievement.category}
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            <Badge className={getCategoryColor(achievement.category)}>
-                                                {achievement.category}
-                                            </Badge>
-                                        </div>
 
-                                        <div className="flex items-center justify-between mt-4">
-                                            <div className="flex items-center gap-2">
-                                                <Trophy className="w-4 h-4 text-yellow-600" />
-                                                <span className="text-sm font-medium text-gray-700">
-                                                    {achievement.points} points
-                                                </span>
+                                            <div className="flex items-center justify-between mt-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Trophy className="w-4 h-4 text-yellow-600" />
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        {achievement.points} points
+                                                    </span>
+                                                </div>
+                                                {(achievement.achieved || achievement.isCompleted) ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-green-100 text-green-800">Unlocked</Badge>
+                                                        {achievement.reward && !achievement.reward.claimed && (
+                                                            <Button
+                                                                size="sm"
+                                                                className="bg-amber-500 hover:bg-amber-600 text-white"
+                                                                onClick={() => handleClaimReward(achievement.id)}
+                                                                disabled={claimingId === achievement.id}
+                                                            >
+                                                                {claimingId === achievement.id ? (
+                                                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                                                ) : (
+                                                                    'Claim Reward'
+                                                                )}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                ) : achievement.progress != null ? (
+                                                    <span className="text-sm text-gray-600 font-medium">
+                                                        {achievement.progress}% complete
+                                                    </span>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-gray-500">
+                                                        <Lock className="w-3 h-3 mr-1" />
+                                                        Locked
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            {achievement.achieved ? (
-                                                <Badge className="bg-green-100 text-green-800">
-                                                    ✓ Unlocked
-                                                </Badge>
-                                            ) : achievement.progress ? (
-                                                <span className="text-sm text-gray-600 font-medium">
-                                                    {achievement.progress}% complete
-                                                </span>
-                                            ) : (
-                                                <Badge variant="outline" className="text-gray-500">
-                                                    <Lock className="w-3 h-3 mr-1" />
-                                                    Locked
-                                                </Badge>
+
+                                            {!(achievement.achieved || achievement.isCompleted) && achievement.progress != null && (
+                                                <Progress value={achievement.progress} className="mt-3 h-2" />
+                                            )}
+
+                                            {(achievement.achieved || achievement.isCompleted) && (achievement.achievedAt || achievement.earnedAt) && (
+                                                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                                    <Star className="w-3 h-3" />
+                                                    Achieved on {new Date(achievement.achievedAt || achievement.earnedAt).toLocaleDateString()}
+                                                </p>
                                             )}
                                         </div>
-
-                                        {!achievement.achieved && achievement.progress && (
-                                            <Progress value={achievement.progress} className="mt-3 h-2" />
-                                        )}
-
-                                        {achievement.achieved && achievement.achievedAt && (
-                                            <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                                                <Star className="w-3 h-3" />
-                                                Achieved on {achievement.achievedAt}
-                                            </p>
-                                        )}
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
-            </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
             {/* Leaderboard */}
             {leaderboard.length > 0 && (
@@ -406,19 +336,18 @@ export default function AchievementsPage() {
                                 <TrendingUp className="w-5 h-5 text-purple-600" />
                                 <CardTitle>Leaderboard</CardTitle>
                             </div>
-                            <Button id="user-achievements-view-all-leaderboard-btn" variant="ghost" size="sm">View All</Button>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
                             {leaderboard.map((entry, index) => (
                                 <motion.div
-                                    key={entry.userId}
+                                    key={entry.userId || index}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
                                     className={`flex items-center justify-between p-4 rounded-lg ${
-                                        entry.userId === user?.id
+                                        entry.userId === (user?.id || (user as any)?._id)
                                             ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200'
                                             : 'bg-gray-50'
                                     }`}
@@ -435,7 +364,7 @@ export default function AchievementsPage() {
                                         <div>
                                             <p className="font-semibold text-gray-900">
                                                 {entry.userName}
-                                                {entry.userId === user?.id && (
+                                                {entry.userId === (user?.id || (user as any)?._id) && (
                                                     <Badge className="ml-2 bg-emerald-100 text-emerald-800">You</Badge>
                                                 )}
                                             </p>

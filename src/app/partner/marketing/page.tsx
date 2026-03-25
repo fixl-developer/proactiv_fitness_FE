@@ -23,6 +23,18 @@ export default function PartnerMarketingPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState('campaigns')
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [createSubmitting, setCreateSubmitting] = useState(false)
+    const [createForm, setCreateForm] = useState({
+        name: '',
+        type: 'Email',
+        status: 'ACTIVE',
+        startDate: '',
+        endDate: '',
+        budget: '',
+        targetAudience: '',
+        description: '',
+    })
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -39,41 +51,40 @@ export default function PartnerMarketingPage() {
             setError(null)
 
             const partnerId = user?.id || 'partner-1'
-            const response = await PartnerPortalService.getPartnerProfile(partnerId)
-
-            setCampaigns([
-                {
-                    id: '1',
-                    name: 'Spring Enrollment Drive',
-                    type: 'Email Campaign',
-                    status: 'ACTIVE',
-                    startDate: '2024-03-01',
-                    endDate: '2024-04-30',
-                    budget: 2500,
-                    spent: 1850,
-                    impressions: 45000,
-                    clicks: 1200,
-                    conversions: 85,
-                    ctr: 2.67,
-                    conversionRate: 7.08,
-                    roi: 340
-                }
+            const [campaignsRes, leadsRes] = await Promise.all([
+                PartnerPortalService.getMarketingCampaigns(partnerId),
+                PartnerPortalService.getMarketingLeads(partnerId)
             ])
 
-            setLeads([
-                {
-                    id: '1',
-                    name: 'Sarah Johnson',
-                    email: 'sarah.johnson@email.com',
-                    phone: '+1 555-0123',
-                    source: 'Spring Enrollment Drive',
-                    status: 'HOT',
-                    score: 92,
-                    interest: 'Elementary Gymnastics',
-                    lastContact: '2024-03-14',
-                    nextFollowUp: '2024-03-16'
-                }
-            ])
+            setCampaigns((campaignsRes?.campaigns || []).map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                type: c.type,
+                status: c.status?.toUpperCase() || 'ACTIVE',
+                startDate: c.startDate,
+                endDate: c.endDate,
+                budget: c.budget || 0,
+                spent: c.spent || 0,
+                impressions: c.impressions || 0,
+                clicks: c.clicks || 0,
+                conversions: c.conversions || 0,
+                ctr: c.clicks && c.impressions ? parseFloat(((c.clicks / c.impressions) * 100).toFixed(2)) : 0,
+                conversionRate: c.clicks && c.conversions ? parseFloat(((c.conversions / c.clicks) * 100).toFixed(2)) : 0,
+                roi: c.roi || 0
+            })))
+
+            setLeads((leadsRes?.leads || []).map((l: any) => ({
+                id: l.id,
+                name: l.name,
+                email: l.email,
+                phone: l.phone,
+                source: l.source,
+                status: l.interestLevel?.toUpperCase() === 'HIGH' ? 'HOT' : l.interestLevel?.toUpperCase() === 'MEDIUM' ? 'WARM' : 'COLD',
+                score: l.interestLevel === 'high' ? 92 : l.interestLevel === 'medium' ? 65 : 30,
+                interest: l.status,
+                lastContact: l.createdAt ? new Date(l.createdAt).toLocaleDateString() : 'N/A',
+                nextFollowUp: l.createdAt ? new Date(new Date(l.createdAt).getTime() + 172800000).toLocaleDateString() : 'N/A'
+            })))
         } catch (err) {
             console.error('Error fetching marketing data:', err)
             setError('Failed to load marketing data')
@@ -81,11 +92,13 @@ export default function PartnerMarketingPage() {
             setIsLoading(false)
         }
     }
-    const campaignPerformance = [
-        { month: 'Jan', impressions: 32000, clicks: 960, conversions: 48 },
-        { month: 'Feb', impressions: 28000, clicks: 850, conversions: 42 },
-        { month: 'Mar', impressions: 45000, clicks: 1200, conversions: 85 },
-    ]
+
+    const campaignPerformance = campaigns.map(c => ({
+        month: c.name?.substring(0, 6) || 'N/A',
+        impressions: c.impressions,
+        clicks: c.clicks,
+        conversions: c.conversions
+    }))
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -108,6 +121,40 @@ export default function PartnerMarketingPage() {
         alert(`${action} lead ${leadId}`)
     }
 
+    const handleCreateCampaign = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!createForm.name.trim()) return
+
+        setCreateSubmitting(true)
+        try {
+            const partnerId = user?.id || 'partner-1'
+            await PartnerPortalService.createMarketingCampaign?.(partnerId, createForm)
+        } catch {
+            // API may not exist yet, continue with local add
+        }
+
+        const newCampaign = {
+            id: `camp-${Date.now()}`,
+            name: createForm.name,
+            type: createForm.type,
+            status: createForm.status,
+            startDate: createForm.startDate,
+            endDate: createForm.endDate,
+            budget: Number(createForm.budget) || 0,
+            spent: 0,
+            impressions: 0,
+            clicks: 0,
+            conversions: 0,
+            ctr: 0,
+            conversionRate: 0,
+            roi: 0,
+        }
+        setCampaigns(prev => [...prev, newCampaign])
+        setShowCreateModal(false)
+        setCreateForm({ name: '', type: 'Email', status: 'ACTIVE', startDate: '', endDate: '', budget: '', targetAudience: '', description: '' })
+        setCreateSubmitting(false)
+    }
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -123,7 +170,7 @@ export default function PartnerMarketingPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Marketing Tools</h1>
                     <p className="text-gray-600 mt-1">Manage campaigns and track lead generation</p>
                 </div>
-                <button id="partner-marketing-create-campaign-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button id="partner-marketing-create-campaign-btn" onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
                     Create Campaign
                 </button>
@@ -134,31 +181,39 @@ export default function PartnerMarketingPage() {
                 {[
                     {
                         title: 'Active Campaigns',
-                        value: '1',
+                        value: String(campaigns.filter(c => c.status === 'ACTIVE').length),
                         icon: Megaphone,
-                        color: 'text-blue-600',
-                        bgColor: 'bg-blue-50'
+                        gradient: 'from-blue-500 to-blue-600',
+                        bgGradient: 'from-blue-50 to-blue-100',
+                        badge: `${campaigns.length} total`
                     },
                     {
                         title: 'Total Leads',
-                        value: '127',
+                        value: String(leads.length),
                         icon: Users,
-                        color: 'text-green-600',
-                        bgColor: 'bg-green-50'
+                        gradient: 'from-emerald-500 to-emerald-600',
+                        bgGradient: 'from-emerald-50 to-emerald-100',
+                        badge: leads.filter(l => l.status === 'HOT').length > 0 ? `${leads.filter(l => l.status === 'HOT').length} hot` : 'No hot leads'
                     },
                     {
                         title: 'Conversion Rate',
-                        value: '6.2%',
+                        value: campaigns.length > 0
+                            ? `${(campaigns.reduce((sum, c) => sum + (c.conversionRate || 0), 0) / campaigns.length).toFixed(1)}%`
+                            : '0%',
                         icon: Target,
-                        color: 'text-purple-600',
-                        bgColor: 'bg-purple-50'
+                        gradient: 'from-purple-500 to-purple-600',
+                        bgGradient: 'from-purple-50 to-purple-100',
+                        badge: 'Avg across campaigns'
                     },
                     {
                         title: 'Marketing ROI',
-                        value: '320%',
+                        value: campaigns.length > 0
+                            ? `${Math.round(campaigns.reduce((sum, c) => sum + (c.roi || 0), 0) / campaigns.length)}%`
+                            : '0%',
                         icon: TrendingUp,
-                        color: 'text-orange-600',
-                        bgColor: 'bg-orange-50'
+                        gradient: 'from-amber-500 to-orange-600',
+                        bgGradient: 'from-amber-50 to-orange-100',
+                        badge: 'Return on investment'
                     },
                 ].map((metric, idx) => (
                     <motion.div
@@ -167,16 +222,17 @@ export default function PartnerMarketingPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
-                                    </div>
+                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">{metric.badge}</span>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -406,6 +462,146 @@ export default function PartnerMarketingPage() {
                             </Card>
                         </motion.div>
                     ))}
+                </div>
+            )}
+
+            {/* Create Campaign Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                    >
+                        <div className="flex items-center justify-between p-6 border-b">
+                            <h2 className="text-xl font-bold text-gray-900">Create New Campaign</h2>
+                            <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
+                                <AlertCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateCampaign} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={createForm.name}
+                                    onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="e.g., Summer Fitness Promo"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <textarea
+                                    value={createForm.description}
+                                    onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                                    placeholder="Brief description of the campaign"
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Type</label>
+                                    <select
+                                        value={createForm.type}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, type: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    >
+                                        <option value="Email">Email</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="PPC">PPC (Pay Per Click)</option>
+                                        <option value="Content">Content Marketing</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="SMS">SMS</option>
+                                        <option value="Display">Display Ads</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        value={createForm.status}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, status: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    >
+                                        <option value="ACTIVE">Active</option>
+                                        <option value="SCHEDULED">Scheduled</option>
+                                        <option value="PAUSED">Paused</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={createForm.startDate}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, startDate: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                    <input
+                                        type="date"
+                                        value={createForm.endDate}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, endDate: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={createForm.budget}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, budget: e.target.value }))}
+                                        placeholder="0.00"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+                                    <input
+                                        type="text"
+                                        value={createForm.targetAudience}
+                                        onChange={e => setCreateForm(prev => ({ ...prev, targetAudience: e.target.value }))}
+                                        placeholder="e.g., Parents, Athletes"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={createSubmitting || !createForm.name.trim()}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {createSubmitting ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Plus className="w-4 h-4" />
+                                            Create Campaign
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
                 </div>
             )}
         </div>

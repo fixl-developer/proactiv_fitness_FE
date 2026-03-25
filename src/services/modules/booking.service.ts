@@ -93,6 +93,17 @@ class BookingService {
     }
   }
 
+  async createBooking(data: any): Promise<BookingResponse> {
+    try {
+      const response = await apiClient.post<BookingResponse>('/bookings', data)
+      return response
+    } catch (error) {
+      const appError = ErrorHandler.classifyError(error)
+      ErrorHandler.logError(appError, this.MODULE_NAME)
+      throw error
+    }
+  }
+
   async updateBooking(id: string, data: UpdateBookingDTO): Promise<BookingResponse> {
     try {
       const response = await apiClient.put<BookingResponse>(`/bookings/${id}`, data)

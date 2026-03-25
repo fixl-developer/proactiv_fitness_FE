@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, Calendar, Camera, Save, Edit, X, CheckCircle, Shield, Bell } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Camera, Save, Edit, X, CheckCircle, Shield, Bell, RefreshCw, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,13 +13,44 @@ import UserProfileService from '@/services/modules/user-profile.service'
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null)
+    const [originalProfile, setOriginalProfile] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+    const [saveSuccess, setSaveSuccess] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
+    const profileService = new UserProfileService()
+
+    const loadProfile = useCallback(async () => {
+        try {
+            const data = await profileService.getProfile()
+            setProfile(data)
+            setOriginalProfile(data)
+        } catch (err) {
+            console.error('Error loading profile:', err)
+            // Use auth context as fallback
+            if (user) {
+                const fallback = {
+                    firstName: (user as any)?.firstName || user?.name?.split(' ')[0] || '',
+                    lastName: (user as any)?.lastName || user?.name?.split(' ')[1] || '',
+                    email: user?.email || '',
+                    phone: '',
+                    dateOfBirth: '',
+                    bio: '',
+                    emergencyContact: { name: '', phone: '', relationship: '' },
+                    preferences: { notifications: true, emailUpdates: true, smsReminders: true }
+                }
+                setProfile(fallback)
+                setOriginalProfile(fallback)
+            }
+        } finally {
+            setIsLoading(false)
+        }
+    }, [user])
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -27,58 +58,52 @@ export default function ProfilePage() {
             return
         }
         loadProfile()
-    }, [isAuthenticated, router])
-
-    const loadProfile = async () => {
-        try {
-            const service = new UserProfileService()
-            const data = await service.getProfile()
-            setProfile(data)
-        } catch (err) {
-            setProfile({
-                firstName: user?.name?.split(' ')[0] || 'John',
-                lastName: user?.name?.split(' ')[1] || 'Doe',
-                email: user?.email || 'john.doe@example.com',
-                phone: '+852 1234 5678',
-                dateOfBirth: '1995-05-15',
-                bio: 'Passionate about gymnastics and fitness',
-                emergencyContact: {
-                    name: 'Jane Doe',
-                    phone: '+852 9876 5432',
-                    relationship: 'Spouse'
-                },
-                preferences: {
-                    notifications: true,
-                    emailUpdates: true,
-                    smsReminders: true
-                }
-            })
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    }, [isAuthenticated, router, loadProfile])
 
     const handleSave = async () => {
         try {
             setIsSaving(true)
-            const service = new UserProfileService()
-            await service.updateProfile(profile)
+            await profileService.updateProfile(profile)
+            setOriginalProfile(profile)
             setIsEditing(false)
+            setSaveSuccess(true)
+            setTimeout(() => setSaveSuccess(false), 3000)
         } catch (err) {
             console.error('Error saving:', err)
+            alert('Failed to save profile. Please try again.')
         } finally {
             setIsSaving(false)
         }
     }
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCancelEdit = () => {
+        setProfile(originalProfile)
+        setIsEditing(false)
+        setAvatarPreview(null)
+    }
+
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setAvatarPreview(reader.result as string)
+        if (!file) return
+
+        // Preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setAvatarPreview(reader.result as string)
+        }
+        reader.readAsDataURL(file)
+
+        // Upload to backend
+        try {
+            setIsUploadingAvatar(true)
+            const result = await profileService.uploadAvatar(file)
+            if (result?.avatarUrl) {
+                setProfile((prev: any) => ({ ...prev, avatar: result.avatarUrl }))
             }
-            reader.readAsDataURL(file)
+        } catch (err) {
+            console.error('Error uploading avatar:', err)
+        } finally {
+            setIsUploadingAvatar(false)
         }
     }
 
@@ -125,17 +150,33 @@ export default function ProfilePage() {
                     </Button>
                 ) : (
                     <div className="flex gap-2">
-                        <Button id="user-profile-cancel-edit-btn" variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+                        <Button id="user-profile-cancel-edit-btn" variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
                             <X className="w-4 h-4 mr-2" />
                             Cancel
                         </Button>
                         <Button id="user-profile-save-btn" onClick={handleSave} disabled={isSaving}>
-                            <Save className="w-4 h-4 mr-2" />
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                            {isSaving ? (
+                                <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                            ) : (
+                                <><Save className="w-4 h-4 mr-2" /> Save Changes</>
+                            )}
                         </Button>
                     </div>
                 )}
             </div>
+
+            {/* Save Success Message */}
+            {saveSuccess && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2"
+                >
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-green-800 font-medium">Profile saved successfully!</span>
+                </motion.div>
+            )}
 
             {/* Profile Completion */}
             <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
@@ -159,9 +200,9 @@ export default function ProfilePage() {
                 <CardContent>
                     <div className="flex items-center gap-6">
                         <div className="relative">
-                            {avatarPreview ? (
+                            {(avatarPreview || profile?.avatar) ? (
                                 <img
-                                    src={avatarPreview}
+                                    src={avatarPreview || profile?.avatar}
                                     alt="Avatar"
                                     className="w-24 h-24 rounded-full object-cover border-4 border-emerald-200"
                                 />
@@ -170,10 +211,16 @@ export default function ProfilePage() {
                                     {profile?.firstName?.[0]}{profile?.lastName?.[0]}
                                 </div>
                             )}
+                            {isUploadingAvatar && (
+                                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
+                                    <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                                </div>
+                            )}
                             {isEditing && (
                                 <button id="user-profile-avatar-upload-btn"
                                     onClick={() => fileInputRef.current?.click()}
                                     className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white hover:bg-emerald-700 transition-colors shadow-lg"
+                                    disabled={isUploadingAvatar}
                                 >
                                     <Camera className="w-4 h-4" />
                                 </button>
@@ -365,66 +412,63 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <h4 className="font-medium text-gray-900">Push Notifications</h4>
-                                <p className="text-sm text-gray-600 mt-1">Receive notifications in the app</p>
+                        {[
+                            { key: 'notifications', label: 'Push Notifications', desc: 'Receive notifications in the app' },
+                            { key: 'emailUpdates', label: 'Email Updates', desc: 'Receive updates via email' },
+                            { key: 'smsReminders', label: 'SMS Reminders', desc: 'Receive class reminders via SMS' }
+                        ].map((pref) => (
+                            <div key={pref.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <h4 className="font-medium text-gray-900">{pref.label}</h4>
+                                    <p className="text-sm text-gray-600 mt-1">{pref.desc}</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={profile?.preferences?.[pref.key] || false}
+                                        onChange={(e) => setProfile({
+                                            ...profile,
+                                            preferences: { ...profile?.preferences, [pref.key]: e.target.checked }
+                                        })}
+                                        disabled={!isEditing}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={profile?.preferences?.notifications || false}
-                                    onChange={(e) => setProfile({
-                                        ...profile,
-                                        preferences: { ...profile?.preferences, notifications: e.target.checked }
-                                    })}
-                                    disabled={!isEditing}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <h4 className="font-medium text-gray-900">Email Updates</h4>
-                                <p className="text-sm text-gray-600 mt-1">Receive updates via email</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={profile?.preferences?.emailUpdates || false}
-                                    onChange={(e) => setProfile({
-                                        ...profile,
-                                        preferences: { ...profile?.preferences, emailUpdates: e.target.checked }
-                                    })}
-                                    disabled={!isEditing}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <h4 className="font-medium text-gray-900">SMS Reminders</h4>
-                                <p className="text-sm text-gray-600 mt-1">Receive class reminders via SMS</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={profile?.preferences?.smsReminders || false}
-                                    onChange={(e) => setProfile({
-                                        ...profile,
-                                        preferences: { ...profile?.preferences, smsReminders: e.target.checked }
-                                    })}
-                                    disabled={!isEditing}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
-                        </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Stats Card */}
+            {profile?.stats && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Account Stats</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                <p className="text-2xl font-bold text-blue-600">{profile.stats.totalClasses || 0}</p>
+                                <p className="text-sm text-gray-600 mt-1">Total Classes</p>
+                            </div>
+                            <div className="text-center p-4 bg-green-50 rounded-lg">
+                                <p className="text-2xl font-bold text-green-600">{profile.stats.completedClasses || 0}</p>
+                                <p className="text-sm text-gray-600 mt-1">Completed</p>
+                            </div>
+                            <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                <p className="text-2xl font-bold text-purple-600">{profile.stats.upcomingClasses || 0}</p>
+                                <p className="text-sm text-gray-600 mt-1">Upcoming</p>
+                            </div>
+                            <div className="text-center p-4 bg-amber-50 rounded-lg">
+                                <p className="text-2xl font-bold text-amber-600">HK${profile.stats.totalSpent || 0}</p>
+                                <p className="text-sm text-gray-600 mt-1">Total Spent</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }
