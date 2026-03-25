@@ -25,10 +25,11 @@ export interface CommissionPayout {
     id: string
     partnerId: string
     amount: number
-    status: 'pending' | 'processing' | 'completed' | 'failed'
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'rejected'
     requestedAt: string
     processedAt?: string
-    method: 'bank_transfer' | 'check' | 'paypal' | 'stripe'
+    method: 'bank_transfer' | 'check' | 'paypal' | 'upi'
+    notes?: string
     reference?: string
 }
 

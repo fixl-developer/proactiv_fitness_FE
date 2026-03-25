@@ -21,6 +21,8 @@ export default function PartnerSettingsPage() {
     const [activeTab, setActiveTab] = useState('profile')
     const [showApiKey, setShowApiKey] = useState(false)
     const [settings, setSettings] = useState<any>({})
+    const [saving, setSaving] = useState(false)
+    const [saveSuccess, setSaveSuccess] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -37,42 +39,42 @@ export default function PartnerSettingsPage() {
             setError(null)
 
             const partnerId = user?.id || 'partner-1'
-            const response = await PartnerPortalService.getPartnerProfile(partnerId)
+            const response = await PartnerPortalService.getPartnerSettings(partnerId)
 
-            setSettings({
-                profile: {
-                    organizationName: response?.businessName || 'Elite School Partners',
-                    contactPerson: response?.name || 'John Smith',
-                    email: response?.email || 'john.smith@eliteschool.com',
-                    phone: response?.phone || '+1 555-0123',
-                    website: 'https://eliteschool.com',
-                    address: response?.location || '123 Education Street, New York, NY 10001'
-                },
-                billing: {
-                    billingEmail: response?.email || 'billing@eliteschool.com',
-                    paymentMethod: 'Credit Card ending in 4567',
-                    billingAddress: response?.location || '123 Education Street, New York, NY 10001',
-                    taxId: 'TAX123456789'
-                },
-                api: {
-                    apiKey: 'pk_live_1234567890abcdef',
-                    webhookUrl: 'https://eliteschool.com/webhooks/proactive',
-                    environment: 'production'
-                },
-                notifications: {
-                    emailNotifications: true,
-                    smsNotifications: false,
-                    webhookNotifications: true,
-                    dailyDigest: true,
-                    weeklyReport: true
-                }
-            })
+            setSettings(response || {})
         } catch (err) {
             console.error('Error fetching settings:', err)
             setError('Failed to load settings')
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const handleSaveSettings = async () => {
+        try {
+            setSaving(true)
+            setError(null)
+            const partnerId = user?.id || 'partner-1'
+            const updated = await PartnerPortalService.updatePartnerSettings(partnerId, settings)
+            setSettings(updated)
+            setSaveSuccess(true)
+            setTimeout(() => setSaveSuccess(false), 3000)
+        } catch (err) {
+            console.error('Error saving settings:', err)
+            setError('Failed to save settings')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const updateSettingsField = (section: string, field: string, value: any) => {
+        setSettings((prev: any) => ({
+            ...prev,
+            [section]: {
+                ...prev[section],
+                [field]: value
+            }
+        }))
     }
 
     if (!isAuthenticated) return null
@@ -96,6 +98,13 @@ export default function PartnerSettingsPage() {
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
                     <AlertCircle className="w-5 h-5 text-red-600" />
                     <p className="text-red-800">{error}</p>
+                </div>
+            )}
+
+            {saveSuccess && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                    <Save className="w-5 h-5 text-green-600" />
+                    <p className="text-green-800">Settings saved successfully!</p>
                 </div>
             )}
 
@@ -141,61 +150,60 @@ export default function PartnerSettingsPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Organization Name</label>
                                     <Input
                                         type="text"
-                                        value={settings.profile?.organizationName}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.organizationName || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'organizationName', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
                                     <Input
                                         type="text"
-                                        value={settings.profile?.contactPerson}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.contactPerson || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'contactPerson', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                                     <Input
                                         type="email"
-                                        value={settings.profile?.email}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.email || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'email', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                                     <Input
                                         type="tel"
-                                        value={settings.profile?.phone}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.phone || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'phone', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
                                     <Input
                                         type="url"
-                                        value={settings.profile?.website}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.website || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'website', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                                     <Input
                                         type="text"
-                                        value={settings.profile?.address}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.profile?.address || ''}
+                                        onChange={(e) => updateSettingsField('profile', 'address', e.target.value)}
                                     />
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <button id="partner-settings-edit-profile-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                    <Edit2 className="w-4 h-4" />
-                                    Edit Profile
+                                <button
+                                    id="partner-settings-save-profile-btn"
+                                    onClick={handleSaveSettings}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {saving ? 'Saving...' : 'Save Profile'}
                                 </button>
                             </div>
                         </CardContent>
@@ -223,28 +231,109 @@ export default function PartnerSettingsPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Billing Email</label>
                                     <Input
                                         type="email"
-                                        value={settings.billing?.billingEmail}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.billing?.billingEmail || ''}
+                                        onChange={(e) => updateSettingsField('billing', 'billingEmail', e.target.value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                                     <Input
                                         type="text"
-                                        value={settings.billing?.paymentMethod}
-                                        readOnly
-                                        className="bg-gray-50"
+                                        value={settings.billing?.paymentMethod || ''}
+                                        onChange={(e) => updateSettingsField('billing', 'paymentMethod', e.target.value)}
                                     />
                                 </div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
-                                <Input value={settings.api?.webhookUrl} />
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Billing Address</label>
+                                    <Input
+                                        type="text"
+                                        value={settings.billing?.billingAddress || ''}
+                                        onChange={(e) => updateSettingsField('billing', 'billingAddress', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Tax ID</label>
+                                    <Input
+                                        type="text"
+                                        value={settings.billing?.taxId || ''}
+                                        onChange={(e) => updateSettingsField('billing', 'taxId', e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Environment</label>
-                                <Badge variant={settings.api?.environment === 'production' ? 'default' : 'secondary'}>
-                                    {settings.api?.environment}
-                                </Badge>
+                            <div className="flex justify-end">
+                                <button
+                                    id="partner-settings-save-billing-btn"
+                                    onClick={handleSaveSettings}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {saving ? 'Saving...' : 'Save Billing'}
+                                </button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
+
+            {/* API & Webhooks Tab */}
+            {activeTab === 'api' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Key className="w-5 h-5 text-purple-600" />
+                                API & Webhooks
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type={showApiKey ? 'text' : 'password'}
+                                            value={settings.api?.apiKey || ''}
+                                            readOnly
+                                            className="bg-gray-50"
+                                        />
+                                        <button
+                                            onClick={() => setShowApiKey(!showApiKey)}
+                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                        >
+                                            {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                                    <Input
+                                        type="url"
+                                        value={settings.api?.webhookUrl || ''}
+                                        onChange={(e) => updateSettingsField('api', 'webhookUrl', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Environment</label>
+                                    <Badge variant={settings.api?.environment === 'production' ? 'default' : 'secondary'}>
+                                        {settings.api?.environment || 'production'}
+                                    </Badge>
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    id="partner-settings-save-api-btn"
+                                    onClick={handleSaveSettings}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {saving ? 'Saving...' : 'Save API Settings'}
+                                </button>
                             </div>
                         </CardContent>
                     </Card>
@@ -270,7 +359,8 @@ export default function PartnerSettingsPage() {
                                 { key: 'emailNotifications', label: 'Email Notifications', description: 'Receive updates via email' },
                                 { key: 'smsNotifications', label: 'SMS Notifications', description: 'Receive updates via SMS' },
                                 { key: 'webhookNotifications', label: 'Webhook Notifications', description: 'Receive updates via webhook' },
-                                { key: 'reportNotifications', label: 'Report Notifications', description: 'Receive report generation updates' },
+                                { key: 'dailyDigest', label: 'Daily Digest', description: 'Receive daily summary of activities' },
+                                { key: 'weeklyReport', label: 'Weekly Report', description: 'Receive weekly performance report' },
                             ].map((notification) => (
                                 <div key={notification.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                     <div>
@@ -280,13 +370,25 @@ export default function PartnerSettingsPage() {
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={settings.notifications?.[notification.key]}
+                                            checked={settings.notifications?.[notification.key] || false}
+                                            onChange={(e) => updateSettingsField('notifications', notification.key, e.target.checked)}
                                             className="sr-only peer"
                                         />
                                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                 </div>
                             ))}
+                            <div className="flex justify-end pt-4">
+                                <button
+                                    id="partner-settings-save-notifications-btn"
+                                    onClick={handleSaveSettings}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {saving ? 'Saving...' : 'Save Notifications'}
+                                </button>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>

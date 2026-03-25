@@ -173,7 +173,7 @@ class ErrorHandler {
             timestamp: new Date(error.timestamp).toISOString()
         }
 
-        console.error('[ERROR]', errorLog)
+        console.warn('[ERROR]', errorLog)
 
         // Audit logger integration can be added here when available
     }

@@ -87,9 +87,9 @@ export default function FranchiseLocationsPage() {
                 debouncedSearch || undefined,
                 statusFilter || undefined
             )
-            setLocations(res.data)
-            setTotalLocations(res.total)
-            setTotalPages(res.totalPages)
+            setLocations(res.data || [])
+            setTotalLocations(res.total || 0)
+            setTotalPages(res.totalPages || 1)
         } catch (err: any) {
             setError(err.message || 'Failed to load locations')
         } finally {
