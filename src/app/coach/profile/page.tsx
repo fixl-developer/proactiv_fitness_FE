@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { coachService, CoachProfile, CoachReportData } from '@/services/modules/coach.service'
 import { toast } from 'sonner'
 
@@ -62,6 +63,39 @@ const CoachProfilePage = () => {
     const [newGoal, setNewGoal] = useState('')
 
     const coachId = user?.id || ''
+
+    // ==================== UNSAVED CHANGES TRACKING ====================
+
+    const isDirty = isEditing && JSON.stringify(editedProfile) !== JSON.stringify(profile)
+
+    const saveForLogout = useCallback(async () => {
+        if (!isDirty || !coachId) return
+
+        const locationParts = editedProfile.location.split(',').map(s => s.trim())
+        const city = locationParts[0] || ''
+        const country = locationParts[1] || ''
+
+        const firstName = editedProfile.firstName || editedProfile.name.split(' ')[0] || ''
+        const lastName = editedProfile.lastName || editedProfile.name.split(' ').slice(1).join(' ') || ''
+
+        const updateData = {
+            personalInfo: { firstName, lastName },
+            contactInfo: {
+                email: editedProfile.email,
+                phone: editedProfile.phone,
+                address: { city, country },
+            },
+            notes: editedProfile.bio,
+            specializations: editedProfile.specializations,
+            skills: editedProfile.skills,
+        }
+
+        await coachService.updateProfile(coachId, updateData)
+        setProfile(editedProfile)
+        setIsEditing(false)
+    }, [editedProfile, isDirty, coachId, profile])
+
+    useTrackUnsavedChanges('coach-profile', 'Coach Profile', isDirty, saveForLogout)
 
     // ==================== LOAD PROFILE ====================
 

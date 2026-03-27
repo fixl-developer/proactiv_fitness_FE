@@ -8,10 +8,11 @@ import { FiMenu, FiX, FiChevronDown, FiLogOut, FiGrid } from 'react-icons/fi'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authService } from '@/services/modules/auth.service'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
 
 const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }) => {
     const router = useRouter()
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick: triggerLogout, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
@@ -62,38 +63,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
 
     const handleLogoutClick = () => {
         setIsProfileOpen(false)
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        // Save session for quick re-login
-        const user = localStorage.getItem('user')
-        const token = localStorage.getItem('token')
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (user && token) {
-            localStorage.setItem('savedSession', JSON.stringify({ user, token, refreshToken, savedAt: Date.now() }))
-        }
-        // Clear active session
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setLoggedInUser(null)
-        setShowLogoutModal(false)
-        window.location.href = '/login'
-    }
-
-    const handlePermanentLogout = async () => {
-        try { await authService.logout() } catch {}
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setLoggedInUser(null)
-        setShowLogoutModal(false)
-        window.location.href = '/login'
+        triggerLogout()
     }
 
     const getInitials = (userObj: any) => {
@@ -384,10 +354,11 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
             {/* Logout Modal */}
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={loggedInUser?.name?.split(' ')[0] || loggedInUser?.firstName}
+                unsavedPages={unsavedPages}
             />
         </header>
     )

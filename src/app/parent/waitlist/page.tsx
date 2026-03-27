@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Loader, Clock, MapPin, User, Trash2, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { WaitlistService } from '@/services/modules/waitlist.service'
+import { apiClient } from '@/services/api/client'
 
 const WaitlistPage = () => {
     const router = useRouter()
@@ -31,9 +31,9 @@ const WaitlistPage = () => {
         try {
             setIsLoading(true)
             setError('')
-            const waitlistService = new WaitlistService()
-            const entries = await waitlistService.getWaitlist(parentId)
-            setWaitlistEntries(entries || [])
+            const response = await apiClient.get<any>('/bookings/waitlist')
+            const entries = response?.data || response || []
+            setWaitlistEntries(Array.isArray(entries) ? entries : [])
         } catch (err: any) {
             console.error('Error loading waitlist:', err)
             setError(err.message || 'Failed to load waitlist')
@@ -49,9 +49,8 @@ const WaitlistPage = () => {
 
         setRemovingId(entryId)
         try {
-            const waitlistService = new WaitlistService()
-            await waitlistService.removeFromWaitlist(entryId)
-            setWaitlistEntries(prev => prev.filter(entry => entry.id !== entryId))
+            await apiClient.delete(`/bookings/waitlist/${entryId}`)
+            setWaitlistEntries(prev => prev.filter(entry => (entry.id || entry._id) !== entryId))
         } catch (err: any) {
             console.error('Error removing from waitlist:', err)
             alert(err.message || 'Failed to remove from waitlist')
@@ -62,9 +61,8 @@ const WaitlistPage = () => {
 
     const handleAcceptOffer = async (entryId: string) => {
         try {
-            const waitlistService = new WaitlistService()
-            await waitlistService.acceptOffer(entryId)
-            setWaitlistEntries(prev => prev.map(e => e.id === entryId ? { ...e, status: 'enrolled' } : e))
+            await apiClient.put(`/bookings/waitlist/${entryId}/accept`, {})
+            setWaitlistEntries(prev => prev.map(e => (e.id || e._id) === entryId ? { ...e, status: 'enrolled' } : e))
         } catch (err: any) {
             console.error('Error accepting offer:', err)
             alert(err.message || 'Failed to accept offer')
@@ -73,9 +71,8 @@ const WaitlistPage = () => {
 
     const handleDeclineOffer = async (entryId: string) => {
         try {
-            const waitlistService = new WaitlistService()
-            await waitlistService.declineOffer(entryId)
-            setWaitlistEntries(prev => prev.map(e => e.id === entryId ? { ...e, status: 'cancelled' } : e))
+            await apiClient.put(`/bookings/waitlist/${entryId}/decline`, {})
+            setWaitlistEntries(prev => prev.map(e => (e.id || e._id) === entryId ? { ...e, status: 'cancelled' } : e))
         } catch (err: any) {
             console.error('Error declining offer:', err)
             alert(err.message || 'Failed to decline offer')

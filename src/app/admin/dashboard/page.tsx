@@ -4,10 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
-    Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle
+    Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { globalIntelligenceService, revenueIntelligenceService } from '@/services/advancedAIServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -70,6 +74,22 @@ export default function AdminDashboard() {
     const [studentData, setStudentData] = useState<StudentDataPoint[]>([])
     const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
     const [alerts, setAlerts] = useState<AlertItem[]>([])
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const [benchmarks, optimizations] = await Promise.allSettled([
+                globalIntelligenceService.getBenchmarks(),
+                revenueIntelligenceService.getOptimizationSuggestions()
+            ])
+            const bench = benchmarks.status === 'fulfilled' ? benchmarks.value?.data || benchmarks.value : null
+            const opts = optimizations.status === 'fulfilled' ? optimizations.value?.data || optimizations.value : null
+            setAiInsights({ benchmarks: bench, optimizations: opts })
+        } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
+        finally { setAiLoading(false) }
+    }
 
     const loadDashboardData = useCallback(async () => {
         try {
@@ -128,6 +148,8 @@ export default function AdminDashboard() {
         }
     }, [timeRange])
 
+    useRealtimeRefresh(['booking', 'payment', 'program', 'attendance', 'staff', 'location', 'schedule', 'ticket'], loadDashboardData)
+
     useEffect(() => {
         if (authLoading) return
         if (!isAuthenticated) {
@@ -135,6 +157,7 @@ export default function AdminDashboard() {
             return
         }
         loadDashboardData()
+        loadAiInsights()
     }, [isAuthenticated, authLoading, router, loadDashboardData])
 
     if (!isAuthenticated && !authLoading) return null
@@ -361,6 +384,72 @@ export default function AdminDashboard() {
                                 <Line type="monotone" dataKey="students" stroke="#10b981" strokeWidth={2} name="Total Students" />
                             </LineChart>
                         </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* AI Insights */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Business Insights</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Generating AI insights...</p>
+                        </div>
+                    ) : aiInsights ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Global Benchmarks */}
+                            {(Array.isArray(aiInsights.benchmarks) ? aiInsights.benchmarks : aiInsights.benchmarks?.benchmarks || []).slice(0, 3).map((bench: any, i: number) => (
+                                <div key={`bench-${i}`} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <BarChart3 className="w-4 h-4 text-blue-600" />
+                                        <span className="text-xs font-semibold text-blue-700 uppercase">Benchmark</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{bench.title || bench.metric || bench.name || bench}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{bench.description || bench.value || ''}</p>
+                                </div>
+                            ))}
+                            {/* Optimization Suggestions */}
+                            {(Array.isArray(aiInsights.optimizations) ? aiInsights.optimizations : aiInsights.optimizations?.suggestions || []).slice(0, 3).map((opt: any, i: number) => (
+                                <div key={`opt-${i}`} className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Sparkles className="w-4 h-4 text-purple-600" />
+                                        <span className="text-xs font-semibold text-purple-700 uppercase">Optimization</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{opt.title || opt.suggestion || opt.name || opt}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{opt.description || opt.impact || ''}</p>
+                                </div>
+                            ))}
+                            {/* Best Practices */}
+                            {(aiInsights.benchmarks?.bestPractices || aiInsights.optimizations?.bestPractices || []).slice(0, 2).map((practice: any, i: number) => (
+                                <div key={`bp-${i}`} className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Best Practice</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{practice.title || practice.name || practice}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{practice.description || ''}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI insights unavailable</p>
+                            <button onClick={loadAiInsights} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
+                        </div>
                     )}
                 </CardContent>
             </Card>

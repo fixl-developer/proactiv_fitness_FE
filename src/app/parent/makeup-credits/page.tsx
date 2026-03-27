@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Loader, Gift, Calendar, DollarSign, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import BookingService from '@/services/modules/booking.service'
+import { apiClient } from '@/services/api/client'
 
 const MakeupCreditsPage = () => {
     const router = useRouter()
@@ -31,14 +31,15 @@ const MakeupCreditsPage = () => {
         try {
             setIsLoading(true)
             setError('')
-            const bookingService = new BookingService()
-            const creditsData = await bookingService.getMakeupCredits(parentId)
-            setCredits(creditsData || [])
+            const response = await apiClient.get<any>('/bookings/makeup-credits')
+            const creditsData = response?.data || response || []
+            const creditsArray = Array.isArray(creditsData) ? creditsData : []
+            setCredits(creditsArray)
 
             // Calculate total available credits
-            const total = creditsData
-                ?.filter((c: any) => !c.usedAt)
-                .reduce((sum: number, c: any) => sum + c.amount, 0) || 0
+            const total = creditsArray
+                .filter((c: any) => !c.usedAt)
+                .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
             setTotalCredits(total)
         } catch (err: any) {
             console.error('Error loading makeup credits:', err)

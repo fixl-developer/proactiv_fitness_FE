@@ -1,17 +1,19 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Globe, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Globe, ChevronDown, Utensils } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState, useRef } from 'react'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
     const { isAuthenticated, isLoading, user, logout, softLogout } = useAuth()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick: triggerLogout, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
     const profileRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -37,40 +39,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         { name: 'Bookings', href: '/user/bookings', icon: Calendar },
         { name: 'Payments', href: '/user/payments', icon: CreditCard },
         { name: 'Progress', href: '/user/progress', icon: TrendingUp },
+        { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
         { name: 'Achievements', href: '/user/achievements', icon: Award },
         { name: 'Profile', href: '/user/profile', icon: User }
     ]
 
     const handleLogoutClick = () => {
         setIsProfileOpen(false)
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        // Save session FIRST
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login'
+        triggerLogout()
     }
 
     const getInitials = () => {
@@ -141,6 +117,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                         </h2>
                     </div>
 
+                    <div className="flex items-center gap-3">
+                    <NotificationBell />
                     {/* Profile Dropdown */}
                     <div className="relative" ref={profileRef}>
                         <button id="user-layout-profile-dropdown-btn"
@@ -187,6 +165,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                             </div>
                         )}
                     </div>
+                    </div>
                 </header>
 
                 {/* Page Content */}
@@ -198,10 +177,11 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             {/* Logout Modal */}
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={displayName.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

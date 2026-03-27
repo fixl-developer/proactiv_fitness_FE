@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
 import { authService } from '@/services/modules/auth.service'
+import NotificationBell from '@/components/shared/NotificationBell'
 import {
     LayoutDashboard, Ticket, Users, Settings, BarChart3,
-    HelpCircle, MessageSquare, Bell, LogOut, Menu, X,
+    HelpCircle, MessageSquare, LogOut, Menu, X,
     Calendar, Clock, FileText, Zap, Shield, Database,
     Headphones, UserCheck, TrendingUp, Mail, Phone
 } from 'lucide-react'
@@ -40,37 +42,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         setUser(parsedUser)
     }, [router])
 
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
-
-    const handleLogoutClick = () => {
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     const navigation = [
         { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
@@ -119,10 +91,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button id="staff-layout-btn-2" className="relative p-2 hover:bg-gray-100 rounded-lg">
-                            <Bell className="w-5 h-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                        <NotificationBell />
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
@@ -167,10 +136,11 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={user?.name?.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

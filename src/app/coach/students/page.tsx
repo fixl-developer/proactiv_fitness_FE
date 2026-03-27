@@ -7,7 +7,7 @@ import {
     Users, Search, Filter, TrendingUp, Award, MessageSquare,
     Phone, Mail, Calendar, Target, Star, MoreVertical,
     RefreshCw, X, Eye, Send, UserMinus, Activity,
-    CheckCircle, Clock, ArrowUp
+    CheckCircle, Clock, ArrowUp, Brain, Sparkles, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import {
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
+import aiCoachService from '@/services/aiCoachService'
 
 // ==================== MOCK DATA ====================
 
@@ -342,6 +343,38 @@ const CoachStudentsPage = () => {
     const [students, setStudents] = useState<any[]>([])
     const [selectedStudent, setSelectedStudent] = useState<any>(null)
     const [usingMockData, setUsingMockData] = useState(false)
+    const [aiAnalysis, setAiAnalysis] = useState<Map<string, any>>(new Map())
+    const [aiLoadingMap, setAiLoadingMap] = useState<Map<string, boolean>>(new Map())
+    const [aiExpandedMap, setAiExpandedMap] = useState<Map<string, boolean>>(new Map())
+
+    const handleAiAnalysis = async (student: any) => {
+        const studentId = student.id
+        // Toggle expand if already loaded
+        if (aiAnalysis.has(studentId)) {
+            setAiExpandedMap(prev => {
+                const next = new Map(prev)
+                next.set(studentId, !prev.get(studentId))
+                return next
+            })
+            return
+        }
+        // Set loading
+        setAiLoadingMap(prev => { const next = new Map(prev); next.set(studentId, true); return next })
+        setAiExpandedMap(prev => { const next = new Map(prev); next.set(studentId, true); return next })
+        try {
+            const result = await aiCoachService.getRecommendations({ studentId })
+            setAiAnalysis(prev => { const next = new Map(prev); next.set(studentId, result); return next })
+        } catch (err) {
+            console.error('AI analysis failed for student:', studentId, err)
+            setAiAnalysis(prev => {
+                const next = new Map(prev)
+                next.set(studentId, { error: true, message: 'AI analysis is currently unavailable.' })
+                return next
+            })
+        } finally {
+            setAiLoadingMap(prev => { const next = new Map(prev); next.set(studentId, false); return next })
+        }
+    }
 
     const loadStudents = useCallback(async (showRefreshState = false) => {
         try {
@@ -628,6 +661,72 @@ const CoachStudentsPage = () => {
                                         Feedback
                                     </Button>
                                 </div>
+
+                                {/* AI Analysis Button */}
+                                <Button
+                                    id={`coach-students-ai-analysis-${student.id}-btn`}
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full border-purple-200 text-purple-700 hover:bg-purple-50"
+                                    onClick={() => handleAiAnalysis(student)}
+                                    disabled={aiLoadingMap.get(student.id) || false}
+                                >
+                                    {aiLoadingMap.get(student.id) ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Brain className="w-4 h-4 mr-2" />
+                                    )}
+                                    {aiExpandedMap.get(student.id) && aiAnalysis.has(student.id) ? 'Toggle AI Analysis' : 'AI Analysis'}
+                                    <Badge className="ml-2 bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">
+                                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />AI
+                                    </Badge>
+                                </Button>
+
+                                {/* AI Analysis Expandable Section */}
+                                <AnimatePresence>
+                                    {aiExpandedMap.get(student.id) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="overflow-hidden"
+                                        >
+                                            {aiLoadingMap.get(student.id) ? (
+                                                <div className="flex items-center justify-center py-4 text-purple-600">
+                                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                                    <span className="text-sm">Analyzing...</span>
+                                                </div>
+                                            ) : aiAnalysis.get(student.id)?.error ? (
+                                                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-700">
+                                                    {aiAnalysis.get(student.id)?.message || 'AI analysis unavailable.'}
+                                                </div>
+                                            ) : aiAnalysis.has(student.id) ? (
+                                                <div className="p-3 bg-purple-50 border border-purple-100 rounded-lg space-y-2">
+                                                    <div className="flex items-center gap-1 mb-1">
+                                                        <Sparkles className="w-3 h-3 text-purple-600" />
+                                                        <span className="text-xs font-semibold text-purple-800">AI Recommendations</span>
+                                                    </div>
+                                                    {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).length > 0 ? (
+                                                        <ul className="space-y-1">
+                                                            {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).map((rec: string, i: number) => (
+                                                                <li key={i} className="text-xs text-purple-700 flex items-start gap-1.5">
+                                                                    <Target className="w-3 h-3 mt-0.5 flex-shrink-0 text-purple-500" />
+                                                                    {typeof rec === 'string' ? rec : rec?.message || rec?.description || JSON.stringify(rec)}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="text-xs text-purple-600">No specific recommendations at this time.</p>
+                                                    )}
+                                                    {aiAnalysis.get(student.id)?.confidence != null && (
+                                                        <p className="text-[10px] text-purple-500 mt-1">Confidence: {Math.round(aiAnalysis.get(student.id).confidence * 100)}%</p>
+                                                    )}
+                                                </div>
+                                            ) : null}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </CardContent>
                         </Card>
                     </motion.div>

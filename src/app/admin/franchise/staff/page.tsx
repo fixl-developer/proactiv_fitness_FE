@@ -85,7 +85,7 @@ export default function FranchiseStaffPage() {
                 roleParam,
                 statusParam
             )
-            setStaff(response.data)
+            setStaff(response.data || [])
             setTotalPages(response.totalPages)
             setTotalStaff(response.total)
         } catch (err: any) {

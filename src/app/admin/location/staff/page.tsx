@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save, UserCheck, Award, Activity } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -109,6 +109,32 @@ export default function LocationStaffPage() {
                     <Plus className="w-5 h-5" />
                     Add Staff
                 </button>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { title: 'Total Staff', value: staff.length, icon: Users, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+                    { title: 'Active Staff', value: staff.filter(s => s.status?.toUpperCase() === 'ACTIVE').length, icon: UserCheck, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
+                    { title: 'Coaches', value: staff.filter(s => s.role?.toUpperCase() === 'COACH').length, icon: Award, cardBg: 'bg-gradient-to-br from-purple-50 to-purple-100', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', titleColor: 'text-purple-700', valueColor: 'text-purple-900' },
+                    { title: 'Avg Utilization', value: staff.length > 0 ? `${Math.round(staff.reduce((sum, s) => sum + (s.utilization || 0), 0) / staff.length)}%` : '0%', icon: Activity, cardBg: 'bg-gradient-to-br from-orange-50 to-orange-100', iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600', titleColor: 'text-orange-700', valueColor: 'text-orange-900' },
+                ].map((metric, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+                        <Card className={`${metric.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className={`text-sm font-medium ${metric.titleColor}`}>{metric.title}</p>
+                                        <p className={`text-3xl font-bold ${metric.valueColor} mt-2`}>{metric.value}</p>
+                                    </div>
+                                    <div className={`${metric.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ))}
             </div>
 
             {/* Search & Filter */}

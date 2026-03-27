@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, TrendingUp, Medal } from 'lucide-react'
+import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, TrendingUp, Medal, Brain, Sparkles, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import UserAchievementsService from '@/services/modules/user-achievements.service'
+import { apiClient } from '@/services/api/client'
+import { gamificationEngineService } from '@/services/advancedAIServices'
 
 export default function AchievementsPage() {
     const [achievements, setAchievements] = useState<any[]>([])
@@ -21,9 +23,45 @@ export default function AchievementsPage() {
     const [activeFilter, setActiveFilter] = useState<'all' | 'unlocked' | 'locked'>('all')
     const [categoryFilter, setCategoryFilter] = useState<string>('all')
     const [claimingId, setClaimingId] = useState<string | null>(null)
+    const [aiTips, setAiTips] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [aiChallenges, setAiChallenges] = useState<any>(null)
+    const [aiChallengesLoading, setAiChallengesLoading] = useState(false)
+    const [streakRisk, setStreakRisk] = useState<any>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
     const achievementsService = new UserAchievementsService()
+
+    const loadAiTips = useCallback(async () => {
+        try {
+            setAiLoading(true)
+            const data = await apiClient.get('/advanced-analytics/insights')
+            setAiTips(data)
+        } catch (error) {
+            console.error('Error loading AI tips:', error)
+            setAiTips(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }, [])
+
+    const loadAiChallenges = useCallback(async () => {
+        try {
+            setAiChallengesLoading(true)
+            const [challengesData, streakData] = await Promise.allSettled([
+                gamificationEngineService.getChallenges(user?.id || ''),
+                gamificationEngineService.getStreakRisk(user?.id || '')
+            ])
+            setAiChallenges(challengesData.status === 'fulfilled' ? challengesData.value : null)
+            setStreakRisk(streakData.status === 'fulfilled' ? streakData.value : null)
+        } catch (error) {
+            console.error('Error loading AI challenges:', error)
+            setAiChallenges(null)
+            setStreakRisk(null)
+        } finally {
+            setAiChallengesLoading(false)
+        }
+    }, [user?.id])
 
     const loadAchievements = useCallback(async () => {
         try {
@@ -56,7 +94,9 @@ export default function AchievementsPage() {
             return
         }
         loadAchievements()
-    }, [isAuthenticated, router, loadAchievements])
+        loadAiTips()
+        loadAiChallenges()
+    }, [isAuthenticated, router, loadAchievements, loadAiTips, loadAiChallenges])
 
     useEffect(() => {
         filterAchievements()
@@ -174,6 +214,102 @@ export default function AchievementsPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* AI Achievement Tips */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">AI Achievement Tips</h3>
+                    <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                </div>
+                {aiLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                        <p className="text-sm text-gray-500">Loading AI suggestions...</p>
+                    </div>
+                ) : aiTips ? (
+                    <div className="space-y-2">
+                        {(aiTips.recommendations || aiTips.insights || []).slice(0, 3).map((item: any, i: number) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">AI suggestions unavailable</p>
+                )}
+            </div>
+
+            {/* AI Challenges */}
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-purple-600" />
+                        <CardTitle>AI Challenges</CardTitle>
+                        <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {/* Streak Risk Warning */}
+                    {streakRisk && (streakRisk.atRisk || streakRisk.riskLevel === 'high' || streakRisk.riskLevel === 'medium') && (
+                        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                            <Zap className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-medium text-amber-800">Streak at Risk!</p>
+                                <p className="text-xs text-amber-600 mt-0.5">
+                                    {streakRisk.message || streakRisk.recommendation || 'Complete a challenge today to maintain your streak.'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {aiChallengesLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Loading personalized challenges...</p>
+                        </div>
+                    ) : aiChallenges ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {(aiChallenges.challenges || aiChallenges.data || []).slice(0, 4).map((challenge: any, i: number) => {
+                                const difficultyColors: Record<string, string> = {
+                                    easy: 'bg-green-100 text-green-700',
+                                    medium: 'bg-yellow-100 text-yellow-700',
+                                    hard: 'bg-red-100 text-red-700',
+                                }
+                                return (
+                                    <div key={i} className="p-4 bg-white rounded-lg border border-purple-100 shadow-sm">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <h4 className="text-sm font-semibold text-gray-900">{challenge.title || challenge.name || `Challenge ${i + 1}`}</h4>
+                                            {challenge.difficulty && (
+                                                <Badge className={difficultyColors[challenge.difficulty?.toLowerCase()] || 'bg-gray-100 text-gray-700'}>
+                                                    {challenge.difficulty}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-600 mb-3">{challenge.description || challenge.details || ''}</p>
+                                        <div className="flex items-center justify-between">
+                                            {challenge.xpReward != null && (
+                                                <span className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full flex items-center gap-1">
+                                                    <Sparkles className="w-3 h-3" /> {challenge.xpReward} XP
+                                                </span>
+                                            )}
+                                            {challenge.progress != null && (
+                                                <span className="text-xs text-gray-500">{challenge.progress}% done</span>
+                                            )}
+                                        </div>
+                                        {challenge.progress != null && (
+                                            <Progress value={challenge.progress} className="mt-2 h-1.5" />
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">AI challenges unavailable</p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Filters */}
             <Card>

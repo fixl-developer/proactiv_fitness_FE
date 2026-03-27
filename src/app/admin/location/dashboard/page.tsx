@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    Zap, Activity, Target, BarChart3, MapPin
+    Zap, Activity, Target, BarChart3, MapPin,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { smartSchedulerService, safetyMonitorService } from '@/services/advancedAIServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -22,60 +26,81 @@ const FALLBACK_LOCATION = {
 
 export default function LocationManagerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
     const [revenueData, setRevenueData] = useState<any[]>([])
     const [todayClassSchedule, setTodayClassSchedule] = useState<any[]>([])
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [overview, analytics] = await Promise.allSettled([
-                    LocationManagerService.getDashboardOverview(),
-                    LocationManagerService.getAnalytics(timeRange)
-                ])
-                const data = overview.status === 'fulfilled' ? overview.value : {}
-                const stats = analytics.status === 'fulfilled' ? analytics.value : {}
+    const loadAiInsights = async (locId?: string) => {
+        setAiLoading(true)
+        const locationId = locId || 'current'
+        try {
+            const [peakHours, safetyScore] = await Promise.allSettled([
+                smartSchedulerService.getPeakHours(locationId),
+                safetyMonitorService.getSafetyScore(locationId)
+            ])
+            const peaks = peakHours.status === 'fulfilled' ? peakHours.value?.data || peakHours.value : null
+            const safety = safetyScore.status === 'fulfilled' ? safetyScore.value?.data || safetyScore.value : null
+            setAiInsights({ peakHours: peaks, safetyScore: safety })
+        } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
+        finally { setAiLoading(false) }
+    }
 
-                setDashboardData({
-                    locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
-                    totalClasses: data?.totalClasses ?? stats?.classesPerWeek ?? FALLBACK_LOCATION.totalClasses,
-                    totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
-                    totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
-                    monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
-                    revenueGrowth: data?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
-                    occupancyRate: data?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
-                    staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
-                    customerSatisfaction: data?.customerSatisfaction ?? stats?.satisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
-                    todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
-                    todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
-                    pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
-                    criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
-                    warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
-                })
+    const loadData = useCallback(async () => {
+        try {
+            const [overview, analytics] = await Promise.allSettled([
+                LocationManagerService.getDashboardOverview(),
+                LocationManagerService.getAnalytics(timeRange)
+            ])
+            const data = overview.status === 'fulfilled' ? overview.value : {}
+            const stats = analytics.status === 'fulfilled' ? analytics.value : {}
 
-                // Set revenue data from analytics
-                if (stats?.revenueData && Array.isArray(stats.revenueData)) {
-                    setRevenueData(stats.revenueData)
-                } else {
-                    setRevenueData(data?.revenueData || [])
-                }
+            setDashboardData({
+                locationName: data?.locationName ?? FALLBACK_LOCATION.locationName,
+                totalClasses: data?.totalClasses ?? stats?.classesPerWeek ?? FALLBACK_LOCATION.totalClasses,
+                totalStaff: data?.totalStaff ?? FALLBACK_LOCATION.totalStaff,
+                totalStudents: data?.totalStudents ?? stats?.totalStudents ?? FALLBACK_LOCATION.totalStudents,
+                monthlyRevenue: data?.monthlyRevenue ?? FALLBACK_LOCATION.monthlyRevenue,
+                revenueGrowth: data?.revenueGrowth ?? FALLBACK_LOCATION.revenueGrowth,
+                occupancyRate: data?.occupancyRate ?? FALLBACK_LOCATION.occupancyRate,
+                staffUtilization: data?.staffUtilization ?? FALLBACK_LOCATION.staffUtilization,
+                customerSatisfaction: data?.customerSatisfaction ?? stats?.satisfaction ?? FALLBACK_LOCATION.customerSatisfaction,
+                todayClasses: data?.todayClasses ?? FALLBACK_LOCATION.todayClasses,
+                todayAttendance: data?.todayAttendance ?? FALLBACK_LOCATION.todayAttendance,
+                pendingApprovals: data?.pendingApprovals ?? FALLBACK_LOCATION.pendingApprovals,
+                criticalAlerts: data?.criticalAlerts ?? FALLBACK_LOCATION.criticalAlerts,
+                warnings: data?.warnings ?? FALLBACK_LOCATION.warnings
+            })
 
-                // Set today's class schedule from dashboard overview
-                if (data?.todaySchedule && Array.isArray(data.todaySchedule)) {
-                    setTodayClassSchedule(data.todaySchedule)
-                } else if (data?.classes && Array.isArray(data.classes)) {
-                    setTodayClassSchedule(data.classes)
-                }
-            } catch (error) {
-                console.error('Error loading location dashboard:', error)
-                setDashboardData(FALLBACK_LOCATION)
-            } finally {
-                setIsLoading(false)
+            // Set revenue data from analytics
+            if (stats?.revenueData && Array.isArray(stats.revenueData)) {
+                setRevenueData(stats.revenueData)
+            } else {
+                setRevenueData(data?.revenueData || [])
             }
+
+            // Set today's class schedule from dashboard overview
+            if (data?.todaySchedule && Array.isArray(data.todaySchedule)) {
+                setTodayClassSchedule(data.todaySchedule)
+            } else if (data?.classes && Array.isArray(data.classes)) {
+                setTodayClassSchedule(data.classes)
+            }
+        } catch (error) {
+            console.error('Error loading location dashboard:', error)
+            setDashboardData(FALLBACK_LOCATION)
+        } finally {
+            setIsLoading(false)
         }
-        loadData()
     }, [timeRange])
+
+    useRealtimeRefresh(['attendance', 'booking', 'staff', 'schedule'], loadData)
+
+    useEffect(() => {
+        loadData()
+        loadAiInsights()
+    }, [loadData])
 
     if (isLoading) {
         return (
@@ -112,27 +137,27 @@ export default function LocationManagerDashboard() {
             {/* Top KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { title: 'Total Classes', value: dashboardData?.totalClasses, icon: Calendar, color: 'text-blue-600', bgColor: 'bg-blue-50', change: 'This month' },
-                    { title: 'Total Students', value: dashboardData?.totalStudents, icon: Users, color: 'text-green-600', bgColor: 'bg-green-50', change: 'Active students' },
-                    { title: 'Staff Members', value: dashboardData?.totalStaff, icon: Users, color: 'text-purple-600', bgColor: 'bg-purple-50', change: 'Full team' },
+                    { title: 'Total Classes', value: dashboardData?.totalClasses, icon: Calendar, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900', change: 'This month' },
+                    { title: 'Total Students', value: dashboardData?.totalStudents, icon: Users, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900', change: 'Active students' },
+                    { title: 'Staff Members', value: dashboardData?.totalStaff, icon: Users, cardBg: 'bg-gradient-to-br from-purple-50 to-purple-100', iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600', titleColor: 'text-purple-700', valueColor: 'text-purple-900', change: 'Full team' },
                     {
                         title: 'Monthly Revenue',
                         value: dashboardData?.monthlyRevenue ? `${(dashboardData.monthlyRevenue / 1000).toFixed(0)}K` : '0',
-                        icon: DollarSign, color: 'text-orange-600', bgColor: 'bg-orange-50',
+                        icon: DollarSign, cardBg: 'bg-gradient-to-br from-orange-50 to-orange-100', iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600', titleColor: 'text-orange-700', valueColor: 'text-orange-900',
                         change: dashboardData?.revenueGrowth ? `+${dashboardData.revenueGrowth}% vs last month` : 'No data'
                     },
                 ].map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className="hover:shadow-lg transition-shadow">
+                        <Card className={`${metric.cardBg} border-0 shadow-sm hover:shadow-lg transition-shadow`}>
                             <CardContent className="pt-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600 font-medium">{metric.title}</p>
-                                        <p className="text-2xl font-bold text-gray-900 mt-2">{metric.value}</p>
+                                        <p className={`text-sm font-medium ${metric.titleColor}`}>{metric.title}</p>
+                                        <p className={`text-2xl font-bold ${metric.valueColor} mt-2`}>{metric.value}</p>
                                         <p className="text-xs text-gray-500 mt-2">{metric.change}</p>
                                     </div>
-                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
-                                        <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                                    <div className={`${metric.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                        <metric.icon className="w-5 h-5 text-white" />
                                     </div>
                                 </div>
                             </CardContent>
@@ -296,6 +321,72 @@ export default function LocationManagerDashboard() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* AI Insights */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Location Insights</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={() => loadAiInsights()} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing location data...</p>
+                        </div>
+                    ) : aiInsights ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Peak Hours Analysis */}
+                            {(Array.isArray(aiInsights.peakHours) ? aiInsights.peakHours : aiInsights.peakHours?.hours || aiInsights.peakHours?.peakTimes || []).slice(0, 3).map((peak: any, i: number) => (
+                                <div key={`peak-${i}`} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Clock className="w-4 h-4 text-blue-600" />
+                                        <span className="text-xs font-semibold text-blue-700 uppercase">Peak Hours</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{peak.title || peak.timeSlot || peak.hour || peak}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{peak.description || peak.attendance || ''}</p>
+                                </div>
+                            ))}
+                            {/* Safety Score */}
+                            {aiInsights.safetyScore && (
+                                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Safety Score</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-700">{aiInsights.safetyScore.score || aiInsights.safetyScore.overallScore || 'N/A'}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{aiInsights.safetyScore.description || aiInsights.safetyScore.status || 'Safety assessment complete'}</p>
+                                </div>
+                            )}
+                            {/* Attendance Predictions */}
+                            {(aiInsights.peakHours?.predictions || aiInsights.peakHours?.attendanceForecast || []).slice(0, 2).map((pred: any, i: number) => (
+                                <div key={`att-${i}`} className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="w-4 h-4 text-purple-600" />
+                                        <span className="text-xs font-semibold text-purple-700 uppercase">Attendance Prediction</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{pred.title || pred.day || pred.period || pred}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{pred.description || pred.predicted || ''}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI insights unavailable</p>
+                            <button onClick={() => loadAiInsights()} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }

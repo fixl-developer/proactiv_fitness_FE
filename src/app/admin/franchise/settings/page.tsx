@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
     Settings, Bell, Lock, Mail, Save, AlertCircle, CheckCircle, Eye, EyeOff
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FranchiseOwnerService, FranchiseSettings } from '@/services/franchiseOwnerService'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 interface Toast {
     type: 'success' | 'error'
@@ -53,6 +54,7 @@ export default function FranchiseSettingsPage() {
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
 
     const [settings, setSettings] = useState<FranchiseSettings>(defaultSettings)
+    const originalSettingsRef = useRef<string>('')
 
     const [currentPassword, setCurrentPassword] = useState('')
     const [newPassword, setNewPassword] = useState('')
@@ -71,7 +73,7 @@ export default function FranchiseSettingsPage() {
                 setLoadError(null)
                 const response = await FranchiseOwnerService.getSettings()
                 const data = (response as any)?.data ?? response
-                setSettings({
+                const resolvedSettings = {
                     franchiseName: data.franchiseName ?? '',
                     franchiseCode: data.franchiseCode ?? '',
                     ownerName: data.ownerName ?? '',
@@ -88,16 +90,28 @@ export default function FranchiseSettingsPage() {
                     notificationsSMS: data.notificationsSMS ?? true,
                     notificationsPush: data.notificationsPush ?? true,
                     maintenanceMode: data.maintenanceMode ?? false,
-                })
+                }
+                setSettings(resolvedSettings)
+                originalSettingsRef.current = JSON.stringify(resolvedSettings)
             } catch (error: any) {
                 console.error('Failed to load settings:', error)
                 setLoadError(error.message || 'Failed to load settings')
+                originalSettingsRef.current = JSON.stringify(defaultSettings)
             } finally {
                 setIsLoading(false)
             }
         }
         fetchSettings()
     }, [])
+
+    const isDirty = !isLoading && originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveForLogout = useCallback(async () => {
+        await FranchiseOwnerService.updateSettings(settings)
+        originalSettingsRef.current = JSON.stringify(settings)
+    }, [settings])
+
+    useTrackUnsavedChanges('franchise-settings', 'Franchise Settings', isDirty, saveForLogout)
 
     const handleInputChange = (field: keyof FranchiseSettings, value: string | boolean) => {
         setSettings(prev => ({
@@ -153,6 +167,7 @@ export default function FranchiseSettingsPage() {
         setIsSaving(true)
         try {
             await FranchiseOwnerService.updateSettings(settings)
+            originalSettingsRef.current = JSON.stringify(settings)
             showToast('success', 'Settings saved successfully')
         } catch (error: any) {
             console.error('Failed to save settings:', error)

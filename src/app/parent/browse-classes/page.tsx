@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
-import SchedulingService from '@/services/modules/scheduling.service'
-import BookingService from '@/services/modules/booking.service'
+import { apiClient } from '@/services/api/client'
 
 const BrowseClassesPage = () => {
     const router = useRouter()
@@ -41,10 +40,11 @@ const BrowseClassesPage = () => {
             setIsLoading(true)
             setError('')
 
-            const schedulingService = new SchedulingService()
-            const classes = await schedulingService.getSchedules(parentId)
-            setSessions(classes || [])
-            setFilteredSessions(classes || [])
+            const response = await apiClient.get<any>('/scheduling/sessions')
+            const classes = response?.data || response || []
+            const classArray = Array.isArray(classes) ? classes : []
+            setSessions(classArray)
+            setFilteredSessions(classArray)
         } catch (err: any) {
             console.error('Error loading classes:', err)
             setError(err.message || 'Failed to load classes')

@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService, StaffSettings } from '@/services/supportStaffService'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { User, Bell, Shield, Settings, Save, CheckCircle, XCircle } from 'lucide-react'
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) {
@@ -38,6 +39,7 @@ export default function StaffSettingsPage() {
     const [saving, setSaving] = useState(false)
     const [settings, setSettings] = useState<StaffSettings>(defaultSettings)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+    const originalSettingsRef = useRef<string>('')
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -50,8 +52,10 @@ export default function StaffSettingsPage() {
             try {
                 const data = await supportStaffService.getSettings()
                 setSettings(data)
+                originalSettingsRef.current = JSON.stringify(data)
             } catch {
                 setSettings(defaultSettings)
+                originalSettingsRef.current = JSON.stringify(defaultSettings)
             } finally {
                 setLoading(false)
             }
@@ -59,6 +63,15 @@ export default function StaffSettingsPage() {
 
         loadSettings()
     }, [isAuthenticated, router])
+
+    const isDirty = !loading && originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveSettings = useCallback(async () => {
+        await supportStaffService.updateSettings(settings)
+        originalSettingsRef.current = JSON.stringify(settings)
+    }, [settings])
+
+    useTrackUnsavedChanges('staff-settings', 'Staff Settings', isDirty, saveSettings)
 
     const showToast = (type: 'success' | 'error', message: string) => {
         setToast({ type, message })
@@ -85,6 +98,7 @@ export default function StaffSettingsPage() {
         setSaving(true)
         try {
             await supportStaffService.updateSettings(settings)
+            originalSettingsRef.current = JSON.stringify(settings)
             showToast('success', 'Settings saved successfully!')
         } catch {
             showToast('error', 'Failed to save settings. Please try again.')

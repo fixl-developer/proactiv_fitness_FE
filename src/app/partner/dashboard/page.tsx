@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
 import CommissionService from '@/services/modules/commission.service'
 import PartnerAnalyticsService from '@/services/modules/partner-analytics.service'
@@ -13,8 +14,11 @@ import {
 import {
     AlertCircle, TrendingUp, Users, DollarSign, Award, BookOpen, Target,
     BarChart3, ArrowUpRight, ArrowDownRight, Calendar, Bell, Clock,
-    CheckCircle, Activity, UserPlus, CreditCard, Eye, ChevronRight
+    CheckCircle, Activity, UserPlus, CreditCard, Eye, ChevronRight,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { revenueIntelligenceService, globalIntelligenceService } from '@/services/advancedAIServices'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -38,6 +42,22 @@ export default function PartnerDashboard() {
     const [notifications, setNotifications] = useState<any[]>([])
     const [goals, setGoals] = useState<any[]>([])
     const [qualityMetrics, setQualityMetrics] = useState<any>(null)
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const [optimizations, upsells] = await Promise.allSettled([
+                revenueIntelligenceService.getOptimizationSuggestions(),
+                revenueIntelligenceService.getUpsellOpportunities()
+            ])
+            const opts = optimizations.status === 'fulfilled' ? optimizations.value?.data || optimizations.value : null
+            const ups = upsells.status === 'fulfilled' ? upsells.value?.data || upsells.value : null
+            setAiInsights({ optimizations: opts, upsells: ups })
+        } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
+        finally { setAiLoading(false) }
+    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -46,6 +66,7 @@ export default function PartnerDashboard() {
         }
 
         loadDashboardData()
+        loadAiInsights()
     }, [isAuthenticated, router, user])
 
     const loadDashboardData = async () => {
@@ -106,6 +127,8 @@ export default function PartnerDashboard() {
 
         setLoading(false)
     }
+
+    useRealtimeRefresh(['program', 'booking', 'crm', 'payment'], loadDashboardData)
 
     if (!isAuthenticated) return null
 
@@ -794,6 +817,74 @@ export default function PartnerDashboard() {
                                         <Progress value={qualityMetrics.completionRate} className="h-2" />
                                     </div>
                                 </>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* AI Insights */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Brain className="w-5 h-5 text-purple-600" />
+                                    <CardTitle>AI Insights</CardTitle>
+                                    <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                                </div>
+                                <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                    <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {aiLoading ? (
+                                <div className="flex items-center justify-center py-8 gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                    <p className="text-sm text-gray-500">Generating AI insights...</p>
+                                </div>
+                            ) : aiInsights ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {/* Revenue Optimization Tips */}
+                                    {(Array.isArray(aiInsights.optimizations) ? aiInsights.optimizations : aiInsights.optimizations?.suggestions || []).slice(0, 3).map((tip: any, i: number) => (
+                                        <div key={`opt-${i}`} className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <TrendingUp className="w-4 h-4 text-purple-600" />
+                                                <span className="text-xs font-semibold text-purple-700 uppercase">Revenue Optimization</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">{tip.title || tip.suggestion || tip.name || tip}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{tip.description || tip.impact || ''}</p>
+                                        </div>
+                                    ))}
+                                    {/* Upsell Opportunities */}
+                                    {(Array.isArray(aiInsights.upsells) ? aiInsights.upsells : aiInsights.upsells?.opportunities || []).slice(0, 3).map((opp: any, i: number) => (
+                                        <div key={`ups-${i}`} className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Sparkles className="w-4 h-4 text-green-600" />
+                                                <span className="text-xs font-semibold text-green-700 uppercase">Upsell Opportunity</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">{opp.title || opp.name || opp.product || opp}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{opp.description || opp.reason || ''}</p>
+                                        </div>
+                                    ))}
+                                    {/* Churn Risk Alerts */}
+                                    {(aiInsights.optimizations?.churnAlerts || aiInsights.upsells?.atRiskStudents || []).slice(0, 2).map((alert: any, i: number) => (
+                                        <div key={`churn-${i}`} className="p-4 bg-gradient-to-br from-red-50 to-orange-100 rounded-lg border border-red-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <AlertCircle className="w-4 h-4 text-red-600" />
+                                                <span className="text-xs font-semibold text-red-700 uppercase">Churn Risk</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">{alert.title || alert.studentName || alert.name || alert}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{alert.description || alert.reason || ''}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">AI insights unavailable</p>
+                                    <button onClick={loadAiInsights} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
+                                </div>
                             )}
                         </CardContent>
                     </Card>

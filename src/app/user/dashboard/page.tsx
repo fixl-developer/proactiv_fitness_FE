@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame } from 'lucide-react'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
+import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame, Brain, Sparkles, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import UserClassesService from '@/services/modules/user-classes.service'
 import UserProgressService from '@/services/modules/user-progress.service'
 import UserAchievementsService from '@/services/modules/user-achievements.service'
 import { apiClient } from '@/services/api/client'
+import aiCoachService from '@/services/aiCoachService'
 
 export default function UserDashboardPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -27,6 +29,8 @@ export default function UserDashboardPage() {
     })
     const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
     const [progressData, setProgressData] = useState<any>(null)
+    const [aiRecommendations, setAiRecommendations] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
 
@@ -80,13 +84,44 @@ export default function UserDashboardPage() {
         }
     }, [])
 
+    const loadAiRecommendations = useCallback(async () => {
+        setAiLoading(true)
+        try {
+            const userId = user?.id || ''
+            const tenantId = (user as any)?.tenantId || 'proactiv-hq'
+            const [progressRes, recommendationsRes] = await Promise.allSettled([
+                aiCoachService.predictProgress(userId, tenantId),
+                aiCoachService.getRecommendations({ studentId: userId, skillLevel: 'all' }),
+            ])
+
+            const progress = progressRes.status === 'fulfilled' ? progressRes.value : null
+            const recommendations = recommendationsRes.status === 'fulfilled' ? recommendationsRes.value : null
+
+            setAiRecommendations({
+                progressPrediction: progress?.data || progress,
+                recommendations: recommendations?.data?.recommendations || recommendations?.recommendations || [],
+                overallAssessment: recommendations?.data?.overallAssessment || recommendations?.overallAssessment || '',
+                focusArea: recommendations?.data?.focusArea || recommendations?.focusArea || '',
+                aiPowered: true,
+            })
+        } catch (err) {
+            console.error('AI recommendations unavailable:', err)
+            setAiRecommendations(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }, [user])
+
+    useRealtimeRefresh(['booking', 'attendance', 'payment', 'program'], loadDashboard)
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/login')
             return
         }
         loadDashboard()
-    }, [isAuthenticated, router, loadDashboard])
+        loadAiRecommendations()
+    }, [isAuthenticated, router, loadDashboard, loadAiRecommendations])
 
     const handleRefresh = async () => {
         setRefreshing(true)
@@ -212,6 +247,62 @@ export default function UserDashboardPage() {
                             )
                         })}
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* AI Recommendations */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Recommendations</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={loadAiRecommendations} disabled={aiLoading}>
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Personalizing your experience...</p>
+                        </div>
+                    ) : aiRecommendations ? (
+                        <div className="space-y-3">
+                            {aiRecommendations.overallAssessment && (
+                                <div className="bg-purple-50 border border-purple-100 rounded-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                        <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                                        <p className="text-sm text-purple-900">{aiRecommendations.overallAssessment}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {aiRecommendations.recommendations?.slice(0, 3).map((rec: any, i: number) => (
+                                <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                        <Target className="w-4 h-4 text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{rec.skill || rec.suggestion || rec}</p>
+                                        {rec.suggestion && rec.skill && (
+                                            <p className="text-xs text-gray-600 mt-0.5">{rec.suggestion}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {aiRecommendations.focusArea && (
+                                <p className="text-xs text-purple-600 font-medium">Focus Area: {aiRecommendations.focusArea}</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI recommendations will appear as you attend more classes</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

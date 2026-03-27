@@ -5,17 +5,19 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
     LayoutDashboard, Building2, Users, Settings, BarChart3,
-    TrendingUp, DollarSign, Bell, LogOut, Menu, Package,
+    TrendingUp, DollarSign, LogOut, Menu, Package,
     Megaphone, MessageSquare, FileText
 } from 'lucide-react'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 
 export default function FranchiseOwnerLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const pathname = usePathname()
     const [user, setUser] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     useEffect(() => {
         const userData = localStorage.getItem('user')
@@ -35,32 +37,6 @@ export default function FranchiseOwnerLayout({ children }: { children: React.Rea
 
         setUser(parsedUser)
     }, [router])
-
-    const handleSaveAndLogout = () => {
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
 
     const navigation = [
         { name: 'Dashboard', href: '/admin/franchise/dashboard', icon: LayoutDashboard },
@@ -105,17 +81,14 @@ export default function FranchiseOwnerLayout({ children }: { children: React.Rea
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button id="admin-franchise-layout-btn" className="relative p-2 hover:bg-gray-100 rounded-lg">
-                            <Bell className="w-5 h-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                        <NotificationBell />
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
                                 <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                             <button id="btn-admin-franchise-2"
-                                onClick={() => setShowLogoutModal(true)}
+                                onClick={handleLogoutClick}
                                 className="p-2 hover:bg-red-50 rounded-lg text-red-600"
                             >
                                 <LogOut className="w-5 h-5" />
@@ -160,10 +133,11 @@ export default function FranchiseOwnerLayout({ children }: { children: React.Rea
             {/* Logout Modal */}
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={user.name?.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

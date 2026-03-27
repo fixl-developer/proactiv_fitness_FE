@@ -18,25 +18,6 @@ export default function StaffLoginPage() {
     const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
     const [formData, setFormData] = useState({ email: '', password: '' });
     const justLoggedIn = useRef(false);
-    const [savedSession, setSavedSession] = useState<any>(null);
-
-    // Check for saved session (15 minute expiry)
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('savedSession');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                const SAVED_SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-                if (parsed.savedAt && (Date.now() - parsed.savedAt) > SAVED_SESSION_TIMEOUT) {
-                    localStorage.removeItem('savedSession');
-                    setSavedSession(null);
-                    return;
-                }
-                const userData = JSON.parse(parsed.user);
-                setSavedSession(userData);
-            }
-        } catch { setSavedSession(null); }
-    }, []);
 
     useEffect(() => {
         if (isAuthenticated && justLoggedIn.current) {
@@ -139,70 +120,6 @@ export default function StaffLoginPage() {
                                             Go to Dashboard
                                         </button>
                                         <button id="btn-login-staff-2" type="button" onClick={() => logout()}
-                                            className="flex-1 bg-white text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors border border-gray-200">
-                                            Switch Account
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Saved Session - Continue to Dashboard */}
-                            {!isAuthenticated && savedSession && (
-                                <div className="mb-5 p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                            {(() => {
-                                                const fn = savedSession.firstName || '';
-                                                const ln = savedSession.lastName || '';
-                                                if (fn && ln) return (fn[0] + ln[0]).toUpperCase();
-                                                const name = savedSession.name || savedSession.email || 'U';
-                                                const parts = name.trim().split(' ');
-                                                return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : name[0].toUpperCase();
-                                            })()}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-900">{savedSession.name || `${savedSession.firstName || ''} ${savedSession.lastName || ''}`.trim() || 'Staff'}</p>
-                                            <p className="text-xs text-gray-500">{savedSession.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button id="btn-login-staff-3" type="button" onClick={() => {
-                                            try {
-                                                const saved = JSON.parse(localStorage.getItem('savedSession') || '{}');
-                                                localStorage.setItem('token', saved.token);
-                                                if (saved.refreshToken) localStorage.setItem('refreshToken', saved.refreshToken);
-                                                localStorage.setItem('user', saved.user);
-                                                const userData = JSON.parse(saved.user);
-                                                const roleName = typeof userData.role === 'object' ? userData.role?.name : userData.role;
-                                                localStorage.setItem('auth-storage', JSON.stringify({
-                                                    state: { user: { userId: userData.id || '', email: userData.email || '', firstName: userData.firstName || '', lastName: userData.lastName || '', role: roleName || '', permissions: [] }, accessToken: saved.token, refreshToken: saved.refreshToken || null, isAuthenticated: true }, version: 0
-                                                }));
-                                                localStorage.removeItem('savedSession');
-                                                localStorage.setItem('lastActivity', Date.now().toString());
-
-                                                // Map role to correct dashboard
-                                                const roleUpper = roleName?.toUpperCase() || '';
-                                                const roleDashboardMap: Record<string, string> = {
-                                                    'ADMIN': '/admin/dashboard',
-                                                    'REGIONAL_ADMIN': '/admin/regional/dashboard',
-                                                    'FRANCHISE_OWNER': '/admin/franchise/dashboard',
-                                                    'LOCATION_MANAGER': '/admin/location/dashboard',
-                                                    'MANAGER': '/manager/dashboard',
-                                                    'COACH': '/coach/dashboard',
-                                                    'PARTNER_ADMIN': '/partner/dashboard',
-                                                    'SUPPORT_STAFF': '/staff/dashboard',
-                                                };
-                                                // Try role mapping first, then demo accounts, then fallback
-                                                const dashboard = roleDashboardMap[roleUpper]
-                                                    || DEMO_ACCOUNTS.find(a => a.email === userData.email)?.dashboard
-                                                    || '/staff/dashboard';
-                                                window.location.href = dashboard;
-                                            } catch { window.location.href = '/staff/dashboard'; }
-                                        }}
-                                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors">
-                                            Continue to Dashboard
-                                        </button>
-                                        <button id="btn-login-staff-4" type="button" onClick={() => { localStorage.removeItem('savedSession'); setSavedSession(null); }}
                                             className="flex-1 bg-white text-gray-700 py-2 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors border border-gray-200">
                                             Switch Account
                                         </button>

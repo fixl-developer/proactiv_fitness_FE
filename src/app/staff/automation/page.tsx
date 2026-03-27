@@ -14,6 +14,9 @@ import {
     X,
     Edit2,
     Trash2,
+    Brain,
+    Wand2,
+    Loader2,
 } from 'lucide-react'
 
 interface AutomationRule {
@@ -57,6 +60,38 @@ export default function Automation() {
     const [showNewRuleModal, setShowNewRuleModal] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    const [aiGenerating, setAiGenerating] = useState(false)
+    const [aiDescription, setAiDescription] = useState('')
+    const [showAiModal, setShowAiModal] = useState(false)
+
+    const handleAiGenerateWorkflow = async () => {
+        if (!aiDescription.trim()) return
+        setAiGenerating(true)
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/automation/workflows/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token')}`,
+                },
+                body: JSON.stringify({ description: aiDescription }),
+            })
+            const data = await response.json()
+            if (data.success) {
+                showToast('AI workflow generated successfully!', 'success')
+                setShowAiModal(false)
+                setAiDescription('')
+                loadRules()
+            } else {
+                showToast(data.message || 'Failed to generate workflow', 'error')
+            }
+        } catch (err) {
+            showToast('AI workflow generation failed. Please try again.', 'error')
+        } finally {
+            setAiGenerating(false)
+        }
+    }
 
     const [formData, setFormData] = useState({
         name: '',
@@ -187,17 +222,27 @@ export default function Automation() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900">Automation Rules</h1>
-                    <button
-                        id="staff-automation-new-rule-btn"
-                        onClick={() => {
-                            resetForm()
-                            setShowNewRuleModal(true)
-                        }}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Rule
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            id="staff-automation-ai-generate-btn"
+                            onClick={() => setShowAiModal(true)}
+                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 transition-colors"
+                        >
+                            <Brain className="w-5 h-5" />
+                            AI Generate
+                        </button>
+                        <button
+                            id="staff-automation-new-rule-btn"
+                            onClick={() => {
+                                resetForm()
+                                setShowNewRuleModal(true)
+                            }}
+                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+                        >
+                            <Plus className="w-5 h-5" />
+                            New Rule
+                        </button>
+                    </div>
                 </div>
 
                 {/* Toast */}
@@ -559,6 +604,78 @@ export default function Automation() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* AI Generate Workflow Modal */}
+            {showAiModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+                        <div className="flex items-center justify-between p-6 border-b">
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <h2 className="text-xl font-bold text-gray-900">AI Workflow Generator</h2>
+                                <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                            </div>
+                            <button onClick={() => setShowAiModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-gray-600">
+                                Describe the workflow you want in plain English. AI will generate the trigger, conditions, and actions automatically.
+                            </p>
+                            <textarea
+                                value={aiDescription}
+                                onChange={(e) => setAiDescription(e.target.value)}
+                                placeholder="Example: When a student misses 3 classes in a row, send an email to their parent and create a follow-up task for the coach"
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none h-32"
+                            />
+                            <div className="bg-purple-50 rounded-lg p-3">
+                                <p className="text-xs text-purple-700 font-medium mb-2">Examples you can try:</p>
+                                <div className="space-y-1">
+                                    {[
+                                        'Send welcome email when new student registers',
+                                        'Escalate ticket if not responded within 2 hours',
+                                        'Notify manager when class capacity reaches 90%',
+                                    ].map((example, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => setAiDescription(example)}
+                                            className="block text-xs text-purple-600 hover:text-purple-800 hover:underline"
+                                        >
+                                            &quot;{example}&quot;
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 p-6 border-t">
+                            <button
+                                onClick={() => setShowAiModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAiGenerateWorkflow}
+                                disabled={aiGenerating || !aiDescription.trim()}
+                                className="px-6 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {aiGenerating ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Wand2 className="w-4 h-4" />
+                                        Generate Workflow
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

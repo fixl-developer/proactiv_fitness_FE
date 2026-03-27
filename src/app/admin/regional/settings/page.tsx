@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Settings, Bell, Lock, Mail, Phone, MapPin, Globe, Save,
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalSettings } from '@/services/regionalAdminService'
+import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
 export default function RegionalSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -22,6 +23,8 @@ export default function RegionalSettingsPage() {
     const [webhookResult, setWebhookResult] = useState<string | null>(null)
     const [passwordData, setPasswordData] = useState({ current: '', newPass: '', confirm: '' })
     const [passwordSuccess, setPasswordSuccess] = useState(false)
+
+    const originalSettingsRef = useRef<string>('')
 
     const [settings, setSettings] = useState<RegionalSettings>({
         regionName: 'Northeast Region',
@@ -53,13 +56,24 @@ export default function RegionalSettingsPage() {
             setError(null)
             const data = await RegionalAdminService.getSettings()
             setSettings(data)
+            originalSettingsRef.current = JSON.stringify(data)
         } catch (err: any) {
             console.error('Error fetching settings:', err)
             setError(err.message)
+            originalSettingsRef.current = JSON.stringify(settings)
         } finally {
             setIsLoading(false)
         }
     }
+
+    const isDirty = !isLoading && originalSettingsRef.current !== '' && JSON.stringify(settings) !== originalSettingsRef.current
+
+    const saveForLogout = useCallback(async () => {
+        await RegionalAdminService.updateSettings(settings)
+        originalSettingsRef.current = JSON.stringify(settings)
+    }, [settings])
+
+    useTrackUnsavedChanges('regional-settings', 'Regional Settings', isDirty, saveForLogout)
 
     const handleInputChange = (field: string, value: any) => {
         setSettings(prev => ({
@@ -73,6 +87,7 @@ export default function RegionalSettingsPage() {
         try {
             setError(null)
             await RegionalAdminService.updateSettings(settings)
+            originalSettingsRef.current = JSON.stringify(settings)
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 3000)
         } catch (err: any) {

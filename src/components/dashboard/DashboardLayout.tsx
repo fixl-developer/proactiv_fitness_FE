@@ -7,6 +7,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import LogoutModal from '@/components/ui/LogoutModal'
+import { useLogout } from '@/hooks/useLogout'
+import NotificationBell from '@/components/shared/NotificationBell'
 import {
     Home,
     Calendar,
@@ -14,7 +16,6 @@ import {
     Settings,
     BarChart3,
     CreditCard,
-    Bell,
     LogOut,
     User,
     BookOpen,
@@ -156,13 +157,15 @@ const roleMenuItems: Record<string, MenuItem[]> = {
         }
     ],
     parent: [
-        { icon: Home, label: 'Dashboard', href: '/book-now?section=dashboard' },
-        { icon: Calendar, label: 'My Bookings', href: '/book-now?section=bookings' },
-        { icon: BookOpen, label: 'Book Classes', href: '/book-now' },
-        { icon: Star, label: 'Assessments', href: '/book-assessment' },
-        { icon: Users, label: 'My Children', href: '/book-now?section=children' },
-        { icon: CreditCard, label: 'Payments', href: '/book-now?section=payments' },
-        { icon: Settings, label: 'Profile', href: '/book-now?section=profile' }
+        { icon: Home, label: 'Dashboard', href: '/parent/dashboard' },
+        { icon: Users, label: 'My Children', href: '/parent/children' },
+        { icon: Calendar, label: 'My Bookings', href: '/parent/bookings' },
+        { icon: BookOpen, label: 'Browse Classes', href: '/parent/browse-classes' },
+        { icon: Activity, label: 'Nutrition', href: '/parent/nutrition' },
+        { icon: CreditCard, label: 'Payments', href: '/parent/payments' },
+        { icon: Clock, label: 'Waitlist', href: '/parent/waitlist' },
+        { icon: Star, label: 'Makeup Credits', href: '/parent/makeup-credits' },
+        { icon: Settings, label: 'Profile', href: '/parent/profile' }
     ],
     coach: [
         { icon: Home, label: 'Dashboard', href: '/coach/dashboard' },
@@ -214,7 +217,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     const { logout, softLogout } = useAuth()
     const router = useRouter()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
-    const [showLogoutModal, setShowLogoutModal] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {
@@ -235,47 +238,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     }
 
     const isActiveLink = (href: string) => {
-        if (userRole === 'parent') {
-            const currentSection = getCurrentSection()
-            if (href.includes('?section=')) {
-                const linkSection = href.split('?section=')[1]
-                return currentSection === linkSection
-            } else if (href === '/book-now') {
-                return !currentSection || currentSection === ''
-            }
-        }
-        return pathname === href
-    }
-
-    const handleLogoutClick = () => {
-        setShowLogoutModal(true)
-    }
-
-    const handleSaveAndLogout = () => {
-        // Save session FIRST before clearing anything
-        const savedUser = localStorage.getItem('user')
-        const savedToken = localStorage.getItem('token')
-        const savedRefreshToken = localStorage.getItem('refreshToken')
-        if (savedUser && savedToken) {
-            localStorage.setItem('savedSession', JSON.stringify({ user: savedUser, token: savedToken, refreshToken: savedRefreshToken, savedAt: Date.now() }))
-        }
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
-    }
-
-    const handlePermanentLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        localStorage.removeItem('savedSession')
-        localStorage.removeItem('lastActivity')
-        localStorage.removeItem('auth-storage')
-        setShowLogoutModal(false)
-        window.location.href = '/login/staff'
+        return pathname === href || pathname.startsWith(href + '/')
     }
 
     return (
@@ -409,14 +372,6 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
-                            <Button id="dashboard-dashboard-layout-btn-2"
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 text-gray-600 hover:text-gray-900"
-                            >
-                                <Bell className="w-4 h-4 mr-2" />
-                                Alerts
-                            </Button>
                             <Button id="dashboard-dashboard-layout-btn-3"
                                 variant="outline"
                                 size="sm"
@@ -454,10 +409,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                         </div>
 
                         <div className="flex items-center space-x-3">
-                            <Button id="dashboard-dashboard-layout-btn-4" variant="outline" size="sm">
-                                <Bell className="w-4 h-4 mr-2" />
-                                Notifications
-                            </Button>
+                            <NotificationBell />
                             <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
@@ -480,10 +432,11 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
             <LogoutModal
                 isOpen={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
+                onClose={closeLogoutModal}
                 onSaveAndLogout={handleSaveAndLogout}
                 onPermanentLogout={handlePermanentLogout}
                 userName={userName?.split(' ')[0]}
+                unsavedPages={unsavedPages}
             />
         </div>
     )

@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    Zap, Activity, Target, BarChart3, PieChart
+    Zap, Activity, Target, BarChart3, PieChart,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { revenueIntelligenceService, smartSchedulerService } from '@/services/advancedAIServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -26,45 +30,65 @@ export default function FranchiseOwnerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const [churnRisk, scheduleOpt] = await Promise.allSettled([
+                revenueIntelligenceService.getChurnRisk('franchise-overview'),
+                smartSchedulerService.optimizeSchedule({ locationId: 'all' })
+            ])
+            const churn = churnRisk.status === 'fulfilled' ? churnRisk.value?.data || churnRisk.value : null
+            const schedule = scheduleOpt.status === 'fulfilled' ? scheduleOpt.value?.data || scheduleOpt.value : null
+            setAiInsights({ churnRisk: churn, scheduleOptimization: schedule })
+        } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
+        finally { setAiLoading(false) }
+    }
+
+    const loadData = useCallback(async () => {
+        try {
+            const response = await FranchiseOwnerService.getDashboardOverview()
+            // Backend returns { success: true, data: { ... } }
+            const data = response?.data ?? response ?? {}
+            setDashboardData({
+                franchiseName: data.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
+                totalLocations: data.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
+                totalStaff: data.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
+                totalStudents: data.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
+                totalRevenue: data.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
+                monthlyRevenue: data.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
+                revenueGrowth: data.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
+                occupancyRate: data.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
+                staffUtilization: data.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
+                customerSatisfaction: data.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
+                pendingApprovals: data.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
+                criticalAlerts: data.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
+                warnings: data.warnings ?? FALLBACK_FRANCHISE.warnings,
+                locationsChange: data.locationsChange ?? FALLBACK_FRANCHISE.locationsChange,
+                studentsChange: data.studentsChange ?? FALLBACK_FRANCHISE.studentsChange,
+                staffChange: data.staffChange ?? FALLBACK_FRANCHISE.staffChange,
+                revenueChange: data.revenueChange ?? FALLBACK_FRANCHISE.revenueChange,
+                revenueTrend: data.revenueTrend ?? FALLBACK_FRANCHISE.revenueTrend,
+                locationPerformance: data.locationPerformance ?? FALLBACK_FRANCHISE.locationPerformance,
+                pendingActions: data.pendingActions ?? FALLBACK_FRANCHISE.pendingActions,
+                alerts: data.alerts ?? FALLBACK_FRANCHISE.alerts,
+            })
+        } catch (error) {
+            console.error('Error loading franchise dashboard:', error)
+            setDashboardData(FALLBACK_FRANCHISE)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [timeRange])
+
+    useRealtimeRefresh(['location', 'staff', 'program', 'booking', 'payment'], loadData)
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const response = await FranchiseOwnerService.getDashboardOverview()
-                // Backend returns { success: true, data: { ... } }
-                const data = response?.data ?? response ?? {}
-                setDashboardData({
-                    franchiseName: data.franchiseName ?? FALLBACK_FRANCHISE.franchiseName,
-                    totalLocations: data.totalLocations ?? FALLBACK_FRANCHISE.totalLocations,
-                    totalStaff: data.totalStaff ?? FALLBACK_FRANCHISE.totalStaff,
-                    totalStudents: data.totalStudents ?? FALLBACK_FRANCHISE.totalStudents,
-                    totalRevenue: data.totalRevenue ?? FALLBACK_FRANCHISE.totalRevenue,
-                    monthlyRevenue: data.monthlyRevenue ?? FALLBACK_FRANCHISE.monthlyRevenue,
-                    revenueGrowth: data.revenueGrowth ?? FALLBACK_FRANCHISE.revenueGrowth,
-                    occupancyRate: data.occupancyRate ?? FALLBACK_FRANCHISE.occupancyRate,
-                    staffUtilization: data.staffUtilization ?? FALLBACK_FRANCHISE.staffUtilization,
-                    customerSatisfaction: data.customerSatisfaction ?? FALLBACK_FRANCHISE.customerSatisfaction,
-                    pendingApprovals: data.pendingApprovals ?? FALLBACK_FRANCHISE.pendingApprovals,
-                    criticalAlerts: data.criticalAlerts ?? FALLBACK_FRANCHISE.criticalAlerts,
-                    warnings: data.warnings ?? FALLBACK_FRANCHISE.warnings,
-                    locationsChange: data.locationsChange ?? FALLBACK_FRANCHISE.locationsChange,
-                    studentsChange: data.studentsChange ?? FALLBACK_FRANCHISE.studentsChange,
-                    staffChange: data.staffChange ?? FALLBACK_FRANCHISE.staffChange,
-                    revenueChange: data.revenueChange ?? FALLBACK_FRANCHISE.revenueChange,
-                    revenueTrend: data.revenueTrend ?? FALLBACK_FRANCHISE.revenueTrend,
-                    locationPerformance: data.locationPerformance ?? FALLBACK_FRANCHISE.locationPerformance,
-                    pendingActions: data.pendingActions ?? FALLBACK_FRANCHISE.pendingActions,
-                    alerts: data.alerts ?? FALLBACK_FRANCHISE.alerts,
-                })
-            } catch (error) {
-                console.error('Error loading franchise dashboard:', error)
-                setDashboardData(FALLBACK_FRANCHISE)
-            } finally {
-                setIsLoading(false)
-            }
-        }
         loadData()
-    }, [timeRange])
+        loadAiInsights()
+    }, [loadData])
 
     if (isLoading) {
         return (
@@ -377,6 +401,72 @@ export default function FranchiseOwnerDashboard() {
                                 <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
                                 <p>No pending actions</p>
                             </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* AI Insights */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Franchise Insights</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing franchise data...</p>
+                        </div>
+                    ) : aiInsights ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Churn Risk Analysis */}
+                            {(Array.isArray(aiInsights.churnRisk) ? aiInsights.churnRisk : aiInsights.churnRisk?.atRiskStudents || aiInsights.churnRisk?.risks || []).slice(0, 3).map((risk: any, i: number) => (
+                                <div key={`churn-${i}`} className="p-4 bg-gradient-to-br from-red-50 to-orange-100 rounded-lg border border-red-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                                        <span className="text-xs font-semibold text-red-700 uppercase">Churn Risk</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{risk.title || risk.studentName || risk.name || risk}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{risk.description || risk.reason || risk.riskLevel || ''}</p>
+                                </div>
+                            ))}
+                            {/* Schedule Optimization */}
+                            {(Array.isArray(aiInsights.scheduleOptimization) ? aiInsights.scheduleOptimization : aiInsights.scheduleOptimization?.suggestions || aiInsights.scheduleOptimization?.recommendations || []).slice(0, 3).map((sched: any, i: number) => (
+                                <div key={`sched-${i}`} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Clock className="w-4 h-4 text-blue-600" />
+                                        <span className="text-xs font-semibold text-blue-700 uppercase">Schedule Optimization</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{sched.title || sched.suggestion || sched.name || sched}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{sched.description || sched.impact || ''}</p>
+                                </div>
+                            ))}
+                            {/* Revenue Predictions */}
+                            {(aiInsights.churnRisk?.revenuePredictions || aiInsights.scheduleOptimization?.revenueImpact || []).slice(0, 2).map((pred: any, i: number) => (
+                                <div key={`pred-${i}`} className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Revenue Prediction</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{pred.title || pred.prediction || pred.name || pred}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{pred.description || pred.amount || ''}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI insights unavailable</p>
+                            <button onClick={loadAiInsights} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
                         </div>
                     )}
                 </CardContent>
