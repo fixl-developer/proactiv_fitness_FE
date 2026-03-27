@@ -2,18 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle, Edit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import BookingService from '@/services/modules/booking.service'
+import { apiClient } from '@/services/api/client'
 
 export default function BookingsPage() {
     const [bookings, setBookings] = useState<any[]>([])
     const [filteredBookings, setFilteredBookings] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [refreshing, setRefreshing] = useState(false)
     const [activeFilter, setActiveFilter] = useState<'all' | 'confirmed' | 'pending' | 'cancelled' | 'completed'>('all')
     const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -26,7 +28,6 @@ export default function BookingsPage() {
         program: '',
         classType: '',
         childName: '',
-        childAge: '',
         date: '',
         timeSlot: '',
         location: '',
@@ -37,12 +38,26 @@ export default function BookingsPage() {
     const bookingService = new BookingService()
 
     const loadBookings = useCallback(async () => {
+        setError(null)
         try {
-            const response = await bookingService.getBookings({})
-            const bookingsList = response?.data?.bookings || []
+            let bookingsList: any[] = []
+            try {
+                const response = await bookingService.getBookings({})
+                bookingsList = response?.data?.bookings || []
+            } catch (serviceErr) {
+                console.warn('BookingService failed, falling back to apiClient:', serviceErr)
+                try {
+                    const fallback = await apiClient.get<any>('/bookings')
+                    bookingsList = fallback?.data?.bookings || fallback?.bookings || []
+                } catch (fallbackErr) {
+                    console.error('Fallback apiClient also failed:', fallbackErr)
+                    throw fallbackErr
+                }
+            }
             setBookings(Array.isArray(bookingsList) ? bookingsList : [])
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error loading bookings:', err)
+            setError(err?.message || 'Failed to load bookings. Please try again.')
             setBookings([])
         } finally {
             setIsLoading(false)
@@ -63,6 +78,7 @@ export default function BookingsPage() {
 
     const handleRefresh = async () => {
         setRefreshing(true)
+        setIsLoading(false)
         await loadBookings()
         setRefreshing(false)
     }
@@ -79,8 +95,12 @@ export default function BookingsPage() {
         if (!cancelModal) return
         try {
             setCancellingId(cancelModal.id)
-            await bookingService.cancelBooking(cancelModal.id, cancelReason)
-            // Update local state
+            try {
+                await bookingService.cancelBooking(cancelModal.id, cancelReason)
+            } catch (serviceErr) {
+                console.warn('BookingService.cancelBooking failed, falling back to apiClient:', serviceErr)
+                await apiClient.put(`/bookings/${cancelModal.id}/cancel`, { reason: cancelReason })
+            }
             setBookings(prev => prev.map(b =>
                 b.id === cancelModal.id ? { ...b, status: 'cancelled' } : b
             ))
@@ -100,26 +120,31 @@ export default function BookingsPage() {
 
         setBookingSubmitting(true)
         try {
-            await bookingService.createBooking({
+            const payload = {
                 program: bookingForm.program,
                 classType: bookingForm.classType,
                 childName: bookingForm.childName,
-                childAge: bookingForm.childAge,
                 date: bookingForm.date,
                 timeSlot: bookingForm.timeSlot,
                 location: bookingForm.location,
                 notes: bookingForm.notes,
-            })
+            }
+            try {
+                await bookingService.createBooking(payload)
+            } catch (serviceErr) {
+                console.warn('BookingService.createBooking failed, falling back to apiClient:', serviceErr)
+                await apiClient.post('/bookings', payload)
+            }
             setBookingSuccess(true)
             await loadBookings()
             setTimeout(() => {
                 setShowBookingModal(false)
                 setBookingSuccess(false)
-                setBookingForm({ program: '', classType: '', childName: '', childAge: '', date: '', timeSlot: '', location: '', notes: '' })
+                setBookingForm({ program: '', classType: '', childName: '', date: '', timeSlot: '', location: '', notes: '' })
             }, 2000)
         } catch (err) {
             console.error('Error creating booking:', err)
-            // Still add locally as pending
+            // Still add locally as pending so user sees feedback
             const newBooking = {
                 id: `local-${Date.now()}`,
                 className: `${bookingForm.program} - ${bookingForm.classType || 'Class'}`,
@@ -136,11 +161,27 @@ export default function BookingsPage() {
             setTimeout(() => {
                 setShowBookingModal(false)
                 setBookingSuccess(false)
-                setBookingForm({ program: '', classType: '', childName: '', childAge: '', date: '', timeSlot: '', location: '', notes: '' })
+                setBookingForm({ program: '', classType: '', childName: '', date: '', timeSlot: '', location: '', notes: '' })
             }, 2000)
         } finally {
             setBookingSubmitting(false)
         }
+    }
+
+    const handleViewDetails = (booking: any) => {
+        const details = [
+            `Booking ID: ${booking.bookingId || booking.id || 'N/A'}`,
+            `Class: ${booking.className || 'N/A'}`,
+            `Date: ${booking.classDate || booking.date || 'TBD'}`,
+            `Time: ${booking.classTime || booking.time || 'TBD'}`,
+            `Location: ${booking.locationName || booking.location || 'TBD'}`,
+            `Status: ${booking.status || 'N/A'}`,
+            `Payment: ${booking.paymentStatus || 'N/A'}`,
+            `Amount: HK$${booking.amount || 0}`,
+            booking.notes ? `Notes: ${booking.notes}` : null,
+            booking.coachName ? `Coach: ${booking.coachName}` : null,
+        ].filter(Boolean).join('\n')
+        alert(details)
     }
 
     const getStatusColor = (status: string) => {
@@ -178,25 +219,57 @@ export default function BookingsPage() {
         totalAmount: bookings.reduce((sum, b) => sum + (b.amount || 0), 0)
     }
 
+    // Loading state
     if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-gray-200 rounded w-1/3"></div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>
+                        ))}
                     </div>
-                    {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>)}
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+                    ))}
                 </div>
             </div>
         )
     }
 
+    // Error state with retry
+    if (error && bookings.length === 0) {
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
+                        <p className="text-gray-600 mt-2">Manage your class bookings</p>
+                    </div>
+                </div>
+                <Card>
+                    <CardContent className="p-12 text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Bookings</h3>
+                        <p className="text-gray-500 mb-6 max-w-md mx-auto">{error}</p>
+                        <Button onClick={() => { setIsLoading(true); loadBookings() }}>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
     const statCards = [
-        { title: 'Total Bookings', value: stats.total, icon: Calendar, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: 'all time' },
-        { title: 'Confirmed', value: stats.confirmed, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: 'active' },
-        { title: 'Pending', value: stats.pending, icon: Clock, gradient: 'from-amber-500 to-yellow-600', bgGradient: 'from-amber-50 to-yellow-100', change: 'awaiting' },
-        { title: 'Total Amount', value: `HK$${stats.totalAmount.toLocaleString()}`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: 'spent' }
+        { title: 'Total Bookings', value: stats.total, icon: Calendar, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', badge: 'all time', badgeColor: 'text-blue-600 bg-blue-100' },
+        { title: 'Confirmed', value: stats.confirmed, icon: CheckCircle, gradient: 'from-green-500 to-green-600', bgGradient: 'from-green-50 to-green-100', badge: 'active', badgeColor: 'text-green-600 bg-green-100' },
+        { title: 'Pending', value: stats.pending, icon: Clock, gradient: 'from-amber-500 to-orange-600', bgGradient: 'from-amber-50 to-orange-100', badge: 'awaiting', badgeColor: 'text-orange-600 bg-orange-100' },
+        { title: 'Total Spent', value: `HK$${stats.totalAmount.toLocaleString()}`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', badge: 'spent', badgeColor: 'text-purple-600 bg-purple-100' }
     ]
 
     return (
@@ -224,19 +297,17 @@ export default function BookingsPage() {
                 {statCards.map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
                         <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
-                            <CardContent className="p-5">
+                            <CardContent className="p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
                                         <metric.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <span className="text-xs font-medium text-gray-600 bg-white/60 px-2 py-1 rounded-full">
-                                        {metric.change}
+                                    <span className={`text-xs font-medium ${metric.badgeColor} px-2 py-1 rounded-full`}>
+                                        {metric.badge}
                                     </span>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                                </div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -343,14 +414,15 @@ export default function BookingsPage() {
                                     </div>
                                     <div className="flex gap-2">
                                         <Button id={`user-bookings-view-${booking.id}-btn`} size="sm" variant="outline" className="flex-1"
-                                            onClick={() => router.push(`/user/bookings?view=${booking.id}`)}>
+                                            onClick={() => handleViewDetails(booking)}>
                                             <Eye className="w-4 h-4 mr-2" />
                                             View Details
                                         </Button>
                                         {booking.status === 'confirmed' && (
                                             <>
                                                 <Button id={`user-bookings-modify-${booking.id}-btn`} size="sm" variant="outline"
-                                                    onClick={() => router.push(`/user/bookings?modify=${booking.id}`)}>
+                                                    onClick={() => alert('Feature coming soon')}>
+                                                    <Edit className="w-4 h-4 mr-2" />
                                                     Modify
                                                 </Button>
                                                 <Button id={`user-bookings-cancel-confirmed-${booking.id}-btn`} size="sm" variant="outline"
@@ -439,30 +511,15 @@ export default function BookingsPage() {
                                             <option value="Group">Group Class</option>
                                         </select>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Child Name</label>
-                                            <input
-                                                type="text"
-                                                value={bookingForm.childName}
-                                                onChange={e => setBookingForm(prev => ({ ...prev, childName: e.target.value }))}
-                                                placeholder="Child's name"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Child Age</label>
-                                            <select
-                                                value={bookingForm.childAge}
-                                                onChange={e => setBookingForm(prev => ({ ...prev, childAge: e.target.value }))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                            >
-                                                <option value="">Select age</option>
-                                                {Array.from({ length: 14 }, (_, i) => i + 2).map(age => (
-                                                    <option key={age} value={String(age)}>{age} years</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Child Name</label>
+                                        <input
+                                            type="text"
+                                            value={bookingForm.childName}
+                                            onChange={e => setBookingForm(prev => ({ ...prev, childName: e.target.value }))}
+                                            placeholder="Child's name"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>

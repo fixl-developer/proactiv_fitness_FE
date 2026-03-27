@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, TrendingUp, Medal, Brain, Sparkles, Loader2 } from 'lucide-react'
+import { Award, Trophy, Star, Target, Zap, Lock, RefreshCw, TrendingUp, Medal, Brain, Sparkles, Loader2, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -19,10 +19,13 @@ export default function AchievementsPage() {
     const [stats, setStats] = useState<any>(null)
     const [leaderboard, setLeaderboard] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [refreshing, setRefreshing] = useState(false)
     const [activeFilter, setActiveFilter] = useState<'all' | 'unlocked' | 'locked'>('all')
     const [categoryFilter, setCategoryFilter] = useState<string>('all')
     const [claimingId, setClaimingId] = useState<string | null>(null)
+    const [claimSuccess, setClaimSuccess] = useState<string | null>(null)
+    const [claimError, setClaimError] = useState<string | null>(null)
     const [aiTips, setAiTips] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
     const [aiChallenges, setAiChallenges] = useState<any>(null)
@@ -48,9 +51,15 @@ export default function AchievementsPage() {
     const loadAiChallenges = useCallback(async () => {
         try {
             setAiChallengesLoading(true)
+            const userId = user?.id || (user as any)?._id || ''
+            if (!userId) {
+                setAiChallenges(null)
+                setStreakRisk(null)
+                return
+            }
             const [challengesData, streakData] = await Promise.allSettled([
-                gamificationEngineService.getChallenges(user?.id || ''),
-                gamificationEngineService.getStreakRisk(user?.id || '')
+                gamificationEngineService.getChallenges(userId),
+                gamificationEngineService.getStreakRisk(userId)
             ])
             setAiChallenges(challengesData.status === 'fulfilled' ? challengesData.value : null)
             setStreakRisk(streakData.status === 'fulfilled' ? streakData.value : null)
@@ -65,6 +74,7 @@ export default function AchievementsPage() {
 
     const loadAchievements = useCallback(async () => {
         try {
+            setError(null)
             const [achievementsData, statsData, leaderboardData] = await Promise.allSettled([
                 achievementsService.getAchievements(),
                 achievementsService.getStats(),
@@ -80,6 +90,7 @@ export default function AchievementsPage() {
             setLeaderboard(Array.isArray(lbResult) ? lbResult.slice(0, 5) : [])
         } catch (err) {
             console.error('Error loading achievements:', err)
+            setError('Failed to load achievements. Please try again.')
             setAchievements([])
             setStats(null)
             setLeaderboard([])
@@ -102,21 +113,45 @@ export default function AchievementsPage() {
         filterAchievements()
     }, [achievements, activeFilter, categoryFilter])
 
+    // Auto-dismiss alerts
+    useEffect(() => {
+        if (claimSuccess) {
+            const t = setTimeout(() => setClaimSuccess(null), 4000)
+            return () => clearTimeout(t)
+        }
+    }, [claimSuccess])
+
+    useEffect(() => {
+        if (claimError) {
+            const t = setTimeout(() => setClaimError(null), 5000)
+            return () => clearTimeout(t)
+        }
+    }, [claimError])
+
     const handleRefresh = async () => {
         setRefreshing(true)
         await loadAchievements()
+        loadAiTips()
+        loadAiChallenges()
         setRefreshing(false)
     }
 
     const handleClaimReward = async (achievementId: string) => {
         try {
             setClaimingId(achievementId)
-            await achievementsService.unlockAchievement(achievementId)
-            // Refresh after claim
+            setClaimError(null)
+            setClaimSuccess(null)
+            try {
+                await achievementsService.unlockAchievement(achievementId)
+            } catch {
+                // Fallback to direct API call
+                await apiClient.post(`/user/achievements/${achievementId}/claim`)
+            }
+            setClaimSuccess('Reward claimed successfully!')
             await loadAchievements()
         } catch (err) {
             console.error('Error claiming reward:', err)
-            alert('Failed to claim reward. Please try again.')
+            setClaimError('Failed to claim reward. Please try again.')
         } finally {
             setClaimingId(null)
         }
@@ -157,24 +192,77 @@ export default function AchievementsPage() {
         { key: 'special', label: 'Special', count: achievements.filter(a => a.category === 'special').length }
     ]
 
+    // Loading skeleton
     if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+                            <div className="h-4 bg-gray-200 rounded w-80"></div>
+                        </div>
+                        <div className="h-9 bg-gray-200 rounded w-24"></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                    <div className="h-48 bg-gray-200 rounded-lg"></div>
+                    <div className="h-16 bg-gray-200 rounded-lg"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-40 bg-gray-200 rounded-lg"></div>
+                        ))}
                     </div>
                 </div>
             </div>
         )
     }
 
-    const statCards = [
-        { title: 'Total Points', value: stats?.totalPoints || 0, icon: Trophy, gradient: 'from-amber-500 to-yellow-600', bgGradient: 'from-amber-50 to-yellow-100', change: 'earned' },
-        { title: 'Unlocked', value: `${stats?.unlockedAchievements || 0}/${stats?.totalAchievements || 0}`, icon: Award, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: 'achievements' },
-        { title: 'Badges', value: stats?.badges || 0, icon: Star, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: 'collected' },
-        { title: 'Completion', value: `${Math.round(((stats?.unlockedAchievements || 0) / (stats?.totalAchievements || 1)) * 100)}%`, icon: Target, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: 'progress' }
+    // Error state with retry
+    if (error && achievements.length === 0) {
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">My Achievements</h1>
+                        <p className="text-gray-600 mt-2">Track your accomplishments and earn rewards</p>
+                    </div>
+                </div>
+                <Card className="border-red-200">
+                    <CardContent className="p-12 text-center">
+                        <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
+                        <p className="text-gray-500 mb-6">{error}</p>
+                        <Button onClick={handleRefresh} disabled={refreshing}>
+                            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                            Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    const totalPoints = stats?.totalPoints || 0
+    const unlockedCount = stats?.unlockedAchievements || 0
+    const totalCount = stats?.totalAchievements || achievements.length || 0
+    const badgesCount = stats?.badges || 0
+    const completionPct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0
+
+    const fallbackTips = [
+        'Stay consistent with your training schedule to unlock more achievements.',
+        'Try new class types to earn special category badges.',
+        'Check in regularly - attendance streaks unlock bonus rewards!'
+    ]
+
+    const fallbackChallenges = [
+        { title: 'Weekly Warrior', description: 'Attend 3 classes this week to earn bonus points.', difficulty: 'Easy', xpReward: 50 },
+        { title: 'Skill Explorer', description: 'Try a class in a new category you haven\'t attended before.', difficulty: 'Medium', xpReward: 100 },
+        { title: 'Consistency Champion', description: 'Maintain a 7-day check-in streak.', difficulty: 'Hard', xpReward: 200 },
+        { title: 'Social Star', description: 'Attend a group class with 5+ participants.', difficulty: 'Easy', xpReward: 75 }
     ]
 
     return (
@@ -191,32 +279,89 @@ export default function AchievementsPage() {
                 </Button>
             </div>
 
+            {/* Success/Error Alerts */}
+            {claimSuccess && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <Star className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <p className="text-sm font-medium text-green-800">{claimSuccess}</p>
+                </div>
+            )}
+            {claimError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <p className="text-sm font-medium text-red-800">{claimError}</p>
+                </div>
+            )}
+
             {/* Colorful Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((metric, idx) => (
-                    <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
-                            <CardContent className="p-5">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
-                                        <metric.icon className="w-5 h-5 text-white" />
-                                    </div>
-                                    <span className="text-xs font-medium text-gray-600 bg-white/60 px-2 py-1 rounded-full">
-                                        {metric.change}
-                                    </span>
+                {/* Blue - Total Points */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
+                                    <Trophy className="w-5 h-5 text-white" />
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">earned</span>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Total Points</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalPoints}</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Green - Unlocked */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-green-50 to-green-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-green-500 to-green-600 p-2.5 rounded-lg shadow-md">
+                                    <Award className="w-5 h-5 text-white" />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">achievements</span>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Unlocked</p>
+                            <p className="text-2xl font-bold text-gray-900">{unlockedCount}/{totalCount}</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Purple - Badges */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
+                                    <Star className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">collected</span>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Badges</p>
+                            <p className="text-2xl font-bold text-gray-900">{badgesCount}</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Orange - Completion % */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-orange-50 to-orange-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md">
+                                    <Target className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">progress</span>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Completion</p>
+                            <p className="text-2xl font-bold text-gray-900">{completionPct}%</p>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </div>
 
             {/* AI Achievement Tips */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Brain className="w-5 h-5 text-purple-600" />
                     <h3 className="text-lg font-semibold text-gray-900">AI Achievement Tips</h3>
@@ -227,7 +372,7 @@ export default function AchievementsPage() {
                         <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                         <p className="text-sm text-gray-500">Loading AI suggestions...</p>
                     </div>
-                ) : aiTips ? (
+                ) : aiTips && (aiTips.recommendations || aiTips.insights || []).length > 0 ? (
                     <div className="space-y-2">
                         {(aiTips.recommendations || aiTips.insights || []).slice(0, 3).map((item: any, i: number) => (
                             <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
@@ -237,7 +382,14 @@ export default function AchievementsPage() {
                         ))}
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">AI suggestions unavailable</p>
+                    <div className="space-y-2">
+                        {fallbackTips.map((tip, i) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-gray-700">{tip}</p>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
 
@@ -269,45 +421,50 @@ export default function AchievementsPage() {
                             <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                             <p className="text-sm text-gray-500">Loading personalized challenges...</p>
                         </div>
-                    ) : aiChallenges ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {(aiChallenges.challenges || aiChallenges.data || []).slice(0, 4).map((challenge: any, i: number) => {
-                                const difficultyColors: Record<string, string> = {
-                                    easy: 'bg-green-100 text-green-700',
-                                    medium: 'bg-yellow-100 text-yellow-700',
-                                    hard: 'bg-red-100 text-red-700',
-                                }
-                                return (
-                                    <div key={i} className="p-4 bg-white rounded-lg border border-purple-100 shadow-sm">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <h4 className="text-sm font-semibold text-gray-900">{challenge.title || challenge.name || `Challenge ${i + 1}`}</h4>
-                                            {challenge.difficulty && (
-                                                <Badge className={difficultyColors[challenge.difficulty?.toLowerCase()] || 'bg-gray-100 text-gray-700'}>
-                                                    {challenge.difficulty}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        <p className="text-xs text-gray-600 mb-3">{challenge.description || challenge.details || ''}</p>
-                                        <div className="flex items-center justify-between">
-                                            {challenge.xpReward != null && (
-                                                <span className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full flex items-center gap-1">
-                                                    <Sparkles className="w-3 h-3" /> {challenge.xpReward} XP
-                                                </span>
-                                            )}
+                    ) : (() => {
+                        const challengeList = aiChallenges
+                            ? (aiChallenges.challenges || aiChallenges.data || [])
+                            : []
+                        const displayChallenges = challengeList.length > 0 ? challengeList.slice(0, 4) : fallbackChallenges
+
+                        return (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {displayChallenges.map((challenge: any, i: number) => {
+                                    const difficultyColors: Record<string, string> = {
+                                        easy: 'bg-green-100 text-green-700',
+                                        medium: 'bg-yellow-100 text-yellow-700',
+                                        hard: 'bg-red-100 text-red-700',
+                                    }
+                                    return (
+                                        <div key={i} className="p-4 bg-white rounded-lg border border-purple-100 shadow-sm">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <h4 className="text-sm font-semibold text-gray-900">{challenge.title || challenge.name || `Challenge ${i + 1}`}</h4>
+                                                {challenge.difficulty && (
+                                                    <Badge className={difficultyColors[challenge.difficulty?.toLowerCase()] || 'bg-gray-100 text-gray-700'}>
+                                                        {challenge.difficulty}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-600 mb-3">{challenge.description || challenge.details || ''}</p>
+                                            <div className="flex items-center justify-between">
+                                                {challenge.xpReward != null && (
+                                                    <span className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full flex items-center gap-1">
+                                                        <Sparkles className="w-3 h-3" /> {challenge.xpReward} XP
+                                                    </span>
+                                                )}
+                                                {challenge.progress != null && (
+                                                    <span className="text-xs text-gray-500">{challenge.progress}% done</span>
+                                                )}
+                                            </div>
                                             {challenge.progress != null && (
-                                                <span className="text-xs text-gray-500">{challenge.progress}% done</span>
+                                                <Progress value={challenge.progress} className="mt-2 h-1.5" />
                                             )}
                                         </div>
-                                        {challenge.progress != null && (
-                                            <Progress value={challenge.progress} className="mt-2 h-1.5" />
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500 text-center py-4">AI challenges unavailable</p>
-                    )}
+                                    )
+                                })}
+                            </div>
+                        )
+                    })()}
                 </CardContent>
             </Card>
 
@@ -363,6 +520,11 @@ export default function AchievementsPage() {
                         </p>
                         {achievements.length === 0 && (
                             <Button onClick={() => router.push('/user/my-classes')}>Browse Classes</Button>
+                        )}
+                        {achievements.length > 0 && (
+                            <Button variant="outline" onClick={() => { setActiveFilter('all'); setCategoryFilter('all') }}>
+                                Clear Filters
+                            </Button>
                         )}
                     </CardContent>
                 </Card>
@@ -463,18 +625,18 @@ export default function AchievementsPage() {
                 </div>
             )}
 
-            {/* Leaderboard */}
-            {leaderboard.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-purple-600" />
-                                <CardTitle>Leaderboard</CardTitle>
-                            </div>
+            {/* Leaderboard - always shown */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-purple-600" />
+                            <CardTitle>Leaderboard</CardTitle>
                         </div>
-                    </CardHeader>
-                    <CardContent>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {leaderboard.length > 0 ? (
                         <div className="space-y-3">
                             {leaderboard.map((entry, index) => (
                                 <motion.div
@@ -514,9 +676,15 @@ export default function AchievementsPage() {
                                 </motion.div>
                             ))}
                         </div>
-                    </CardContent>
-                </Card>
-            )}
+                    ) : (
+                        <div className="text-center py-8">
+                            <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm font-medium text-gray-900 mb-1">No leaderboard data yet</p>
+                            <p className="text-xs text-gray-500">Keep earning achievements to see rankings here!</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }

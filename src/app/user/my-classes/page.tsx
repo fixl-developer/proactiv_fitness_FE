@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     Calendar, Clock, MapPin, User, Search, Eye, X, RefreshCw, Plus,
     CheckCircle, XCircle, Star, MessageSquare, ClipboardCheck, Dumbbell,
-    ChevronRight, ChevronLeft, Filter, Users, ArrowLeft, Sparkles, Brain, Loader2
+    ChevronRight, ChevronLeft, Filter, Users, ArrowLeft, Sparkles, Brain, Loader2,
+    AlertTriangle, Zap
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,13 +15,22 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import UserClassesService from '@/services/modules/user-classes.service'
 import aiCoachService from '@/services/aiCoachService'
-import { smartSchedulerService, digitalTwinService } from '@/services/advancedAIServices'
-import { eventData } from '@/data/eventData'
+import { apiClient } from '@/services/api/client'
+
+// Safe eventData import - fallback to empty object if module is missing
+let eventData: Record<string, any> = {}
+try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    eventData = require('@/data/eventData').eventData || {}
+} catch {
+    eventData = {}
+}
 
 export default function MyClassesPage() {
     const [classes, setClasses] = useState<any[]>([])
     const [filteredClasses, setFilteredClasses] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
     const [refreshing, setRefreshing] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
     const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all')
@@ -42,18 +52,25 @@ export default function MyClassesPage() {
     const [bookingSuccess, setBookingSuccess] = useState(false)
     const [aiRecommendations, setAiRecommendations] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
-    const [aiClassData, setAiClassData] = useState<any>(null)
-    const [aiClassLoading, setAiClassLoading] = useState(false)
+    const [selectedClassDetail, setSelectedClassDetail] = useState<any>(null)
+    const [skillGaps, setSkillGaps] = useState<any>(null)
+    const [learningPath, setLearningPath] = useState<any>(null)
+    const [aiInsightsLoading, setAiInsightsLoading] = useState(false)
+    const [learningPathLoading, setLearningPathLoading] = useState(false)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
     const classesService = new UserClassesService()
 
-    // Get available events from hardcoded data
+    // Get available events from hardcoded data (safe - eventData defaults to {})
     const availableEvents = useMemo(() => {
-        return Object.entries(eventData).map(([id, data]) => ({
-            id,
-            ...data
-        }))
+        try {
+            return Object.entries(eventData).map(([id, data]) => ({
+                id,
+                ...(typeof data === 'object' && data !== null ? data : {}),
+            }))
+        } catch {
+            return []
+        }
     }, [])
 
     const filteredEvents = useMemo(() => {
@@ -88,26 +105,43 @@ export default function MyClassesPage() {
         }
     }, [user?.id])
 
-    const loadAiClassData = useCallback(async () => {
+    const loadSkillGaps = useCallback(async () => {
         try {
-            setAiClassLoading(true)
-            const data = await digitalTwinService.getLearningPath(user?.id || '')
-            setAiClassData(data)
+            setAiInsightsLoading(true)
+            const userId = user?.id || ''
+            const response = await apiClient.get(`/student-digital-twin/skill-gaps/${userId}`)
+            setSkillGaps(response)
         } catch (error) {
-            console.error('Error loading AI class data:', error)
-            setAiClassData(null)
+            console.error('Skill gap analysis unavailable:', error)
+            setSkillGaps(null)
         } finally {
-            setAiClassLoading(false)
+            setAiInsightsLoading(false)
         }
     }, [user?.id])
 
+    const handleGenerateLearningPath = async () => {
+        try {
+            setLearningPathLoading(true)
+            const userId = user?.id || ''
+            const response = await apiClient.post('/student-digital-twin/learning-path', { studentId: userId })
+            setLearningPath(response)
+        } catch (error) {
+            console.error('Learning path generation unavailable:', error)
+            setLearningPath(null)
+        } finally {
+            setLearningPathLoading(false)
+        }
+    }
+
     const loadClasses = useCallback(async () => {
         try {
+            setLoadError(null)
             const data = await classesService.getClasses()
             setClasses(Array.isArray(data) ? data : [])
         } catch (err) {
             console.error('Error loading classes:', err)
             setClasses([])
+            setLoadError('Failed to load classes. Please try again.')
         } finally {
             setIsLoading(false)
         }
@@ -120,8 +154,8 @@ export default function MyClassesPage() {
         }
         loadClasses()
         loadAiRecommendations()
-        loadAiClassData()
-    }, [isAuthenticated, router, loadClasses, loadAiRecommendations, loadAiClassData])
+        loadSkillGaps()
+    }, [isAuthenticated, router, loadClasses, loadAiRecommendations, loadSkillGaps])
 
     useEffect(() => {
         filterClasses()
@@ -129,7 +163,9 @@ export default function MyClassesPage() {
 
     const handleRefresh = async () => {
         setRefreshing(true)
+        setLoadError(null)
         await loadClasses()
+        loadAiRecommendations()
         setRefreshing(false)
     }
 
@@ -156,7 +192,6 @@ export default function MyClassesPage() {
         try {
             setCancellingId(classId)
             await classesService.cancelClass(classId)
-            // Update local state
             setClasses(prev => prev.map(c =>
                 c.id === classId ? { ...c, status: 'cancelled' } : c
             ))
@@ -176,7 +211,6 @@ export default function MyClassesPage() {
                 rating: feedbackRating,
                 comment: feedbackComment
             })
-            // Update local state
             setClasses(prev => prev.map(c =>
                 c.id === feedbackModal.classId
                     ? { ...c, feedback: { rating: feedbackRating, comment: feedbackComment } }
@@ -191,6 +225,10 @@ export default function MyClassesPage() {
         } finally {
             setSubmittingFeedback(false)
         }
+    }
+
+    const handleViewDetails = (cls: any) => {
+        setSelectedClassDetail(selectedClassDetail?.id === cls.id ? null : cls)
     }
 
     const getStatusColor = (status: string) => {
@@ -210,7 +248,6 @@ export default function MyClassesPage() {
         { key: 'cancelled', label: 'Cancelled', count: classes.filter(c => c.status === 'cancelled').length }
     ]
 
-    // Stats for colorful cards
     const stats = {
         total: classes.length,
         upcoming: classes.filter(c => c.status === 'upcoming').length,
@@ -218,16 +255,47 @@ export default function MyClassesPage() {
         cancelled: classes.filter(c => c.status === 'cancelled').length
     }
 
+    // Loading skeleton
     if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-gray-200 rounded w-1/3"></div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>
+                        ))}
                     </div>
-                    {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>)}
+                    <div className="h-16 bg-gray-200 rounded-lg"></div>
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
+                    ))}
                 </div>
+            </div>
+        )
+    }
+
+    // Error state with retry
+    if (loadError && classes.length === 0) {
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
+                        <p className="text-gray-600 mt-2">View and manage your class schedule</p>
+                    </div>
+                </div>
+                <Card>
+                    <CardContent className="p-12 text-center">
+                        <AlertTriangle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Classes</h3>
+                        <p className="text-gray-500 mb-6">{loadError}</p>
+                        <Button onClick={handleRefresh} disabled={refreshing}>
+                            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                            {refreshing ? 'Retrying...' : 'Try Again'}
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         )
     }
@@ -252,46 +320,38 @@ export default function MyClassesPage() {
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button id="user-my-classes-btn" size="sm" onClick={() => {
-                        setShowBookingModal(true)
-                        setBookingStep('browse')
-                        setBookingType('all')
-                        setBookingSearch('')
-                        setSelectedEvent(null)
-                        setSelectedSession(null)
-                        setBookingSuccess(false)
-                    }}>
+                    <Button id="user-my-classes-btn" size="sm" onClick={() => router.push('/user/bookings')}>
                         <Plus className="w-4 h-4 mr-2" />
-                        Book Class
+                        Book New Class
                     </Button>
                 </div>
             </div>
 
-            {/* AI Class Recommendations */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Brain className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">AI Class Recommendations</h3>
-                    <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+            {/* AI Class Recommendations - hidden gracefully on failure */}
+            {(aiLoading || aiRecommendations) && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Brain className="w-5 h-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">AI Class Recommendations</h3>
+                        <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                    </div>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Loading AI suggestions...</p>
+                        </div>
+                    ) : aiRecommendations ? (
+                        <div className="space-y-2">
+                            {(aiRecommendations.recommendations || aiRecommendations.insights || []).slice(0, 3).map((item: any, i: number) => (
+                                <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                    <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                    <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
-                {aiLoading ? (
-                    <div className="flex items-center justify-center py-6 gap-2">
-                        <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                        <p className="text-sm text-gray-500">Loading AI suggestions...</p>
-                    </div>
-                ) : aiRecommendations ? (
-                    <div className="space-y-2">
-                        {(aiRecommendations.recommendations || aiRecommendations.insights || []).slice(0, 3).map((item: any, i: number) => (
-                            <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
-                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">AI suggestions unavailable</p>
-                )}
-            </div>
+            )}
 
             {/* Colorful Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -365,21 +425,17 @@ export default function MyClassesPage() {
                         <CardContent className="p-12 text-center">
                             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                {searchQuery ? 'No classes found' : 'No classes yet'}
+                                {searchQuery ? 'No classes found' : activeFilter !== 'all' ? `No ${activeFilter} classes` : 'No classes yet'}
                             </h3>
                             <p className="text-gray-500 mb-4">
-                                {searchQuery ? 'Try adjusting your search or filters' : 'Book your first class to get started!'}
+                                {searchQuery
+                                    ? 'Try adjusting your search or filters'
+                                    : activeFilter !== 'all'
+                                        ? 'Try switching to a different filter'
+                                        : 'Book your first class to get started!'}
                             </p>
-                            {!searchQuery && (
-                                <Button id="user-my-classes-browse-empty-btn" onClick={() => {
-                                    setShowBookingModal(true)
-                                    setBookingStep('browse')
-                                    setBookingType('all')
-                                    setBookingSearch('')
-                                    setSelectedEvent(null)
-                                    setSelectedSession(null)
-                                    setBookingSuccess(false)
-                                }}>
+                            {!searchQuery && activeFilter === 'all' && (
+                                <Button id="user-my-classes-browse-empty-btn" onClick={() => router.push('/user/bookings')}>
                                     <Plus className="w-4 h-4 mr-2" />
                                     Browse Classes
                                 </Button>
@@ -394,7 +450,7 @@ export default function MyClassesPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                         >
-                            <Card className="hover:shadow-lg transition-all cursor-pointer group">
+                            <Card className="hover:shadow-lg transition-all group">
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -421,31 +477,87 @@ export default function MyClassesPage() {
                                             <User className="w-4 h-4 text-gray-500" />
                                             <div>
                                                 <p className="text-xs text-gray-500">Coach</p>
-                                                <p className="text-sm font-medium text-gray-900">{cls.coach}</p>
+                                                <p className="text-sm font-medium text-gray-900">{cls.coach || 'TBD'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Calendar className="w-4 h-4 text-gray-500" />
                                             <div>
                                                 <p className="text-xs text-gray-500">Date</p>
-                                                <p className="text-sm font-medium text-gray-900">{cls.schedule?.date}</p>
+                                                <p className="text-sm font-medium text-gray-900">{cls.schedule?.date || 'TBD'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Clock className="w-4 h-4 text-gray-500" />
                                             <div>
                                                 <p className="text-xs text-gray-500">Time</p>
-                                                <p className="text-sm font-medium text-gray-900">{cls.schedule?.time}</p>
+                                                <p className="text-sm font-medium text-gray-900">{cls.schedule?.time || 'TBD'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <MapPin className="w-4 h-4 text-gray-500" />
                                             <div>
                                                 <p className="text-xs text-gray-500">Location</p>
-                                                <p className="text-sm font-medium text-gray-900">{cls.location}</p>
+                                                <p className="text-sm font-medium text-gray-900">{cls.location || 'TBD'}</p>
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Expanded detail section */}
+                                    <AnimatePresence>
+                                        {selectedClassDetail?.id === cls.id && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden"
+                                            >
+                                                <h4 className="text-sm font-semibold text-gray-800 mb-2">Class Details</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                    {cls.description && (
+                                                        <div className="md:col-span-2">
+                                                            <span className="text-gray-500">Description:</span>
+                                                            <p className="text-gray-700 mt-1">{cls.description}</p>
+                                                        </div>
+                                                    )}
+                                                    {cls.type && (
+                                                        <div>
+                                                            <span className="text-gray-500">Type:</span>
+                                                            <span className="ml-2 text-gray-700">{cls.type}</span>
+                                                        </div>
+                                                    )}
+                                                    {cls.level && (
+                                                        <div>
+                                                            <span className="text-gray-500">Level:</span>
+                                                            <span className="ml-2 text-gray-700">{cls.level}</span>
+                                                        </div>
+                                                    )}
+                                                    {cls.capacity && (
+                                                        <div>
+                                                            <span className="text-gray-500">Capacity:</span>
+                                                            <span className="ml-2 text-gray-700">{cls.capacity} students</span>
+                                                        </div>
+                                                    )}
+                                                    {cls.price && (
+                                                        <div>
+                                                            <span className="text-gray-500">Price:</span>
+                                                            <span className="ml-2 text-gray-700">{cls.price}</span>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <span className="text-gray-500">Status:</span>
+                                                        <Badge className={`ml-2 ${getStatusColor(cls.status)}`}>{cls.status}</Badge>
+                                                    </div>
+                                                    {cls.bookedAt && (
+                                                        <div>
+                                                            <span className="text-gray-500">Booked:</span>
+                                                            <span className="ml-2 text-gray-700">{new Date(cls.bookedAt).toLocaleDateString()}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
 
                                     {/* Feedback display if already given */}
                                     {cls.feedback && (
@@ -466,9 +578,9 @@ export default function MyClassesPage() {
 
                                     <div className="flex gap-2">
                                         <Button id={`user-my-classes-view-${cls.id}-btn`} size="sm" variant="outline" className="flex-1"
-                                            onClick={() => router.push(`/user/my-classes?view=${cls.id}`)}>
+                                            onClick={() => handleViewDetails(cls)}>
                                             <Eye className="w-4 h-4 mr-2" />
-                                            View Details
+                                            {selectedClassDetail?.id === cls.id ? 'Hide Details' : 'View Details'}
                                         </Button>
                                         {cls.status === 'upcoming' && (
                                             <>
@@ -507,91 +619,114 @@ export default function MyClassesPage() {
                 )}
             </div>
 
-            {/* AI Learning Path & Class Recommendations */}
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+            {/* AI Learning Insights */}
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
                 <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Brain className="w-5 h-5 text-purple-600" />
-                        <CardTitle>AI Learning Path</CardTitle>
-                        <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-2 rounded-lg shadow-md">
+                                <Brain className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">AI Learning Insights</CardTitle>
+                                <p className="text-xs text-gray-500 mt-0.5">Powered by Digital Twin Analysis</p>
+                            </div>
+                            <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full ml-1">AI</span>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {aiClassLoading ? (
-                        <div className="flex items-center justify-center py-6 gap-2">
+                    {aiInsightsLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
                             <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                            <p className="text-sm text-gray-500">Generating your learning path...</p>
+                            <p className="text-sm text-gray-500">Analyzing your skill gaps...</p>
                         </div>
-                    ) : aiClassData ? (
+                    ) : skillGaps ? (
                         <div className="space-y-4">
-                            {/* Learning Progress */}
-                            {(aiClassData.progress != null || aiClassData.completionPercentage != null) && (
-                                <div className="p-3 bg-white/70 rounded-lg border border-purple-100">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-gray-700">Learning Progress</span>
-                                        <span className="text-sm font-bold text-purple-700">
-                                            {aiClassData.progress ?? aiClassData.completionPercentage ?? 0}%
-                                        </span>
-                                    </div>
-                                    <div className="w-full bg-purple-100 rounded-full h-2">
-                                        <div
-                                            className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all"
-                                            style={{ width: `${aiClassData.progress ?? aiClassData.completionPercentage ?? 0}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Recommended Next Classes */}
-                            {(aiClassData.recommendedClasses || aiClassData.nextSteps || aiClassData.recommendations || []).length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Recommended Next Classes</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {(aiClassData.recommendedClasses || aiClassData.nextSteps || aiClassData.recommendations || []).slice(0, 4).map((item: any, i: number) => (
-                                            <div key={i} className="flex items-start gap-2 p-3 bg-white/70 rounded-lg border border-purple-100">
-                                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-800">{item.title || item.name || item.className || item}</p>
-                                                    {(item.description || item.reason) && (
-                                                        <p className="text-xs text-gray-600 mt-0.5">{item.description || item.reason}</p>
-                                                    )}
-                                                    {item.skillLevel && (
-                                                        <Badge className="mt-1 bg-purple-100 text-purple-700 text-xs">{item.skillLevel}</Badge>
-                                                    )}
-                                                </div>
+                            {/* Skill Gap Analysis */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+                                    <Zap className="w-4 h-4 text-amber-500" />
+                                    Skill Gap Analysis
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {(skillGaps.gaps || skillGaps.skillGaps || skillGaps.data || []).map((gap: any, idx: number) => (
+                                        <div key={idx} className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium text-gray-900">{gap.skillName || gap.skill || gap.name}</span>
+                                                <Badge className="bg-indigo-100 text-indigo-700 text-xs">
+                                                    {gap.currentLevel || gap.current || 'N/A'} → {gap.targetLevel || gap.target || 'N/A'}
+                                                </Badge>
                                             </div>
-                                        ))}
-                                    </div>
+                                            {(gap.gapDescription || gap.description || gap.gap) && (
+                                                <p className="text-xs text-gray-500">{gap.gapDescription || gap.description || gap.gap}</p>
+                                            )}
+                                            {(gap.currentLevel || gap.current) && (gap.targetLevel || gap.target) && (
+                                                <div className="mt-2">
+                                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                        <div
+                                                            className="bg-gradient-to-r from-purple-500 to-indigo-500 h-1.5 rounded-full transition-all"
+                                                            style={{
+                                                                width: `${Math.min(100, ((Number(gap.currentLevel || gap.current) || 0) / (Number(gap.targetLevel || gap.target) || 1)) * 100)}%`
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
 
-                            {/* Skill Development Path */}
-                            {(aiClassData.skills || aiClassData.skillPath || aiClassData.milestones || []).length > 0 && (
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Skill Development Path</h4>
-                                    <div className="space-y-2">
-                                        {(aiClassData.skills || aiClassData.skillPath || aiClassData.milestones || []).slice(0, 4).map((skill: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-3 p-2 bg-white/70 rounded-lg border border-purple-100">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                    skill.completed ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
-                                                }`}>
-                                                    {i + 1}
+                            {/* Generate Learning Path Button & Results */}
+                            <div className="border-t border-gray-200 pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                                        <Sparkles className="w-4 h-4 text-purple-500" />
+                                        Personalized Learning Path
+                                    </h4>
+                                    <Button
+                                        size="sm"
+                                        onClick={handleGenerateLearningPath}
+                                        disabled={learningPathLoading}
+                                        className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white"
+                                    >
+                                        {learningPathLoading ? (
+                                            <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Generating...</>
+                                        ) : (
+                                            <><Sparkles className="w-4 h-4 mr-1.5" /> Generate Learning Path</>
+                                        )}
+                                    </Button>
+                                </div>
+
+                                {learningPath && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-2"
+                                    >
+                                        {(learningPath.steps || learningPath.path || learningPath.data || []).map((step: any, idx: number) => (
+                                            <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                                                <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
+                                                    {idx + 1}
                                                 </div>
                                                 <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-800">{skill.name || skill.title || skill.skill || skill}</p>
-                                                    {skill.level && <p className="text-xs text-gray-500">Level: {skill.level}</p>}
+                                                    <p className="text-sm font-medium text-gray-900">{step.title || step.name || step.step || `Step ${idx + 1}`}</p>
+                                                    {(step.description || step.details) && (
+                                                        <p className="text-xs text-gray-500 mt-0.5">{step.description || step.details}</p>
+                                                    )}
                                                 </div>
-                                                {skill.progress != null && (
-                                                    <span className="text-xs font-medium text-purple-600">{skill.progress}%</span>
-                                                )}
                                             </div>
                                         ))}
-                                    </div>
-                                </div>
-                            )}
+                                    </motion.div>
+                                )}
+                            </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500 text-center py-4">AI learning path data unavailable</p>
+                        <div className="text-center py-6">
+                            <Brain className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI insights are currently unavailable. Your class data is still accessible above.</p>
+                        </div>
                     )}
                 </CardContent>
             </Card>

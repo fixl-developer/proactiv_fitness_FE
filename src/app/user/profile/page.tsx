@@ -2,63 +2,106 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, Calendar, Camera, Save, Edit, X, CheckCircle, Shield, Bell, RefreshCw, Trash2 } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Camera, Save, Edit, X, CheckCircle, Shield, Bell, RefreshCw, BookOpen, CreditCard, CalendarCheck, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import UserProfileService from '@/services/modules/user-profile.service'
+import apiClient from '@/lib/apiClient'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 
+interface EmergencyContact {
+    name: string
+    phone: string
+    relationship: string
+}
+
+interface Preferences {
+    notifications: boolean
+    emailUpdates: boolean
+    smsReminders: boolean
+}
+
+interface ProfileStats {
+    totalClasses: number
+    completedClasses: number
+    upcomingClasses: number
+    totalSpent: number
+}
+
+interface ProfileData {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    dateOfBirth: string
+    bio: string
+    avatar?: string
+    emergencyContact: EmergencyContact
+    preferences: Preferences
+    stats?: ProfileStats
+}
+
+function buildFallbackProfile(user: any): ProfileData {
+    return {
+        firstName: user?.firstName || user?.name?.split(' ')[0] || '',
+        lastName: user?.lastName || user?.name?.split(' ')[1] || '',
+        email: user?.email || '',
+        phone: '',
+        dateOfBirth: '',
+        bio: '',
+        emergencyContact: { name: '', phone: '', relationship: '' },
+        preferences: { notifications: true, emailUpdates: true, smsReminders: true },
+        stats: { totalClasses: 0, completedClasses: 0, upcomingClasses: 0, totalSpent: 0 }
+    }
+}
+
 export default function ProfilePage() {
-    const [profile, setProfile] = useState<any>(null)
-    const [originalProfile, setOriginalProfile] = useState<any>(null)
+    const [profile, setProfile] = useState<ProfileData | null>(null)
+    const [originalProfile, setOriginalProfile] = useState<ProfileData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [saveSuccess, setSaveSuccess] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
-    const profileService = new UserProfileService()
 
     const isDirty = isEditing && JSON.stringify(profile) !== JSON.stringify(originalProfile)
 
     const saveForLogout = useCallback(async () => {
-        if (!isDirty) return
-        const profileService = new UserProfileService()
-        await profileService.updateProfile(profile)
-        setOriginalProfile(profile)
-        setIsEditing(false)
+        if (!isDirty || !profile) return
+        try {
+            await apiClient.put('/user/profile/profile', profile)
+            setOriginalProfile(profile)
+            setIsEditing(false)
+        } catch (err) {
+            console.error('Error auto-saving profile on logout:', err)
+        }
     }, [profile, isDirty])
 
     useTrackUnsavedChanges('user-profile', 'User Profile', isDirty, saveForLogout)
 
     const loadProfile = useCallback(async () => {
+        setIsLoading(true)
+        setError(null)
         try {
-            const data = await profileService.getProfile()
+            const response = await apiClient.get('/user/profile/profile')
+            const data = response?.data || response
             setProfile(data)
             setOriginalProfile(data)
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error loading profile:', err)
-            // Use auth context as fallback
             if (user) {
-                const fallback = {
-                    firstName: (user as any)?.firstName || user?.name?.split(' ')[0] || '',
-                    lastName: (user as any)?.lastName || user?.name?.split(' ')[1] || '',
-                    email: user?.email || '',
-                    phone: '',
-                    dateOfBirth: '',
-                    bio: '',
-                    emergencyContact: { name: '', phone: '', relationship: '' },
-                    preferences: { notifications: true, emailUpdates: true, smsReminders: true }
-                }
+                const fallback = buildFallbackProfile(user)
                 setProfile(fallback)
                 setOriginalProfile(fallback)
+            } else {
+                setError('Failed to load profile. Please try again.')
             }
         } finally {
             setIsLoading(false)
@@ -73,16 +116,23 @@ export default function ProfilePage() {
         loadProfile()
     }, [isAuthenticated, router, loadProfile])
 
+    // Auto-dismiss success message after 5 seconds
+    useEffect(() => {
+        if (!saveSuccess) return
+        const timer = setTimeout(() => setSaveSuccess(false), 5000)
+        return () => clearTimeout(timer)
+    }, [saveSuccess])
+
     const handleSave = async () => {
+        if (!profile) return
         try {
             setIsSaving(true)
-            await profileService.updateProfile(profile)
+            await apiClient.put('/user/profile/profile', profile)
             setOriginalProfile(profile)
             setIsEditing(false)
             setSaveSuccess(true)
-            setTimeout(() => setSaveSuccess(false), 3000)
-        } catch (err) {
-            console.error('Error saving:', err)
+        } catch (err: any) {
+            console.error('Error saving profile:', err)
             alert('Failed to save profile. Please try again.')
         } finally {
             setIsSaving(false)
@@ -95,53 +145,56 @@ export default function ProfilePage() {
         setAvatarPreview(null)
     }
 
-    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        // Preview
-        const reader = new FileReader()
-        reader.onloadend = () => {
-            setAvatarPreview(reader.result as string)
-        }
-        reader.readAsDataURL(file)
-
-        // Upload to backend
-        try {
-            setIsUploadingAvatar(true)
-            const result = await profileService.uploadAvatar(file)
-            if (result?.avatarUrl) {
-                setProfile((prev: any) => ({ ...prev, avatar: result.avatarUrl }))
-            }
-        } catch (err) {
-            console.error('Error uploading avatar:', err)
-        } finally {
-            setIsUploadingAvatar(false)
-        }
+    const handleAvatarClick = () => {
+        alert('Avatar upload coming soon')
     }
 
     const calculateProfileCompletion = () => {
+        if (!profile) return 0
         const fields = [
-            profile?.firstName,
-            profile?.lastName,
-            profile?.email,
-            profile?.phone,
-            profile?.dateOfBirth,
-            profile?.bio,
-            profile?.emergencyContact?.name,
-            profile?.emergencyContact?.phone
+            profile.firstName,
+            profile.lastName,
+            profile.email,
+            profile.phone,
+            profile.dateOfBirth,
+            profile.bio,
+            profile.emergencyContact?.name,
+            profile.emergencyContact?.phone
         ]
         const completed = fields.filter(f => f && f.length > 0).length
         return Math.round((completed / fields.length) * 100)
     }
 
+    // Loading skeleton
     if (isLoading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>)}
+                    <div className="h-24 bg-gray-200 rounded-lg"></div>
+                    <div className="h-48 bg-gray-200 rounded-lg"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="h-32 bg-gray-200 rounded-lg"></div>
+                        <div className="h-32 bg-gray-200 rounded-lg"></div>
+                    </div>
+                    <div className="h-40 bg-gray-200 rounded-lg"></div>
+                    <div className="h-32 bg-gray-200 rounded-lg"></div>
                 </div>
+            </div>
+        )
+    }
+
+    // Error with retry
+    if (error && !profile) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+                <AlertCircle className="w-12 h-12 text-red-500" />
+                <h2 className="text-xl font-semibold text-gray-900">Something went wrong</h2>
+                <p className="text-gray-600">{error}</p>
+                <Button onClick={loadProfile}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                </Button>
             </div>
         )
     }
@@ -191,6 +244,37 @@ export default function ProfilePage() {
                 </motion.div>
             )}
 
+            {/* Quick Navigation Buttons */}
+            <div className="grid grid-cols-3 gap-4">
+                <Button
+                    id="user-profile-my-classes-btn"
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 py-6"
+                    onClick={() => router.push('/user/my-classes')}
+                >
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <span>My Classes</span>
+                </Button>
+                <Button
+                    id="user-profile-bookings-btn"
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 py-6"
+                    onClick={() => router.push('/user/bookings')}
+                >
+                    <CalendarCheck className="w-5 h-5 text-emerald-600" />
+                    <span>Bookings</span>
+                </Button>
+                <Button
+                    id="user-profile-payments-btn"
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 py-6"
+                    onClick={() => router.push('/user/payments')}
+                >
+                    <CreditCard className="w-5 h-5 text-purple-600" />
+                    <span>Payments</span>
+                </Button>
+            </div>
+
             {/* Profile Completion */}
             <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
                 <CardContent className="p-6">
@@ -205,283 +289,277 @@ export default function ProfilePage() {
                 </CardContent>
             </Card>
 
-            {/* Profile Picture */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Profile Picture</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-6">
-                        <div className="relative">
-                            {(avatarPreview || profile?.avatar) ? (
-                                <img
-                                    src={avatarPreview || profile?.avatar}
-                                    alt="Avatar"
-                                    className="w-24 h-24 rounded-full object-cover border-4 border-emerald-200"
-                                />
-                            ) : (
-                                <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-emerald-200">
-                                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main profile content - left 2 columns */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Profile Picture */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Profile Picture</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center gap-6">
+                                <div className="relative">
+                                    {(avatarPreview || profile?.avatar) ? (
+                                        <img
+                                            src={avatarPreview || profile?.avatar}
+                                            alt="Avatar"
+                                            className="w-24 h-24 rounded-full object-cover border-4 border-emerald-200"
+                                        />
+                                    ) : (
+                                        <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-emerald-200">
+                                            {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                                        </div>
+                                    )}
+                                    {isEditing && (
+                                        <button
+                                            id="user-profile-avatar-upload-btn"
+                                            onClick={handleAvatarClick}
+                                            className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white hover:bg-emerald-700 transition-colors shadow-lg"
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-                            {isUploadingAvatar && (
-                                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
-                                    <RefreshCw className="w-6 h-6 text-white animate-spin" />
-                                </div>
-                            )}
-                            {isEditing && (
-                                <button id="user-profile-avatar-upload-btn"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white hover:bg-emerald-700 transition-colors shadow-lg"
-                                    disabled={isUploadingAvatar}
-                                >
-                                    <Camera className="w-4 h-4" />
-                                </button>
-                            )}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleAvatarChange}
-                                className="hidden"
-                            />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-semibold text-gray-900">
-                                {profile?.firstName} {profile?.lastName}
-                            </h3>
-                            <p className="text-gray-600 mt-1">{profile?.email}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                                <Badge className="bg-emerald-100 text-emerald-800">
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    Verified
-                                </Badge>
-                                <Badge variant="outline">USER</Badge>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Personal Information */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <User className="w-5 h-5 text-blue-600" />
-                        <CardTitle>Personal Information</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                First Name
-                            </label>
-                            <input
-                                type="text"
-                                value={profile?.firstName || ''}
-                                onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                Last Name
-                            </label>
-                            <input
-                                type="text"
-                                value={profile?.lastName || ''}
-                                onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Mail className="w-4 h-4" />
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                value={profile?.email || ''}
-                                disabled
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
-                            />
-                            <p className="text-xs text-gray-500">Email cannot be changed</p>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Phone className="w-4 h-4" />
-                                Phone
-                            </label>
-                            <input
-                                type="tel"
-                                value={profile?.phone || ''}
-                                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
-                                Date of Birth
-                            </label>
-                            <input
-                                type="date"
-                                value={profile?.dateOfBirth || ''}
-                                onChange={(e) => setProfile({ ...profile, dateOfBirth: e.target.value })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Bio */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Bio</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <textarea
-                        value={profile?.bio || ''}
-                        onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                        disabled={!isEditing}
-                        rows={4}
-                        placeholder="Tell us about yourself..."
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors resize-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                        {profile?.bio?.length || 0} / 500 characters
-                    </p>
-                </CardContent>
-            </Card>
-
-            {/* Emergency Contact */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-red-600" />
-                        <CardTitle>Emergency Contact</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Name</label>
-                            <input
-                                type="text"
-                                value={profile?.emergencyContact?.name || ''}
-                                onChange={(e) => setProfile({
-                                    ...profile,
-                                    emergencyContact: { ...profile?.emergencyContact, name: e.target.value }
-                                })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Phone</label>
-                            <input
-                                type="tel"
-                                value={profile?.emergencyContact?.phone || ''}
-                                onChange={(e) => setProfile({
-                                    ...profile,
-                                    emergencyContact: { ...profile?.emergencyContact, phone: e.target.value }
-                                })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Relationship</label>
-                            <input
-                                type="text"
-                                value={profile?.emergencyContact?.relationship || ''}
-                                onChange={(e) => setProfile({
-                                    ...profile,
-                                    emergencyContact: { ...profile?.emergencyContact, relationship: e.target.value }
-                                })}
-                                disabled={!isEditing}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Preferences */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Bell className="w-5 h-5 text-purple-600" />
-                        <CardTitle>Notification Preferences</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {[
-                            { key: 'notifications', label: 'Push Notifications', desc: 'Receive notifications in the app' },
-                            { key: 'emailUpdates', label: 'Email Updates', desc: 'Receive updates via email' },
-                            { key: 'smsReminders', label: 'SMS Reminders', desc: 'Receive class reminders via SMS' }
-                        ].map((pref) => (
-                            <div key={pref.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                 <div>
-                                    <h4 className="font-medium text-gray-900">{pref.label}</h4>
-                                    <p className="text-sm text-gray-600 mt-1">{pref.desc}</p>
+                                    <h3 className="text-xl font-semibold text-gray-900">
+                                        {profile?.firstName} {profile?.lastName}
+                                    </h3>
+                                    <p className="text-gray-600 mt-1">{profile?.email}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Badge className="bg-emerald-100 text-emerald-800">
+                                            <CheckCircle className="w-3 h-3 mr-1" />
+                                            Verified
+                                        </Badge>
+                                        <Badge variant="outline">USER</Badge>
+                                    </div>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={profile?.preferences?.[pref.key] || false}
-                                        onChange={(e) => setProfile({
-                                            ...profile,
-                                            preferences: { ...profile?.preferences, [pref.key]: e.target.checked }
-                                        })}
-                                        disabled={!isEditing}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                </label>
                             </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
 
-            {/* Stats Card */}
-            {profile?.stats && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Account Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                <p className="text-2xl font-bold text-blue-600">{profile.stats.totalClasses || 0}</p>
-                                <p className="text-sm text-gray-600 mt-1">Total Classes</p>
+                    {/* Personal Information */}
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <User className="w-5 h-5 text-blue-600" />
+                                <CardTitle>Personal Information</CardTitle>
                             </div>
-                            <div className="text-center p-4 bg-green-50 rounded-lg">
-                                <p className="text-2xl font-bold text-green-600">{profile.stats.completedClasses || 0}</p>
-                                <p className="text-sm text-gray-600 mt-1">Completed</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <User className="w-4 h-4" />
+                                        First Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={profile?.firstName || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, firstName: e.target.value } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <User className="w-4 h-4" />
+                                        Last Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={profile?.lastName || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, lastName: e.target.value } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <Mail className="w-4 h-4" />
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={profile?.email || ''}
+                                        disabled
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 cursor-not-allowed"
+                                    />
+                                    <p className="text-xs text-gray-500">Email cannot be changed</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <Phone className="w-4 h-4" />
+                                        Phone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={profile?.phone || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, phone: e.target.value } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                        <Calendar className="w-4 h-4" />
+                                        Date of Birth
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={profile?.dateOfBirth || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, dateOfBirth: e.target.value } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
                             </div>
-                            <div className="text-center p-4 bg-purple-50 rounded-lg">
-                                <p className="text-2xl font-bold text-purple-600">{profile.stats.upcomingClasses || 0}</p>
-                                <p className="text-sm text-gray-600 mt-1">Upcoming</p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Bio */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Bio</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <textarea
+                                value={profile?.bio || ''}
+                                onChange={(e) => setProfile((prev) => prev ? { ...prev, bio: e.target.value } : prev)}
+                                disabled={!isEditing}
+                                rows={4}
+                                maxLength={500}
+                                placeholder="Tell us about yourself..."
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors resize-none"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                {profile?.bio?.length || 0} / 500 characters
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Emergency Contact */}
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-red-600" />
+                                <CardTitle>Emergency Contact</CardTitle>
                             </div>
-                            <div className="text-center p-4 bg-amber-50 rounded-lg">
-                                <p className="text-2xl font-bold text-amber-600">HK${profile.stats.totalSpent || 0}</p>
-                                <p className="text-sm text-gray-600 mt-1">Total Spent</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Name</label>
+                                    <input
+                                        type="text"
+                                        value={profile?.emergencyContact?.name || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? {
+                                            ...prev,
+                                            emergencyContact: { ...prev.emergencyContact, name: e.target.value }
+                                        } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                                    <input
+                                        type="tel"
+                                        value={profile?.emergencyContact?.phone || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? {
+                                            ...prev,
+                                            emergencyContact: { ...prev.emergencyContact, phone: e.target.value }
+                                        } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700">Relationship</label>
+                                    <input
+                                        type="text"
+                                        value={profile?.emergencyContact?.relationship || ''}
+                                        onChange={(e) => setProfile((prev) => prev ? {
+                                            ...prev,
+                                            emergencyContact: { ...prev.emergencyContact, relationship: e.target.value }
+                                        } : prev)}
+                                        disabled={!isEditing}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Notification Preferences */}
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Bell className="w-5 h-5 text-purple-600" />
+                                <CardTitle>Notification Preferences</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {[
+                                    { key: 'notifications' as const, label: 'Push Notifications', desc: 'Receive notifications in the app' },
+                                    { key: 'emailUpdates' as const, label: 'Email Updates', desc: 'Receive updates via email' },
+                                    { key: 'smsReminders' as const, label: 'SMS Reminders', desc: 'Receive class reminders via SMS' }
+                                ].map((pref) => (
+                                    <div key={pref.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">{pref.label}</h4>
+                                            <p className="text-sm text-gray-600 mt-1">{pref.desc}</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={profile?.preferences?.[pref.key] || false}
+                                                onChange={(e) => setProfile((prev) => prev ? {
+                                                    ...prev,
+                                                    preferences: { ...prev.preferences, [pref.key]: e.target.checked }
+                                                } : prev)}
+                                                disabled={!isEditing}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Account Stats Sidebar - right column */}
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Account Stats</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-blue-600">{profile?.stats?.totalClasses || 0}</p>
+                                    <p className="text-sm text-gray-600 mt-1">Total Classes</p>
+                                </div>
+                                <div className="text-center p-4 bg-green-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-green-600">{profile?.stats?.completedClasses || 0}</p>
+                                    <p className="text-sm text-gray-600 mt-1">Completed</p>
+                                </div>
+                                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-purple-600">{profile?.stats?.upcomingClasses || 0}</p>
+                                    <p className="text-sm text-gray-600 mt-1">Upcoming</p>
+                                </div>
+                                <div className="text-center p-4 bg-amber-50 rounded-lg">
+                                    <p className="text-2xl font-bold text-amber-600">HK${profile?.stats?.totalSpent || 0}</p>
+                                    <p className="text-sm text-gray-600 mt-1">Total Spent</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     )
 }

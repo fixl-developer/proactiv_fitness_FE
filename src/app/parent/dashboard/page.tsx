@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
-    Users, Calendar, DollarSign, RefreshCw, Eye, Plus, BarChart3, MessageSquare,
-    ArrowUp, User, BookOpen, CreditCard, Download, TrendingUp, CheckCircle, AlertTriangle, Bell,
+    Users, Calendar, DollarSign, RefreshCw, Eye, Plus, MessageSquare,
+    ArrowUp, User, BookOpen, CreditCard, Download, AlertTriangle, Bell,
     Brain, Sparkles, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +15,6 @@ import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
-import { parentAIService } from '@/services/advancedAIServices'
 
 const ParentDashboard = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -23,21 +22,17 @@ const ParentDashboard = () => {
     const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | '7d' | '30d'>('today')
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
-    const [aiData, setAiData] = useState<any>(null)
+    const [aiReport, setAiReport] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [aiQuestion, setAiQuestion] = useState('')
+    const [aiAnswer, setAiAnswer] = useState<string | null>(null)
+    const [aiAnswerLoading, setAiAnswerLoading] = useState(false)
+    const [selectedChildIdForAi, setSelectedChildIdForAi] = useState<string | null>(null)
+    const [aiError, setAiError] = useState<string | null>(null)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
     const parentName = user?.name || 'Parent User'
-
-    const loadAiInsights = async () => {
-        setAiLoading(true)
-        try {
-            const res = await parentAIService.getNotifications(user?.id || '')
-            setAiData(res)
-        } catch { setAiData(null) }
-        finally { setAiLoading(false) }
-    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -45,7 +40,6 @@ const ParentDashboard = () => {
             return
         }
         loadDashboardData()
-        loadAiInsights()
     }, [isAuthenticated, router])
 
     const loadDashboardData = async () => {
@@ -69,8 +63,44 @@ const ParentDashboard = () => {
     const handleRefresh = async () => {
         setRefreshing(true)
         await loadDashboardData()
-        await loadAiInsights()
         setRefreshing(false)
+    }
+
+    const handleGenerateAiReport = async (childId: string) => {
+        try {
+            setAiLoading(true)
+            setAiError(null)
+            setSelectedChildIdForAi(childId)
+            const response = await apiClient.post<any>('/parent-ai-assistant/report', { childId })
+            const data = response?.data || response
+            setAiReport(data)
+        } catch (err) {
+            console.error('Error generating AI report:', err)
+            setAiError('AI insights are not available right now. Please try again later.')
+            setAiReport(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
+    const handleAskAi = async () => {
+        if (!aiQuestion.trim() || !selectedChildIdForAi) return
+        try {
+            setAiAnswerLoading(true)
+            setAiError(null)
+            const response = await apiClient.post<any>('/parent-ai-assistant/ask', {
+                childId: selectedChildIdForAi,
+                question: aiQuestion.trim()
+            })
+            const data = response?.data || response
+            setAiAnswer(data?.answer || data?.response || JSON.stringify(data))
+        } catch (err) {
+            console.error('Error asking AI:', err)
+            setAiAnswer(null)
+            setAiError('AI insights are not available right now. Please try again later.')
+        } finally {
+            setAiAnswerLoading(false)
+        }
     }
 
     // Extract data from API response with fallbacks
@@ -134,6 +164,12 @@ const ParentDashboard = () => {
                             <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
                         ))}
                     </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+                        ))}
+                    </div>
+                    <div className="h-64 bg-gray-200 rounded-lg"></div>
                 </div>
             </div>
         )
@@ -145,6 +181,7 @@ const ParentDashboard = () => {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
                     <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
                     <p className="text-red-700 font-medium">{error}</p>
+                    <p className="text-sm text-red-500 mt-1">Please check your connection and try again.</p>
                     <Button onClick={handleRefresh} variant="outline" className="mt-4">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Try Again
@@ -208,10 +245,8 @@ const ParentDashboard = () => {
                                 </div>
                                 <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">All active</span>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-600 font-medium mb-1">My Children</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.totalChildren ?? 0}</p>
-                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">My Children</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.totalChildren ?? 0}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -228,10 +263,8 @@ const ParentDashboard = () => {
                                     <ArrowUp className="w-3 h-3 inline mr-0.5" />Ongoing
                                 </span>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-600 font-medium mb-1">Active Programs</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.activePrograms ?? 0}</p>
-                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Active Programs</p>
+                            <p className="text-2xl font-bold text-gray-900">{stats.activePrograms ?? 0}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -246,10 +279,8 @@ const ParentDashboard = () => {
                                 </div>
                                 <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">This year</span>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
-                                <p className="text-2xl font-bold text-gray-900">HK${(stats.totalSpent ?? 0).toLocaleString()}</p>
-                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${(stats.totalSpent ?? 0).toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -264,91 +295,99 @@ const ParentDashboard = () => {
                                 </div>
                                 <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Available</span>
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-600 font-medium mb-1">Account Balance</p>
-                                <p className="text-2xl font-bold text-gray-900">HK${(stats.accountBalance ?? 0).toLocaleString()}</p>
-                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Account Balance</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${(stats.accountBalance ?? 0).toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
             </div>
 
             {/* My Children Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {myChildren.map((child: any, index: number) => (
-                    <motion.div
-                        key={child.id || index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * index }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                                            {(child.name || 'C').split(' ').map((n: string) => n[0]).join('')}
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-lg">{child.name}</CardTitle>
-                                            <p className="text-sm text-gray-500">{child.age} years old</p>
-                                        </div>
-                                    </div>
-                                    <Badge className={getStatusColor(child.status || 'active')}>
-                                        {child.status || 'active'}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-sm text-gray-600">Program</p>
-                                            <p className="font-semibold text-gray-900">{child.program || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Coach</p>
-                                            <p className="font-semibold text-gray-900">{child.coach || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Classes</p>
-                                            <p className="font-semibold text-gray-900">{child.classes ?? 0}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Rating</p>
-                                            <p className="font-semibold text-yellow-600">&#11088; {child.rating ?? 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                    {child.progress !== undefined && (
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-600">Progress</span>
-                                                <span className="font-medium">{child.progress}%</span>
+            {myChildren.length === 0 ? (
+                <Card>
+                    <CardContent className="p-8 text-center">
+                        <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">No children linked to your account yet</p>
+                        <p className="text-sm text-gray-400 mt-1">Contact your facility to add your children.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {myChildren.map((child: any, index: number) => (
+                        <motion.div
+                            key={child.id || index}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 * index }}
+                        >
+                            <Card className="hover:shadow-lg transition-shadow">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
+                                                {(child.name || 'C').split(' ').map((n: string) => n[0]).join('')}
                                             </div>
-                                            <Progress value={child.progress} className="h-2" />
+                                            <div>
+                                                <CardTitle className="text-lg">{child.name}</CardTitle>
+                                                <p className="text-sm text-gray-500">{child.age} years old</p>
+                                            </div>
                                         </div>
-                                    )}
-                                    {child.nextClass && (
-                                        <div className="p-3 bg-blue-50 rounded-lg">
-                                            <p className="text-sm text-blue-700">
-                                                <strong>Next Class:</strong> {child.nextClass}
-                                            </p>
+                                        <Badge className={getStatusColor(child.status || 'active')}>
+                                            {child.status || 'active'}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-gray-600">Program</p>
+                                                <p className="font-semibold text-gray-900">{child.program || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Coach</p>
+                                                <p className="font-semibold text-gray-900">{child.coach || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Classes</p>
+                                                <p className="font-semibold text-gray-900">{child.classes ?? 0}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Rating</p>
+                                                <p className="font-semibold text-yellow-600">&#11088; {child.rating ?? 'N/A'}</p>
+                                            </div>
                                         </div>
-                                    )}
-                                    <Button
-                                        id={`parent-dashboard-child-${child.id}-details-btn`}
-                                        className="w-full"
-                                        variant="outline"
-                                        onClick={() => router.push('/parent/children')}
-                                    >
-                                        View Details
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
-            </div>
+                                        {child.progress !== undefined && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-gray-600">Progress</span>
+                                                    <span className="font-medium">{child.progress}%</span>
+                                                </div>
+                                                <Progress value={child.progress} className="h-2" />
+                                            </div>
+                                        )}
+                                        {child.nextClass && (
+                                            <div className="p-3 bg-blue-50 rounded-lg">
+                                                <p className="text-sm text-blue-700">
+                                                    <strong>Next Class:</strong> {child.nextClass}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <Button
+                                            id={`parent-dashboard-child-${child.id}-details-btn`}
+                                            className="w-full"
+                                            variant="outline"
+                                            onClick={() => router.push('/parent/children')}
+                                        >
+                                            View Details
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
             {/* Upcoming Classes */}
             <Card>
@@ -359,14 +398,24 @@ const ParentDashboard = () => {
                             <CardTitle>Upcoming Classes</CardTitle>
                             <Badge>{upcomingClasses.length} classes</Badge>
                         </div>
-                        <Button
-                            id="parent-dashboard-book-new-class-btn"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push('/parent/browse-classes')}
-                        >
-                            Book New Class
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                id="parent-dashboard-view-all-bookings-btn"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.push('/parent/bookings')}
+                            >
+                                View All
+                            </Button>
+                            <Button
+                                id="parent-dashboard-book-new-class-btn"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.push('/parent/browse-classes')}
+                            >
+                                Book New Class
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -374,11 +423,12 @@ const ParentDashboard = () => {
                         {upcomingClasses.length === 0 ? (
                             <div className="text-center py-6 text-gray-500">
                                 <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No upcoming classes</p>
+                                <p className="text-sm font-medium">No upcoming classes</p>
+                                <p className="text-xs text-gray-400 mt-1">Book a class to get started.</p>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="mt-2"
+                                    className="mt-3"
                                     onClick={() => router.push('/parent/browse-classes')}
                                 >
                                     Browse Classes
@@ -411,7 +461,7 @@ const ParentDashboard = () => {
                                             id={`parent-dashboard-class-${session.id}-view-btn`}
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => router.push('/parent/browse-classes')}
+                                            onClick={() => router.push('/parent/bookings')}
                                         >
                                             <Eye className="w-4 h-4" />
                                         </Button>
@@ -446,7 +496,8 @@ const ParentDashboard = () => {
                         {recentPayments.length === 0 ? (
                             <div className="text-center py-6 text-gray-500">
                                 <CreditCard className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No recent payments</p>
+                                <p className="text-sm font-medium">No recent payments</p>
+                                <p className="text-xs text-gray-400 mt-1">Your payment history will appear here.</p>
                             </div>
                         ) : (
                             recentPayments.map((payment: any, index: number) => (
@@ -561,46 +612,172 @@ const ParentDashboard = () => {
             </Card>
 
             {/* AI Insights */}
-            <div className="mt-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Brain className="w-5 h-5 text-purple-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
-                            <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+                <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-lg shadow-md">
+                                    <Brain className="w-5 h-5 text-white" />
+                                </div>
+                                <CardTitle>AI Insights</CardTitle>
+                                <Sparkles className="w-4 h-4 text-purple-500" />
+                            </div>
                         </div>
-                        <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
-                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
-                        </button>
-                    </div>
-                    <div className="p-6">
-                        {aiLoading ? (
-                            <div className="flex items-center justify-center py-6 gap-2">
-                                <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                                <p className="text-sm text-gray-500">Analyzing data with AI...</p>
-                            </div>
-                        ) : aiData ? (
-                            <div className="space-y-3">
-                                {(Array.isArray(aiData) ? aiData : aiData?.recommendations || aiData?.suggestions || [aiData]).slice(0, 5).map((item: any, i: number) => (
-                                    <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
-                                            {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
-                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
-                                        </div>
-                                    </div>
+                        <p className="text-sm text-gray-500 mt-1">Get AI-powered progress reports and ask questions about your child's development.</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* Child Selector + Generate Report */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                            <select
+                                id="parent-dashboard-ai-child-select"
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                value={selectedChildIdForAi || ''}
+                                onChange={(e) => {
+                                    setSelectedChildIdForAi(e.target.value || null)
+                                    setAiReport(null)
+                                    setAiAnswer(null)
+                                    setAiError(null)
+                                }}
+                            >
+                                <option value="">Select a child</option>
+                                {myChildren.map((child: any) => (
+                                    <option key={child.id} value={child.id}>
+                                        {child.name}
+                                    </option>
                                 ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6">
-                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                            </select>
+                            <Button
+                                id="parent-dashboard-generate-ai-report-btn"
+                                onClick={() => selectedChildIdForAi && handleGenerateAiReport(selectedChildIdForAi)}
+                                disabled={!selectedChildIdForAi || aiLoading}
+                                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                            >
+                                {aiLoading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        Generate AI Report
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+
+                        {/* AI Error */}
+                        {aiError && (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                    <p className="text-sm text-amber-700">{aiError}</p>
+                                </div>
                             </div>
                         )}
-                    </div>
-                </div>
-            </div>
+
+                        {/* AI Report Display */}
+                        {aiReport && !aiError && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="space-y-4"
+                            >
+                                {aiReport.summary && (
+                                    <div className="p-4 bg-white rounded-lg border border-indigo-100 shadow-sm">
+                                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                            <Brain className="w-4 h-4 text-indigo-600" />
+                                            Summary
+                                        </h4>
+                                        <p className="text-sm text-gray-700 leading-relaxed">{aiReport.summary}</p>
+                                    </div>
+                                )}
+                                {aiReport.highlights && aiReport.highlights.length > 0 && (
+                                    <div className="p-4 bg-white rounded-lg border border-green-100 shadow-sm">
+                                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-green-600" />
+                                            Highlights
+                                        </h4>
+                                        <ul className="space-y-1">
+                                            {aiReport.highlights.map((highlight: string, idx: number) => (
+                                                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                                    <span className="text-green-500 mt-0.5">&#8226;</span>
+                                                    {highlight}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                {aiReport.recommendations && aiReport.recommendations.length > 0 && (
+                                    <div className="p-4 bg-white rounded-lg border border-purple-100 shadow-sm">
+                                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                                            <Brain className="w-4 h-4 text-purple-600" />
+                                            Recommendations
+                                        </h4>
+                                        <ul className="space-y-1">
+                                            {aiReport.recommendations.map((rec: string, idx: number) => (
+                                                <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
+                                                    <span className="text-purple-500 mt-0.5">&#8226;</span>
+                                                    {rec}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
+                        {/* Ask AI Section */}
+                        <div className="border-t border-indigo-100 pt-4">
+                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-indigo-600" />
+                                Ask AI About Your Child
+                            </h4>
+                            <div className="flex gap-2">
+                                <input
+                                    id="parent-dashboard-ai-question-input"
+                                    type="text"
+                                    placeholder={selectedChildIdForAi ? "e.g., How is my child progressing in swimming?" : "Select a child first..."}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    value={aiQuestion}
+                                    onChange={(e) => setAiQuestion(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !aiAnswerLoading) {
+                                            handleAskAi()
+                                        }
+                                    }}
+                                    disabled={!selectedChildIdForAi || aiAnswerLoading}
+                                />
+                                <Button
+                                    id="parent-dashboard-ask-ai-btn"
+                                    onClick={handleAskAi}
+                                    disabled={!selectedChildIdForAi || !aiQuestion.trim() || aiAnswerLoading}
+                                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                                >
+                                    {aiAnswerLoading ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        'Ask'
+                                    )}
+                                </Button>
+                            </div>
+                            {aiAnswer && !aiError && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-3 p-4 bg-white rounded-lg border border-indigo-100 shadow-sm"
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <Brain className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                                        <p className="text-sm text-gray-700 leading-relaxed">{aiAnswer}</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
         </div>
     )
 }

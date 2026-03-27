@@ -43,6 +43,7 @@ const ProfilePage = () => {
     const [isEditing, setIsEditing] = useState(false)
     const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [isSaving, setIsSaving] = useState(false)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
@@ -140,13 +141,17 @@ const ProfilePage = () => {
         }
     }
 
-    const handleEdit = () => setIsEditing(true)
+    const handleEdit = () => {
+        setSuccessMessage(null)
+        setIsEditing(true)
+    }
 
     const handleSave = async () => {
         if (!editedProfile) return
         try {
             setIsSaving(true)
             setError(null)
+            setSuccessMessage(null)
             await apiClient.put('/parent/profile', {
                 firstName: editedProfile.firstName,
                 lastName: editedProfile.lastName,
@@ -158,6 +163,8 @@ const ProfilePage = () => {
             })
             setProfile(editedProfile)
             setIsEditing(false)
+            setSuccessMessage('Profile updated successfully!')
+            setTimeout(() => setSuccessMessage(null), 5000)
         } catch (err) {
             console.error('Error saving profile:', err)
             setError('Failed to save profile')
@@ -169,6 +176,7 @@ const ProfilePage = () => {
     const handleCancel = () => {
         setEditedProfile(profile)
         setIsEditing(false)
+        setError(null)
     }
 
     const handleInputChange = (field: string, value: string | boolean) => {
@@ -239,6 +247,13 @@ const ProfilePage = () => {
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-red-600" />
                     <p className="text-sm text-red-700">{error}</p>
+                </div>
+            )}
+
+            {successMessage && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                    <Save className="w-4 h-4 text-green-600" />
+                    <p className="text-sm text-green-700">{successMessage}</p>
                 </div>
             )}
 
