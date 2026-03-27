@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, Plus, RefreshCw, Eye, Edit, Calendar, Star, TrendingUp,
-    BookOpen, Award, Activity, Loader, AlertCircle, Trophy
+    BookOpen, Award, Activity, Loader, AlertCircle, Trophy, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,10 @@ const ParentChildrenPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [children, setChildren] = useState<any[]>([])
     const [error, setError] = useState<string | null>(null)
+    const [showAddModal, setShowAddModal] = useState(false)
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [editingChild, setEditingChild] = useState<any>(null)
+    const [formSubmitting, setFormSubmitting] = useState(false)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
@@ -43,6 +47,69 @@ const ParentChildrenPage = () => {
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const handleAddChild = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setFormSubmitting(true)
+        const formData = new FormData(e.currentTarget)
+        const data = {
+            firstName: formData.get('firstName') as string,
+            lastName: formData.get('lastName') as string,
+            dateOfBirth: formData.get('dateOfBirth') as string,
+            gender: formData.get('gender') as string,
+            medicalInfo: {
+                allergies: (formData.get('allergies') as string)
+                    .split(',')
+                    .map((a) => a.trim())
+                    .filter(Boolean),
+            },
+        }
+        try {
+            await apiClient.post('/parent/children', data)
+            setShowAddModal(false)
+            await loadChildren()
+        } catch (err) {
+            console.error('Error adding child:', err)
+            alert('Failed to add child. Please try again.')
+        } finally {
+            setFormSubmitting(false)
+        }
+    }
+
+    const handleEditChild = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        if (!editingChild) return
+        setFormSubmitting(true)
+        const formData = new FormData(e.currentTarget)
+        const data = {
+            firstName: formData.get('firstName') as string,
+            lastName: formData.get('lastName') as string,
+            dateOfBirth: formData.get('dateOfBirth') as string,
+            gender: formData.get('gender') as string,
+            medicalInfo: {
+                allergies: (formData.get('allergies') as string)
+                    .split(',')
+                    .map((a) => a.trim())
+                    .filter(Boolean),
+            },
+        }
+        try {
+            await apiClient.put(`/parent/children/${editingChild.id}`, data)
+            setShowEditModal(false)
+            setEditingChild(null)
+            await loadChildren()
+        } catch (err) {
+            console.error('Error updating child:', err)
+            alert('Failed to update child. Please try again.')
+        } finally {
+            setFormSubmitting(false)
+        }
+    }
+
+    const openEditModal = (child: any) => {
+        setEditingChild(child)
+        setShowEditModal(true)
     }
 
     const totalChildren = children.length
@@ -98,6 +165,112 @@ const ParentChildrenPage = () => {
         return 'text-red-600'
     }
 
+    // Derive first/last name and allergies string from a child object for prefilling
+    const getChildFirstName = (child: any) => {
+        if (child.firstName) return child.firstName
+        const parts = (child.name || '').split(' ')
+        return parts[0] || ''
+    }
+    const getChildLastName = (child: any) => {
+        if (child.lastName) return child.lastName
+        const parts = (child.name || '').split(' ')
+        return parts.slice(1).join(' ') || ''
+    }
+    const getChildAllergies = (child: any) => {
+        if (child.medicalInfo?.allergies && Array.isArray(child.medicalInfo.allergies)) {
+            return child.medicalInfo.allergies.join(', ')
+        }
+        return ''
+    }
+
+    // Reusable modal form content
+    const renderChildForm = (
+        onSubmit: (e: React.FormEvent<HTMLFormElement>) => void,
+        defaults?: any,
+    ) => (
+        <form onSubmit={onSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input
+                        type="text"
+                        name="firstName"
+                        required
+                        defaultValue={defaults?.firstName || ''}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="First name"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                        type="text"
+                        name="lastName"
+                        required
+                        defaultValue={defaults?.lastName || ''}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Last name"
+                    />
+                </div>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                <input
+                    type="date"
+                    name="dateOfBirth"
+                    required
+                    defaultValue={defaults?.dateOfBirth || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                <select
+                    name="gender"
+                    required
+                    defaultValue={defaults?.gender || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                    <option value="" disabled>Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Medical Info - Allergies</label>
+                <textarea
+                    name="allergies"
+                    rows={3}
+                    defaultValue={defaults?.allergies || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Comma-separated allergies (e.g. peanuts, dust, pollen)"
+                />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                        setShowAddModal(false)
+                        setShowEditModal(false)
+                        setEditingChild(null)
+                    }}
+                >
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={formSubmitting}>
+                    {formSubmitting ? (
+                        <>
+                            <Loader className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                        </>
+                    ) : defaults ? 'Update Child' : 'Add Child'}
+                </Button>
+            </div>
+        </form>
+    )
+
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -120,6 +293,44 @@ const ParentChildrenPage = () => {
 
     return (
         <div className="space-y-6">
+            {/* Add Child Modal */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 relative">
+                        <button
+                            onClick={() => setShowAddModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Add Child</h2>
+                        {renderChildForm(handleAddChild)}
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Child Modal */}
+            {showEditModal && editingChild && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 relative">
+                        <button
+                            onClick={() => { setShowEditModal(false); setEditingChild(null) }}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Child</h2>
+                        {renderChildForm(handleEditChild, {
+                            firstName: getChildFirstName(editingChild),
+                            lastName: getChildLastName(editingChild),
+                            dateOfBirth: editingChild.dateOfBirth || '',
+                            gender: editingChild.gender || '',
+                            allergies: getChildAllergies(editingChild),
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -139,7 +350,7 @@ const ParentChildrenPage = () => {
                     <Button
                         id="parent-children-add-btn"
                         size="sm"
-                        onClick={() => alert('Feature coming soon')}
+                        onClick={() => setShowAddModal(true)}
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Child
@@ -310,7 +521,7 @@ const ParentChildrenPage = () => {
                                             className="flex-1"
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => alert('Feature coming soon')}
+                                            onClick={() => openEditModal(child)}
                                         >
                                             <Edit className="w-4 h-4 mr-2" />
                                             Edit Profile
@@ -339,7 +550,7 @@ const ParentChildrenPage = () => {
                     <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Children Found</h3>
                     <p className="text-gray-600 mb-4">Add your children to start tracking their progress.</p>
-                    <Button onClick={() => alert('Feature coming soon')}>
+                    <Button onClick={() => setShowAddModal(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Child
                     </Button>
@@ -357,7 +568,7 @@ const ParentChildrenPage = () => {
                             id="parent-children-quick-add-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Feature coming soon')}
+                            onClick={() => setShowAddModal(true)}
                         >
                             <Plus className="w-6 h-6" />
                             <span>Add Child</span>

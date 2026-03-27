@@ -71,19 +71,14 @@ const ParentBookingsPage = () => {
     }, [isAuthenticated, router, loadBookings])
 
     const handleCancelBooking = async (bookingId: string) => {
-        if (!confirm('Are you sure you want to cancel this booking?')) return
+        if (!confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) return
 
         try {
             await apiClient.put(`/parent/bookings/${bookingId}/cancel`, {})
-            setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: 'cancelled' } : b))
-            setStats(prev => ({
-                ...prev,
-                upcoming: Math.max(0, prev.upcoming - 1),
-                cancelled: prev.cancelled + 1
-            }))
+            await loadBookings()
         } catch (err) {
             console.error('Error cancelling booking:', err)
-            alert('Failed to cancel booking')
+            alert('Failed to cancel booking. Please try again.')
         }
     }
 
@@ -131,28 +126,36 @@ const ParentBookingsPage = () => {
             value: stats.total,
             icon: BookOpen,
             bgGradient: 'from-blue-50 to-blue-100',
-            gradient: 'from-blue-500 to-blue-600'
+            gradient: 'from-blue-500 to-blue-600',
+            badge: 'All Time',
+            badgeColor: 'text-blue-600 bg-blue-100'
         },
         {
             title: 'Upcoming',
             value: stats.upcoming,
             icon: TrendingUp,
             bgGradient: 'from-green-50 to-emerald-100',
-            gradient: 'from-green-500 to-emerald-600'
+            gradient: 'from-green-500 to-emerald-600',
+            badge: 'Scheduled',
+            badgeColor: 'text-green-600 bg-green-100'
         },
         {
             title: 'Completed',
             value: stats.completed,
             icon: CheckCircle,
             bgGradient: 'from-purple-50 to-purple-100',
-            gradient: 'from-purple-500 to-purple-600'
+            gradient: 'from-purple-500 to-purple-600',
+            badge: 'Done',
+            badgeColor: 'text-purple-600 bg-purple-100'
         },
         {
             title: 'Cancelled',
             value: stats.cancelled,
             icon: XCircle,
             bgGradient: 'from-orange-50 to-orange-100',
-            gradient: 'from-orange-500 to-orange-600'
+            gradient: 'from-orange-500 to-orange-600',
+            badge: 'Dropped',
+            badgeColor: 'text-orange-600 bg-orange-100'
         }
     ]
 
@@ -220,6 +223,7 @@ const ParentBookingsPage = () => {
                                     <div className={`bg-gradient-to-br ${card.gradient} p-2.5 rounded-lg shadow-md`}>
                                         <card.icon className="w-5 h-5 text-white" />
                                     </div>
+                                    <span className={`text-xs font-medium ${card.badgeColor} px-2 py-1 rounded-full`}>{card.badge}</span>
                                 </div>
                                 <p className="text-xs text-gray-600 font-medium mb-1">{card.title}</p>
                                 <p className="text-2xl font-bold text-gray-900">{card.value}</p>

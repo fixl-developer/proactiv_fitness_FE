@@ -226,7 +226,7 @@ const ParentHomePage = () => {
                                             <Clock className="w-4 h-4 text-gray-400" />
                                             <span className="text-sm text-gray-600">Next class: {child.nextClass}</span>
                                         </div>
-                                        <Button id={`parent-child-${child.name.toLowerCase()}-view-btn`} variant="outline" size="sm">
+                                        <Button id={`parent-child-${child.name.toLowerCase()}-view-btn`} variant="outline" size="sm" onClick={() => window.location.href = '/parent/children'}>
                                             View Details
                                         </Button>
                                     </div>
@@ -297,7 +297,7 @@ const ParentHomePage = () => {
                 <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
-                            { icon: Calendar, label: 'Book Class', href: '/book-now' },
+                            { icon: Calendar, label: 'Book Class', href: '/parent/browse-classes' },
                             { icon: CreditCard, label: 'Make Payment', href: '/parent/payments' },
                             { icon: Star, label: 'View Progress', href: '/parent/children' },
                             { icon: Target, label: 'Set Goals', href: '/parent/dashboard' }

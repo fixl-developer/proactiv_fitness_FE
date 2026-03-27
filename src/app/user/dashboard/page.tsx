@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
-import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame, Brain, Sparkles, Loader2 } from 'lucide-react'
+import { Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw, Target, Flame, Brain, Sparkles, Loader2, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,17 +16,86 @@ import UserAchievementsService from '@/services/modules/user-achievements.servic
 import { apiClient } from '@/services/api/client'
 import aiCoachService from '@/services/aiCoachService'
 
+interface DashboardStats {
+    upcomingClasses: number
+    completedClasses: number
+    totalBookings: number
+    achievements: number
+    currentStreak: number
+    totalPoints: number
+}
+
+const DEFAULT_STATS: DashboardStats = {
+    upcomingClasses: 0,
+    completedClasses: 0,
+    totalBookings: 0,
+    achievements: 0,
+    currentStreak: 0,
+    totalPoints: 0,
+}
+
+const FALLBACK_AI_TIPS = [
+    'Stay consistent with your training schedule for best results.',
+    'Remember to warm up before every session and cool down after.',
+    'Hydration and sleep are just as important as your workouts.',
+]
+
+function LoadingSkeleton() {
+    return (
+        <div className="space-y-6">
+            {/* Header skeleton */}
+            <div className="animate-pulse flex justify-between items-center">
+                <div className="space-y-2">
+                    <div className="h-8 bg-gray-200 rounded w-72" />
+                    <div className="h-4 bg-gray-200 rounded w-48" />
+                </div>
+                <div className="h-9 w-24 bg-gray-200 rounded" />
+            </div>
+
+            {/* Stat cards skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="animate-pulse">
+                        <div className="h-[120px] bg-gray-200 rounded-lg" />
+                    </div>
+                ))}
+            </div>
+
+            {/* Quick actions skeleton */}
+            <div className="animate-pulse h-[140px] bg-gray-200 rounded-lg" />
+
+            {/* Content sections skeleton */}
+            <div className="grid grid-cols-1 gap-6">
+                <div className="animate-pulse h-[200px] bg-gray-200 rounded-lg" />
+                <div className="animate-pulse h-[180px] bg-gray-200 rounded-lg" />
+            </div>
+        </div>
+    )
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="bg-red-100 p-4 rounded-full">
+                <AlertTriangle className="w-10 h-10 text-red-500" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Something went wrong</h2>
+            <p className="text-gray-500 text-sm text-center max-w-md">
+                We could not load your dashboard. This might be a temporary issue. Please try again.
+            </p>
+            <Button onClick={onRetry} className="mt-2">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+            </Button>
+        </div>
+    )
+}
+
 export default function UserDashboardPage() {
     const [isLoading, setIsLoading] = useState(true)
+    const [hasError, setHasError] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
-    const [stats, setStats] = useState({
-        upcomingClasses: 0,
-        completedClasses: 0,
-        totalBookings: 0,
-        achievements: 0,
-        currentStreak: 0,
-        totalPoints: 0
-    })
+    const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS)
     const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
     const [progressData, setProgressData] = useState<any>(null)
     const [aiRecommendations, setAiRecommendations] = useState<any>(null)
@@ -37,48 +106,86 @@ export default function UserDashboardPage() {
     const loadDashboard = useCallback(async () => {
         try {
             setIsLoading(true)
+            setHasError(false)
 
-            const classesService = new UserClassesService()
-            const progressService = new UserProgressService()
-            const achievementsService = new UserAchievementsService()
+            // Try the consolidated dashboard endpoint first
+            let dashboardData: any = null
+            try {
+                const dashboardRes = await apiClient.get<any>('/user/dashboard')
+                dashboardData = dashboardRes?.data ?? dashboardRes
+            } catch {
+                // Consolidated endpoint unavailable, fall back to individual calls
+            }
 
-            // Fetch all data in parallel from backend
-            const [dashboardRes, upcomingRes, allClassesRes, progressRes, achievementsStatsRes] = await Promise.allSettled([
-                apiClient.get<any>('/user/dashboard').catch(() => null),
-                classesService.getUpcomingClasses().catch(() => []),
-                classesService.getClasses().catch(() => []),
-                progressService.getProgress().catch(() => null),
-                achievementsService.getStats().catch(() => null)
-            ])
+            // If we got dashboard data, use it; otherwise fetch individually
+            if (dashboardData?.stats) {
+                setStats({
+                    upcomingClasses: dashboardData.stats.upcomingClasses ?? 0,
+                    completedClasses: dashboardData.stats.completedClasses ?? 0,
+                    totalBookings: dashboardData.stats.totalBookings ?? 0,
+                    achievements: dashboardData.stats.achievements ?? 0,
+                    currentStreak: dashboardData.stats.currentStreak ?? 0,
+                    totalPoints: dashboardData.stats.totalPoints ?? 0,
+                })
+                setUpcomingClasses(Array.isArray(dashboardData.upcomingClasses) ? dashboardData.upcomingClasses.slice(0, 5) : [])
+                setProgressData(dashboardData.progress ?? null)
+            } else {
+                // Fallback: individual service calls, each wrapped safely
+                let upcoming: any[] = []
+                let allClasses: any[] = []
+                let progress: any = null
+                let achievementsStats: any = null
 
-            // Dashboard stats from API
-            const dashboard = dashboardRes.status === 'fulfilled' ? dashboardRes.value : null
-            const upcoming = upcomingRes.status === 'fulfilled' ? upcomingRes.value : []
-            const allClasses = allClassesRes.status === 'fulfilled' ? allClassesRes.value : []
-            const progress = progressRes.status === 'fulfilled' ? progressRes.value : null
-            const achievementsStats = achievementsStatsRes.status === 'fulfilled' ? achievementsStatsRes.value : null
+                try {
+                    const classesService = new UserClassesService()
+                    upcoming = await classesService.getUpcomingClasses()
+                } catch {
+                    upcoming = []
+                }
 
-            // Set upcoming classes
-            setUpcomingClasses(Array.isArray(upcoming) ? upcoming.slice(0, 5) : [])
+                try {
+                    const classesService = new UserClassesService()
+                    allClasses = await classesService.getClasses()
+                } catch {
+                    allClasses = []
+                }
 
-            // Calculate stats from real data
-            const completedCount = Array.isArray(allClasses) ? allClasses.filter((c: any) => c.status === 'completed').length : 0
-            const upcomingCount = Array.isArray(upcoming) ? upcoming.length : 0
-            const totalCount = Array.isArray(allClasses) ? allClasses.length : 0
+                try {
+                    const progressService = new UserProgressService()
+                    progress = await progressService.getProgress()
+                } catch {
+                    progress = null
+                }
 
-            setStats({
-                upcomingClasses: dashboard?.data?.stats?.upcomingClasses ?? upcomingCount,
-                completedClasses: dashboard?.data?.stats?.completedClasses ?? completedCount,
-                totalBookings: dashboard?.data?.stats?.totalBookings ?? totalCount,
-                achievements: achievementsStats?.unlockedAchievements ?? achievementsStats?.totalPoints ?? 0,
-                currentStreak: progress?.currentStreak ?? 0,
-                totalPoints: achievementsStats?.totalPoints ?? 0
-            })
+                try {
+                    const achievementsService = new UserAchievementsService()
+                    achievementsStats = await achievementsService.getStats()
+                } catch {
+                    achievementsStats = null
+                }
 
-            // Set progress data
-            setProgressData(progress)
+                setUpcomingClasses(Array.isArray(upcoming) ? upcoming.slice(0, 5) : [])
+
+                const completedCount = Array.isArray(allClasses)
+                    ? allClasses.filter((c: any) => c.status === 'completed').length
+                    : 0
+                const upcomingCount = Array.isArray(upcoming) ? upcoming.length : 0
+                const totalCount = Array.isArray(allClasses) ? allClasses.length : 0
+
+                setStats({
+                    upcomingClasses: upcomingCount,
+                    completedClasses: completedCount,
+                    totalBookings: totalCount,
+                    achievements: achievementsStats?.unlockedAchievements ?? achievementsStats?.totalPoints ?? 0,
+                    currentStreak: progress?.currentStreak ?? 0,
+                    totalPoints: achievementsStats?.totalPoints ?? 0,
+                })
+
+                setProgressData(progress)
+            }
         } catch (err) {
             console.error('Error loading dashboard:', err)
+            setHasError(true)
         } finally {
             setIsLoading(false)
         }
@@ -89,24 +196,54 @@ export default function UserDashboardPage() {
         try {
             const userId = user?.id || ''
             const tenantId = (user as any)?.tenantId || 'proactiv-hq'
-            const [progressRes, recommendationsRes] = await Promise.allSettled([
-                aiCoachService.predictProgress(userId, tenantId),
-                aiCoachService.getRecommendations({ studentId: userId, skillLevel: 'all' }),
-            ])
 
-            const progress = progressRes.status === 'fulfilled' ? progressRes.value : null
-            const recommendations = recommendationsRes.status === 'fulfilled' ? recommendationsRes.value : null
+            let progress: any = null
+            let recommendations: any = null
 
-            setAiRecommendations({
-                progressPrediction: progress?.data || progress,
-                recommendations: recommendations?.data?.recommendations || recommendations?.recommendations || [],
-                overallAssessment: recommendations?.data?.overallAssessment || recommendations?.overallAssessment || '',
-                focusArea: recommendations?.data?.focusArea || recommendations?.focusArea || '',
-                aiPowered: true,
-            })
+            try {
+                progress = await aiCoachService.predictProgress(userId, tenantId)
+            } catch {
+                progress = null
+            }
+
+            try {
+                recommendations = await aiCoachService.getRecommendations({ studentId: userId, skillLevel: 'all' })
+            } catch {
+                recommendations = null
+            }
+
+            const recList = recommendations?.data?.recommendations || recommendations?.recommendations || []
+            const assessment = recommendations?.data?.overallAssessment || recommendations?.overallAssessment || ''
+            const focus = recommendations?.data?.focusArea || recommendations?.focusArea || ''
+
+            if (recList.length > 0 || assessment) {
+                setAiRecommendations({
+                    progressPrediction: progress?.data || progress,
+                    recommendations: recList,
+                    overallAssessment: assessment,
+                    focusArea: focus,
+                    aiPowered: true,
+                })
+            } else {
+                // No real data -- show fallback tips
+                setAiRecommendations({
+                    progressPrediction: null,
+                    recommendations: FALLBACK_AI_TIPS.map(tip => ({ suggestion: tip })),
+                    overallAssessment: 'Keep up the great work! Here are some general fitness tips to help you on your journey.',
+                    focusArea: '',
+                    aiPowered: false,
+                })
+            }
         } catch (err) {
             console.error('AI recommendations unavailable:', err)
-            setAiRecommendations(null)
+            // Show fallback tips instead of nothing
+            setAiRecommendations({
+                progressPrediction: null,
+                recommendations: FALLBACK_AI_TIPS.map(tip => ({ suggestion: tip })),
+                overallAssessment: 'Keep up the great work! Here are some general fitness tips to help you on your journey.',
+                focusArea: '',
+                aiPowered: false,
+            })
         } finally {
             setAiLoading(false)
         }
@@ -125,23 +262,20 @@ export default function UserDashboardPage() {
 
     const handleRefresh = async () => {
         setRefreshing(true)
-        await loadDashboard()
+        await Promise.all([loadDashboard(), loadAiRecommendations()])
         setRefreshing(false)
     }
 
     const displayName = user?.name || (user as any)?.firstName || 'User'
 
+    // Loading state
     if (isLoading) {
-        return (
-            <div className="space-y-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>)}
-                    </div>
-                </div>
-            </div>
-        )
+        return <LoadingSkeleton />
+    }
+
+    // Error state with retry
+    if (hasError) {
+        return <ErrorState onRetry={handleRefresh} />
     }
 
     const statCards = [
@@ -151,15 +285,17 @@ export default function UserDashboardPage() {
             icon: Calendar,
             gradient: 'from-blue-500 to-blue-600',
             bgGradient: 'from-blue-50 to-blue-100',
-            change: `${stats.upcomingClasses} scheduled`
+            badge: `${stats.upcomingClasses} scheduled`,
+            badgeColor: 'text-blue-600 bg-blue-100',
         },
         {
             title: 'Completed',
             value: stats.completedClasses,
             icon: TrendingUp,
-            gradient: 'from-green-500 to-emerald-600',
-            bgGradient: 'from-green-50 to-emerald-100',
-            change: 'classes done'
+            gradient: 'from-green-500 to-green-600',
+            bgGradient: 'from-green-50 to-green-100',
+            badge: 'classes done',
+            badgeColor: 'text-green-600 bg-green-100',
         },
         {
             title: 'Total Bookings',
@@ -167,23 +303,25 @@ export default function UserDashboardPage() {
             icon: BookOpen,
             gradient: 'from-purple-500 to-purple-600',
             bgGradient: 'from-purple-50 to-purple-100',
-            change: 'all time'
+            badge: 'all time',
+            badgeColor: 'text-purple-600 bg-purple-100',
         },
         {
             title: 'Achievements',
             value: stats.achievements,
             icon: Award,
-            gradient: 'from-amber-500 to-orange-600',
-            bgGradient: 'from-amber-50 to-orange-100',
-            change: `${stats.totalPoints} pts`
-        }
+            gradient: 'from-orange-500 to-orange-600',
+            bgGradient: 'from-orange-50 to-orange-100',
+            badge: `${stats.totalPoints} pts`,
+            badgeColor: 'text-orange-600 bg-orange-100',
+        },
     ]
 
     const quickActions = [
-        { label: 'Book a Class', href: '/user/my-classes', icon: BookOpen },
-        { label: 'View Bookings', href: '/user/bookings', icon: Calendar },
-        { label: 'My Progress', href: '/user/progress', icon: TrendingUp },
-        { label: 'Payments', href: '/user/payments', icon: CreditCard }
+        { label: 'Browse Classes', href: '/user/my-classes', icon: BookOpen },
+        { label: 'My Bookings', href: '/user/bookings', icon: Calendar },
+        { label: 'Payments', href: '/user/payments', icon: CreditCard },
+        { label: 'Progress', href: '/user/progress', icon: TrendingUp },
     ]
 
     return (
@@ -200,24 +338,22 @@ export default function UserDashboardPage() {
                 </Button>
             </div>
 
-            {/* Colorful Stats Cards - Admin Style */}
+            {/* Colorful Stats Cards - Admin Style Gradients */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {statCards.map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
                         <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
-                            <CardContent className="p-5">
+                            <CardContent className="p-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
                                         <metric.icon className="w-5 h-5 text-white" />
                                     </div>
-                                    <span className="text-xs font-medium text-gray-600 bg-white/60 px-2 py-1 rounded-full">
-                                        {metric.change}
+                                    <span className={`text-xs font-medium ${metric.badgeColor} px-2 py-1 rounded-full`}>
+                                        {metric.badge}
                                     </span>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                                </div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
                             </CardContent>
                         </Card>
                     </motion.div>
@@ -257,7 +393,11 @@ export default function UserDashboardPage() {
                         <div className="flex items-center gap-2">
                             <Brain className="w-5 h-5 text-purple-600" />
                             <CardTitle>AI Recommendations</CardTitle>
-                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                            {aiRecommendations?.aiPowered ? (
+                                <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                            ) : (
+                                <Badge className="bg-gray-100 text-gray-600 text-xs">General Tips</Badge>
+                            )}
                         </div>
                         <Button variant="outline" size="sm" onClick={loadAiRecommendations} disabled={aiLoading}>
                             <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
@@ -344,7 +484,7 @@ export default function UserDashboardPage() {
                                         <div>
                                             <h4 className="font-semibold text-gray-900">{cls.className}</h4>
                                             <p className="text-sm text-gray-500">
-                                                {cls.coach} • {cls.schedule?.time || cls.time} • {cls.location}
+                                                {cls.coach} {cls.schedule?.time || cls.time ? `\u2022 ${cls.schedule?.time || cls.time}` : ''} {cls.location ? `\u2022 ${cls.location}` : ''}
                                             </p>
                                         </div>
                                     </div>

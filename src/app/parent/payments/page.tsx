@@ -86,9 +86,9 @@ const ParentPaymentsPage = () => {
         }
     }
 
-    const filteredPayments = payments.filter(payment =>
-        selectedFilter === 'all' || payment.status === selectedFilter
-    )
+    const formatCurrency = (amount: number) => {
+        return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
 
     if (isLoading) {
         return (
@@ -140,9 +140,10 @@ const ParentPaymentsPage = () => {
                                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
                                     <DollarSign className="w-5 h-5 text-white" />
                                 </div>
+                                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Lifetime</span>
                             </div>
                             <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
-                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.totalSpent.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">${paymentStats.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -154,9 +155,10 @@ const ParentPaymentsPage = () => {
                                 <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-2.5 rounded-lg shadow-md">
                                     <TrendingUp className="w-5 h-5 text-white" />
                                 </div>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">This Month</span>
                             </div>
                             <p className="text-xs text-gray-600 font-medium mb-1">Monthly Spent</p>
-                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.monthlySpent.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">${paymentStats.monthlySpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -168,9 +170,10 @@ const ParentPaymentsPage = () => {
                                 <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md">
                                     <Clock className="w-5 h-5 text-white" />
                                 </div>
+                                <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Awaiting</span>
                             </div>
                             <p className="text-xs text-gray-600 font-medium mb-1">Pending Payments</p>
-                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.pendingPayments.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">${paymentStats.pendingPayments.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -182,9 +185,10 @@ const ParentPaymentsPage = () => {
                                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
                                     <Wallet className="w-5 h-5 text-white" />
                                 </div>
+                                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Balance</span>
                             </div>
                             <p className="text-xs text-gray-600 font-medium mb-1">Account Balance</p>
-                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.accountBalance.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">${paymentStats.accountBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -224,12 +228,12 @@ const ParentPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {filteredPayments.length === 0 && (
+                        {payments.length === 0 && (
                             <div className="text-center py-8 text-gray-500">
                                 No payments found for the selected filter.
                             </div>
                         )}
-                        {filteredPayments.map((payment, index) => (
+                        {payments.map((payment, index) => (
                             <motion.div
                                 key={payment.id || index}
                                 initial={{ opacity: 0, y: 10 }}
@@ -253,13 +257,13 @@ const ParentPaymentsPage = () => {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-lg font-bold text-blue-600">HK${payment.amount?.toLocaleString()}</p>
+                                    <p className="text-lg font-bold text-blue-600">${payment.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     <p className="text-sm text-gray-600">{payment.date}</p>
                                     <p className="text-xs text-gray-500">ID: {payment.id}</p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(payment.status)}
-                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert(`Payment Details:\n\nID: ${payment.id}\nProgram: ${payment.program}\nChild: ${payment.child}\nAmount: HK$${payment.amount?.toLocaleString()}\nDate: ${payment.date}\nStatus: ${payment.status}\nMethod: ${payment.method}\nInvoice: ${payment.invoice}\nDescription: ${payment.description}`)}>
+                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert(`Payment Details:\n\nID: ${payment.id}\nProgram: ${payment.program}\nChild: ${payment.child}\nAmount: $${payment.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nDate: ${payment.date}\nStatus: ${payment.status}\nMethod: ${payment.method}\nInvoice: ${payment.invoice}\nDescription: ${payment.description}`)}>
                                         <Eye className="w-4 h-4" />
                                     </Button>
                                     <Button id={`parent-payments-receipt-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert('Receipt download coming soon')}>
