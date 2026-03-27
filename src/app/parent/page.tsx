@@ -17,11 +17,14 @@ const ParentHomePage = () => {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const isAuthenticated = localStorage.getItem('isAuthenticated')
+            const isAuthenticated = localStorage.getItem('isAuthenticated') || localStorage.getItem('token')
             if (!isAuthenticated) {
                 window.location.href = '/login'
                 return
             }
+            // Redirect to dashboard
+            window.location.href = '/parent/dashboard'
+            return
         }
         setTimeout(() => setIsLoading(false), 1000)
     }, [])

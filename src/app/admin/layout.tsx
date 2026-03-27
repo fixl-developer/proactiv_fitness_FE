@@ -324,14 +324,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
-                            <Button id="admin-layout-btn-4"
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 text-gray-600 hover:text-gray-900"
-                            >
-                                <Bell className="w-4 h-4 mr-2" />
-                                Alerts
-                            </Button>
                             <Button id="admin-layout-btn-5"
                                 variant="outline"
                                 size="sm"
@@ -370,10 +362,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                         <div className="flex items-center space-x-3">
                             <NotificationBell />
-                            <Button id="admin-layout-btn-6" variant="outline" size="sm">
-                                <Bell className="w-4 h-4 mr-2" />
-                                Notifications
-                            </Button>
                             <Button id="admin-layout-btn-7" variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings

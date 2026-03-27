@@ -3,42 +3,73 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { rbacManager } from '@/services/auth/rbac';
+import { apiClient } from '@/services/api/client';
 import { RegisterStep1 } from '@/components/auth/RegisterStep1';
 import { RegisterStep2 } from '@/components/auth/RegisterStep2';
 import { RegisterStep3 } from '@/components/auth/RegisterStep3';
+import { RegisterStep4 } from '@/components/auth/RegisterStep4';
+import { RegisterStep5 } from '@/components/auth/RegisterStep5';
+import { RegisterStep6 } from '@/components/auth/RegisterStep6';
 import { RegistrationProgress } from '@/components/auth/RegistrationProgress';
 import type { RegisterStep1Data } from '@/lib/validations/auth';
 import type { RegisterStep2Data } from '@/lib/validations/auth';
 import type { RegisterStep3Data } from '@/lib/validations/auth';
+import type { RegisterStep4Data } from '@/lib/validations/auth';
+import type { RegisterStep5Data } from '@/lib/validations/auth';
+import type { RegisterStep6Data } from '@/lib/validations/auth';
 
 export default function RegisterPage() {
     const router = useRouter();
-    const { isAuthenticated, register, error, clearError } = useAuth();
+    const { isAuthenticated, error, clearError } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     const [formData, setFormData] = useState({
+        // Step 1: Account
         email: '',
         password: '',
         confirmPassword: '',
+        // Step 2: Personal
         firstName: '',
         lastName: '',
         phone: '',
         dateOfBirth: '',
         gender: '' as 'male' | 'female' | 'other' | '',
+        // Step 3: Address
         address: {
             street: '',
             city: '',
             state: '',
             zipCode: '',
             country: ''
-        }
+        },
+        // Step 4: Students
+        students: [] as Array<{
+            firstName: string;
+            lastName: string;
+            dateOfBirth: string;
+            gender: 'male' | 'female' | 'other';
+            school?: string;
+            medicalConditions?: string;
+        }>,
+        // Step 5: Guardians
+        guardians: [] as Array<{
+            firstName: string;
+            lastName: string;
+            relationship: string;
+            phone: string;
+            email: string;
+            isEmergencyContact: boolean;
+        }>,
+        // Step 6: Terms
+        acceptTerms: false,
+        acceptPrivacy: false,
+        marketingConsent: false,
     });
 
     // Redirect if already authenticated
@@ -63,6 +94,7 @@ export default function RegisterPage() {
             password: data.password,
             confirmPassword: data.confirmPassword
         }));
+        setFormErrors({});
         setCurrentStep(2);
     };
 
@@ -73,8 +105,9 @@ export default function RegisterPage() {
             lastName: data.lastName,
             phone: data.phone,
             dateOfBirth: data.dateOfBirth,
-            gender: data.gender
+            gender: data.gender || ''
         }));
+        setFormErrors({});
         setCurrentStep(3);
     };
 
@@ -83,17 +116,88 @@ export default function RegisterPage() {
             ...prev,
             address: data.address
         }));
-        handleSubmit();
+        setFormErrors({});
+        setCurrentStep(4);
     };
 
-    const handleSubmit = async () => {
+    const handleStep4Complete = (data: RegisterStep4Data) => {
+        setFormData(prev => ({
+            ...prev,
+            students: data.students || []
+        }));
+        setFormErrors({});
+        setCurrentStep(5);
+    };
+
+    const handleStep5Complete = (data: RegisterStep5Data) => {
+        setFormData(prev => ({
+            ...prev,
+            guardians: data.guardians || []
+        }));
+        setFormErrors({});
+        setCurrentStep(6);
+    };
+
+    const handleStep6Complete = (data: RegisterStep6Data) => {
+        setFormData(prev => ({
+            ...prev,
+            acceptTerms: data.acceptTerms,
+            acceptPrivacy: data.acceptPrivacy,
+            marketingConsent: data.marketingConsent || false,
+        }));
+        handleSubmit(data);
+    };
+
+    const handleSubmit = async (step6Data?: RegisterStep6Data) => {
         setIsLoading(true);
         setFormErrors({});
         clearError();
 
         try {
-            const fullName = `${formData.firstName} ${formData.lastName}`;
-            await register(formData.email, formData.password, fullName);
+            // Build emergency contact from first guardian marked as emergency contact
+            const emergencyGuardian = formData.guardians.find(g => g.isEmergencyContact) || formData.guardians[0];
+            const emergencyContact = emergencyGuardian ? {
+                name: `${emergencyGuardian.firstName} ${emergencyGuardian.lastName}`,
+                relationship: emergencyGuardian.relationship,
+                phone: emergencyGuardian.phone,
+            } : {
+                name: '',
+                relationship: '',
+                phone: '',
+            };
+
+            // Build children array
+            const children = formData.students.map(s => ({
+                firstName: s.firstName,
+                lastName: s.lastName,
+                dateOfBirth: s.dateOfBirth,
+                gender: s.gender,
+            }));
+
+            // Call the parent registration endpoint with all 6 steps data
+            const response = await apiClient.post('/auth/register/parent', {
+                // Step 1
+                email: formData.email,
+                password: formData.password,
+                confirmPassword: formData.confirmPassword,
+                // Step 2
+                parentFirstName: formData.firstName,
+                parentLastName: formData.lastName,
+                phone: formData.phone,
+                // Step 3
+                address: formData.address,
+                // Step 4
+                children,
+                // Step 5
+                emergencyContact,
+                // Step 6
+                preferences: {
+                    newsletter: step6Data?.marketingConsent || formData.marketingConsent || false,
+                    smsNotifications: true,
+                    emailNotifications: true,
+                },
+            });
+
             setRegistrationSuccess(true);
 
             // Redirect to login after 2 seconds
@@ -103,7 +207,6 @@ export default function RegisterPage() {
         } catch (err: any) {
             const errorMsg = err.response?.data?.message || err.message || 'Registration failed';
             setFormErrors({ general: errorMsg });
-            setCurrentStep(1);
         } finally {
             setIsLoading(false);
         }
@@ -256,6 +359,36 @@ export default function RegisterPage() {
                                     initialData={{
                                         address: formData.address
                                     }}
+                                />
+                            )}
+                            {currentStep === 4 && (
+                                <RegisterStep4
+                                    onComplete={handleStep4Complete}
+                                    onBack={handleBack}
+                                    initialData={{
+                                        students: formData.students.length > 0 ? formData.students : undefined
+                                    }}
+                                />
+                            )}
+                            {currentStep === 5 && (
+                                <RegisterStep5
+                                    onComplete={handleStep5Complete}
+                                    onBack={handleBack}
+                                    initialData={{
+                                        guardians: formData.guardians.length > 0 ? formData.guardians : undefined
+                                    }}
+                                />
+                            )}
+                            {currentStep === 6 && (
+                                <RegisterStep6
+                                    onComplete={handleStep6Complete}
+                                    onBack={handleBack}
+                                    initialData={{
+                                        acceptTerms: formData.acceptTerms,
+                                        acceptPrivacy: formData.acceptPrivacy,
+                                        marketingConsent: formData.marketingConsent,
+                                    }}
+                                    isLoading={isLoading}
                                 />
                             )}
                         </motion.div>

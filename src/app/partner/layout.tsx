@@ -10,7 +10,7 @@ import { authService } from '@/services/modules/auth.service'
 import NotificationBell from '@/components/shared/NotificationBell'
 import {
     LayoutDashboard, DollarSign, Settings, BarChart3,
-    TrendingUp, Zap, Bell, LogOut, Menu, X, Briefcase,
+    TrendingUp, Zap, LogOut, Menu, X, Briefcase,
     BookOpen, Users, FileText, Shield, MessageSquare,
     Target, Book, HelpCircle, Wallet
 } from 'lucide-react'
@@ -93,10 +93,6 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
 
                     <div className="flex items-center gap-4">
                         <NotificationBell />
-                        <button id="partner-layout-btn-2" className="relative p-2 hover:bg-gray-100 rounded-lg">
-                            <Bell className="w-5 h-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>

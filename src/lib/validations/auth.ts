@@ -45,7 +45,7 @@ export const registerStep3Schema = z.object({
         street: z.string().min(5, 'Street address is required'),
         city: z.string().min(2, 'City is required'),
         state: z.string().min(2, 'State is required'),
-        zipCode: z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid zip code'),
+        zipCode: z.string().min(3, 'Postal/Zip code is required').max(10, 'Postal/Zip code is too long'),
         country: z.string().min(2, 'Country is required'),
     }),
 });
@@ -152,7 +152,7 @@ export const profileUpdateSchema = z.object({
             street: z.string().min(5, 'Street address is required'),
             city: z.string().min(2, 'City is required'),
             state: z.string().min(2, 'State is required'),
-            zipCode: z.string().regex(/^\d{5}(-\d{4})?$/, 'Invalid zip code'),
+            zipCode: z.string().min(3, 'Postal/Zip code is required').max(10, 'Postal/Zip code is too long'),
             country: z.string().min(2, 'Country is required'),
         })
         .optional(),

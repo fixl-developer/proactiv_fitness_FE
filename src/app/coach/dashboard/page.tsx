@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Users, Calendar, TrendingUp, Award, Clock, AlertCircle,
-    CheckCircle, BarChart3, Target, Zap, BookOpen, MessageSquare
+    CheckCircle, BarChart3, Target, Zap, BookOpen, MessageSquare,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import { Progress } from '@/components/ui/progress'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
+import aiCoachService from '@/services/aiCoachService'
 import { toast } from 'sonner'
 
 // Fallback mock data when API fails
@@ -56,6 +58,37 @@ const CoachDashboard = () => {
     const [todaySchedule, setTodaySchedule] = useState<any[]>([])
     const [programs, setPrograms] = useState<any[]>([])
     const [performanceMetrics, setPerformanceMetrics] = useState(FALLBACK_DATA.performanceMetrics)
+
+    // AI Insights state
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const tenantId = (user as any)?.tenantId || 'proactiv-hq'
+            const [sessionsRes, recommendationsRes] = await Promise.allSettled([
+                aiCoachService.listSessions({ coachId: user?.id || '', tenantId }),
+                aiCoachService.getRecommendations({ studentId: 'overview', performanceData: performanceMetrics, skillLevel: 'all' }),
+            ])
+
+            const sessions = sessionsRes.status === 'fulfilled' ? sessionsRes.value : null
+            const recommendations = recommendationsRes.status === 'fulfilled' ? recommendationsRes.value : null
+
+            setAiInsights({
+                sessions: sessions?.data || [],
+                recommendations: recommendations?.data?.recommendations || recommendations?.recommendations || [],
+                overallAssessment: recommendations?.data?.overallAssessment || recommendations?.overallAssessment || '',
+                focusArea: recommendations?.data?.focusArea || recommendations?.focusArea || '',
+                aiPowered: recommendations?.data?.aiPowered ?? recommendations?.aiPowered ?? false,
+            })
+        } catch (err) {
+            console.error('AI insights unavailable:', err)
+            setAiInsights(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }
 
     useEffect(() => {
         // Don't redirect - layout handles auth. Just load data if authenticated.
@@ -101,6 +134,8 @@ const CoachDashboard = () => {
         }
 
         setIsLoading(false)
+        // Load AI insights lazily after main data
+        loadAiInsights()
     }
 
     useRealtimeRefresh(['schedule', 'attendance', 'booking', 'program'], loadDashboardData)
@@ -394,6 +429,91 @@ const CoachDashboard = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* AI Coaching Insights */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Coaching Insights</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={loadAiInsights} disabled={aiLoading}>
+                            <RefreshCw className={`w-4 h-4 mr-1 ${aiLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-3">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-gray-500 text-sm">Generating AI insights for your students...</p>
+                        </div>
+                    ) : aiInsights ? (
+                        <div className="space-y-4">
+                            {/* Overall Assessment */}
+                            {aiInsights.overallAssessment && (
+                                <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+                                    <div className="flex items-start gap-2">
+                                        <Sparkles className="w-4 h-4 text-purple-600 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-medium text-purple-900">{aiInsights.overallAssessment}</p>
+                                            {aiInsights.focusArea && (
+                                                <p className="text-xs text-purple-600 mt-1">Focus Area: {aiInsights.focusArea}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* AI Recommendations */}
+                            {aiInsights.recommendations?.length > 0 ? (
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-medium text-gray-700">AI Recommendations</h4>
+                                    {aiInsights.recommendations.slice(0, 4).map((rec: any, index: number) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                                        >
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                                                rec.priority === 1 ? 'bg-red-500' : rec.priority === 2 ? 'bg-orange-500' : 'bg-blue-500'
+                                            }`}>
+                                                {rec.priority || index + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-gray-900">{rec.skill || rec.suggestion || rec}</p>
+                                                {rec.suggestion && rec.skill && (
+                                                    <p className="text-xs text-gray-600 mt-1">{rec.suggestion}</p>
+                                                )}
+                                                {rec.level && (
+                                                    <Badge className="mt-1 bg-gray-100 text-gray-600 text-xs">{rec.level}</Badge>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-4">
+                                    <p className="text-sm text-gray-500">No specific recommendations at this time. Keep up the great coaching!</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <Brain className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-gray-500 text-sm">AI insights unavailable</p>
+                            <Button variant="outline" size="sm" className="mt-3" onClick={loadAiInsights}>
+                                <Sparkles className="w-4 h-4 mr-1" /> Generate Insights
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }

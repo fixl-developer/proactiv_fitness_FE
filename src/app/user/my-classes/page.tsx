@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     Calendar, Clock, MapPin, User, Search, Eye, X, RefreshCw, Plus,
     CheckCircle, XCircle, Star, MessageSquare, ClipboardCheck, Dumbbell,
-    ChevronRight, ChevronLeft, Filter, Users, ArrowLeft, Sparkles
+    ChevronRight, ChevronLeft, Filter, Users, ArrowLeft, Sparkles, Brain, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import UserClassesService from '@/services/modules/user-classes.service'
+import aiCoachService from '@/services/aiCoachService'
+import { smartSchedulerService, digitalTwinService } from '@/services/advancedAIServices'
 import { eventData } from '@/data/eventData'
 
 export default function MyClassesPage() {
@@ -38,6 +40,10 @@ export default function MyClassesPage() {
     const [bookingChildAge, setBookingChildAge] = useState('')
     const [submittingBooking, setSubmittingBooking] = useState(false)
     const [bookingSuccess, setBookingSuccess] = useState(false)
+    const [aiRecommendations, setAiRecommendations] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [aiClassData, setAiClassData] = useState<any>(null)
+    const [aiClassLoading, setAiClassLoading] = useState(false)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
     const classesService = new UserClassesService()
@@ -69,6 +75,32 @@ export default function MyClassesPage() {
         return filtered
     }, [availableEvents, bookingType, bookingSearch])
 
+    const loadAiRecommendations = useCallback(async () => {
+        try {
+            setAiLoading(true)
+            const data = await aiCoachService.getRecommendations({ studentId: user?.id || '', skillLevel: 'all' })
+            setAiRecommendations(data)
+        } catch (error) {
+            console.error('Error loading AI recommendations:', error)
+            setAiRecommendations(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }, [user?.id])
+
+    const loadAiClassData = useCallback(async () => {
+        try {
+            setAiClassLoading(true)
+            const data = await digitalTwinService.getLearningPath(user?.id || '')
+            setAiClassData(data)
+        } catch (error) {
+            console.error('Error loading AI class data:', error)
+            setAiClassData(null)
+        } finally {
+            setAiClassLoading(false)
+        }
+    }, [user?.id])
+
     const loadClasses = useCallback(async () => {
         try {
             const data = await classesService.getClasses()
@@ -87,7 +119,9 @@ export default function MyClassesPage() {
             return
         }
         loadClasses()
-    }, [isAuthenticated, router, loadClasses])
+        loadAiRecommendations()
+        loadAiClassData()
+    }, [isAuthenticated, router, loadClasses, loadAiRecommendations, loadAiClassData])
 
     useEffect(() => {
         filterClasses()
@@ -231,6 +265,32 @@ export default function MyClassesPage() {
                         Book Class
                     </Button>
                 </div>
+            </div>
+
+            {/* AI Class Recommendations */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">AI Class Recommendations</h3>
+                    <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                </div>
+                {aiLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                        <p className="text-sm text-gray-500">Loading AI suggestions...</p>
+                    </div>
+                ) : aiRecommendations ? (
+                    <div className="space-y-2">
+                        {(aiRecommendations.recommendations || aiRecommendations.insights || []).slice(0, 3).map((item: any, i: number) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">AI suggestions unavailable</p>
+                )}
             </div>
 
             {/* Colorful Stats Cards */}
@@ -446,6 +506,95 @@ export default function MyClassesPage() {
                     ))
                 )}
             </div>
+
+            {/* AI Learning Path & Class Recommendations */}
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-purple-600" />
+                        <CardTitle>AI Learning Path</CardTitle>
+                        <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiClassLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Generating your learning path...</p>
+                        </div>
+                    ) : aiClassData ? (
+                        <div className="space-y-4">
+                            {/* Learning Progress */}
+                            {(aiClassData.progress != null || aiClassData.completionPercentage != null) && (
+                                <div className="p-3 bg-white/70 rounded-lg border border-purple-100">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700">Learning Progress</span>
+                                        <span className="text-sm font-bold text-purple-700">
+                                            {aiClassData.progress ?? aiClassData.completionPercentage ?? 0}%
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-purple-100 rounded-full h-2">
+                                        <div
+                                            className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all"
+                                            style={{ width: `${aiClassData.progress ?? aiClassData.completionPercentage ?? 0}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Recommended Next Classes */}
+                            {(aiClassData.recommendedClasses || aiClassData.nextSteps || aiClassData.recommendations || []).length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Recommended Next Classes</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {(aiClassData.recommendedClasses || aiClassData.nextSteps || aiClassData.recommendations || []).slice(0, 4).map((item: any, i: number) => (
+                                            <div key={i} className="flex items-start gap-2 p-3 bg-white/70 rounded-lg border border-purple-100">
+                                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-800">{item.title || item.name || item.className || item}</p>
+                                                    {(item.description || item.reason) && (
+                                                        <p className="text-xs text-gray-600 mt-0.5">{item.description || item.reason}</p>
+                                                    )}
+                                                    {item.skillLevel && (
+                                                        <Badge className="mt-1 bg-purple-100 text-purple-700 text-xs">{item.skillLevel}</Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Skill Development Path */}
+                            {(aiClassData.skills || aiClassData.skillPath || aiClassData.milestones || []).length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Skill Development Path</h4>
+                                    <div className="space-y-2">
+                                        {(aiClassData.skills || aiClassData.skillPath || aiClassData.milestones || []).slice(0, 4).map((skill: any, i: number) => (
+                                            <div key={i} className="flex items-center gap-3 p-2 bg-white/70 rounded-lg border border-purple-100">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                    skill.completed ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                                                }`}>
+                                                    {i + 1}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-800">{skill.name || skill.title || skill.skill || skill}</p>
+                                                    {skill.level && <p className="text-xs text-gray-500">Level: {skill.level}</p>}
+                                                </div>
+                                                {skill.progress != null && (
+                                                    <span className="text-xs font-medium text-purple-600">{skill.progress}%</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">AI learning path data unavailable</p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Book Class / Assessment Modal */}
             <AnimatePresence>

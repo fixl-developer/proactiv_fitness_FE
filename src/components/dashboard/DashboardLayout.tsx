@@ -16,7 +16,6 @@ import {
     Settings,
     BarChart3,
     CreditCard,
-    Bell,
     LogOut,
     User,
     BookOpen,
@@ -158,13 +157,15 @@ const roleMenuItems: Record<string, MenuItem[]> = {
         }
     ],
     parent: [
-        { icon: Home, label: 'Dashboard', href: '/book-now?section=dashboard' },
-        { icon: Calendar, label: 'My Bookings', href: '/book-now?section=bookings' },
-        { icon: BookOpen, label: 'Book Classes', href: '/book-now' },
-        { icon: Star, label: 'Assessments', href: '/book-assessment' },
-        { icon: Users, label: 'My Children', href: '/book-now?section=children' },
-        { icon: CreditCard, label: 'Payments', href: '/book-now?section=payments' },
-        { icon: Settings, label: 'Profile', href: '/book-now?section=profile' }
+        { icon: Home, label: 'Dashboard', href: '/parent/dashboard' },
+        { icon: Users, label: 'My Children', href: '/parent/children' },
+        { icon: Calendar, label: 'My Bookings', href: '/parent/bookings' },
+        { icon: BookOpen, label: 'Browse Classes', href: '/parent/browse-classes' },
+        { icon: Activity, label: 'Nutrition', href: '/parent/nutrition' },
+        { icon: CreditCard, label: 'Payments', href: '/parent/payments' },
+        { icon: Clock, label: 'Waitlist', href: '/parent/waitlist' },
+        { icon: Star, label: 'Makeup Credits', href: '/parent/makeup-credits' },
+        { icon: Settings, label: 'Profile', href: '/parent/profile' }
     ],
     coach: [
         { icon: Home, label: 'Dashboard', href: '/coach/dashboard' },
@@ -237,16 +238,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     }
 
     const isActiveLink = (href: string) => {
-        if (userRole === 'parent') {
-            const currentSection = getCurrentSection()
-            if (href.includes('?section=')) {
-                const linkSection = href.split('?section=')[1]
-                return currentSection === linkSection
-            } else if (href === '/book-now') {
-                return !currentSection || currentSection === ''
-            }
-        }
-        return pathname === href
+        return pathname === href || pathname.startsWith(href + '/')
     }
 
     return (
@@ -380,14 +372,6 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
-                            <Button id="dashboard-dashboard-layout-btn-2"
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 text-gray-600 hover:text-gray-900"
-                            >
-                                <Bell className="w-4 h-4 mr-2" />
-                                Alerts
-                            </Button>
                             <Button id="dashboard-dashboard-layout-btn-3"
                                 variant="outline"
                                 size="sm"
@@ -426,10 +410,6 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
                         <div className="flex items-center space-x-3">
                             <NotificationBell />
-                            <Button id="dashboard-dashboard-layout-btn-4" variant="outline" size="sm">
-                                <Bell className="w-4 h-4 mr-2" />
-                                Notifications
-                            </Button>
                             <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings

@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Globe, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Globe, ChevronDown, Utensils } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState, useRef } from 'react'
 import LogoutModal from '@/components/ui/LogoutModal'
@@ -39,6 +39,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         { name: 'Bookings', href: '/user/bookings', icon: Calendar },
         { name: 'Payments', href: '/user/payments', icon: CreditCard },
         { name: 'Progress', href: '/user/progress', icon: TrendingUp },
+        { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
         { name: 'Achievements', href: '/user/achievements', icon: Award },
         { name: 'Profile', href: '/user/profile', icon: User }
     ]

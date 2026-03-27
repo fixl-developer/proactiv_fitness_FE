@@ -7,6 +7,7 @@ import TeamPreview from '@/components/sections/TeamPreview';
 import Testimonials from '@/components/sections/Testimonials';
 import Footer from '@/components/layout/Footer';
 import SectionDivider from '@/components/ui/SectionDivider';
+import AIPowered from '@/components/sections/AIPowered';
 
 export default function Home() {
     return (
@@ -17,6 +18,8 @@ export default function Home() {
             <About />
             <SectionDivider title="What We Offer" icon="🎯" color="from-green-500 to-emerald-500" />
             <Services />
+            <SectionDivider title="AI-Powered Platform" icon="🤖" color="from-purple-500 to-blue-500" />
+            <AIPowered />
             <SectionDivider title="Trusted Partners" icon="🤝" color="from-orange-500 to-red-500" />
             <ClientLogos />
             <SectionDivider title="Expert Coaches" icon="👥" color="from-purple-500 to-pink-500" />

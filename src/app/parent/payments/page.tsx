@@ -9,27 +9,23 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import PaymentService from '@/services/modules/payment.service'
-import BillingService from '@/services/modules/billing.service'
+import { apiClient } from '@/services/api/client'
 
 const ParentPaymentsPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [payments, setPayments] = useState<any[]>([])
     const [paymentStats, setPaymentStats] = useState<any>({
-        totalSpent: 18500,
-        monthlySpent: 4200,
-        pendingPayments: 1200,
-        accountBalance: 2500
+        totalSpent: 0,
+        monthlySpent: 0,
+        pendingPayments: 0,
+        accountBalance: 0
     })
     const [selectedFilter, setSelectedFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
     const [error, setError] = useState<string | null>(null)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
-
-    const parentId = user?.id || 'parent-1'
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -37,28 +33,29 @@ const ParentPaymentsPage = () => {
             return
         }
         loadPayments()
-    }, [isAuthenticated, router, parentId])
+    }, [isAuthenticated, router])
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            loadPayments()
+        }
+    }, [selectedFilter])
 
     const loadPayments = async () => {
         try {
             setIsLoading(true)
             setError(null)
 
-            const paymentService = new PaymentService()
-            const billingService = new BillingService()
+            const response = await apiClient.get(`/parent/payments?status=${selectedFilter}`)
+            const { stats, payments: paymentsList } = response.data
 
-            // Get payments
-            const paymentsData = await paymentService.getPayments(parentId)
-            setPayments(paymentsData || [])
-
-            // Get billing info for stats
-            const billingData = await billingService.getBillings(parentId)
             setPaymentStats({
-                totalSpent: billingData?.totalAmount || 0,
-                monthlySpent: billingData?.monthlyAmount || 0,
-                pendingPayments: billingData?.pendingAmount || 0,
-                accountBalance: billingData?.balance || 0
+                totalSpent: stats?.totalSpent || 0,
+                monthlySpent: stats?.monthlySpent || 0,
+                pendingPayments: stats?.pendingPayments || 0,
+                accountBalance: stats?.accountBalance || 0
             })
+            setPayments(paymentsList || [])
         } catch (err) {
             console.error('Error loading payments:', err)
             setError('Failed to load payment data')
@@ -66,53 +63,6 @@ const ParentPaymentsPage = () => {
             setIsLoading(false)
         }
     }
-
-    const paymentsData = [
-        {
-            id: 'PAY-001',
-            child: 'Emma Chen',
-            program: 'Beginner Gymnastics',
-            amount: 1800,
-            date: '2024-01-20',
-            status: 'completed',
-            method: 'Credit Card',
-            invoice: 'INV-2024-001',
-            description: 'Monthly gymnastics classes (January 2024)'
-        },
-        {
-            id: 'PAY-002',
-            child: 'Lucas Chen',
-            program: 'Intermediate Gymnastics',
-            amount: 2100,
-            date: '2024-01-20',
-            status: 'completed',
-            method: 'Bank Transfer',
-            invoice: 'INV-2024-002',
-            description: 'Monthly gymnastics classes (January 2024)'
-        },
-        {
-            id: 'PAY-003',
-            child: 'Emma Chen',
-            program: 'Private Coaching',
-            amount: 800,
-            date: '2024-01-25',
-            status: 'pending',
-            method: 'Credit Card',
-            invoice: 'INV-2024-003',
-            description: 'Private coaching session'
-        },
-        {
-            id: 'PAY-004',
-            child: 'Lucas Chen',
-            program: 'Holiday Camp',
-            amount: 1200,
-            date: '2024-02-01',
-            status: 'pending',
-            method: 'Bank Transfer',
-            invoice: 'INV-2024-004',
-            description: 'February holiday camp registration'
-        }
-    ]
 
     const getStatusColor = (status: string) => {
         const colors = {
@@ -136,7 +86,7 @@ const ParentPaymentsPage = () => {
         }
     }
 
-    const filteredPayments = paymentsData.filter(payment =>
+    const filteredPayments = payments.filter(payment =>
         selectedFilter === 'all' || payment.status === selectedFilter
     )
 
@@ -164,71 +114,77 @@ const ParentPaymentsPage = () => {
                     <p className="text-gray-600 mt-2">Manage your payments and view transaction history</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button id="parent-payments-refresh-btn" variant="outline" size="sm">
+                    <Button id="parent-payments-refresh-btn" variant="outline" size="sm" onClick={() => loadPayments()}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button id="parent-payments-make-payment-btn" size="sm">
+                    <Button id="parent-payments-make-payment-btn" size="sm" onClick={() => alert('Payment gateway coming soon')}>
                         <Plus className="w-4 h-4 mr-2" />
                         Make Payment
                     </Button>
                 </div>
             </div>
 
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    {error}
+                </div>
+            )}
+
             {/* Payment Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Total Spent</CardTitle>
-                            <DollarSign className="h-5 w-5 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${paymentStats.totalSpent.toLocaleString()}</div>
-                            <p className="text-sm text-blue-600 font-medium">This year</p>
-                            <Progress value={75} className="mt-3 h-2" />
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
+                                    <DollarSign className="w-5 h-5 text-white" />
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.totalSpent.toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Monthly Spent</CardTitle>
-                            <TrendingUp className="h-5 w-5 text-green-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${paymentStats.monthlySpent.toLocaleString()}</div>
-                            <p className="text-sm text-green-600 font-medium">This month</p>
-                            <Progress value={60} className="mt-3 h-2" />
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-green-50 to-emerald-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-2.5 rounded-lg shadow-md">
+                                    <TrendingUp className="w-5 h-5 text-white" />
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Monthly Spent</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.monthlySpent.toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Pending Payments</CardTitle>
-                            <Clock className="h-5 w-5 text-yellow-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${paymentStats.pendingPayments.toLocaleString()}</div>
-                            <p className="text-sm text-yellow-600 font-medium">Due soon</p>
-                            <Progress value={40} className="mt-3 h-2" />
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-orange-50 to-orange-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md">
+                                    <Clock className="w-5 h-5 text-white" />
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Pending Payments</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.pendingPayments.toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
 
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Account Balance</CardTitle>
-                            <Wallet className="h-5 w-5 text-purple-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${paymentStats.accountBalance.toLocaleString()}</div>
-                            <p className="text-sm text-purple-600 font-medium">Available</p>
-                            <Progress value={85} className="mt-3 h-2" />
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
+                                    <Wallet className="w-5 h-5 text-white" />
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-600 font-medium mb-1">Account Balance</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${paymentStats.accountBalance.toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -259,7 +215,7 @@ const ParentPaymentsPage = () => {
                                     </button>
                                 ))}
                             </div>
-                            <Button id="parent-payments-export-btn" variant="outline" size="sm">
+                            <Button id="parent-payments-export-btn" variant="outline" size="sm" onClick={() => alert('Export feature coming soon')}>
                                 <Download className="w-4 h-4 mr-2" />
                                 Export
                             </Button>
@@ -268,9 +224,14 @@ const ParentPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
+                        {filteredPayments.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">
+                                No payments found for the selected filter.
+                            </div>
+                        )}
                         {filteredPayments.map((payment, index) => (
                             <motion.div
-                                key={index}
+                                key={payment.id || index}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
@@ -284,7 +245,7 @@ const ParentPaymentsPage = () => {
                                         <div className="flex items-center gap-2">
                                             <h4 className="font-semibold text-gray-900">{payment.program}</h4>
                                             <Badge className={getStatusColor(payment.status)}>
-                                                {payment.status.toUpperCase()}
+                                                {payment.status?.toUpperCase()}
                                             </Badge>
                                         </div>
                                         <p className="text-sm text-gray-600">{payment.child} • {payment.description}</p>
@@ -292,16 +253,16 @@ const ParentPaymentsPage = () => {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-lg font-bold text-blue-600">HK${payment.amount.toLocaleString()}</p>
+                                    <p className="text-lg font-bold text-blue-600">HK${payment.amount?.toLocaleString()}</p>
                                     <p className="text-sm text-gray-600">{payment.date}</p>
                                     <p className="text-xs text-gray-500">ID: {payment.id}</p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(payment.status)}
-                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm">
+                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert(`Payment Details:\n\nID: ${payment.id}\nProgram: ${payment.program}\nChild: ${payment.child}\nAmount: HK$${payment.amount?.toLocaleString()}\nDate: ${payment.date}\nStatus: ${payment.status}\nMethod: ${payment.method}\nInvoice: ${payment.invoice}\nDescription: ${payment.description}`)}>
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button id={`parent-payments-receipt-${payment.id}-btn`} variant="ghost" size="sm">
+                                    <Button id={`parent-payments-receipt-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert('Receipt download coming soon')}>
                                         <Receipt className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -318,19 +279,19 @@ const ParentPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button id="parent-payments-quick-pay-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-pay-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment gateway coming soon')}>
                             <Plus className="w-6 h-6" />
                             <span>Make Payment</span>
                         </Button>
-                        <Button id="parent-payments-quick-receipt-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-receipt-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Receipt download coming soon')}>
                             <Download className="w-6 h-6" />
                             <span>Download Receipt</span>
                         </Button>
-                        <Button id="parent-payments-quick-methods-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-methods-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment methods management coming soon')}>
                             <CreditCard className="w-6 h-6" />
                             <span>Payment Methods</span>
                         </Button>
-                        <Button id="parent-payments-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button id="parent-payments-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment schedule coming soon')}>
                             <Calendar className="w-6 h-6" />
                             <span>Payment Schedule</span>
                         </Button>

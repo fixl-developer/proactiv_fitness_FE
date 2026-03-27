@@ -6,7 +6,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import { supportStaffService } from '@/services/supportStaffService'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { AlertCircle, CheckCircle, Clock, TrendingUp, AlertTriangle, Zap, Target, Ticket } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, TrendingUp, AlertTriangle, Zap, Target, Ticket, Brain, Sparkles, Loader2, RefreshCw } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { smartSupportService, workflowOrchestratorService } from '@/services/advancedAIServices'
 
 export default function StaffDashboard() {
     const router = useRouter()
@@ -16,6 +18,17 @@ export default function StaffDashboard() {
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [recentTickets, setRecentTickets] = useState<any[]>([])
     const [chartData, setChartData] = useState<any[]>([])
+    const [aiData, setAiData] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const res = await workflowOrchestratorService.getWorkflowHealth()
+            setAiData(res)
+        } catch { setAiData(null) }
+        finally { setAiLoading(false) }
+    }
 
     const loadDashboardData = useCallback(async () => {
         setLoading(true)
@@ -87,6 +100,7 @@ export default function StaffDashboard() {
         }
 
         loadDashboardData()
+        loadAiInsights()
     }, [isAuthenticated, router, loadDashboardData])
 
     if (!isAuthenticated) return null
@@ -319,6 +333,48 @@ export default function StaffDashboard() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                {/* AI Insights */}
+                <div className="mt-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
+                                <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                            </div>
+                            <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {aiLoading ? (
+                                <div className="flex items-center justify-center py-6 gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                    <p className="text-sm text-gray-500">Analyzing data with AI...</p>
+                                </div>
+                            ) : aiData ? (
+                                <div className="space-y-3">
+                                    {(Array.isArray(aiData) ? aiData : aiData?.recommendations || aiData?.suggestions || [aiData]).slice(0, 5).map((item: any, i: number) => (
+                                        <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
+                                                {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
+                                                {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

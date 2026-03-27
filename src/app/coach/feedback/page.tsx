@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     MessageSquare, Send, Star, User, Trash2,
-    CheckCircle, AlertCircle, X
+    CheckCircle, AlertCircle, X, Brain, Sparkles, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
+import aiCoachService from '@/services/aiCoachService'
+import { videoAnalysisService } from '@/services/advancedAIServices'
 import type { CoachStudent, CoachFeedback } from '@/services/modules/coach.service'
 
 // Mock fallback data
@@ -73,6 +75,10 @@ const CoachFeedbackPage = () => {
     const [feedbackHistory, setFeedbackHistory] = useState<CoachFeedback[]>([])
     const [filterType, setFilterType] = useState('all')
     const [notification, setNotification] = useState<Notification | null>(null)
+    const [aiFeedback, setAiFeedback] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [aiSuggestions, setAiSuggestions] = useState<any>(null)
+    const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false)
 
     const coachId = user?.id || ''
 
@@ -80,6 +86,41 @@ const CoachFeedbackPage = () => {
         setNotification({ type, message })
         setTimeout(() => setNotification(null), 4000)
     }, [])
+
+    const loadAiFeedback = useCallback(async () => {
+        if (!selectedStudent) return
+        try {
+            setAiLoading(true)
+            const data = await aiCoachService.getRecommendations({ studentId: selectedStudent, performanceData: { type: 'feedback' } })
+            setAiFeedback(data)
+        } catch (error) {
+            console.error('Error loading AI feedback:', error)
+            setAiFeedback(null)
+        } finally {
+            setAiLoading(false)
+        }
+    }, [selectedStudent])
+
+    const loadAiSuggestions = useCallback(async () => {
+        if (!selectedStudent) return
+        try {
+            setAiSuggestionsLoading(true)
+            const data = await videoAnalysisService.getStudentHistory(selectedStudent)
+            setAiSuggestions(data)
+        } catch (error) {
+            console.error('Error loading AI analysis history:', error)
+            setAiSuggestions(null)
+        } finally {
+            setAiSuggestionsLoading(false)
+        }
+    }, [selectedStudent])
+
+    useEffect(() => {
+        if (selectedStudent) {
+            loadAiFeedback()
+            loadAiSuggestions()
+        }
+    }, [selectedStudent, loadAiFeedback, loadAiSuggestions])
 
     const loadStudents = useCallback(async () => {
         if (!coachId) return
@@ -230,6 +271,71 @@ const CoachFeedbackPage = () => {
                     </p>
                 </div>
             </div>
+
+            {/* AI Feedback Suggestions */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">AI Feedback Suggestions</h3>
+                    <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                </div>
+                {aiLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                        <p className="text-sm text-gray-500">Loading AI suggestions...</p>
+                    </div>
+                ) : aiFeedback ? (
+                    <div className="space-y-2">
+                        {(aiFeedback.recommendations || aiFeedback.insights || []).slice(0, 3).map((item: any, i: number) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">Select a student to get AI-powered feedback suggestions</p>
+                )}
+            </div>
+
+            {/* AI Feedback Analysis (Video Analysis History) */}
+            {selectedStudent && (
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-sm border border-purple-200 p-6 mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Brain className="w-5 h-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-gray-900">AI Feedback Analysis</h3>
+                        <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                    </div>
+                    {aiSuggestionsLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing student history...</p>
+                        </div>
+                    ) : aiSuggestions ? (
+                        <div className="space-y-3">
+                            {(aiSuggestions.analyses || aiSuggestions.history || aiSuggestions.suggestions || []).slice(0, 4).map((item: any, i: number) => (
+                                <div key={i} className="flex items-start gap-3 p-3 bg-white/70 rounded-lg border border-purple-100">
+                                    <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-800">{item.title || item.exerciseType || item.area || `Analysis Point ${i + 1}`}</p>
+                                        <p className="text-xs text-gray-600 mt-0.5">{item.feedback || item.summary || item.description || item.suggestion || (typeof item === 'string' ? item : '')}</p>
+                                        {item.score != null && (
+                                            <span className="inline-block mt-1 text-xs font-medium text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                                                Score: {item.score}/100
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            {(aiSuggestions.analyses || aiSuggestions.history || aiSuggestions.suggestions || []).length === 0 && (
+                                <p className="text-sm text-gray-500 text-center py-2">No analysis history found for this student yet</p>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">No AI analysis data available for this student</p>
+                    )}
+                </div>
+            )}
 
             {/* Feedback Form */}
             <Card className="mb-6">

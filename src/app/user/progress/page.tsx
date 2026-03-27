@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, Target, Award, Calendar, RefreshCw, ArrowUp, CheckCircle, Clock, Flame, BarChart3 } from 'lucide-react'
+import { TrendingUp, Target, Award, Calendar, RefreshCw, ArrowUp, CheckCircle, Clock, Flame, BarChart3, Brain, Sparkles, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -10,12 +10,15 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import UserProgressService from '@/services/modules/user-progress.service'
+import aiCoachService from '@/services/aiCoachService'
 
 export default function ProgressPage() {
     const [progress, setProgress] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const { isAuthenticated } = useAuth()
+    const [aiData, setAiData] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const { isAuthenticated, user } = useAuth()
     const router = useRouter()
 
     const loadProgress = useCallback(async () => {
@@ -48,13 +51,30 @@ export default function ProgressPage() {
         }
     }, [])
 
+    const loadAiInsights = useCallback(async () => {
+        try {
+            setAiLoading(true)
+            const userId = user?.id || ''
+            const tenantId = user?.tenantId || user?.tenant_id || 'default'
+            if (userId) {
+                const result = await aiCoachService.predictProgress(userId, tenantId)
+                setAiData(result)
+            }
+        } catch (err) {
+            console.error('Failed to load AI progress insights:', err)
+        } finally {
+            setAiLoading(false)
+        }
+    }, [user?.id, user?.tenantId, user?.tenant_id])
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/login')
             return
         }
         loadProgress()
-    }, [isAuthenticated, router, loadProgress])
+        loadAiInsights()
+    }, [isAuthenticated, router, loadProgress, loadAiInsights])
 
     const handleRefresh = async () => {
         setRefreshing(true)
@@ -139,6 +159,73 @@ export default function ProgressPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* AI Progress Insights */}
+            <Card className="relative overflow-hidden border-purple-200">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-purple-400/10 to-transparent rounded-full -mr-24 -mt-24"></div>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Progress Insights</CardTitle>
+                        </div>
+                        <Badge className="bg-purple-100 text-purple-800">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            AI Powered
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="w-6 h-6 animate-spin text-purple-600 mr-2" />
+                            <span className="text-gray-600">Analyzing your progress trajectory...</span>
+                        </div>
+                    ) : aiData ? (
+                        <div className="space-y-4">
+                            {aiData.predictedTrajectory && (
+                                <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
+                                    <p className="text-sm font-semibold text-purple-900 mb-1">Predicted Trajectory</p>
+                                    <p className="text-xs text-purple-700">{aiData.predictedTrajectory.description || aiData.predictedTrajectory.summary || 'Based on your current pace, you are on track.'}</p>
+                                    {aiData.predictedTrajectory.projectedProgress != null && (
+                                        <div className="mt-2">
+                                            <div className="flex items-center justify-between text-xs text-purple-600 mb-1">
+                                                <span>Projected progress</span>
+                                                <span className="font-bold">{aiData.predictedTrajectory.projectedProgress}%</span>
+                                            </div>
+                                            <Progress value={aiData.predictedTrajectory.projectedProgress} className="h-2" />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {(aiData.recommendations || aiData.insights || []).slice(0, 3).map((item: any, idx: number) => (
+                                    <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                                        <div className="p-3 rounded-lg bg-white border border-purple-100 hover:shadow-md transition-shadow">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <Target className="w-3.5 h-3.5 text-purple-500" />
+                                                <span className="text-xs font-semibold text-purple-800">{item.title || item.category || 'Insight'}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-600">{typeof item === 'string' ? item : item.description || item.message || item.text || ''}</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                            {aiData.confidence != null && (
+                                <p className="text-[10px] text-purple-400 text-right">AI confidence: {Math.round(aiData.confidence * 100)}%</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4 text-gray-500">
+                            <Sparkles className="w-6 h-6 mx-auto mb-2 text-purple-300" />
+                            <p className="text-sm">AI insights will appear as you track more progress.</p>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={loadAiInsights}>
+                                <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {progress ? (
                 <>

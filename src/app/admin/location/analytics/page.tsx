@@ -3,12 +3,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
-    BarChart3, Users, TrendingUp, Calendar, LineChart as LineChartIcon
+    BarChart3, Users, TrendingUp, Calendar, LineChart as LineChartIcon,
+    Clock, DollarSign, Activity, Star
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Progress } from '@/components/ui/progress'
+import {
+    LineChart, Line, BarChart, Bar, AreaChart, Area,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    PieChart, Pie, Cell
+} from 'recharts'
 import { LocationManagerService, LocationAnalytics } from '@/services/locationManagerService'
+
+const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4']
 
 export default function LocationAnalyticsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -42,6 +50,7 @@ export default function LocationAnalyticsPage() {
     const attendanceData = analyticsData?.attendanceData ?? analyticsData?.students?.growth ?? []
     const classPerformance = analyticsData?.classPerformance ?? analyticsData?.classes?.performance ?? []
     const peakHours = analyticsData?.peakHours ?? []
+    const revenueTrend = analyticsData?.revenueTrend ?? []
 
     if (isLoading) {
         return (
@@ -50,6 +59,12 @@ export default function LocationAnalyticsPage() {
             </div>
         )
     }
+
+    // Prepare pie chart data from class performance
+    const classPieData = classPerformance.map((cls: any) => ({
+        name: cls.name,
+        value: cls.students,
+    }))
 
     return (
         <div className="space-y-6">
@@ -109,100 +124,259 @@ export default function LocationAnalyticsPage() {
                 ))}
             </div>
 
-            {/* Attendance Trend */}
-            {attendanceData.length > 0 && (
+            {/* Charts Row - Attendance Trend & Revenue */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Attendance Trend */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <LineChartIcon className="w-5 h-5 text-blue-600" />
+                                Attendance Trend
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {attendanceData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={attendanceData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                                        <Legend />
+                                        <Bar dataKey="attended" fill="#3b82f6" name="Attended" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="noshow" fill="#ef4444" name="No-Show" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-[300px] text-gray-400">
+                                    <div className="text-center">
+                                        <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No attendance data available</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Revenue Trend */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-green-600" />
+                                Revenue Trend
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {revenueTrend.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <AreaChart data={revenueTrend}>
+                                        <defs>
+                                            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
+                                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                                        <Legend />
+                                        <Area type="monotone" dataKey="revenue" stroke="#10b981" fill="url(#revenueGradient)" name="Revenue" strokeWidth={2} />
+                                        <Line type="monotone" dataKey="bookings" stroke="#8b5cf6" name="Bookings" strokeWidth={2} dot={{ r: 4 }} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-[300px] text-gray-400">
+                                    <div className="text-center">
+                                        <DollarSign className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                                        <p className="text-sm">No revenue data available</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            </div>
+
+            {/* Class Performance & Student Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Class Performance Table */}
+                <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-purple-600" />
+                                Class Performance
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {classPerformance.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b border-gray-200">
+                                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Class</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Students</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Attendance</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Rating</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {classPerformance.map((cls: any, idx: number) => (
+                                                <motion.tr key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}
+                                                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                                                            <p className="font-medium text-gray-900">{cls.name}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="text-sm font-medium text-gray-700">{cls.students}</span>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full ${cls.attendance >= 80 ? 'bg-green-500' : cls.attendance >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${cls.attendance}%` }}
+                                                                ></div>
+                                                            </div>
+                                                            <span className="text-sm font-medium text-gray-700">{cls.attendance}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-1">
+                                                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                                            <span className="text-sm font-medium text-gray-700">{cls.satisfaction}</span>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-[200px] text-gray-400">
+                                    <p className="text-sm">No class performance data</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Student Distribution Pie */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Users className="w-5 h-5 text-blue-600" />
+                                Student Distribution
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {classPieData.length > 0 ? (
+                                <>
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <PieChart>
+                                            <Pie
+                                                data={classPieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={50}
+                                                outerRadius={80}
+                                                paddingAngle={3}
+                                                dataKey="value"
+                                            >
+                                                {classPieData.map((_: any, idx: number) => (
+                                                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="space-y-2 mt-2">
+                                        {classPieData.slice(0, 5).map((item: any, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                                                    <span className="text-gray-600 truncate max-w-[120px]">{item.name}</span>
+                                                </div>
+                                                <span className="font-medium text-gray-900">{item.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-center h-[200px] text-gray-400">
+                                    <p className="text-sm">No student data</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            </div>
+
+            {/* Peak Hours */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <LineChartIcon className="w-5 h-5 text-blue-600" />
-                            Weekly Attendance Trend
+                            <Clock className="w-5 h-5 text-orange-600" />
+                            Peak Hours Analysis
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={attendanceData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="week" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="attended" fill="#3b82f6" name="Attended" />
-                                <Bar dataKey="noshow" fill="#ef4444" name="No-Show" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Class Performance */}
-            {classPerformance.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Class Performance Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-gray-200">
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Class</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Students</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Attendance</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Satisfaction</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {classPerformance.map((cls: any, idx: number) => (
-                                        <motion.tr key={idx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}
-                                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                            <td className="py-3 px-4"><p className="font-medium text-gray-900">{cls.name}</p></td>
-                                            <td className="py-3 px-4"><p className="text-sm text-gray-600">{cls.students}</p></td>
-                                            <td className="py-3 px-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-green-600" style={{ width: `${cls.attendance}%` }}></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium text-gray-700">{cls.attendance}%</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <Badge variant="outline">{cls.satisfaction}/5.0</Badge>
-                                            </td>
-                                        </motion.tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Peak Hours */}
-            {peakHours.length > 0 && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Peak Hours Analysis</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {peakHours.map((slot: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{slot.time}</p>
-                                        <p className="text-xs text-gray-600">{slot.classes} classes</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-600" style={{ width: `${slot.utilization}%` }}></div>
+                        {peakHours.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {peakHours.map((slot: any, idx: number) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.4 + idx * 0.05 }}
+                                        className={`p-4 rounded-xl border transition-shadow hover:shadow-md ${
+                                            slot.utilization >= 90 ? 'bg-red-50 border-red-200' :
+                                            slot.utilization >= 70 ? 'bg-orange-50 border-orange-200' :
+                                            slot.utilization >= 50 ? 'bg-yellow-50 border-yellow-200' :
+                                            'bg-green-50 border-green-200'
+                                        }`}
+                                    >
+                                        <p className="font-semibold text-gray-900 text-sm">{slot.time}</p>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-xs text-gray-500">{slot.classes} classes</span>
+                                            <Badge variant={
+                                                slot.utilization >= 90 ? 'destructive' :
+                                                slot.utilization >= 70 ? 'default' : 'secondary'
+                                            }>
+                                                {slot.utilization}%
+                                            </Badge>
                                         </div>
-                                        <span className="text-sm font-medium text-gray-700 w-10 text-right">{slot.utilization}%</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-3">
+                                            <div
+                                                className={`h-full rounded-full transition-all ${
+                                                    slot.utilization >= 90 ? 'bg-red-500' :
+                                                    slot.utilization >= 70 ? 'bg-orange-500' :
+                                                    slot.utilization >= 50 ? 'bg-yellow-500' :
+                                                    'bg-green-500'
+                                                }`}
+                                                style={{ width: `${slot.utilization}%` }}
+                                            ></div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-[100px] text-gray-400">
+                                <p className="text-sm">No peak hours data available</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
-            )}
+            </motion.div>
 
             {!analyticsData && !error && (
                 <Card>

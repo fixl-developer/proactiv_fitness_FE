@@ -5,7 +5,8 @@ import { motion } from 'framer-motion'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Users, Calendar, DollarSign, RefreshCw, Eye, Plus, BarChart3, MessageSquare,
-    ArrowUp, User, BookOpen, CreditCard, Download, TrendingUp, CheckCircle, AlertTriangle, Bell
+    ArrowUp, User, BookOpen, CreditCard, Download, TrendingUp, CheckCircle, AlertTriangle, Bell,
+    Brain, Sparkles, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,23 +14,30 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import ParentEngagementService from '@/services/modules/parent-engagement.service'
-import ParentROIService from '@/services/modules/parent-roi.service'
-import BookingService from '@/services/modules/booking.service'
+import { apiClient } from '@/services/api/client'
+import { parentAIService } from '@/services/advancedAIServices'
 
 const ParentDashboard = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | '7d' | '30d'>('today')
-    const [engagementData, setEngagementData] = useState<any>(null)
-    const [roiData, setRoiData] = useState<any>(null)
-    const [bookingStats, setBookingStats] = useState<any>(null)
+    const [dashboardData, setDashboardData] = useState<any>(null)
     const [error, setError] = useState<string | null>(null)
+    const [aiData, setAiData] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
     const parentName = user?.name || 'Parent User'
-    const parentId = user?.id || 'parent-1'
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const res = await parentAIService.getNotifications(user?.id || '')
+            setAiData(res)
+        } catch { setAiData(null) }
+        finally { setAiLoading(false) }
+    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -37,32 +45,17 @@ const ParentDashboard = () => {
             return
         }
         loadDashboardData()
-    }, [isAuthenticated, router, parentId])
+        loadAiInsights()
+    }, [isAuthenticated, router])
 
     const loadDashboardData = async () => {
         try {
             setIsLoading(true)
             setError(null)
 
-            // Load parent engagement data
-            const engagementService = new ParentEngagementService()
-            const engagementResponse = await engagementService.getEngagementProfile(parentId)
-            setEngagementData(engagementResponse?.data)
-
-            // Load parent ROI data
-            const roiService = new ParentROIService()
-            const roi = await roiService.getParentROI(parentId)
-            setRoiData(roi)
-
-            // Load booking statistics
-            const bookingService = new BookingService()
-            const bookingsResponse = await bookingService.getBookings({})
-            const bookingsList = bookingsResponse?.data?.bookings || []
-            setBookingStats({
-                totalBookings: bookingsList.length,
-                upcomingBookings: bookingsList.filter((b: any) => b.status === 'confirmed').length,
-                completedBookings: bookingsList.filter((b: any) => b.status === 'completed').length
-            })
+            const response = await apiClient.get<any>('/parent/dashboard')
+            const data = response?.data || response
+            setDashboardData(data)
         } catch (err) {
             console.error('Error loading dashboard data:', err)
             setError('Failed to load dashboard data. Please try again.')
@@ -76,137 +69,35 @@ const ParentDashboard = () => {
     const handleRefresh = async () => {
         setRefreshing(true)
         await loadDashboardData()
+        await loadAiInsights()
         setRefreshing(false)
     }
 
-    // Parent-specific Real-time Data
-    const parentStats = {
-        totalChildren: 2,
-        activeEnrollments: 4,
-        totalSpent: 18500,
-        monthlySpent: 4200,
-        upcomingClasses: 8,
-        completedClasses: 45,
-        averageChildRating: 4.6,
-        accountBalance: 2500
-    }
-
-    const myChildren = [
-        {
-            id: 1,
-            name: 'Emma Smith',
-            age: 8,
-            program: 'Beginner Gymnastics',
-            level: 'Beginner',
-            coach: 'Sarah Chen',
-            joinDate: '2024-01-15',
-            classes: 12,
-            rating: 4.8,
-            progress: 75,
-            nextClass: '2024-01-25 10:00 AM',
-            status: 'active'
-        },
-        {
-            id: 2,
-            name: 'Lucas Smith',
-            age: 10,
-            program: 'Intermediate Gymnastics',
-            level: 'Intermediate',
-            coach: 'Mike Wong',
-            joinDate: '2023-11-20',
-            classes: 28,
-            rating: 4.7,
-            progress: 85,
-            nextClass: '2024-01-26 2:00 PM',
-            status: 'active'
-        }
-    ]
-
-    const upcomingClasses = [
-        {
-            id: 1,
-            child: 'Emma Smith',
-            program: 'Beginner Gymnastics',
-            coach: 'Sarah Chen',
-            date: '2024-01-25',
-            time: '10:00 AM',
-            location: 'Cyberport',
-            status: 'confirmed',
-            duration: '1 hour'
-        },
-        {
-            id: 2,
-            child: 'Lucas Smith',
-            program: 'Intermediate Gymnastics',
-            coach: 'Mike Wong',
-            date: '2024-01-26',
-            time: '2:00 PM',
-            location: 'Cyberport',
-            status: 'confirmed',
-            duration: '1 hour'
-        },
-        {
-            id: 3,
-            child: 'Emma Smith',
-            program: 'Trial Assessment',
-            coach: 'Lisa Zhang',
-            date: '2024-01-27',
-            time: '3:30 PM',
-            location: 'Wan Chai',
-            status: 'pending',
-            duration: '30 mins'
-        }
-    ]
-
-    const recentPayments = [
-        {
-            id: 1,
-            child: 'Emma Smith',
-            program: 'Beginner Gymnastics',
-            amount: 1200,
-            date: '2024-01-20',
-            status: 'completed',
-            method: 'Credit Card'
-        },
-        {
-            id: 2,
-            child: 'Lucas Smith',
-            program: 'Intermediate Gymnastics',
-            amount: 1500,
-            date: '2024-01-18',
-            status: 'completed',
-            method: 'Bank Transfer'
-        },
-        {
-            id: 3,
-            child: 'Emma Smith',
-            program: 'Private Coaching',
-            amount: 800,
-            date: '2024-01-15',
-            status: 'completed',
-            method: 'Credit Card'
-        }
-    ]
+    // Extract data from API response with fallbacks
+    const stats = dashboardData?.stats || {}
+    const myChildren = dashboardData?.children || []
+    const upcomingClasses = dashboardData?.upcomingClasses || []
+    const recentPayments = dashboardData?.recentPayments || []
 
     const alerts = [
         {
             type: 'success',
             title: 'Class Completed',
-            message: 'Emma completed Beginner Gymnastics class successfully',
+            message: 'Your child completed a class successfully',
             time: '2h ago',
             priority: 'low'
         },
         {
             type: 'info',
             title: 'New Achievement',
-            message: 'Lucas earned "Consistency Champion" badge',
+            message: 'Your child earned a new badge',
             time: '4h ago',
             priority: 'low'
         },
         {
             type: 'info',
             title: 'Coach Feedback',
-            message: 'Sarah Chen left feedback on Emma\'s progress',
+            message: 'A coach left feedback on your child\'s progress',
             time: '1d ago',
             priority: 'low'
         }
@@ -248,6 +139,21 @@ const ParentDashboard = () => {
         )
     }
 
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                    <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-red-700 font-medium">{error}</p>
+                    <Button onClick={handleRefresh} variant="outline" className="mt-4">
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try Again
+                    </Button>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
             {/* Header with Parent Info */}
@@ -267,7 +173,7 @@ const ParentDashboard = () => {
                     <Button id="parent-dashboard-refresh-btn"
                         variant="outline"
                         size="sm"
-                        onClick={() => setRefreshing(true)}
+                        onClick={handleRefresh}
                         disabled={refreshing}
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
@@ -290,77 +196,78 @@ const ParentDashboard = () => {
                 </div>
             </div>
 
-            {/* Key Metrics - 4 Cards */}
+            {/* Key Metrics - 4 Colorful Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* My Children */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">My Children</CardTitle>
-                            <Users className="h-5 w-5 text-blue-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{parentStats.totalChildren}</div>
-                            <div className="flex items-center mt-1">
-                                <span className="text-sm text-blue-600 font-medium">All active</span>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-blue-50 to-blue-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
+                                    <Users className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">All active</span>
                             </div>
-                            <Progress value={100} className="mt-3 h-2" />
+                            <div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">My Children</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.totalChildren ?? 0}</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>
 
-                {/* Active Enrollments */}
+                {/* Active Programs */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Active Programs</CardTitle>
-                            <BookOpen className="h-5 w-5 text-green-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{parentStats.activeEnrollments}</div>
-                            <div className="flex items-center mt-1">
-                                <ArrowUp className="w-4 h-4 text-green-600 mr-1" />
-                                <span className="text-sm text-green-600 font-medium">Ongoing</span>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-green-50 to-emerald-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-2.5 rounded-lg shadow-md">
+                                    <BookOpen className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                    <ArrowUp className="w-3 h-3 inline mr-0.5" />Ongoing
+                                </span>
                             </div>
-                            <Progress value={80} className="mt-3 h-2" />
+                            <div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">Active Programs</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.activePrograms ?? 0}</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>
 
                 {/* Total Spent */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                    <Card className="relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Total Spent</CardTitle>
-                            <CreditCard className="h-5 w-5 text-purple-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${parentStats.totalSpent.toLocaleString()}</div>
-                            <div className="flex items-center mt-1">
-                                <span className="text-sm text-purple-600 font-medium">This year</span>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-purple-50 to-purple-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
+                                    <CreditCard className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">This year</span>
                             </div>
-                            <Progress value={65} className="mt-3 h-2" />
+                            <div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
+                                <p className="text-2xl font-bold text-gray-900">HK${(stats.totalSpent ?? 0).toLocaleString()}</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>
 
                 {/* Account Balance */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                    <Card className="relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-full -mr-16 -mt-16"></div>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-600">Account Balance</CardTitle>
-                            <DollarSign className="h-5 w-5 text-yellow-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">HK${parentStats.accountBalance.toLocaleString()}</div>
-                            <div className="flex items-center mt-1">
-                                <span className="text-sm text-yellow-600 font-medium">Available</span>
+                    <Card className="hover:shadow-lg transition-all border-0 bg-gradient-to-br from-orange-50 to-orange-100">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md">
+                                    <DollarSign className="w-5 h-5 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">Available</span>
                             </div>
-                            <Progress value={72} className="mt-3 h-2" />
+                            <div>
+                                <p className="text-xs text-gray-600 font-medium mb-1">Account Balance</p>
+                                <p className="text-2xl font-bold text-gray-900">HK${(stats.accountBalance ?? 0).toLocaleString()}</p>
+                            </div>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -368,9 +275,9 @@ const ParentDashboard = () => {
 
             {/* My Children Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {myChildren.map((child, index) => (
+                {myChildren.map((child: any, index: number) => (
                     <motion.div
-                        key={index}
+                        key={child.id || index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 * index }}
@@ -380,15 +287,15 @@ const ParentDashboard = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                                            {child.name.split(' ').map(n => n[0]).join('')}
+                                            {(child.name || 'C').split(' ').map((n: string) => n[0]).join('')}
                                         </div>
                                         <div>
                                             <CardTitle className="text-lg">{child.name}</CardTitle>
                                             <p className="text-sm text-gray-500">{child.age} years old</p>
                                         </div>
                                     </div>
-                                    <Badge className={getStatusColor(child.status)}>
-                                        {child.status}
+                                    <Badge className={getStatusColor(child.status || 'active')}>
+                                        {child.status || 'active'}
                                     </Badge>
                                 </div>
                             </CardHeader>
@@ -397,34 +304,43 @@ const ParentDashboard = () => {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-sm text-gray-600">Program</p>
-                                            <p className="font-semibold text-gray-900">{child.program}</p>
+                                            <p className="font-semibold text-gray-900">{child.program || 'N/A'}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Coach</p>
-                                            <p className="font-semibold text-gray-900">{child.coach}</p>
+                                            <p className="font-semibold text-gray-900">{child.coach || 'N/A'}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Classes</p>
-                                            <p className="font-semibold text-gray-900">{child.classes}</p>
+                                            <p className="font-semibold text-gray-900">{child.classes ?? 0}</p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Rating</p>
-                                            <p className="font-semibold text-yellow-600">⭐ {child.rating}</p>
+                                            <p className="font-semibold text-yellow-600">&#11088; {child.rating ?? 'N/A'}</p>
                                         </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-gray-600">Progress</span>
-                                            <span className="font-medium">{child.progress}%</span>
+                                    {child.progress !== undefined && (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600">Progress</span>
+                                                <span className="font-medium">{child.progress}%</span>
+                                            </div>
+                                            <Progress value={child.progress} className="h-2" />
                                         </div>
-                                        <Progress value={child.progress} className="h-2" />
-                                    </div>
-                                    <div className="p-3 bg-blue-50 rounded-lg">
-                                        <p className="text-sm text-blue-700">
-                                            <strong>Next Class:</strong> {child.nextClass}
-                                        </p>
-                                    </div>
-                                    <Button id={`parent-dashboard-child-${child.id}-details-btn`} className="w-full" variant="outline">
+                                    )}
+                                    {child.nextClass && (
+                                        <div className="p-3 bg-blue-50 rounded-lg">
+                                            <p className="text-sm text-blue-700">
+                                                <strong>Next Class:</strong> {child.nextClass}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <Button
+                                        id={`parent-dashboard-child-${child.id}-details-btn`}
+                                        className="w-full"
+                                        variant="outline"
+                                        onClick={() => router.push('/parent/children')}
+                                    >
                                         View Details
                                     </Button>
                                 </div>
@@ -443,39 +359,66 @@ const ParentDashboard = () => {
                             <CardTitle>Upcoming Classes</CardTitle>
                             <Badge>{upcomingClasses.length} classes</Badge>
                         </div>
-                        <Button id="parent-dashboard-book-new-class-btn" variant="outline" size="sm">Book New Class</Button>
+                        <Button
+                            id="parent-dashboard-book-new-class-btn"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push('/parent/browse-classes')}
+                        >
+                            Book New Class
+                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {upcomingClasses.map((session, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all"
-                            >
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                                        {session.date.split('-')[2]}
+                        {upcomingClasses.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No upcoming classes</p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2"
+                                    onClick={() => router.push('/parent/browse-classes')}
+                                >
+                                    Browse Classes
+                                </Button>
+                            </div>
+                        ) : (
+                            upcomingClasses.map((session: any, index: number) => (
+                                <motion.div
+                                    key={session.id || index}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all"
+                                >
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                            {(session.date || '').split('-')[2] || '--'}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900">{session.program || session.className || 'Class'}</h4>
+                                            <p className="text-sm text-gray-600">{session.child || session.childName} {session.coach ? `\u2022 ${session.coach}` : ''}</p>
+                                            <p className="text-xs text-gray-500">{session.date} at {session.time} {session.location ? `\u2022 ${session.location}` : ''}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{session.program}</h4>
-                                        <p className="text-sm text-gray-600">{session.child} • {session.coach}</p>
-                                        <p className="text-xs text-gray-500">{session.date} at {session.time} • {session.location}</p>
+                                    <div className="flex items-center gap-4">
+                                        <Badge className={getStatusColor(session.status || 'confirmed')} variant="outline">
+                                            {session.status || 'confirmed'}
+                                        </Badge>
+                                        <Button
+                                            id={`parent-dashboard-class-${session.id}-view-btn`}
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => router.push('/parent/browse-classes')}
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                        </Button>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <Badge className={getStatusColor(session.status)} variant="outline">
-                                        {session.status}
-                                    </Badge>
-                                    <Button id={`parent-dashboard-class-${session.id}-view-btn`} variant="ghost" size="sm">
-                                        <Eye className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -488,36 +431,50 @@ const ParentDashboard = () => {
                             <CreditCard className="w-5 h-5 text-green-600" />
                             <CardTitle>Recent Payments</CardTitle>
                         </div>
-                        <Button id="parent-dashboard-view-all-payments-btn" variant="outline" size="sm">View All</Button>
+                        <Button
+                            id="parent-dashboard-view-all-payments-btn"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push('/parent/payments')}
+                        >
+                            View All
+                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {recentPayments.map((payment, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-green-50/30 rounded-lg hover:shadow-md transition-all"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white">
-                                        <CreditCard className="w-6 h-6" />
+                        {recentPayments.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                <CreditCard className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No recent payments</p>
+                            </div>
+                        ) : (
+                            recentPayments.map((payment: any, index: number) => (
+                                <motion.div
+                                    key={payment.id || index}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-green-50/30 rounded-lg hover:shadow-md transition-all"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white">
+                                            <CreditCard className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">{payment.program || payment.description || 'Payment'}</h4>
+                                            <p className="text-sm text-gray-600">{payment.child || payment.childName} {payment.date ? `\u2022 ${payment.date}` : ''}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-gray-900">{payment.program}</h4>
-                                        <p className="text-sm text-gray-600">{payment.child} • {payment.date}</p>
+                                    <div className="text-right">
+                                        <p className="text-lg font-bold text-green-600">HK${(payment.amount ?? 0).toLocaleString()}</p>
+                                        <Badge className={getStatusColor(payment.status || 'completed')} variant="outline">
+                                            {payment.status || 'completed'}
+                                        </Badge>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-bold text-green-600">HK${payment.amount}</p>
-                                    <Badge className={getStatusColor(payment.status)} variant="outline">
-                                        {payment.status}
-                                    </Badge>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -563,25 +520,87 @@ const ParentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button id="parent-dashboard-quick-book-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button
+                            id="parent-dashboard-quick-book-btn"
+                            className="h-20 flex-col gap-2"
+                            variant="outline"
+                            onClick={() => router.push('/parent/browse-classes')}
+                        >
                             <Plus className="w-6 h-6" />
                             <span>Book Class</span>
                         </Button>
-                        <Button id="parent-dashboard-quick-payment-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button
+                            id="parent-dashboard-quick-payment-btn"
+                            className="h-20 flex-col gap-2"
+                            variant="outline"
+                            onClick={() => router.push('/parent/payments')}
+                        >
                             <CreditCard className="w-6 h-6" />
                             <span>Make Payment</span>
                         </Button>
-                        <Button id="parent-dashboard-quick-contact-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button
+                            id="parent-dashboard-quick-contact-btn"
+                            className="h-20 flex-col gap-2"
+                            variant="outline"
+                            onClick={() => alert('Contact Coach feature coming soon!')}
+                        >
                             <MessageSquare className="w-6 h-6" />
                             <span>Contact Coach</span>
                         </Button>
-                        <Button id="parent-dashboard-quick-download-btn" className="h-20 flex-col gap-2" variant="outline">
+                        <Button
+                            id="parent-dashboard-quick-download-btn"
+                            className="h-20 flex-col gap-2"
+                            variant="outline"
+                            onClick={() => alert('Download Report feature coming soon!')}
+                        >
                             <Download className="w-6 h-6" />
                             <span>Download Report</span>
                         </Button>
                     </div>
                 </CardContent>
             </Card>
+
+            {/* AI Insights */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
+                            <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {aiLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                <p className="text-sm text-gray-500">Analyzing data with AI...</p>
+                            </div>
+                        ) : aiData ? (
+                            <div className="space-y-3">
+                                {(Array.isArray(aiData) ? aiData : aiData?.recommendations || aiData?.suggestions || [aiData]).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
+                                            {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
+                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

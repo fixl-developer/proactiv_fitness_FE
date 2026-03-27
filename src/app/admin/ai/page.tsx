@@ -5,8 +5,10 @@ import { motion } from 'framer-motion'
 import {
     MessageSquare, Bot, TrendingUp, Users, Clock,
     Settings, BarChart3, Zap, Brain, Target,
-    ArrowRight, ExternalLink, RefreshCw, AlertCircle
+    ArrowRight, ExternalLink, RefreshCw, AlertCircle,
+    Sparkles, Loader2
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,20 +17,11 @@ import { responsiveClasses } from '@/lib/responsiveClasses'
 
 const AIManagementPage = () => {
     const [isLoading, setIsLoading] = useState(true)
+    const [aiData, setAiData] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const isAuthenticated = localStorage.getItem('isAuthenticated')
-            if (!isAuthenticated) {
-                window.location.href = '/login'
-                return
-            }
-        }
-        setTimeout(() => setIsLoading(false), 1000)
-    }, [])
-
-    // AI System Metrics
-    const aiMetrics = [
+    // Hardcoded fallback metrics
+    const fallbackMetrics = [
         {
             title: 'Chatbot Interactions',
             value: '2,847',
@@ -62,6 +55,70 @@ const AIManagementPage = () => {
             status: 'needs-attention'
         }
     ]
+
+    const loadAiInsights = async () => {
+        try {
+            setAiLoading(true)
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
+            const response: any = await apiClient.get('/advanced-analytics/insights', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setAiData(response?.data || response)
+        } catch (err) {
+            console.error('Failed to load AI insights:', err)
+            // Graceful fallback - aiData stays null, hardcoded metrics used
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const isAuthenticated = localStorage.getItem('isAuthenticated')
+            if (!isAuthenticated) {
+                window.location.href = '/login'
+                return
+            }
+        }
+        loadAiInsights()
+        setTimeout(() => setIsLoading(false), 1000)
+    }, [])
+
+    // Use live data if available, otherwise fallback
+    const aiMetrics = aiData?.metrics ? [
+        {
+            title: 'Chatbot Interactions',
+            value: aiData.metrics.chatbotInteractions?.toLocaleString() || '2,847',
+            growth: aiData.metrics.chatbotGrowth || '+23.5%',
+            icon: MessageSquare,
+            color: 'text-blue-600',
+            status: 'excellent'
+        },
+        {
+            title: 'Resolution Rate',
+            value: `${aiData.metrics.resolutionRate || 87.3}%`,
+            growth: aiData.metrics.resolutionGrowth || '+5.2%',
+            icon: Target,
+            color: 'text-green-600',
+            status: 'excellent'
+        },
+        {
+            title: 'Avg Response Time',
+            value: `${aiData.metrics.avgResponseTime || 1.2}s`,
+            growth: aiData.metrics.responseTimeChange || '-0.3s',
+            icon: Clock,
+            color: 'text-purple-600',
+            status: 'excellent'
+        },
+        {
+            title: 'Human Handovers',
+            value: `${aiData.metrics.humanHandovers || 18.5}%`,
+            growth: aiData.metrics.handoverChange || '+2.1%',
+            icon: Users,
+            color: 'text-orange-600',
+            status: aiData.metrics.humanHandovers > 20 ? 'needs-attention' : 'excellent'
+        }
+    ] : fallbackMetrics
 
     // AI System Components
     const aiSystems = [
@@ -194,6 +251,56 @@ const AIManagementPage = () => {
                     </motion.div>
                 ))}
             </div>
+
+            {/* AI Powered Insights */}
+            <Card className="relative overflow-hidden border-purple-200">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-400/10 to-transparent rounded-full -mr-32 -mt-32"></div>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Insights</CardTitle>
+                        </div>
+                        <Badge className="bg-purple-100 text-purple-800">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            AI Powered
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-purple-600 mr-2" />
+                            <span className="text-gray-600">Analyzing AI system performance...</span>
+                        </div>
+                    ) : aiData?.insights ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {(aiData.insights || []).map((insight: any, idx: number) => (
+                                <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
+                                    <div className="p-4 rounded-lg bg-purple-50 border border-purple-100">
+                                        <p className="text-sm font-semibold text-purple-900">{insight.title || 'Insight'}</p>
+                                        <p className="text-xs text-purple-700 mt-1">{insight.description || insight.message || 'No details'}</p>
+                                        {insight.score != null && (
+                                            <div className="mt-2">
+                                                <Progress value={insight.score} className="h-1.5" />
+                                                <span className="text-xs text-purple-600 mt-1">{insight.score}% confidence</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-gray-500">
+                            <Sparkles className="w-8 h-8 mx-auto mb-2 text-purple-300" />
+                            <p className="text-sm">AI insights will appear here once data is available.</p>
+                            <Button variant="outline" size="sm" className="mt-3" onClick={loadAiInsights}>
+                                <RefreshCw className="w-3 h-3 mr-1" /> Retry
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Quick Actions */}
             <Card>

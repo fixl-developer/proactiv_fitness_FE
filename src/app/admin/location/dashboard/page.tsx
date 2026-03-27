@@ -6,8 +6,11 @@ import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    Zap, Activity, Target, BarChart3, MapPin
+    Zap, Activity, Target, BarChart3, MapPin,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
+import { apiClient } from '@/services/api/client'
+import { smartSchedulerService, safetyMonitorService } from '@/services/advancedAIServices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -23,10 +26,27 @@ const FALLBACK_LOCATION = {
 
 export default function LocationManagerDashboard() {
     const [isLoading, setIsLoading] = useState(true)
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
     const [dashboardData, setDashboardData] = useState<any>(null)
     const [timeRange, setTimeRange] = useState('30d')
     const [revenueData, setRevenueData] = useState<any[]>([])
     const [todayClassSchedule, setTodayClassSchedule] = useState<any[]>([])
+
+    const loadAiInsights = async (locId?: string) => {
+        setAiLoading(true)
+        const locationId = locId || 'current'
+        try {
+            const [peakHours, safetyScore] = await Promise.allSettled([
+                smartSchedulerService.getPeakHours(locationId),
+                safetyMonitorService.getSafetyScore(locationId)
+            ])
+            const peaks = peakHours.status === 'fulfilled' ? peakHours.value?.data || peakHours.value : null
+            const safety = safetyScore.status === 'fulfilled' ? safetyScore.value?.data || safetyScore.value : null
+            setAiInsights({ peakHours: peaks, safetyScore: safety })
+        } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
+        finally { setAiLoading(false) }
+    }
 
     const loadData = useCallback(async () => {
         try {
@@ -79,6 +99,7 @@ export default function LocationManagerDashboard() {
 
     useEffect(() => {
         loadData()
+        loadAiInsights()
     }, [loadData])
 
     if (isLoading) {
@@ -300,6 +321,72 @@ export default function LocationManagerDashboard() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* AI Insights */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Location Insights</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={() => loadAiInsights()} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing location data...</p>
+                        </div>
+                    ) : aiInsights ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Peak Hours Analysis */}
+                            {(Array.isArray(aiInsights.peakHours) ? aiInsights.peakHours : aiInsights.peakHours?.hours || aiInsights.peakHours?.peakTimes || []).slice(0, 3).map((peak: any, i: number) => (
+                                <div key={`peak-${i}`} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Clock className="w-4 h-4 text-blue-600" />
+                                        <span className="text-xs font-semibold text-blue-700 uppercase">Peak Hours</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{peak.title || peak.timeSlot || peak.hour || peak}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{peak.description || peak.attendance || ''}</p>
+                                </div>
+                            ))}
+                            {/* Safety Score */}
+                            {aiInsights.safetyScore && (
+                                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Safety Score</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-700">{aiInsights.safetyScore.score || aiInsights.safetyScore.overallScore || 'N/A'}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{aiInsights.safetyScore.description || aiInsights.safetyScore.status || 'Safety assessment complete'}</p>
+                                </div>
+                            )}
+                            {/* Attendance Predictions */}
+                            {(aiInsights.peakHours?.predictions || aiInsights.peakHours?.attendanceForecast || []).slice(0, 2).map((pred: any, i: number) => (
+                                <div key={`att-${i}`} className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="w-4 h-4 text-purple-600" />
+                                        <span className="text-xs font-semibold text-purple-700 uppercase">Attendance Prediction</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{pred.title || pred.day || pred.period || pred}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{pred.description || pred.predicted || ''}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI insights unavailable</p>
+                            <button onClick={() => loadAiInsights()} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }

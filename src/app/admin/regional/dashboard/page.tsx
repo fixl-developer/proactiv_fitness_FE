@@ -7,13 +7,16 @@ import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2,
     AlertTriangle, CheckCircle, Clock, ArrowUp, ArrowDown,
-    Activity, Target, BarChart3, Info, AlertCircle
+    Activity, Target, BarChart3, Info, AlertCircle,
+    Brain, Sparkles, Loader2, RefreshCw
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { RegionalAdminService } from '@/services/regionalAdminService'
+import { apiClient } from '@/services/api/client'
+import { globalIntelligenceService } from '@/services/advancedAIServices'
 
 export default function RegionalAdminDashboard() {
     const router = useRouter()
@@ -26,6 +29,17 @@ export default function RegionalAdminDashboard() {
     const [alerts, setAlerts] = useState<any[]>([])
     const [pendingActions, setPendingActions] = useState<any[]>([])
     const [timeRange, setTimeRange] = useState('30d')
+    const [aiData, setAiData] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiInsights = async () => {
+        setAiLoading(true)
+        try {
+            const res = await globalIntelligenceService.getBenchmarks()
+            setAiData(res)
+        } catch { setAiData(null) }
+        finally { setAiLoading(false) }
+    }
 
     const loadDashboard = useCallback(async () => {
         try {
@@ -85,6 +99,7 @@ export default function RegionalAdminDashboard() {
 
     useEffect(() => {
         loadDashboard()
+        loadAiInsights()
     }, [loadDashboard])
 
     function formatRelativeDate(dateStr: string): string {
@@ -462,6 +477,48 @@ export default function RegionalAdminDashboard() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* AI Insights */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
+                            <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {aiLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                <p className="text-sm text-gray-500">Analyzing data with AI...</p>
+                            </div>
+                        ) : aiData ? (
+                            <div className="space-y-3">
+                                {(Array.isArray(aiData) ? aiData : aiData?.recommendations || aiData?.suggestions || [aiData]).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
+                                            {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
+                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
