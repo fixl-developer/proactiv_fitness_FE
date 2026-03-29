@@ -7,6 +7,7 @@ import PartnerPortalService from '@/services/modules/partner-portal.service'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle, Plus, BookOpen, CheckCircle, Users, DollarSign, Edit, Eye, Trash2 } from 'lucide-react'
+import { usePartnerConfig } from '@/contexts/PartnerContext'
 
 interface ProgramForm {
     name: string
@@ -29,6 +30,7 @@ const emptyForm: ProgramForm = {
 export default function Programs() {
     const router = useRouter()
     const { user, isAuthenticated } = useAuth()
+    const { config } = usePartnerConfig()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [programs, setPrograms] = useState<any[]>([])
@@ -153,10 +155,10 @@ export default function Programs() {
     if (!isAuthenticated) return null
 
     const kpiCards = [
-        { title: 'Total Programs', value: stats.totalPrograms, icon: BookOpen, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: `${stats.totalPrograms} total` },
-        { title: 'Active Programs', value: stats.activePrograms, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${stats.totalPrograms > 0 ? Math.round((stats.activePrograms / stats.totalPrograms) * 100) : 0}% active` },
-        { title: 'Total Students', value: stats.totalStudents, icon: Users, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `Across programs` },
-        { title: 'Total Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `All programs` },
+        { title: `Total ${config.programLabel}`, value: stats.totalPrograms, icon: BookOpen, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: `${stats.totalPrograms} total` },
+        { title: `Active ${config.programLabel}`, value: stats.activePrograms, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${stats.totalPrograms > 0 ? Math.round((stats.activePrograms / stats.totalPrograms) * 100) : 0}% active` },
+        { title: `Total ${config.memberLabel}`, value: stats.totalStudents, icon: Users, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `Across ${config.programLabel.toLowerCase()}` },
+        { title: 'Total Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `All ${config.programLabel.toLowerCase()}` },
     ]
 
     const renderFormFields = () => (
@@ -203,7 +205,7 @@ export default function Programs() {
                 </select>
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Enrolled Students</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{config.enrolledLabel} {config.memberLabel}</label>
                 <input
                     type="number"
                     min="0"
@@ -232,7 +234,7 @@ export default function Programs() {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900">Program Management</h1>
+                    <h1 className="text-4xl font-bold text-gray-900">{config.programLabelSingular} Management</h1>
                     <button
                         id="partner-programs-new-btn"
                         onClick={() => {
@@ -242,7 +244,7 @@ export default function Programs() {
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
-                        New Program
+                        New {config.programLabelSingular}
                     </button>
                 </div>
 
@@ -279,14 +281,14 @@ export default function Programs() {
                     <div className="flex items-center justify-center py-12">
                         <div className="text-center">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading programs...</p>
+                            <p className="text-gray-600">Loading {config.programLabel.toLowerCase()}...</p>
                         </div>
                     </div>
                 ) : programs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                         <BookOpen className="w-16 h-16 text-gray-300 mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-600 mb-2">No Programs Yet</h3>
-                        <p className="text-gray-400 mb-6">Create your first program to get started.</p>
+                        <h3 className="text-xl font-semibold text-gray-600 mb-2">No {config.programLabel} Yet</h3>
+                        <p className="text-gray-400 mb-6">Create your first {config.programLabelSingular.toLowerCase()} to get started.</p>
                         <button
                             onClick={() => {
                                 setEditForm({ ...emptyForm })
@@ -295,7 +297,7 @@ export default function Programs() {
                             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
                         >
                             <Plus className="w-5 h-5" />
-                            Create Program
+                            Create {config.programLabelSingular}
                         </button>
                     </div>
                 ) : (
@@ -320,7 +322,7 @@ export default function Programs() {
                                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">{program.description}</p>
                                 <div className="space-y-2 text-sm">
                                     <p className="text-gray-600"><span className="font-medium">Category:</span> {program.category}</p>
-                                    <p className="text-gray-600"><span className="font-medium">Students:</span> {program.enrolledStudents}</p>
+                                    <p className="text-gray-600"><span className="font-medium">{config.memberLabel}:</span> {program.enrolledStudents}</p>
                                     <p className="text-gray-600"><span className="font-medium">Revenue:</span> ${program.revenue?.toLocaleString()}</p>
                                 </div>
                                 <div className="mt-4 flex gap-2">
@@ -376,7 +378,7 @@ export default function Programs() {
                                     <p className="text-gray-900 font-semibold capitalize">{selectedProgram.status || 'N/A'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-500 font-medium">Students</p>
+                                    <p className="text-xs text-gray-500 font-medium">{config.memberLabel}</p>
                                     <p className="text-gray-900 font-semibold">{selectedProgram.enrolledStudents}</p>
                                 </div>
                                 <div>
@@ -403,7 +405,7 @@ export default function Programs() {
                         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
                         onClick={e => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit Program</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit {config.programLabelSingular}</h2>
                         {renderFormFields()}
                         <div className="mt-6 flex justify-end gap-3">
                             <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
@@ -430,7 +432,7 @@ export default function Programs() {
                         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
                         onClick={e => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Program</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New {config.programLabelSingular}</h2>
                         {renderFormFields()}
                         <div className="mt-6 flex justify-end gap-3">
                             <button onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
@@ -441,7 +443,7 @@ export default function Programs() {
                                 disabled={saving}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
                             >
-                                {saving ? 'Creating...' : 'Create Program'}
+                                {saving ? 'Creating...' : `Create ${config.programLabelSingular}`}
                             </button>
                         </div>
                     </motion.div>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { Progress } from '@/components/ui/progress'
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -24,6 +25,7 @@ const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4
 export default function Financial() {
     const router = useRouter()
     const { user, isAuthenticated } = useAuth()
+    const { config } = usePartnerConfig()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [revenue, setRevenue] = useState<any>(null)
@@ -74,7 +76,7 @@ export default function Financial() {
             const rows = [
                 ['Total Revenue', `$${revenue?.totalRevenue?.toLocaleString() || '0'}`],
                 ['Revenue Growth', `${revenue?.revenueGrowth || 0}%`],
-                ['Avg Revenue/Student', `$${revenue?.averageRevenuePerStudent?.toLocaleString() || '0'}`],
+                [`Avg Revenue/${config.memberLabelSingular}`, `$${revenue?.averageRevenuePerStudent?.toLocaleString() || '0'}`],
                 ['Avg Revenue/Program', `$${revenue?.averageRevenuePerProgram?.toLocaleString() || '0'}`],
                 ['Total Commissions', `$${commissionStats?.totalCommissions?.toLocaleString() || '0'}`],
                 ['Commissions Paid', `$${commissionStats?.totalPaid?.toLocaleString() || '0'}`],
@@ -187,7 +189,7 @@ export default function Financial() {
                         changePositive: revenueGrowth >= 0
                     },
                     {
-                        title: 'Avg Revenue/Student',
+                        title: `Avg Revenue/${config.memberLabelSingular}`,
                         value: `$${avgPerStudent.toLocaleString()}`,
                         icon: Users,
                         gradient: 'from-green-500 to-emerald-600',

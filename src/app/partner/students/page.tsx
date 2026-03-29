@@ -7,12 +7,14 @@ import PartnerPortalService from '@/services/modules/partner-portal.service'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle, Search, Users, UserCheck, UserX, DollarSign, Plus, Download, Eye, Edit, Trash2 } from 'lucide-react'
+import { usePartnerConfig } from '@/contexts/PartnerContext'
 
 const emptyForm = { name: '', email: '', phone: '', enrolledPrograms: '', status: 'active' }
 
 export default function Students() {
     const router = useRouter()
     const { user, isAuthenticated } = useAuth()
+    const { config } = usePartnerConfig()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [students, setStudents] = useState<any[]>([])
@@ -148,10 +150,10 @@ export default function Students() {
     if (!isAuthenticated) return null
 
     const kpiCards = [
-        { title: 'Total Students', value: stats.totalStudents, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: `${stats.totalStudents} enrolled` },
-        { title: 'Active Students', value: stats.activeStudents, icon: UserCheck, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${stats.totalStudents > 0 ? Math.round((stats.activeStudents / stats.totalStudents) * 100) : 0}% active` },
-        { title: 'Inactive Students', value: stats.inactiveStudents, icon: UserX, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `${stats.totalStudents > 0 ? Math.round((stats.inactiveStudents / stats.totalStudents) * 100) : 0}% inactive` },
-        { title: 'Avg Spend', value: `$${stats.avgSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: 'Per student' },
+        { title: `Total ${config.memberLabel}`, value: stats.totalStudents, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: `${stats.totalStudents} ${config.enrolledLabel.toLowerCase()}` },
+        { title: `Active ${config.memberLabel}`, value: stats.activeStudents, icon: UserCheck, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${stats.totalStudents > 0 ? Math.round((stats.activeStudents / stats.totalStudents) * 100) : 0}% active` },
+        { title: `Inactive ${config.memberLabel}`, value: stats.inactiveStudents, icon: UserX, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `${stats.totalStudents > 0 ? Math.round((stats.inactiveStudents / stats.totalStudents) * 100) : 0}% inactive` },
+        { title: 'Avg Spend', value: `$${stats.avgSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `Per ${config.memberLabelLower.slice(0, -1)}` },
     ]
 
     // Reusable form fields component for Add & Edit modals
@@ -163,7 +165,7 @@ export default function Students() {
                     type="text"
                     value={editForm.name}
                     onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Student name"
+                    placeholder={`${config.memberLabelSingular} name`}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
@@ -216,7 +218,7 @@ export default function Students() {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900">Student Management</h1>
+                    <h1 className="text-4xl font-bold text-gray-900">{config.memberLabelSingular} Management</h1>
                     <div className="flex gap-3">
                         <button
                             onClick={handleExport}
@@ -233,7 +235,7 @@ export default function Students() {
                             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
                         >
                             <Plus className="w-5 h-5" />
-                            Add Student
+                            Add {config.memberLabelSingular}
                         </button>
                     </div>
                 </div>
@@ -273,7 +275,7 @@ export default function Students() {
                         <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search students by name or email..."
+                            placeholder={`Search ${config.memberLabelLower} by name or email...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -285,7 +287,7 @@ export default function Students() {
                     <div className="flex items-center justify-center py-12">
                         <div className="text-center">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading students...</p>
+                            <p className="text-gray-600">Loading {config.memberLabelLower}...</p>
                         </div>
                     </div>
                 ) : (
@@ -346,7 +348,7 @@ export default function Students() {
                                 {filteredStudents.length === 0 && (
                                     <tr>
                                         <td colSpan={7} className="py-8 text-center text-gray-500">
-                                            No students found matching your search.
+                                            No {config.memberLabelLower} found matching your search.
                                         </td>
                                     </tr>
                                 )}
@@ -414,7 +416,7 @@ export default function Students() {
                         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4"
                         onClick={e => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit Student</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit {config.memberLabelSingular}</h2>
                         {renderFormFields(false)}
                         <div className="mt-6 flex justify-end gap-3">
                             <button onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
@@ -437,14 +439,14 @@ export default function Students() {
                         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4"
                         onClick={e => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Student</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New {config.memberLabelSingular}</h2>
                         {renderFormFields(true)}
                         <div className="mt-6 flex justify-end gap-3">
                             <button onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
                                 Cancel
                             </button>
                             <button onClick={handleAddStudent} disabled={submitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50">
-                                {submitting ? 'Adding...' : 'Add Student'}
+                                {submitting ? 'Adding...' : `Add ${config.memberLabelSingular}`}
                             </button>
                         </div>
                     </motion.div>

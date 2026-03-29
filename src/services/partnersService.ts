@@ -6,7 +6,7 @@ export interface Partner {
     partnerId?: string;
     tenantId: string;
     name: string;
-    type: 'school' | 'corporate' | 'government' | 'ngo' | 'other';
+    type: 'school' | 'gym' | 'corporate' | 'sports_academy' | 'ngo' | 'municipal' | 'sports_club' | 'other';
     contactPerson: { name: string; email: string; phone: string };
     contractStartDate: Date;
     contractEndDate?: Date;

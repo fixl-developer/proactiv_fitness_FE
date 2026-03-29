@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { usePartnerConfig } from '@/contexts/PartnerContext'
 
 interface ReportSummary {
     totalReports: number
@@ -59,10 +60,10 @@ const REPORT_FORMATS = [
 
 const QUICK_TEMPLATES = [
     {
-        name: 'Student Progress',
+        name: 'Progress Report',
         reportType: 'performance',
         icon: Users,
-        description: 'Individual student progress and achievements',
+        description: 'Individual progress and achievements',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50'
     },
@@ -109,6 +110,7 @@ function formatDate(dateStr: string): string {
 export default function PartnerReportsPage() {
     const router = useRouter()
     const { user, isAuthenticated } = useAuth()
+    const { config } = usePartnerConfig()
     const [selectedPeriod, setSelectedPeriod] = useState('monthly')
     const [reports, setReports] = useState<PartnerReport[]>([])
     const [summary, setSummary] = useState<ReportSummary | null>(null)

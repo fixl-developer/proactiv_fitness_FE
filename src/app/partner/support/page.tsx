@@ -92,8 +92,8 @@ export default function PartnerSupportPage() {
                 },
                 {
                     id: '3',
-                    question: 'How can I track student progress?',
-                    answer: 'You can track student progress through the Students page, which shows attendance, achievements, and performance metrics.',
+                    question: 'How can I track member progress?',
+                    answer: 'You can track progress through the Members page in your partner dashboard, which shows attendance, achievements, and performance metrics.',
                     category: 'General',
                     helpful: 32,
                     views: 78
