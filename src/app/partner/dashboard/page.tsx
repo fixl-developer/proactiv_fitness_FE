@@ -18,6 +18,7 @@ import {
     Brain, Sparkles, Loader2, RefreshCw, Zap, Send, Megaphone
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
+import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { revenueIntelligenceService, globalIntelligenceService } from '@/services/advancedAIServices'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +30,7 @@ const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4
 export default function PartnerDashboard() {
     const router = useRouter()
     const { user, isAuthenticated } = useAuth()
+    const { config } = usePartnerConfig()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [profile, setProfile] = useState<any>(null)
@@ -161,8 +163,8 @@ export default function PartnerDashboard() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Partner Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Welcome back, {profile?.name || user?.name || 'Partner'}</p>
+                    <h1 className="text-3xl font-bold text-gray-900">{config.dashboardTitle}</h1>
+                    <p className="text-gray-600 mt-1">Welcome back, {profile?.name || user?.name || 'Partner'} — {config.welcomeMessage}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {profile?.tier && (
@@ -209,12 +211,12 @@ export default function PartnerDashboard() {
                         changePositive: growthRate >= 0
                     },
                     {
-                        title: 'Total Students',
+                        title: `Total ${config.memberLabel}`,
                         value: totalStudents.toLocaleString(),
                         icon: Users,
                         gradient: 'from-green-500 to-emerald-600',
                         bgGradient: 'from-green-50 to-emerald-100',
-                        change: `${totalStudents} enrolled`,
+                        change: `${totalStudents} ${config.enrolledLabel.toLowerCase()}`,
                         changePositive: true
                     },
                     {
@@ -326,7 +328,7 @@ export default function PartnerDashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Users className="w-5 h-5 text-green-600" />
-                                Student Growth
+                                {config.memberLabelSingular} Growth
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -351,7 +353,7 @@ export default function PartnerDashboard() {
                                 <div className="flex items-center justify-center h-[300px] text-gray-400">
                                     <div className="text-center">
                                         <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                        <p>No student growth data available</p>
+                                        <p>No {config.memberLabelLower} growth data available</p>
                                     </div>
                                 </div>
                             )}
@@ -423,7 +425,7 @@ export default function PartnerDashboard() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <BookOpen className="w-5 h-5 text-orange-600" />
-                                Top Programs
+                                Top {config.programLabel}
                             </CardTitle>
                             <button
                                 onClick={() => router.push('/partner/programs')}
@@ -438,8 +440,8 @@ export default function PartnerDashboard() {
                                     <table className="w-full">
                                         <thead className="bg-gray-50 border-b border-gray-200">
                                             <tr>
-                                                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">Program</th>
-                                                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">Students</th>
+                                                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">{config.programLabelSingular}</th>
+                                                <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">{config.memberLabel}</th>
                                                 <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">Revenue</th>
                                                 <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">Rating</th>
                                                 <th className="text-left py-2.5 px-4 text-xs font-semibold text-gray-600 uppercase">Status</th>
@@ -476,7 +478,7 @@ export default function PartnerDashboard() {
                             ) : (
                                 <div className="py-12 text-center text-gray-400">
                                     <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                                    <p>No programs available</p>
+                                    <p>No {config.programLabel.toLowerCase()} available</p>
                                 </div>
                             )}
                         </CardContent>
@@ -492,7 +494,7 @@ export default function PartnerDashboard() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <UserPlus className="w-5 h-5 text-green-600" />
-                                Recent Students
+                                Recent {config.memberLabel}
                             </CardTitle>
                             <button
                                 onClick={() => router.push('/partner/students')}
@@ -534,7 +536,7 @@ export default function PartnerDashboard() {
                             ) : (
                                 <div className="py-8 text-center text-gray-400">
                                     <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                                    <p>No students yet</p>
+                                    <p>No {config.memberLabelLower} yet</p>
                                 </div>
                             )}
                         </CardContent>
