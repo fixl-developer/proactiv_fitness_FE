@@ -7,7 +7,7 @@ import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Users, Calendar, TrendingUp, Award, Clock, AlertCircle,
     CheckCircle, BarChart3, Target, Zap, BookOpen, MessageSquare,
-    Brain, Sparkles, Loader2, RefreshCw
+    Brain, Sparkles, Loader2, RefreshCw, Video, Route, Trophy, Wrench
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
 import aiCoachService from '@/services/aiCoachService'
+import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 
 // Fallback mock data when API fails
@@ -514,6 +515,95 @@ const CoachDashboard = () => {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Advanced AI Tools */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-amber-600" />
+                        Advanced AI Tools
+                        <Badge className="bg-purple-100 text-purple-700 text-xs">AI Suite</Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CoachAITools />
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
+function CoachAITools() {
+    const [studentId, setStudentId] = useState('')
+    const [videoUrl, setVideoUrl] = useState('')
+    const [loading, setLoading] = useState<string | null>(null)
+    const [results, setResults] = useState<Record<string, any>>({})
+
+    const callAI = async (key: string, fn: () => Promise<any>) => {
+        setLoading(key)
+        try {
+            const res = await fn()
+            setResults(prev => ({ ...prev, [key]: { success: true, data: res?.data || res } }))
+        } catch {
+            setResults(prev => ({ ...prev, [key]: { success: false, data: { message: 'AI service unavailable right now' } } }))
+        } finally { setLoading(null) }
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* AI Video Analysis */}
+            <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Video className="w-4 h-4 text-blue-600" /> AI Video Analysis
+                </h4>
+                <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video URL" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <input value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Student ID" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <button onClick={() => callAI('video', () => apiClient.post('/ai-video-analysis/analyze-video', { videoUrl, studentId }))} disabled={loading === 'video'} className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors">
+                    {loading === 'video' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} Analyze Form
+                </button>
+                <button onClick={() => callAI('videoHistory', () => apiClient.get(`/ai-video-analysis/student/${studentId || 'default'}/history`))} disabled={loading === 'videoHistory'} className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors">
+                    {loading === 'videoHistory' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />} View History
+                </button>
+                {results.video && <div className="p-3 bg-blue-50 rounded-lg text-xs"><p className="font-medium text-blue-700 mb-1">Analysis:</p><p>{results.video.data?.formScore ? `Form Score: ${results.video.data.formScore}` : results.video.data?.message || JSON.stringify(results.video.data).slice(0, 150)}</p></div>}
+                {results.videoHistory && <div className="p-3 bg-blue-50 rounded-lg text-xs"><p className="font-medium text-blue-700 mb-1">History:</p><p>{Array.isArray(results.videoHistory.data) ? `${results.videoHistory.data.length} analyses found` : results.videoHistory.data?.message || 'No history'}</p></div>}
+            </div>
+
+            {/* Student Digital Twin */}
+            <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-purple-600" /> Student Digital Twin
+                </h4>
+                <button onClick={() => callAI('profile', () => apiClient.get(`/student-digital-twin/profile/${studentId || 'default'}`))} disabled={loading === 'profile'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                    {loading === 'profile' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} View Student Profile
+                </button>
+                <button onClick={() => callAI('learningPath', () => apiClient.post(`/student-digital-twin/learning-path/${studentId || 'default'}`))} disabled={loading === 'learningPath'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                    {loading === 'learningPath' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Route className="w-4 h-4" />} Generate Learning Path
+                </button>
+                <button onClick={() => callAI('competition', () => apiClient.get(`/student-digital-twin/competition-readiness/${studentId || 'default'}`))} disabled={loading === 'competition'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                    {loading === 'competition' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />} Competition Readiness
+                </button>
+                {results.profile && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Profile:</p><p>{results.profile.data?.studentName || results.profile.data?.message || JSON.stringify(results.profile.data).slice(0, 150)}</p></div>}
+                {results.learningPath && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Learning Path:</p><p>{Array.isArray(results.learningPath.data?.steps) ? `${results.learningPath.data.steps.length} steps generated` : results.learningPath.data?.message || 'Path generated'}</p></div>}
+                {results.competition && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Readiness:</p><p>{results.competition.data?.readinessScore ? `Score: ${results.competition.data.readinessScore}%` : results.competition.data?.message || JSON.stringify(results.competition.data).slice(0, 150)}</p></div>}
+            </div>
+
+            {/* AI Coach Assistant */}
+            <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-green-600" /> AI Coach Assistant
+                </h4>
+                <button onClick={() => callAI('corrections', () => apiClient.get(`/ai-coach-assistant/corrections/${studentId || 'default'}`))} disabled={loading === 'corrections'} className="flex items-center gap-2 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-sm font-medium text-green-700 w-full transition-colors">
+                    {loading === 'corrections' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Get Form Corrections
+                </button>
+                {results.corrections && (
+                    <div className="p-3 bg-green-50 rounded-lg text-xs space-y-2">
+                        <p className="font-medium text-green-700">Form Corrections:</p>
+                        {Array.isArray(results.corrections.data?.corrections) ? results.corrections.data.corrections.map((c: any, i: number) => (
+                            <div key={i} className="p-2 bg-white rounded"><p className="font-medium">{c.area || c.title}</p><p className="text-gray-600">{c.suggestion || c.description}</p></div>
+                        )) : <p>{results.corrections.data?.message || 'No corrections needed - great form!'}</p>}
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

@@ -33,6 +33,18 @@ export default function FranchiseOwnerDashboard() {
     const [aiInsights, setAiInsights] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
 
+    // AI Content Engine state
+    const [contentData, setContentData] = useState<any>(null)
+    const [contentLoading, setContentLoading] = useState(false)
+
+    // AI Communication state
+    const [commData, setCommData] = useState<any>(null)
+    const [commLoading, setCommLoading] = useState(false)
+
+    // Global Intelligence state
+    const [globalIntelData, setGlobalIntelData] = useState<any>(null)
+    const [globalIntelLoading, setGlobalIntelLoading] = useState(false)
+
     const loadAiInsights = async () => {
         setAiLoading(true)
         try {
@@ -45,6 +57,45 @@ export default function FranchiseOwnerDashboard() {
             setAiInsights({ churnRisk: churn, scheduleOptimization: schedule })
         } catch (err) { console.error('AI unavailable:', err); setAiInsights(null) }
         finally { setAiLoading(false) }
+    }
+
+    const loadContentEngine = async () => {
+        setContentLoading(true)
+        try {
+            const res = await apiClient.post('/ai-content-engine/generate-social-post', { topic: 'franchise promotions' })
+            setContentData(res?.data || res)
+        } catch (err) {
+            console.error('AI Content Engine unavailable:', err)
+            setContentData(null)
+        } finally {
+            setContentLoading(false)
+        }
+    }
+
+    const loadAiCommunication = async () => {
+        setCommLoading(true)
+        try {
+            const res = await apiClient.post('/ai-communication/optimize-message', { message: 'Monthly update', channels: ['email'] })
+            setCommData(res?.data || res)
+        } catch (err) {
+            console.error('AI Communication unavailable:', err)
+            setCommData(null)
+        } finally {
+            setCommLoading(false)
+        }
+    }
+
+    const loadGlobalIntelligence = async () => {
+        setGlobalIntelLoading(true)
+        try {
+            const res = await apiClient.get('/global-intelligence/benchmarks')
+            setGlobalIntelData(res?.data || res)
+        } catch (err) {
+            console.error('Global Intelligence unavailable:', err)
+            setGlobalIntelData(null)
+        } finally {
+            setGlobalIntelLoading(false)
+        }
     }
 
     const loadData = useCallback(async () => {
@@ -88,6 +139,9 @@ export default function FranchiseOwnerDashboard() {
     useEffect(() => {
         loadData()
         loadAiInsights()
+        loadContentEngine()
+        loadAiCommunication()
+        loadGlobalIntelligence()
     }, [loadData])
 
     if (isLoading) {
@@ -406,7 +460,7 @@ export default function FranchiseOwnerDashboard() {
                 </CardContent>
             </Card>
 
-            {/* AI Insights */}
+            {/* AI Insights - Revenue Intelligence & Smart Scheduler (existing) */}
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -471,6 +525,149 @@ export default function FranchiseOwnerDashboard() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* AI Content Engine */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-pink-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI Content Engine</h3>
+                            <span className="bg-pink-100 text-pink-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadContentEngine} disabled={contentLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${contentLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {contentLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-pink-600" />
+                                <p className="text-sm text-gray-500">Generating promo content...</p>
+                            </div>
+                        ) : contentData ? (
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-pink-500" />
+                                    Generate Promo Content
+                                </h4>
+                                {(Array.isArray(contentData) ? contentData : contentData?.posts || contentData?.content || contentData?.suggestions || [contentData]).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={`content-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg border border-pink-200">
+                                        <Sparkles className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.headline || item.content || JSON.stringify(item).slice(0, 120)}</p>
+                                            {(item.description || item.body || item.caption) && <p className="text-xs text-gray-600 mt-1">{item.description || item.body || item.caption}</p>}
+                                            {item.platform && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">{item.platform}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Content engine unavailable</p>
+                                <button onClick={loadContentEngine} className="mt-2 text-sm text-pink-600 hover:underline">Generate Content</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* AI Communication */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-indigo-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI Communication</h3>
+                            <span className="bg-indigo-100 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadAiCommunication} disabled={commLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${commLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {commLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                                <p className="text-sm text-gray-500">Optimizing member messages...</p>
+                            </div>
+                        ) : commData ? (
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Brain className="w-4 h-4 text-indigo-500" />
+                                    Optimize Member Messages
+                                </h4>
+                                {(Array.isArray(commData) ? commData : commData?.optimizedMessages || commData?.suggestions || commData?.recommendations || [commData]).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={`comm-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-lg border border-indigo-200">
+                                        <Brain className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.subject || item.optimizedMessage || item.message || JSON.stringify(item).slice(0, 120)}</p>
+                                            {(item.description || item.body || item.preview) && <p className="text-xs text-gray-600 mt-1">{item.description || item.body || item.preview}</p>}
+                                            {item.channel && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{item.channel}</span>}
+                                            {item.improvementScore && <span className="inline-block mt-1 ml-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">+{item.improvementScore}% improvement</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">AI communication unavailable</p>
+                                <button onClick={loadAiCommunication} className="mt-2 text-sm text-indigo-600 hover:underline">Optimize Messages</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Global Intelligence */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Global Intelligence</h3>
+                            <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadGlobalIntelligence} disabled={globalIntelLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${globalIntelLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {globalIntelLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                <p className="text-sm text-gray-500">Loading franchise benchmarks...</p>
+                            </div>
+                        ) : globalIntelData ? (
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-purple-500" />
+                                    Franchise Benchmarks
+                                </h4>
+                                {(Array.isArray(globalIntelData) ? globalIntelData : globalIntelData?.benchmarks || globalIntelData?.recommendations || globalIntelData?.insights || [globalIntelData]).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={`gi-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-lg border border-purple-200">
+                                        <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.name || item.metric || item.recommendation || JSON.stringify(item).slice(0, 120)}</p>
+                                            {(item.description || item.value || item.insight) && <p className="text-xs text-gray-600 mt-1">{item.description || item.value || item.insight}</p>}
+                                            {item.ranking && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Rank: {item.ranking}</span>}
+                                            {item.percentile && <span className="inline-block mt-1 ml-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Top {item.percentile}%</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Global intelligence unavailable</p>
+                                <button onClick={loadGlobalIntelligence} className="mt-2 text-sm text-purple-600 hover:underline">Load Benchmarks</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

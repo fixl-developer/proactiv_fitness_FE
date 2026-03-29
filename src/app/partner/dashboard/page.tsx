@@ -15,7 +15,7 @@ import {
     AlertCircle, TrendingUp, Users, DollarSign, Award, BookOpen, Target,
     BarChart3, ArrowUpRight, ArrowDownRight, Calendar, Bell, Clock,
     CheckCircle, Activity, UserPlus, CreditCard, Eye, ChevronRight,
-    Brain, Sparkles, Loader2, RefreshCw
+    Brain, Sparkles, Loader2, RefreshCw, Zap, Send, Megaphone
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { revenueIntelligenceService, globalIntelligenceService } from '@/services/advancedAIServices'
@@ -889,6 +889,54 @@ export default function PartnerDashboard() {
                         </CardContent>
                     </Card>
                 </motion.div>
+            </div>
+
+            {/* AI Extended Tools */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-amber-600" /> AI Marketing & Communication
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <PartnerAIExtended />
+                    </CardContent>
+                </Card>
+            </motion.div>
+        </div>
+    )
+}
+
+function PartnerAIExtended() {
+    const [loading, setLoading] = useState<string | null>(null)
+    const [results, setResults] = useState<Record<string, any>>({})
+
+    const callAI = async (key: string, fn: () => Promise<any>) => {
+        setLoading(key)
+        try {
+            const res = await fn()
+            setResults(prev => ({ ...prev, [key]: res?.data || res }))
+        } catch {
+            setResults(prev => ({ ...prev, [key]: { message: 'AI service unavailable' } }))
+        } finally { setLoading(null) }
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2"><Megaphone className="w-4 h-4 text-indigo-600" /> AI Content Engine</h4>
+                <button onClick={() => callAI('marketing', () => apiClient.post('/ai-content-engine/generate-social-post', { topic: 'partner promotions' }))} disabled={loading === 'marketing'} className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium text-indigo-700 w-full">
+                    {loading === 'marketing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Generate Partner Marketing
+                </button>
+                {results.marketing && <div className="p-3 bg-indigo-50 rounded-lg text-xs"><p className="font-medium text-indigo-700 mb-1">Generated Content:</p><p>{results.marketing?.content || results.marketing?.post || results.marketing?.message || JSON.stringify(results.marketing).slice(0, 200)}</p></div>}
+            </div>
+            <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2"><Send className="w-4 h-4 text-rose-600" /> AI Communication</h4>
+                <button onClick={() => callAI('campaign', () => apiClient.post('/ai-communication/predict-campaign', { type: 'partner-referral' }))} disabled={loading === 'campaign'} className="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 w-full">
+                    {loading === 'campaign' ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />} Predict Campaign Performance
+                </button>
+                {results.campaign && <div className="p-3 bg-rose-50 rounded-lg text-xs"><p className="font-medium text-rose-700 mb-1">Prediction:</p><p>{results.campaign?.predictedOpenRate ? `Open: ${results.campaign.predictedOpenRate}, Click: ${results.campaign.predictedClickRate}` : results.campaign?.message || JSON.stringify(results.campaign).slice(0, 150)}</p></div>}
             </div>
         </div>
     )

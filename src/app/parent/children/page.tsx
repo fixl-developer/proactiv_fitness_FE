@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, Plus, RefreshCw, Eye, Edit, Calendar, Star, TrendingUp,
-    BookOpen, Award, Activity, Loader, AlertCircle, Trophy, X
+    BookOpen, Award, Activity, Loader, AlertCircle, Trophy, X,
+    Brain, Sparkles, Zap, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,18 @@ const ParentChildrenPage = () => {
     const [showEditModal, setShowEditModal] = useState(false)
     const [editingChild, setEditingChild] = useState<any>(null)
     const [formSubmitting, setFormSubmitting] = useState(false)
+    // AI Insights state per child
+    const [aiInsightsOpen, setAiInsightsOpen] = useState<Record<string, boolean>>({})
+    const [aiReportLoading, setAiReportLoading] = useState<Record<string, boolean>>({})
+    const [aiReportResult, setAiReportResult] = useState<Record<string, any>>({})
+    const [aiReportError, setAiReportError] = useState<Record<string, string | null>>({})
+    const [aiReadinessLoading, setAiReadinessLoading] = useState<Record<string, boolean>>({})
+    const [aiReadinessResult, setAiReadinessResult] = useState<Record<string, any>>({})
+    const [aiReadinessError, setAiReadinessError] = useState<Record<string, string | null>>({})
+    const [aiChallengesLoading, setAiChallengesLoading] = useState<Record<string, boolean>>({})
+    const [aiChallengesResult, setAiChallengesResult] = useState<Record<string, any>>({})
+    const [aiChallengesError, setAiChallengesError] = useState<Record<string, string | null>>({})
+
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
@@ -110,6 +123,56 @@ const ParentChildrenPage = () => {
     const openEditModal = (child: any) => {
         setEditingChild(child)
         setShowEditModal(true)
+    }
+
+    // AI Insights handlers
+    const toggleAiInsights = (childId: string) => {
+        setAiInsightsOpen(prev => ({ ...prev, [childId]: !prev[childId] }))
+    }
+
+    const handleAiReport = async (childId: string) => {
+        setAiReportLoading(prev => ({ ...prev, [childId]: true }))
+        setAiReportError(prev => ({ ...prev, [childId]: null }))
+        setAiReportResult(prev => ({ ...prev, [childId]: null }))
+        try {
+            const response = await apiClient.post(`/parent-ai-assistant/report-card/${childId}`)
+            setAiReportResult(prev => ({ ...prev, [childId]: response?.data || response }))
+        } catch (err: any) {
+            console.error('AI Report error:', err)
+            setAiReportError(prev => ({ ...prev, [childId]: err?.message || 'Failed to generate AI report. The service may be temporarily unavailable.' }))
+        } finally {
+            setAiReportLoading(prev => ({ ...prev, [childId]: false }))
+        }
+    }
+
+    const handleCompetitionReadiness = async (childId: string) => {
+        setAiReadinessLoading(prev => ({ ...prev, [childId]: true }))
+        setAiReadinessError(prev => ({ ...prev, [childId]: null }))
+        setAiReadinessResult(prev => ({ ...prev, [childId]: null }))
+        try {
+            const response = await apiClient.get(`/student-digital-twin/competition-readiness/${childId}`)
+            setAiReadinessResult(prev => ({ ...prev, [childId]: response?.data || response }))
+        } catch (err: any) {
+            console.error('Competition Readiness error:', err)
+            setAiReadinessError(prev => ({ ...prev, [childId]: err?.message || 'Failed to check competition readiness. The service may be temporarily unavailable.' }))
+        } finally {
+            setAiReadinessLoading(prev => ({ ...prev, [childId]: false }))
+        }
+    }
+
+    const handleAiChallenges = async (childId: string) => {
+        setAiChallengesLoading(prev => ({ ...prev, [childId]: true }))
+        setAiChallengesError(prev => ({ ...prev, [childId]: null }))
+        setAiChallengesResult(prev => ({ ...prev, [childId]: null }))
+        try {
+            const response = await apiClient.post(`/ai-gamification-engine/generate-challenges/${childId}`)
+            setAiChallengesResult(prev => ({ ...prev, [childId]: response?.data || response }))
+        } catch (err: any) {
+            console.error('AI Challenges error:', err)
+            setAiChallengesError(prev => ({ ...prev, [childId]: err?.message || 'Failed to generate AI challenges. The service may be temporarily unavailable.' }))
+        } finally {
+            setAiChallengesLoading(prev => ({ ...prev, [childId]: false }))
+        }
     }
 
     const totalChildren = children.length
@@ -398,150 +461,313 @@ const ParentChildrenPage = () => {
 
             {/* Children Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {children.map((child: any, index: number) => (
-                    <motion.div
-                        key={child.id || index}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                                            {(child.name || '??').split(' ').map((n: string) => n[0]).join('')}
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-xl">{child.name}</CardTitle>
-                                            <p className="text-sm text-gray-500">{child.age} years old{child.dateOfBirth ? ` \u2022 Born: ${child.dateOfBirth}` : ''}</p>
-                                        </div>
-                                    </div>
-                                    <Badge className="bg-blue-100 text-blue-800">
-                                        {child.level || 'N/A'}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-6">
-                                    {/* Program Info */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-sm text-gray-600">Program</p>
-                                            <p className="font-semibold text-gray-900">{child.program || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Coach</p>
-                                            <p className="font-semibold text-gray-900">{child.coach || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Classes Attended</p>
-                                            <p className="font-semibold text-gray-900">{child.attendedClasses || 0}/{child.totalClasses || 0}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Rating</p>
-                                            <p className="font-semibold text-yellow-600">{child.rating ? `\u2B50 ${child.rating}` : 'N/A'}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Progress */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-gray-600">Overall Progress</span>
-                                            <span className="font-medium">{child.progress || 0}%</span>
-                                        </div>
-                                        <Progress value={child.progress || 0} className="h-3" />
-                                    </div>
-
-                                    {/* Skills Assessment */}
-                                    {child.skills && Object.keys(child.skills).length > 0 && (
-                                        <div className="space-y-3">
-                                            <h4 className="font-semibold text-gray-900">Skills Assessment</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {Object.entries(child.skills).map(([skill, score]) => (
-                                                    <div key={skill} className="space-y-1">
-                                                        <div className="flex items-center justify-between text-sm">
-                                                            <span className="capitalize text-gray-600">{skill}</span>
-                                                            <span className={`font-medium ${getSkillColor(score as number)}`}>{score as number}%</span>
-                                                        </div>
-                                                        <Progress value={score as number} className="h-2" />
-                                                    </div>
-                                                ))}
+                {children.map((child: any, index: number) => {
+                    const childId = child.id || child._id || `child-${index}`
+                    return (
+                        <motion.div
+                            key={childId}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                        >
+                            <Card className="hover:shadow-lg transition-shadow">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                                                {(child.name || '??').split(' ').map((n: string) => n[0]).join('')}
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-xl">{child.name}</CardTitle>
+                                                <p className="text-sm text-gray-500">{child.age} years old{child.dateOfBirth ? ` \u2022 Born: ${child.dateOfBirth}` : ''}</p>
                                             </div>
                                         </div>
-                                    )}
+                                        <Badge className="bg-blue-100 text-blue-800">
+                                            {child.level || 'N/A'}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-6">
+                                        {/* Program Info */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-gray-600">Program</p>
+                                                <p className="font-semibold text-gray-900">{child.program || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Coach</p>
+                                                <p className="font-semibold text-gray-900">{child.coach || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Classes Attended</p>
+                                                <p className="font-semibold text-gray-900">{child.attendedClasses || 0}/{child.totalClasses || 0}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Rating</p>
+                                                <p className="font-semibold text-yellow-600">{child.rating ? `\u2B50 ${child.rating}` : 'N/A'}</p>
+                                            </div>
+                                        </div>
 
-                                    {/* Achievements */}
-                                    {child.achievements && child.achievements.length > 0 && (
+                                        {/* Progress */}
                                         <div className="space-y-2">
-                                            <h4 className="font-semibold text-gray-900">Achievements</h4>
-                                            <div className="flex flex-wrap gap-2">
-                                                {child.achievements.map((achievement: string, idx: number) => (
-                                                    <Badge key={idx} className="bg-yellow-100 text-yellow-800 text-xs">
-                                                        <Trophy className="w-3 h-3 mr-1" />
-                                                        {achievement}
-                                                    </Badge>
-                                                ))}
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-gray-600">Overall Progress</span>
+                                                <span className="font-medium">{child.progress || 0}%</span>
                                             </div>
+                                            <Progress value={child.progress || 0} className="h-3" />
                                         </div>
-                                    )}
 
-                                    {/* Medical Info */}
-                                    {child.medicalInfo && (
-                                        <div className="p-3 bg-red-50 rounded-lg">
-                                            <h5 className="font-semibold text-red-800 text-sm mb-2">Medical Information</h5>
-                                            <div className="text-xs text-red-700 space-y-1">
-                                                {child.medicalInfo.allergies && (
-                                                    <p><strong>Allergies:</strong> {child.medicalInfo.allergies.join(', ')}</p>
-                                                )}
-                                                {child.medicalInfo.medications && (
-                                                    <p><strong>Medications:</strong> {child.medicalInfo.medications.join(', ')}</p>
-                                                )}
-                                                {child.medicalInfo.emergencyContact && (
-                                                    <p><strong>Emergency Contact:</strong> {child.medicalInfo.emergencyContact}</p>
-                                                )}
+                                        {/* Skills Assessment */}
+                                        {child.skills && Object.keys(child.skills).length > 0 && (
+                                            <div className="space-y-3">
+                                                <h4 className="font-semibold text-gray-900">Skills Assessment</h4>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {Object.entries(child.skills).map(([skill, score]) => (
+                                                        <div key={skill} className="space-y-1">
+                                                            <div className="flex items-center justify-between text-sm">
+                                                                <span className="capitalize text-gray-600">{skill}</span>
+                                                                <span className={`font-medium ${getSkillColor(score as number)}`}>{score as number}%</span>
+                                                            </div>
+                                                            <Progress value={score as number} className="h-2" />
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Actions */}
-                                    <div className="flex gap-2">
-                                        <Button
-                                            id={`parent-children-view-${child.id}-btn`}
-                                            className="flex-1"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => router.push('/parent/children')}
-                                        >
-                                            <Eye className="w-4 h-4 mr-2" />
-                                            View Details
-                                        </Button>
-                                        <Button
-                                            id={`parent-children-edit-${child.id}-btn`}
-                                            className="flex-1"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => openEditModal(child)}
-                                        >
-                                            <Edit className="w-4 h-4 mr-2" />
-                                            Edit Profile
-                                        </Button>
-                                        <Button
-                                            id={`parent-children-schedule-${child.id}-btn`}
-                                            className="flex-1"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => router.push('/parent/browse-classes')}
-                                        >
-                                            <Calendar className="w-4 h-4 mr-2" />
-                                            Schedule
-                                        </Button>
+                                        {/* Achievements */}
+                                        {child.achievements && child.achievements.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="font-semibold text-gray-900">Achievements</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {child.achievements.map((achievement: string, idx: number) => (
+                                                        <Badge key={idx} className="bg-yellow-100 text-yellow-800 text-xs">
+                                                            <Trophy className="w-3 h-3 mr-1" />
+                                                            {achievement}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Medical Info */}
+                                        {child.medicalInfo && (
+                                            <div className="p-3 bg-red-50 rounded-lg">
+                                                <h5 className="font-semibold text-red-800 text-sm mb-2">Medical Information</h5>
+                                                <div className="text-xs text-red-700 space-y-1">
+                                                    {child.medicalInfo.allergies && (
+                                                        <p><strong>Allergies:</strong> {child.medicalInfo.allergies.join(', ')}</p>
+                                                    )}
+                                                    {child.medicalInfo.medications && (
+                                                        <p><strong>Medications:</strong> {child.medicalInfo.medications.join(', ')}</p>
+                                                    )}
+                                                    {child.medicalInfo.emergencyContact && (
+                                                        <p><strong>Emergency Contact:</strong> {child.medicalInfo.emergencyContact}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Actions */}
+                                        <div className="flex gap-2">
+                                            <Button
+                                                id={`parent-children-view-${child.id}-btn`}
+                                                className="flex-1"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => router.push('/parent/children')}
+                                            >
+                                                <Eye className="w-4 h-4 mr-2" />
+                                                View Details
+                                            </Button>
+                                            <Button
+                                                id={`parent-children-edit-${child.id}-btn`}
+                                                className="flex-1"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => openEditModal(child)}
+                                            >
+                                                <Edit className="w-4 h-4 mr-2" />
+                                                Edit Profile
+                                            </Button>
+                                            <Button
+                                                id={`parent-children-schedule-${child.id}-btn`}
+                                                className="flex-1"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => router.push('/parent/browse-classes')}
+                                            >
+                                                <Calendar className="w-4 h-4 mr-2" />
+                                                Schedule
+                                            </Button>
+                                        </div>
+
+                                        {/* AI Insights Expandable Section */}
+                                        <div className="border border-indigo-100 rounded-lg overflow-hidden">
+                                            <button
+                                                id={`parent-children-ai-toggle-${childId}-btn`}
+                                                onClick={() => toggleAiInsights(childId)}
+                                                className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Brain className="w-4 h-4 text-indigo-600" />
+                                                    <span className="font-semibold text-sm text-indigo-900">AI Insights</span>
+                                                </div>
+                                                {aiInsightsOpen[childId] ? (
+                                                    <ChevronUp className="w-4 h-4 text-indigo-600" />
+                                                ) : (
+                                                    <ChevronDown className="w-4 h-4 text-indigo-600" />
+                                                )}
+                                            </button>
+
+                                            {aiInsightsOpen[childId] && (
+                                                <div className="p-4 bg-white space-y-3">
+                                                    {/* AI Progress Report */}
+                                                    <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Sparkles className="w-4 h-4 text-indigo-600" />
+                                                            <h5 className="font-semibold text-sm text-indigo-900">AI Progress Report</h5>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-2">Generate an AI-powered progress analysis for {child.name}.</p>
+                                                        <Button
+                                                            id={`parent-children-ai-report-${childId}-btn`}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                                                            onClick={() => handleAiReport(childId)}
+                                                            disabled={aiReportLoading[childId]}
+                                                        >
+                                                            {aiReportLoading[childId] ? (
+                                                                <>
+                                                                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                                                    Generating Report...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Sparkles className="w-3 h-3 mr-2" />
+                                                                    AI Progress Report
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                        {aiReportResult[childId] && (
+                                                            <div className="mt-2 p-2 bg-white rounded border border-indigo-100">
+                                                                <p className="text-xs text-indigo-800">
+                                                                    {aiReportResult[childId].summary || aiReportResult[childId].report || aiReportResult[childId].message || JSON.stringify(aiReportResult[childId])}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        {aiReportError[childId] && (
+                                                            <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                                                <p className="text-xs text-red-600">{aiReportError[childId]}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Competition Readiness */}
+                                                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Zap className="w-4 h-4 text-purple-600" />
+                                                            <h5 className="font-semibold text-sm text-purple-900">Competition Readiness</h5>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-2">Check if {child.name} is ready for upcoming competitions.</p>
+                                                        <Button
+                                                            id={`parent-children-ai-readiness-${childId}-btn`}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="w-full border-purple-200 text-purple-700 hover:bg-purple-100"
+                                                            onClick={() => handleCompetitionReadiness(childId)}
+                                                            disabled={aiReadinessLoading[childId]}
+                                                        >
+                                                            {aiReadinessLoading[childId] ? (
+                                                                <>
+                                                                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                                                    Checking...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Zap className="w-3 h-3 mr-2" />
+                                                                    Competition Readiness
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                        {aiReadinessResult[childId] && (
+                                                            <div className="mt-2 p-2 bg-white rounded border border-purple-100">
+                                                                <p className="text-xs text-purple-800">
+                                                                    {aiReadinessResult[childId].readiness !== undefined && (
+                                                                        <span className="font-semibold">Readiness: {aiReadinessResult[childId].readiness}% - </span>
+                                                                    )}
+                                                                    {aiReadinessResult[childId].summary || aiReadinessResult[childId].assessment || aiReadinessResult[childId].message || JSON.stringify(aiReadinessResult[childId])}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        {aiReadinessError[childId] && (
+                                                            <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                                                <p className="text-xs text-red-600">{aiReadinessError[childId]}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* AI Challenges */}
+                                                    <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Brain className="w-4 h-4 text-amber-600" />
+                                                            <h5 className="font-semibold text-sm text-amber-900">AI Challenges</h5>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-2">Generate personalized challenges to motivate {child.name}.</p>
+                                                        <Button
+                                                            id={`parent-children-ai-challenges-${childId}-btn`}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="w-full border-amber-200 text-amber-700 hover:bg-amber-100"
+                                                            onClick={() => handleAiChallenges(childId)}
+                                                            disabled={aiChallengesLoading[childId]}
+                                                        >
+                                                            {aiChallengesLoading[childId] ? (
+                                                                <>
+                                                                    <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                                                    Generating...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Brain className="w-3 h-3 mr-2" />
+                                                                    AI Challenges
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                        {aiChallengesResult[childId] && (
+                                                            <div className="mt-2 p-2 bg-white rounded border border-amber-100">
+                                                                {aiChallengesResult[childId].challenges ? (
+                                                                    <ul className="text-xs text-amber-800 space-y-1">
+                                                                        {(Array.isArray(aiChallengesResult[childId].challenges) ? aiChallengesResult[childId].challenges : [aiChallengesResult[childId].challenges]).map((challenge: any, i: number) => (
+                                                                            <li key={i} className="flex items-start gap-1">
+                                                                                <Trophy className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                                                <span>{typeof challenge === 'string' ? challenge : challenge.title || challenge.name || JSON.stringify(challenge)}</span>
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                ) : (
+                                                                    <p className="text-xs text-amber-800">
+                                                                        {aiChallengesResult[childId].message || JSON.stringify(aiChallengesResult[childId])}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {aiChallengesError[childId] && (
+                                                            <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                                                <p className="text-xs text-red-600">{aiChallengesError[childId]}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )
+                })}
             </div>
 
             {/* Empty State */}

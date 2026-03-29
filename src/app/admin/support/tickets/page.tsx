@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Ticket, Plus, Search, Clock, User, MessageSquare, CheckCircle, AlertCircle, MoreVertical, UserPlus, Reply, X, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Ticket, Plus, Search, Clock, User, MessageSquare, CheckCircle, AlertCircle, MoreVertical, UserPlus, Reply, X, RefreshCw, AlertTriangle, Brain, Sparkles, Loader2, Zap, ThumbsUp, ThumbsDown, Send } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -357,6 +357,108 @@ export default function SupportTicketsPage() {
                     </CardContent>
                 </Card>
             </motion.div>
+
+            {/* AI Smart Support Hub */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <SupportAIHub tickets={tickets} />
+            </motion.div>
         </div>
+    )
+}
+
+function SupportAIHub({ tickets }: { tickets: SupportTicket[] }) {
+    const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
+    const [loading, setLoading] = useState<string | null>(null)
+    const [results, setResults] = useState<Record<string, any>>({})
+    const [optimizeText, setOptimizeText] = useState('')
+
+    const callAI = async (key: string, fn: () => Promise<any>) => {
+        setLoading(key)
+        try {
+            const res = await fn()
+            setResults(prev => ({ ...prev, [key]: { success: true, data: res?.data || res } }))
+        } catch {
+            setResults(prev => ({ ...prev, [key]: { success: false, data: { message: 'AI service unavailable' } } }))
+        } finally { setLoading(null) }
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    AI Smart Support
+                    <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {/* Ticket Selector */}
+                <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Select Ticket for AI Analysis</label>
+                    <select value={selectedTicket?.id || ''} onChange={e => setSelectedTicket(tickets.find(t => t.id === e.target.value) || null)} className="w-full px-3 py-2 border rounded-lg text-sm">
+                        <option value="">-- Select a ticket --</option>
+                        {tickets.map(t => <option key={t.id} value={t.id}>{t.subject} ({t.requester})</option>)}
+                    </select>
+                </div>
+
+                {/* AI Action Buttons */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <button onClick={() => selectedTicket && callAI('classify', () => apiClient.post('/smart-support/classify-ticket', { description: selectedTicket.subject }))} disabled={!selectedTicket || loading === 'classify'} className="flex items-center gap-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-medium text-blue-700 transition-colors disabled:opacity-50">
+                        {loading === 'classify' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Classify
+                    </button>
+                    <button onClick={() => selectedTicket && callAI('sentiment', () => apiClient.post('/smart-support/analyze-sentiment', { text: selectedTicket.subject }))} disabled={!selectedTicket || loading === 'sentiment'} className="flex items-center gap-1 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-medium text-green-700 transition-colors disabled:opacity-50">
+                        {loading === 'sentiment' ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />} Sentiment
+                    </button>
+                    <button onClick={() => selectedTicket && callAI('autoResolve', () => apiClient.post('/smart-support/auto-resolve', { ticketId: selectedTicket.id }))} disabled={!selectedTicket || loading === 'autoResolve'} className="flex items-center gap-1 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-medium text-amber-700 transition-colors disabled:opacity-50">
+                        {loading === 'autoResolve' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />} Auto-Resolve
+                    </button>
+                    <button onClick={() => selectedTicket && callAI('suggest', () => apiClient.get(`/smart-support/suggest-response/${selectedTicket.id}`))} disabled={!selectedTicket || loading === 'suggest'} className="flex items-center gap-1 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-xs font-medium text-purple-700 transition-colors disabled:opacity-50">
+                        {loading === 'suggest' ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />} Suggest Reply
+                    </button>
+                    <button onClick={() => callAI('optimize', () => apiClient.post('/ai-communication/optimize-message', { message: optimizeText || 'Thank you for contacting support', channels: ['email', 'sms'] }))} disabled={loading === 'optimize'} className="flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 transition-colors disabled:opacity-50">
+                        {loading === 'optimize' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Optimize Msg
+                    </button>
+                </div>
+
+                {/* Message to optimize */}
+                <textarea value={optimizeText} onChange={e => setOptimizeText(e.target.value)} placeholder="Type a message to optimize with AI..." className="w-full px-3 py-2 border rounded-lg text-sm h-20 resize-none" />
+
+                {/* Results Grid */}
+                {Object.keys(results).length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {results.classify && (
+                            <div className="p-3 bg-blue-50 rounded-lg text-xs">
+                                <p className="font-medium text-blue-700 mb-1">Classification:</p>
+                                <p>{results.classify.data?.category || results.classify.data?.classification || results.classify.data?.message || JSON.stringify(results.classify.data).slice(0, 150)}</p>
+                            </div>
+                        )}
+                        {results.sentiment && (
+                            <div className="p-3 bg-green-50 rounded-lg text-xs">
+                                <p className="font-medium text-green-700 mb-1">Sentiment Analysis:</p>
+                                <p>{results.sentiment.data?.sentiment || results.sentiment.data?.score || results.sentiment.data?.message || JSON.stringify(results.sentiment.data).slice(0, 150)}</p>
+                            </div>
+                        )}
+                        {results.autoResolve && (
+                            <div className="p-3 bg-amber-50 rounded-lg text-xs">
+                                <p className="font-medium text-amber-700 mb-1">Auto-Resolve:</p>
+                                <p>{results.autoResolve.data?.resolution || results.autoResolve.data?.resolved ? 'Resolved!' : results.autoResolve.data?.message || JSON.stringify(results.autoResolve.data).slice(0, 150)}</p>
+                            </div>
+                        )}
+                        {results.suggest && (
+                            <div className="p-3 bg-purple-50 rounded-lg text-xs">
+                                <p className="font-medium text-purple-700 mb-1">Suggested Response:</p>
+                                <p>{results.suggest.data?.suggestion || results.suggest.data?.response || results.suggest.data?.message || JSON.stringify(results.suggest.data).slice(0, 150)}</p>
+                            </div>
+                        )}
+                        {results.optimize && (
+                            <div className="p-3 bg-rose-50 rounded-lg text-xs col-span-2">
+                                <p className="font-medium text-rose-700 mb-1">Optimized Message:</p>
+                                <p>{results.optimize.data?.optimizedMessage || results.optimize.data?.email || results.optimize.data?.message || JSON.stringify(results.optimize.data).slice(0, 200)}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     )
 }
