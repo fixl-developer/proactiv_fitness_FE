@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -9,97 +9,142 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { formatDateShort } from '@/utils/dateUtils'
 import { getRandomImage } from '@/utils/imageUtils'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, BlogPostData } from '@/services/cmsService'
+
+interface StaticBlogPost {
+    id: number | string
+    title: string
+    excerpt: string
+    content: string
+    author: string
+    date: string
+    category: string
+    tags: string[]
+    image: string
+    fallback: string
+    readTime: string
+    featured: boolean
+}
+
+const staticBlogPosts: StaticBlogPost[] = [
+    {
+        id: 1,
+        title: 'The Benefits of Gymnastics for Child Development',
+        excerpt: 'Discover how gymnastics training contributes to physical, mental, and social development in children of all ages.',
+        content: 'Gymnastics is more than just physical exercise...',
+        author: 'Sarah Johnson',
+        date: '2024-12-15',
+        category: 'Child Development',
+        tags: ['development', 'benefits', 'children'],
+        image: getRandomImage('child development'),
+        fallback: '🧠',
+        readTime: '5 min read',
+        featured: true
+    },
+    {
+        id: 2,
+        title: 'Preparing for Your First Gymnastics Competition',
+        excerpt: 'Essential tips and strategies to help young gymnasts prepare mentally and physically for their first competition.',
+        content: 'Competition can be both exciting and nerve-wracking...',
+        author: 'Michael Chen',
+        date: '2024-12-10',
+        category: 'Competition',
+        tags: ['competition', 'preparation', 'tips'],
+        image: getRandomImage('gymnastics competition'),
+        fallback: '🏆',
+        readTime: '7 min read',
+        featured: false
+    },
+    {
+        id: 3,
+        title: 'Safety First: Injury Prevention in Gymnastics',
+        excerpt: 'Learn about the most effective ways to prevent injuries and maintain safety during gymnastics training.',
+        content: 'Safety is our top priority at ProActive Sports...',
+        author: 'Emma Wilson',
+        date: '2024-12-05',
+        category: 'Safety',
+        tags: ['safety', 'injury prevention', 'training'],
+        image: getRandomImage('safety training'),
+        fallback: '🛡️',
+        readTime: '6 min read',
+        featured: false
+    },
+    {
+        id: 4,
+        title: 'Building Confidence Through Gymnastics',
+        excerpt: 'How gymnastics training helps children build self-confidence and overcome challenges in all areas of life.',
+        content: 'Confidence is one of the greatest gifts gymnastics can give...',
+        author: 'Lisa Wong',
+        date: '2024-11-28',
+        category: 'Personal Development',
+        tags: ['confidence', 'personal growth', 'mindset'],
+        image: getRandomImage('confidence building'),
+        fallback: '💪',
+        readTime: '4 min read',
+        featured: false
+    },
+    {
+        id: 5,
+        title: 'Nutrition Tips for Young Athletes',
+        excerpt: 'Essential nutrition guidelines to fuel your young gymnast for optimal performance and healthy growth.',
+        content: 'Proper nutrition is crucial for young athletes...',
+        author: 'David Lee',
+        date: '2024-11-20',
+        category: 'Nutrition',
+        tags: ['nutrition', 'health', 'performance'],
+        image: getRandomImage('healthy nutrition'),
+        fallback: '🥗',
+        readTime: '8 min read',
+        featured: false
+    },
+    {
+        id: 6,
+        title: 'The Importance of Goal Setting in Gymnastics',
+        excerpt: 'Learn how setting and achieving goals in gymnastics translates to success in other areas of life.',
+        content: 'Goal setting is a fundamental skill that gymnastics teaches...',
+        author: 'James Chen',
+        date: '2024-11-15',
+        category: 'Goal Setting',
+        tags: ['goals', 'achievement', 'success'],
+        image: getRandomImage('goal achievement'),
+        fallback: '🎯',
+        readTime: '5 min read',
+        featured: false
+    }
+]
+
+const mapCMSPostToLocal = (post: BlogPostData): StaticBlogPost => ({
+    id: post.id,
+    title: post.title,
+    excerpt: post.excerpt,
+    content: post.content,
+    author: post.author,
+    date: post.date,
+    category: post.category,
+    tags: post.tags || [],
+    image: post.image || getRandomImage(post.title),
+    fallback: '📝',
+    readTime: post.readTime || '5 min read',
+    featured: post.isFeatured ?? false
+})
 
 const BlogPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('All Posts')
     const [searchQuery, setSearchQuery] = useState('')
-    // Sample blog posts - replace with actual data from API
-    const blogPosts = [
-        {
-            id: 1,
-            title: 'The Benefits of Gymnastics for Child Development',
-            excerpt: 'Discover how gymnastics training contributes to physical, mental, and social development in children of all ages.',
-            content: 'Gymnastics is more than just physical exercise...',
-            author: 'Sarah Johnson',
-            date: '2024-12-15',
-            category: 'Child Development',
-            tags: ['development', 'benefits', 'children'],
-            image: getRandomImage('child development'),
-            fallback: '🧠',
-            readTime: '5 min read',
-            featured: true
-        },
-        {
-            id: 2,
-            title: 'Preparing for Your First Gymnastics Competition',
-            excerpt: 'Essential tips and strategies to help young gymnasts prepare mentally and physically for their first competition.',
-            content: 'Competition can be both exciting and nerve-wracking...',
-            author: 'Michael Chen',
-            date: '2024-12-10',
-            category: 'Competition',
-            tags: ['competition', 'preparation', 'tips'],
-            image: getRandomImage('gymnastics competition'),
-            fallback: '🏆',
-            readTime: '7 min read',
-            featured: false
-        },
-        {
-            id: 3,
-            title: 'Safety First: Injury Prevention in Gymnastics',
-            excerpt: 'Learn about the most effective ways to prevent injuries and maintain safety during gymnastics training.',
-            content: 'Safety is our top priority at ProActive Sports...',
-            author: 'Emma Wilson',
-            date: '2024-12-05',
-            category: 'Safety',
-            tags: ['safety', 'injury prevention', 'training'],
-            image: getRandomImage('safety training'),
-            fallback: '🛡️',
-            readTime: '6 min read',
-            featured: false
-        },
-        {
-            id: 4,
-            title: 'Building Confidence Through Gymnastics',
-            excerpt: 'How gymnastics training helps children build self-confidence and overcome challenges in all areas of life.',
-            content: 'Confidence is one of the greatest gifts gymnastics can give...',
-            author: 'Lisa Wong',
-            date: '2024-11-28',
-            category: 'Personal Development',
-            tags: ['confidence', 'personal growth', 'mindset'],
-            image: getRandomImage('confidence building'),
-            fallback: '💪',
-            readTime: '4 min read',
-            featured: false
-        },
-        {
-            id: 5,
-            title: 'Nutrition Tips for Young Athletes',
-            excerpt: 'Essential nutrition guidelines to fuel your young gymnast for optimal performance and healthy growth.',
-            content: 'Proper nutrition is crucial for young athletes...',
-            author: 'David Lee',
-            date: '2024-11-20',
-            category: 'Nutrition',
-            tags: ['nutrition', 'health', 'performance'],
-            image: getRandomImage('healthy nutrition'),
-            fallback: '🥗',
-            readTime: '8 min read',
-            featured: false
-        },
-        {
-            id: 6,
-            title: 'The Importance of Goal Setting in Gymnastics',
-            excerpt: 'Learn how setting and achieving goals in gymnastics translates to success in other areas of life.',
-            content: 'Goal setting is a fundamental skill that gymnastics teaches...',
-            author: 'James Chen',
-            date: '2024-11-15',
-            category: 'Goal Setting',
-            tags: ['goals', 'achievement', 'success'],
-            image: getRandomImage('goal achievement'),
-            fallback: '🎯',
-            readTime: '5 min read',
-            featured: false
+
+    const { data: dynamicPosts } = useCMSData<BlogPostData[]>(
+        () => CMSService.getBlogPosts(),
+        [],
+        []
+    )
+
+    const blogPosts: StaticBlogPost[] = useMemo(() => {
+        if (dynamicPosts && dynamicPosts.length > 0) {
+            return dynamicPosts.map(mapCMSPostToLocal)
         }
-    ]
+        return staticBlogPosts
+    }, [dynamicPosts])
 
     const categories = [
         'All Posts',

@@ -32,6 +32,14 @@ export default function RegionalAdminDashboard() {
     const [aiData, setAiData] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
 
+    // Revenue Intelligence state
+    const [revenueIntelData, setRevenueIntelData] = useState<any>(null)
+    const [revenueIntelLoading, setRevenueIntelLoading] = useState(false)
+
+    // Smart Scheduler state
+    const [schedulerData, setSchedulerData] = useState<any>(null)
+    const [schedulerLoading, setSchedulerLoading] = useState(false)
+
     const loadAiInsights = async () => {
         setAiLoading(true)
         try {
@@ -39,6 +47,37 @@ export default function RegionalAdminDashboard() {
             setAiData(res)
         } catch { setAiData(null) }
         finally { setAiLoading(false) }
+    }
+
+    const loadRevenueIntelligence = async () => {
+        setRevenueIntelLoading(true)
+        try {
+            const [churnRes, upsellRes] = await Promise.allSettled([
+                apiClient.get('/revenue-intelligence/churn-risk/regional'),
+                apiClient.get('/revenue-intelligence/upsell-opportunities')
+            ])
+            const churn = churnRes.status === 'fulfilled' ? churnRes.value?.data || churnRes.value : null
+            const upsell = upsellRes.status === 'fulfilled' ? upsellRes.value?.data || upsellRes.value : null
+            setRevenueIntelData({ churnRisk: churn, upsellOpportunities: upsell })
+        } catch (err) {
+            console.error('Revenue Intelligence unavailable:', err)
+            setRevenueIntelData(null)
+        } finally {
+            setRevenueIntelLoading(false)
+        }
+    }
+
+    const loadSmartScheduler = async () => {
+        setSchedulerLoading(true)
+        try {
+            const res = await apiClient.post('/smart-scheduler/optimize-schedule', { scope: 'regional' })
+            setSchedulerData(res?.data || res)
+        } catch (err) {
+            console.error('Smart Scheduler unavailable:', err)
+            setSchedulerData(null)
+        } finally {
+            setSchedulerLoading(false)
+        }
     }
 
     const loadDashboard = useCallback(async () => {
@@ -100,6 +139,8 @@ export default function RegionalAdminDashboard() {
     useEffect(() => {
         loadDashboard()
         loadAiInsights()
+        loadRevenueIntelligence()
+        loadSmartScheduler()
     }, [loadDashboard])
 
     function formatRelativeDate(dateStr: string): string {
@@ -478,7 +519,7 @@ export default function RegionalAdminDashboard() {
                 </CardContent>
             </Card>
 
-            {/* AI Insights */}
+            {/* AI Insights - Global Intelligence */}
             <div className="mt-6">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -514,6 +555,130 @@ export default function RegionalAdminDashboard() {
                             <div className="text-center py-6">
                                 <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                                 <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Revenue Intelligence */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-red-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Revenue Intelligence</h3>
+                            <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadRevenueIntelligence} disabled={revenueIntelLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${revenueIntelLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {revenueIntelLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-red-600" />
+                                <p className="text-sm text-gray-500">Analyzing revenue data...</p>
+                            </div>
+                        ) : revenueIntelData ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Churn Risk Analysis */}
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                                        Churn Risk Analysis
+                                    </h4>
+                                    {(Array.isArray(revenueIntelData.churnRisk) ? revenueIntelData.churnRisk : revenueIntelData.churnRisk?.atRiskMembers || revenueIntelData.churnRisk?.risks || []).slice(0, 4).map((risk: any, i: number) => (
+                                        <div key={`churn-${i}`} className="p-3 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg border border-red-200">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Sparkles className="w-3 h-3 text-red-500" />
+                                                <span className="text-xs font-semibold text-red-700 uppercase">At Risk</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">{risk.title || risk.memberName || risk.name || JSON.stringify(risk).slice(0, 80)}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{risk.description || risk.reason || risk.riskLevel || ''}</p>
+                                        </div>
+                                    ))}
+                                    {(Array.isArray(revenueIntelData.churnRisk) ? revenueIntelData.churnRisk : revenueIntelData.churnRisk?.atRiskMembers || revenueIntelData.churnRisk?.risks || []).length === 0 && (
+                                        <p className="text-xs text-gray-400 italic">No churn risks detected</p>
+                                    )}
+                                </div>
+
+                                {/* Upsell Opportunities */}
+                                <div className="space-y-3">
+                                    <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-green-500" />
+                                        Upsell Opportunities
+                                    </h4>
+                                    {(Array.isArray(revenueIntelData.upsellOpportunities) ? revenueIntelData.upsellOpportunities : revenueIntelData.upsellOpportunities?.opportunities || revenueIntelData.upsellOpportunities?.suggestions || []).slice(0, 4).map((opp: any, i: number) => (
+                                        <div key={`upsell-${i}`} className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Sparkles className="w-3 h-3 text-green-500" />
+                                                <span className="text-xs font-semibold text-green-700 uppercase">Opportunity</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">{opp.title || opp.name || opp.product || JSON.stringify(opp).slice(0, 80)}</p>
+                                            <p className="text-xs text-gray-600 mt-1">{opp.description || opp.potentialRevenue || opp.reason || ''}</p>
+                                        </div>
+                                    ))}
+                                    {(Array.isArray(revenueIntelData.upsellOpportunities) ? revenueIntelData.upsellOpportunities : revenueIntelData.upsellOpportunities?.opportunities || revenueIntelData.upsellOpportunities?.suggestions || []).length === 0 && (
+                                        <p className="text-xs text-gray-400 italic">No upsell opportunities found</p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Revenue intelligence unavailable</p>
+                                <button onClick={loadRevenueIntelligence} className="mt-2 text-sm text-red-600 hover:underline">Generate Analysis</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Smart Scheduler */}
+            <div className="mt-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">Smart Scheduler</h3>
+                            <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
+                        </div>
+                        <button onClick={loadSmartScheduler} disabled={schedulerLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${schedulerLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {schedulerLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                <p className="text-sm text-gray-500">Optimizing regional schedule...</p>
+                            </div>
+                        ) : schedulerData ? (
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-blue-500" />
+                                    Optimize Regional Schedule
+                                </h4>
+                                {(Array.isArray(schedulerData) ? schedulerData : schedulerData?.suggestions || schedulerData?.recommendations || schedulerData?.optimizations || []).slice(0, 5).map((item: any, i: number) => (
+                                    <div key={`sched-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                        <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.suggestion || item.name || JSON.stringify(item).slice(0, 100)}</p>
+                                            {(item.description || item.impact) && <p className="text-xs text-gray-600 mt-0.5">{item.description || item.impact}</p>}
+                                            {item.timeSaved && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Saves {item.timeSaved}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                                {(Array.isArray(schedulerData) ? schedulerData : schedulerData?.suggestions || schedulerData?.recommendations || schedulerData?.optimizations || []).length === 0 && (
+                                    <p className="text-xs text-gray-400 italic">Schedule is already optimized</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Smart scheduler unavailable</p>
+                                <button onClick={loadSmartScheduler} className="mt-2 text-sm text-blue-600 hover:underline">Optimize Schedule</button>
                             </div>
                         )}
                     </div>

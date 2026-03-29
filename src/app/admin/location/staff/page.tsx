@@ -1,13 +1,352 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save, UserCheck, Award, Activity } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save, UserCheck, Award, Activity, Loader2, AlertTriangle, Lock, Shield } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
 
+const ALLOWED_ROLES = ['COACH'] as const
+const ROLE_LABELS: Record<string, string> = {
+    COACH: 'Coach',
+}
+
+interface StaffFormData {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    role: string
+    password: string
+    status: string
+}
+
+const defaultForm: StaffFormData = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: 'COACH',
+    password: '',
+    status: 'ACTIVE',
+}
+
+// ─── Toast Notification ──────────────────────────────────────────
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 4000)
+        return () => clearTimeout(timer)
+    }, [onClose])
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg ${
+                type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}
+        >
+            {type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <span className="text-sm font-medium">{message}</span>
+            <button onClick={onClose} className="ml-2 hover:opacity-70"><X className="w-4 h-4" /></button>
+        </motion.div>
+    )
+}
+
+// ─── Staff Form Modal ────────────────────────────────────────────
+function StaffFormModal({
+    open,
+    onClose,
+    onSubmit,
+    initial,
+    submitting,
+    modalError,
+}: {
+    open: boolean
+    onClose: () => void
+    onSubmit: (data: any) => void
+    initial: any | null
+    submitting: boolean
+    modalError: string | null
+}) {
+    const [form, setForm] = useState<StaffFormData>(defaultForm)
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+    useEffect(() => {
+        if (initial) {
+            const nameParts = (initial.name || '').split(' ')
+            setForm({
+                firstName: initial.firstName || nameParts[0] || '',
+                lastName: initial.lastName || nameParts.slice(1).join(' ') || '',
+                email: initial.email || '',
+                phone: initial.phone || '',
+                role: initial.role || 'COACH',
+                password: '',
+                status: initial.status || 'ACTIVE',
+            })
+        } else {
+            setForm(defaultForm)
+        }
+        setValidationErrors({})
+    }, [initial, open])
+
+    const validate = (): boolean => {
+        const errors: Record<string, string> = {}
+        if (!form.firstName.trim()) errors.firstName = 'First name is required'
+        if (!form.lastName.trim()) errors.lastName = 'Last name is required'
+        if (!form.email.trim()) errors.email = 'Email is required'
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Invalid email format'
+        if (!initial && !form.password) errors.password = 'Password is required for new staff'
+        else if (form.password && form.password.length < 8) errors.password = 'Password must be at least 8 characters'
+        setValidationErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!validate()) return
+        const payload: any = {
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim(),
+            email: form.email.trim().toLowerCase(),
+            phone: form.phone.trim(),
+            role: form.role,
+            status: form.status,
+        }
+        if (form.password) payload.password = form.password
+        onSubmit(payload)
+    }
+
+    const handleChange = (field: keyof StaffFormData, value: string) => {
+        setForm(prev => ({ ...prev, [field]: value }))
+        if (validationErrors[field]) {
+            setValidationErrors(prev => { const n = { ...prev }; delete n[field]; return n })
+        }
+    }
+
+    if (!open) return null
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between p-6 border-b">
+                    <h2 className="text-xl font-bold text-gray-900">{initial ? 'Edit Staff' : 'Add New Staff'}</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    {modalError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {modalError}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                            <Input
+                                value={form.firstName}
+                                onChange={(e) => handleChange('firstName', e.target.value)}
+                                placeholder="First name"
+                                className={validationErrors.firstName ? 'border-red-300' : ''}
+                            />
+                            {validationErrors.firstName && <p className="text-xs text-red-500 mt-1">{validationErrors.firstName}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                            <Input
+                                value={form.lastName}
+                                onChange={(e) => handleChange('lastName', e.target.value)}
+                                placeholder="Last name"
+                                className={validationErrors.lastName ? 'border-red-300' : ''}
+                            />
+                            {validationErrors.lastName && <p className="text-xs text-red-500 mt-1">{validationErrors.lastName}</p>}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <Input
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => handleChange('email', e.target.value)}
+                            placeholder="email@example.com"
+                            className={validationErrors.email ? 'border-red-300' : ''}
+                        />
+                        {validationErrors.email && <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <Input
+                            type="tel"
+                            value={form.phone}
+                            onChange={(e) => handleChange('phone', e.target.value)}
+                            placeholder="+1 (555) 000-0000"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                        <select
+                            value={form.role}
+                            onChange={(e) => handleChange('role', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {ALLOWED_ROLES.map(r => (
+                                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-400 mt-1">Location Managers can only create Coach roles</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select
+                            value={form.status}
+                            onChange={(e) => handleChange('status', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Password {initial ? '(leave blank to keep current)' : '*'}
+                        </label>
+                        <Input
+                            type="password"
+                            value={form.password}
+                            onChange={(e) => handleChange('password', e.target.value)}
+                            placeholder={initial ? '********' : 'Enter password (min 8 chars)'}
+                            className={validationErrors.password ? 'border-red-300' : ''}
+                        />
+                        {validationErrors.password && <p className="text-xs text-red-500 mt-1">{validationErrors.password}</p>}
+                    </div>
+
+                    <div className="flex gap-3 pt-4 border-t">
+                        <button type="button" onClick={onClose} disabled={submitting}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={submitting}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {initial ? 'Update' : 'Create'}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </div>
+    )
+}
+
+// ─── View Detail Modal ───────────────────────────────────────────
+function StaffDetailModal({ open, onClose, staff }: { open: boolean; onClose: () => void; staff: any | null }) {
+    if (!open || !staff) return null
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-lg"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between p-6 border-b">
+                    <h2 className="text-xl font-bold text-gray-900">Staff Details</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+                </div>
+                <div className="p-6 space-y-5">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
+                            {(staff.name || staff.firstName || '?').charAt(0)}
+                        </div>
+                        <div>
+                            <p className="text-lg font-semibold text-gray-900">{staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim()}</p>
+                            <Badge variant="outline">{ROLE_LABELS[staff.role] || staff.role}</Badge>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 mb-1 flex items-center gap-1"><Mail className="w-3 h-3" /> Email</p>
+                            <p className="text-gray-900 font-medium">{staff.email || 'N/A'}</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 mb-1 flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</p>
+                            <p className="text-gray-900 font-medium">{staff.phone || 'N/A'}</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 mb-1 flex items-center gap-1"><Shield className="w-3 h-3" /> Status</p>
+                            <Badge variant={(staff.status || '').toUpperCase() === 'ACTIVE' ? 'default' : 'secondary'}>
+                                {staff.status || 'N/A'}
+                            </Badge>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 mb-1 flex items-center gap-1"><Activity className="w-3 h-3" /> Utilization</p>
+                            <p className="text-gray-900 font-medium">{staff.utilization || 0}%</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex justify-end p-6 border-t">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
+// ─── Delete Confirm Modal ────────────────────────────────────────
+function DeleteConfirmModal({
+    open, onClose, onConfirm, staff, deleting
+}: {
+    open: boolean; onClose: () => void; onConfirm: () => void; staff: any | null; deleting: boolean
+}) {
+    if (!open || !staff) return null
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle className="w-7 h-7 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Staff Member</h3>
+                    <p className="text-gray-600">
+                        Are you sure you want to delete <span className="font-medium">{staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`}</span>? This action cannot be undone.
+                    </p>
+                </div>
+                <div className="flex gap-3 p-6 border-t">
+                    <button onClick={onClose} disabled={deleting}
+                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50">Cancel</button>
+                    <button onClick={onConfirm} disabled={deleting}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+                        {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Delete
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
+// ─── Main Page ───────────────────────────────────────────────────
 export default function LocationStaffPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [filterRole, setFilterRole] = useState('all')
@@ -17,10 +356,18 @@ export default function LocationStaffPage() {
     const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
+
+    // Modal state
     const [showModal, setShowModal] = useState(false)
     const [editingStaff, setEditingStaff] = useState<any>(null)
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', role: 'COACH', status: 'ACTIVE' })
-    const [isSaving, setIsSaving] = useState(false)
+    const [viewTarget, setViewTarget] = useState<any>(null)
+    const [deleteTarget, setDeleteTarget] = useState<any>(null)
+    const [submitting, setSubmitting] = useState(false)
+    const [deleting, setDeleting] = useState(false)
+    const [modalError, setModalError] = useState<string | null>(null)
+
+    // Toast state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
     const fetchStaff = useCallback(async () => {
         try {
@@ -46,68 +393,68 @@ export default function LocationStaffPage() {
 
     const handleOpenCreate = () => {
         setEditingStaff(null)
-        setFormData({ name: '', email: '', phone: '', role: 'COACH', status: 'ACTIVE' })
+        setModalError(null)
         setShowModal(true)
     }
 
     const handleOpenEdit = (member: any) => {
         setEditingStaff(member)
-        setFormData({
-            name: member.name || '',
-            email: member.email || '',
-            phone: member.phone || '',
-            role: member.role || 'COACH',
-            status: member.status || 'ACTIVE'
-        })
+        setModalError(null)
         setShowModal(true)
     }
 
-    const handleSave = async () => {
+    const handleSave = async (formPayload: any) => {
         try {
-            setIsSaving(true)
+            setSubmitting(true)
+            setModalError(null)
             if (editingStaff) {
-                await LocationManagerService.updateStaff(editingStaff.id || editingStaff._id, formData)
+                await LocationManagerService.updateStaff(editingStaff.id || editingStaff._id, formPayload)
+                setToast({ message: 'Staff member updated successfully', type: 'success' })
             } else {
-                await LocationManagerService.createStaff(formData)
+                await LocationManagerService.createStaff(formPayload)
+                setToast({ message: 'Staff member created successfully', type: 'success' })
             }
             setShowModal(false)
+            setEditingStaff(null)
             fetchStaff()
         } catch (err: any) {
-            alert('Failed to save staff: ' + err.message)
+            setModalError(err.message || 'Failed to save staff member')
         } finally {
-            setIsSaving(false)
+            setSubmitting(false)
         }
     }
 
-    const handleDeleteStaff = async (staffId: string) => {
-        if (confirm('Are you sure you want to delete this staff member?')) {
-            try {
-                await LocationManagerService.deleteStaff(staffId)
-                fetchStaff()
-            } catch (err: any) {
-                alert('Failed to delete staff: ' + err.message)
-            }
+    const handleDeleteConfirm = async () => {
+        if (!deleteTarget) return
+        try {
+            setDeleting(true)
+            await LocationManagerService.deleteStaff(deleteTarget.id || deleteTarget._id)
+            setDeleteTarget(null)
+            setToast({ message: 'Staff member deleted successfully', type: 'success' })
+            fetchStaff()
+        } catch (err: any) {
+            setToast({ message: err.message || 'Failed to delete staff', type: 'error' })
+        } finally {
+            setDeleting(false)
         }
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-        )
     }
 
     return (
         <div className="space-y-6">
+            {/* Toast */}
+            <AnimatePresence>
+                {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            </AnimatePresence>
+
+            {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
-                    <p className="text-gray-600 mt-1">Manage location staff members</p>
+                    <p className="text-gray-600 mt-1">Manage location staff members (Coaches)</p>
                 </div>
-                <button id="admin-location-staff-btn" onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={handleOpenCreate} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <Plus className="w-5 h-5" />
-                    Add Staff
+                    Add Coach
                 </button>
             </div>
 
@@ -145,163 +492,161 @@ export default function LocationStaffPage() {
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input placeholder="Search staff..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }} className="pl-10" />
                         </div>
-                        <select id="select-admin-location-staff-1" value={filterRole} onChange={(e) => { setFilterRole(e.target.value); setPage(1) }}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="all">All Roles</option>
-                            <option value="COACH">Coach</option>
-                            <option value="MANAGER">Manager</option>
-                            <option value="SUPPORT_STAFF">Support Staff</option>
-                        </select>
-                        <select id="select-admin-location-staff-2" value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+                        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
                         </select>
                     </div>
                 </CardContent>
             </Card>
 
+            {/* Error */}
             {error && (
                 <Card className="border-red-200 bg-red-50">
-                    <CardContent className="pt-4">
-                        <p className="text-sm text-red-800">{error}</p>
+                    <CardContent className="py-8 text-center">
+                        <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                        <p className="text-red-600 font-medium mb-2">Error loading staff</p>
+                        <p className="text-gray-500 text-sm mb-4">{error}</p>
+                        <button onClick={fetchStaff} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Retry</button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Loading */}
+            {isLoading && !error && (
+                <Card>
+                    <CardContent className="py-16 text-center">
+                        <Loader2 className="w-10 h-10 text-blue-500 mx-auto mb-3 animate-spin" />
+                        <p className="text-gray-500">Loading staff...</p>
                     </CardContent>
                 </Card>
             )}
 
             {/* Staff Table */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Utilization</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {staff.map((member, idx) => (
-                                    <motion.tr
-                                        key={member.id || member._id || idx}
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <td className="py-3 px-4">
-                                            <p className="font-medium text-gray-900">{member.name || `${member.personalInfo?.firstName || ''} ${member.personalInfo?.lastName || ''}`.trim() || 'N/A'}</p>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <p className="text-sm text-gray-600">{member.email || member.contactInfo?.email || 'N/A'}</p>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <Badge variant="outline">{member.role || member.staffType || 'N/A'}</Badge>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2">
-                                                {(member.status || '').toLowerCase() === 'active' ? (
-                                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                                ) : (
-                                                    <AlertCircle className="w-4 h-4 text-gray-400" />
-                                                )}
-                                                <Badge variant={(member.status || '').toLowerCase() === 'active' ? 'default' : 'secondary'}>
-                                                    {member.status || 'N/A'}
-                                                </Badge>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-blue-600" style={{ width: `${member.utilization || 0}%` }}></div>
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-700">{member.utilization || 0}%</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <div className="flex gap-2">
-                                                <button id="admin-location-staff-btn-2" onClick={() => handleOpenEdit(member)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors">
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button id="admin-location-staff-btn-3" onClick={() => handleDeleteStaff(member.id || member._id)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {staff.length === 0 && !error && (
+            {!isLoading && !error && staff.length > 0 && (
                 <Card>
-                    <CardContent className="pt-12 pb-12 text-center">
-                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-600">No staff members found</p>
+                    <CardContent className="pt-6">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Utilization</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {staff.map((member, idx) => (
+                                        <motion.tr
+                                            key={member.id || member._id || idx}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <td className="py-3 px-4">
+                                                <p className="font-medium text-gray-900">{member.name || `${member.personalInfo?.firstName || ''} ${member.personalInfo?.lastName || ''}`.trim() || 'N/A'}</p>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <p className="text-sm text-gray-600">{member.email || member.contactInfo?.email || 'N/A'}</p>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <Badge variant="outline">{ROLE_LABELS[member.role] || member.role || member.staffType || 'N/A'}</Badge>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    {(member.status || '').toUpperCase() === 'ACTIVE' ? (
+                                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                                    ) : (
+                                                        <AlertCircle className="w-4 h-4 text-gray-400" />
+                                                    )}
+                                                    <Badge variant={(member.status || '').toUpperCase() === 'ACTIVE' ? 'default' : 'secondary'}>
+                                                        {member.status || 'N/A'}
+                                                    </Badge>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-600" style={{ width: `${member.utilization || 0}%` }}></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium text-gray-700">{member.utilization || 0}%</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => setViewTarget(member)} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition-colors" title="View">
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => handleOpenEdit(member)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 transition-colors" title="Edit">
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => setDeleteTarget(member)} className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors" title="Delete">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </CardContent>
                 </Card>
             )}
 
+            {/* Empty State */}
+            {!isLoading && !error && staff.length === 0 && (
+                <Card>
+                    <CardContent className="pt-12 pb-12 text-center">
+                        <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-1">No staff members found</p>
+                        <p className="text-sm text-gray-400">
+                            {searchTerm || filterStatus !== 'all' ? 'Try adjusting your search or filters' : 'Add your first coach to get started'}
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-6">
-                    <button id="admin-location-staff-btn-4" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
+                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
                     <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                    <button id="admin-location-staff-btn-5" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
+                    <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
                         className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-6 border-b">
-                            <h2 className="text-xl font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
-                            <button id="admin-location-staff-btn-6" onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Full name" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email address" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <Input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Phone number" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="COACH">Coach</option>
-                                    <option value="MANAGER">Manager</option>
-                                    <option value="SUPPORT_STAFF">Support Staff</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 p-6 border-t">
-                            <button id="admin-location-staff-btn-7" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                            <button id="admin-location-staff-btn-8" onClick={handleSave} disabled={isSaving || !formData.name || !formData.email}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                                {isSaving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save className="w-4 h-4" />}
-                                {editingStaff ? 'Update' : 'Create'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+            <AnimatePresence>
+                <StaffFormModal
+                    open={showModal}
+                    onClose={() => { setShowModal(false); setEditingStaff(null); setModalError(null) }}
+                    onSubmit={handleSave}
+                    initial={editingStaff}
+                    submitting={submitting}
+                    modalError={modalError}
+                />
+                <StaffDetailModal
+                    open={!!viewTarget}
+                    onClose={() => setViewTarget(null)}
+                    staff={viewTarget}
+                />
+                <DeleteConfirmModal
+                    open={!!deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDeleteConfirm}
+                    staff={deleteTarget}
+                    deleting={deleting}
+                />
+            </AnimatePresence>
         </div>
     )
 }

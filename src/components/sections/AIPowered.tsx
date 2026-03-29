@@ -1,9 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Brain, Sparkles, MessageSquare, Target, TrendingUp, Zap, Shield, Utensils } from 'lucide-react'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, AIFeatureData } from '@/services/cmsService'
 
-const aiFeatures = [
+const staticAIFeatures = [
     {
         icon: MessageSquare,
         title: 'AI Chatbot Assistant',
@@ -49,6 +52,26 @@ const aiFeatures = [
 ]
 
 export default function AIPowered() {
+    const { data: dynamicFeatures } = useCMSData<AIFeatureData[]>(
+        () => CMSService.getAIFeatures(),
+        [],
+        []
+    )
+
+    const iconMap: Record<string, any> = {
+        MessageSquare, Target, Utensils, TrendingUp, Shield, Zap, Brain, Sparkles,
+    }
+
+    const features = dynamicFeatures.length > 0
+        ? dynamicFeatures.map(f => ({
+            icon: iconMap[f.icon] || Brain,
+            title: f.title,
+            description: f.description,
+            color: f.color,
+            bgColor: f.bgColor,
+        }))
+        : staticAIFeatures
+
     return (
         <section className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
             <div className="max-w-7xl mx-auto">
@@ -74,7 +97,7 @@ export default function AIPowered() {
 
                 {/* Features Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {aiFeatures.map((feature, index) => {
+                    {features.map((feature, index) => {
                         const Icon = feature.icon
                         return (
                             <motion.div

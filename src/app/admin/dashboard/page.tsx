@@ -8,7 +8,7 @@ import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle,
-    Brain, Sparkles, Loader2, RefreshCw
+    Brain, Sparkles, Loader2, RefreshCw, Zap, Mail, FileText, Send, Megaphone
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { globalIntelligenceService, revenueIntelligenceService } from '@/services/advancedAIServices'
@@ -75,6 +75,12 @@ export default function AdminDashboard() {
     const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
     const [alerts, setAlerts] = useState<AlertItem[]>([])
     const [aiInsights, setAiInsights] = useState<any>(null)
+    const [contentEngineLoading, setContentEngineLoading] = useState(false)
+    const [generatedContent, setGeneratedContent] = useState<any>(null)
+    const [workflowLoading, setWorkflowLoading] = useState(false)
+    const [workflowResult, setWorkflowResult] = useState<any>(null)
+    const [campaignLoading, setCampaignLoading] = useState(false)
+    const [campaignPrediction, setCampaignPrediction] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
 
     const loadAiInsights = async () => {
@@ -451,6 +457,140 @@ export default function AdminDashboard() {
                             <button onClick={loadAiInsights} className="mt-2 text-sm text-purple-600 hover:underline">Generate Insights</button>
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* AI & Automation Hub */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-amber-600" />
+                        AI & Automation Hub
+                        <Badge className="bg-purple-100 text-purple-700 text-xs">Full Suite</Badge>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* AI Content Engine */}
+                        <div className="space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-indigo-600" /> AI Content Engine
+                            </h4>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={async () => {
+                                        setContentEngineLoading(true)
+                                        try {
+                                            const res = await apiClient.post('/ai-content-engine/generate-social-post', { topic: 'fitness classes', platform: 'instagram' })
+                                            setGeneratedContent({ type: 'social', data: res?.data || res })
+                                        } catch { setGeneratedContent({ type: 'social', data: { content: 'Unable to generate content right now.' } }) }
+                                        finally { setContentEngineLoading(false) }
+                                    }}
+                                    disabled={contentEngineLoading}
+                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-sm font-medium text-indigo-700 transition-colors"
+                                >
+                                    {contentEngineLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
+                                    Generate Social Post
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setContentEngineLoading(true)
+                                        try {
+                                            const res = await apiClient.post('/ai-content-engine/generate-email', { type: 'newsletter', audience: 'parents' })
+                                            setGeneratedContent({ type: 'email', data: res?.data || res })
+                                        } catch { setGeneratedContent({ type: 'email', data: { content: 'Unable to generate email right now.' } }) }
+                                        finally { setContentEngineLoading(false) }
+                                    }}
+                                    disabled={contentEngineLoading}
+                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-sm font-medium text-indigo-700 transition-colors"
+                                >
+                                    <Mail className="w-4 h-4" /> Generate Email Campaign
+                                </button>
+                            </div>
+                            {generatedContent && (
+                                <div className="p-3 bg-indigo-50 rounded-lg text-xs text-gray-700">
+                                    <p className="font-medium text-indigo-700 mb-1">{generatedContent.type === 'social' ? 'Social Post' : 'Email'} Generated:</p>
+                                    <p>{generatedContent.data?.content || generatedContent.data?.subject || generatedContent.data?.post || JSON.stringify(generatedContent.data).slice(0, 200)}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Workflow Orchestrator */}
+                        <div className="space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <Zap className="w-4 h-4 text-amber-600" /> Workflow Orchestrator
+                            </h4>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={async () => {
+                                        setWorkflowLoading(true)
+                                        try {
+                                            const res = await apiClient.post('/workflow-orchestrator/schedule-report', { type: 'weekly', recipients: ['admin'] })
+                                            setWorkflowResult({ type: 'schedule', data: res?.data || res })
+                                        } catch { setWorkflowResult({ type: 'schedule', data: { message: 'Workflow service unavailable' } }) }
+                                        finally { setWorkflowLoading(false) }
+                                    }}
+                                    disabled={workflowLoading}
+                                    className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-sm font-medium text-amber-700 transition-colors"
+                                >
+                                    {workflowLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                                    Schedule Weekly Report
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setWorkflowLoading(true)
+                                        try {
+                                            const res = await apiClient.get('/workflow-orchestrator/health/default')
+                                            setWorkflowResult({ type: 'health', data: res?.data || res })
+                                        } catch { setWorkflowResult({ type: 'health', data: { status: 'unavailable' } }) }
+                                        finally { setWorkflowLoading(false) }
+                                    }}
+                                    disabled={workflowLoading}
+                                    className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-sm font-medium text-amber-700 transition-colors"
+                                >
+                                    <Activity className="w-4 h-4" /> View Workflow Health
+                                </button>
+                            </div>
+                            {workflowResult && (
+                                <div className="p-3 bg-amber-50 rounded-lg text-xs text-gray-700">
+                                    <p className="font-medium text-amber-700 mb-1">{workflowResult.type === 'schedule' ? 'Report Scheduled' : 'Workflow Health'}:</p>
+                                    <p>{workflowResult.data?.message || workflowResult.data?.status || JSON.stringify(workflowResult.data).slice(0, 200)}</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* AI Communication */}
+                        <div className="space-y-3">
+                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <Send className="w-4 h-4 text-rose-600" /> AI Communication
+                            </h4>
+                            <button
+                                onClick={async () => {
+                                    setCampaignLoading(true)
+                                    try {
+                                        const res = await apiClient.post('/ai-communication/predict-campaign', { type: 'email', audience: 'all' })
+                                        setCampaignPrediction(res?.data || res)
+                                    } catch { setCampaignPrediction({ predictedOpenRate: 'N/A', predictedClickRate: 'N/A', suggestion: 'AI prediction unavailable' }) }
+                                    finally { setCampaignLoading(false) }
+                                }}
+                                disabled={campaignLoading}
+                                className="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-sm font-medium text-rose-700 transition-colors w-full"
+                            >
+                                {campaignLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+                                Predict Campaign Performance
+                            </button>
+                            {campaignPrediction && (
+                                <div className="p-3 bg-rose-50 rounded-lg text-xs text-gray-700 space-y-2">
+                                    <p className="font-medium text-rose-700">Campaign Prediction:</p>
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between"><span>Open Rate:</span><span className="font-medium">{campaignPrediction.predictedOpenRate || campaignPrediction.openRate || 'N/A'}</span></div>
+                                        <div className="flex justify-between"><span>Click Rate:</span><span className="font-medium">{campaignPrediction.predictedClickRate || campaignPrediction.clickRate || 'N/A'}</span></div>
+                                        {campaignPrediction.suggestion && <p className="text-gray-600 mt-1">{campaignPrediction.suggestion}</p>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </div>

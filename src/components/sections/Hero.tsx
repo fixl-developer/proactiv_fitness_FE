@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import Link from 'next/link'
 import { FiPlay, FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, HeroSlide, SiteStat } from '@/services/cmsService'
 
 // Animated Counter Component
 const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) => {
@@ -32,6 +34,61 @@ const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; dura
     return <span ref={ref}>{count}{suffix}</span>
 }
 
+// Static fallback data
+const staticHeroImages = [
+    {
+        src: '/images/hero/img1.png',
+        alt: 'Professional gymnastics training facility',
+        fallback: 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800'
+    },
+    {
+        src: '/images/hero/img2.jpg',
+        alt: 'Children excelling in gymnastics',
+        fallback: 'bg-gradient-to-br from-green-600 via-blue-600 to-purple-800'
+    },
+    {
+        src: '/images/hero/img3.jpg',
+        alt: 'Expert coaching and guidance',
+        fallback: 'bg-gradient-to-br from-purple-600 via-pink-600 to-red-800'
+    },
+    {
+        src: '/images/hero/img4.jpg',
+        alt: 'Dynamic gymnastics sessions',
+        fallback: 'bg-gradient-to-br from-orange-600 via-red-600 to-pink-800'
+    },
+    {
+        src: '/images/hero/gymnastics-1.jpg',
+        alt: 'Children practicing gymnastics',
+        fallback: 'bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-800'
+    },
+    {
+        src: '/images/hero/gymnastics-2.jpg',
+        alt: 'Gymnastics training session',
+        fallback: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-800'
+    },
+    {
+        src: '/images/hero/gymnastics-3.jpg',
+        alt: 'Professional gymnastics coaching',
+        fallback: 'bg-gradient-to-br from-rose-600 via-orange-600 to-yellow-800'
+    },
+    {
+        src: '/images/hero/gymnastics-4.png',
+        alt: 'Kids enjoying gymnastics class',
+        fallback: 'bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-800'
+    },
+    {
+        src: '/images/hero/gymnastics-5.jpg',
+        alt: 'Competitive gymnastics training',
+        fallback: 'bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-800'
+    }
+]
+
+const staticStats = [
+    { id: '1', label: 'Happy Students', value: 500, suffix: '+', icon: '👨‍👩‍👧‍👦', color: 'from-blue-400 to-cyan-400' },
+    { id: '2', label: 'Years Experience', value: 10, suffix: '+', icon: '🏆', color: 'from-yellow-400 to-orange-400' },
+    { id: '3', label: 'Premium Locations', value: 2, suffix: '', icon: '📍', color: 'from-green-400 to-emerald-400' }
+]
+
 const Hero = () => {
     const [currentSlide, setCurrentSlide] = useState(0)
     const [imageLoadStatus, setImageLoadStatus] = useState<Record<string, boolean>>({})
@@ -41,54 +98,28 @@ const Hero = () => {
 
     const rotatingWords = ['Strength', 'Confidence', 'Character', 'Excellence', 'Champions']
 
-    // Hero images - Updated with new professional images
-    const heroImages = [
-        {
-            src: '/images/hero/img1.png',
-            alt: 'Professional gymnastics training facility',
-            fallback: 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800'
-        },
-        {
-            src: '/images/hero/img2.jpg',
-            alt: 'Children excelling in gymnastics',
-            fallback: 'bg-gradient-to-br from-green-600 via-blue-600 to-purple-800'
-        },
-        {
-            src: '/images/hero/img3.jpg',
-            alt: 'Expert coaching and guidance',
-            fallback: 'bg-gradient-to-br from-purple-600 via-pink-600 to-red-800'
-        },
-        {
-            src: '/images/hero/img4.jpg',
-            alt: 'Dynamic gymnastics sessions',
-            fallback: 'bg-gradient-to-br from-orange-600 via-red-600 to-pink-800'
-        },
-        {
-            src: '/images/hero/gymnastics-1.jpg',
-            alt: 'Children practicing gymnastics',
-            fallback: 'bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-800'
-        },
-        {
-            src: '/images/hero/gymnastics-2.jpg',
-            alt: 'Gymnastics training session',
-            fallback: 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-800'
-        },
-        {
-            src: '/images/hero/gymnastics-3.jpg',
-            alt: 'Professional gymnastics coaching',
-            fallback: 'bg-gradient-to-br from-rose-600 via-orange-600 to-yellow-800'
-        },
-        {
-            src: '/images/hero/gymnastics-4.png',
-            alt: 'Kids enjoying gymnastics class',
-            fallback: 'bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-800'
-        },
-        {
-            src: '/images/hero/gymnastics-5.jpg',
-            alt: 'Competitive gymnastics training',
-            fallback: 'bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-800'
-        }
-    ]
+    // Dynamic hero slides
+    const { data: heroSlides } = useCMSData<HeroSlide[]>(
+        () => CMSService.getHeroSlides(),
+        [],
+        []
+    )
+
+    // Dynamic stats
+    const { data: stats } = useCMSData<SiteStat[]>(
+        () => CMSService.getSiteStats(),
+        staticStats,
+        []
+    )
+
+    // Use API data if available, otherwise fallback
+    const heroImages = heroSlides.length > 0
+        ? heroSlides.map(slide => ({
+            src: slide.image,
+            alt: slide.title,
+            fallback: slide.fallbackGradient || 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800'
+        }))
+        : staticHeroImages
 
     // Typewriter effect
     useEffect(() => {
@@ -392,13 +423,9 @@ const Hero = () => {
                         transition={{ delay: 1.5, duration: 0.8 }}
                         className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 max-w-xl mx-auto px-4"
                     >
-                        {[
-                            { number: 500, suffix: "+", label: "Happy Students", icon: "👨‍👩‍👧‍👦", color: "from-blue-400 to-cyan-400" },
-                            { number: 10, suffix: "+", label: "Years Experience", icon: "🏆", color: "from-yellow-400 to-orange-400" },
-                            { number: 2, suffix: "", label: "Premium Locations", icon: "📍", color: "from-green-400 to-emerald-400" }
-                        ].map((stat, index) => (
+                        {stats.map((stat, index) => (
                             <motion.div
-                                key={index}
+                                key={stat.id || index}
                                 initial={{ opacity: 0, scale: 0.5 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 1.7 + index * 0.2, duration: 0.8, type: "spring" }}
@@ -425,7 +452,7 @@ const Hero = () => {
                                     <motion.div
                                         className={`text-xl sm:text-2xl md:text-3xl font-black mb-0.5 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent drop-shadow-lg`}
                                     >
-                                        <AnimatedCounter end={stat.number} duration={2.5} suffix={stat.suffix} />
+                                        <AnimatedCounter end={stat.value} duration={2.5} suffix={stat.suffix} />
                                     </motion.div>
                                     <div className="text-[9px] sm:text-xs font-bold text-white uppercase tracking-wider drop-shadow-md">{stat.label}</div>
 

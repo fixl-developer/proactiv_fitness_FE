@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle, Edit } from 'lucide-react'
+import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle, Edit, Brain, Sparkles, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,15 @@ export default function BookingsPage() {
         location: '',
         notes: '',
     })
-    const { isAuthenticated } = useAuth()
+    // AI Schedule Optimizer state
+    const [aiPredictLoading, setAiPredictLoading] = useState(false)
+    const [aiPredictResult, setAiPredictResult] = useState<any>(null)
+    const [aiPredictError, setAiPredictError] = useState<string | null>(null)
+    const [aiCoachLoading, setAiCoachLoading] = useState(false)
+    const [aiCoachResult, setAiCoachResult] = useState<any>(null)
+    const [aiCoachError, setAiCoachError] = useState<string | null>(null)
+
+    const { user, isAuthenticated } = useAuth()
     const router = useRouter()
     const bookingService = new BookingService()
 
@@ -201,6 +209,39 @@ export default function BookingsPage() {
             case 'cancelled': return <X className="w-4 h-4" />
             case 'completed': return <CheckCircle className="w-4 h-4" />
             default: return <AlertCircle className="w-4 h-4" />
+        }
+    }
+
+    // AI Schedule Optimizer handlers
+    const handlePredictBestTime = async () => {
+        setAiPredictLoading(true)
+        setAiPredictError(null)
+        setAiPredictResult(null)
+        try {
+            const userId = user?.id || user?._id || ''
+            const response = await apiClient.post('/smart-scheduler/predict-attendance', { studentId: userId })
+            setAiPredictResult(response?.data || response)
+        } catch (err: any) {
+            console.error('AI Predict Best Time error:', err)
+            setAiPredictError(err?.message || 'Failed to get AI predictions. The service may be temporarily unavailable.')
+        } finally {
+            setAiPredictLoading(false)
+        }
+    }
+
+    const handleCoachMatch = async () => {
+        setAiCoachLoading(true)
+        setAiCoachError(null)
+        setAiCoachResult(null)
+        try {
+            const userId = user?.id || user?._id || ''
+            const response = await apiClient.post('/smart-scheduler/match-coach', { studentId: userId, requirements: { level: 'any' } })
+            setAiCoachResult(response?.data || response)
+        } catch (err: any) {
+            console.error('AI Coach Match error:', err)
+            setAiCoachError(err?.message || 'Failed to get coach recommendations. The service may be temporarily unavailable.')
+        } finally {
+            setAiCoachLoading(false)
         }
     }
 
@@ -450,6 +491,133 @@ export default function BookingsPage() {
                     ))
                 )}
             </div>
+
+            {/* AI Schedule Optimizer */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 hover:shadow-lg transition-all">
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-lg shadow-md">
+                                <Brain className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">AI Schedule Optimizer</CardTitle>
+                                <p className="text-sm text-gray-600 mt-1">Get smart booking recommendations powered by AI</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Predict Best Time */}
+                            <div className="bg-white rounded-lg p-4 shadow-sm border border-indigo-100">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                                    <h4 className="font-semibold text-gray-900 text-sm">Best Time to Book</h4>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-3">AI analyzes attendance patterns to find optimal booking times with lower crowd density.</p>
+                                <Button
+                                    id="user-bookings-ai-predict-btn"
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                    onClick={handlePredictBestTime}
+                                    disabled={aiPredictLoading}
+                                >
+                                    {aiPredictLoading ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Analyzing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            Get Best Time to Book
+                                        </>
+                                    )}
+                                </Button>
+                                {aiPredictResult && (
+                                    <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                        <p className="text-xs font-medium text-indigo-800 mb-1">AI Recommendation:</p>
+                                        {aiPredictResult.predictions ? (
+                                            <ul className="text-xs text-indigo-700 space-y-1">
+                                                {(Array.isArray(aiPredictResult.predictions) ? aiPredictResult.predictions : [aiPredictResult.predictions]).map((pred: any, i: number) => (
+                                                    <li key={i} className="flex items-center gap-1">
+                                                        <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                                                        {typeof pred === 'string' ? pred : pred.time || pred.slot || JSON.stringify(pred)}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-indigo-700">
+                                                {aiPredictResult.recommendation || aiPredictResult.message || JSON.stringify(aiPredictResult)}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                {aiPredictError && (
+                                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                                        <p className="text-xs text-red-600">{aiPredictError}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Coach Match */}
+                            <div className="bg-white rounded-lg p-4 shadow-sm border border-purple-100">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Zap className="w-4 h-4 text-purple-600" />
+                                    <h4 className="font-semibold text-gray-900 text-sm">Coach Match</h4>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-3">AI matches you with the best coaches based on your learning style and goals.</p>
+                                <Button
+                                    id="user-bookings-ai-coach-btn"
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full border-purple-200 text-purple-700 hover:bg-purple-50"
+                                    onClick={handleCoachMatch}
+                                    disabled={aiCoachLoading}
+                                >
+                                    {aiCoachLoading ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Matching...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Zap className="w-4 h-4 mr-2" />
+                                            Coach Match
+                                        </>
+                                    )}
+                                </Button>
+                                {aiCoachResult && (
+                                    <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                        <p className="text-xs font-medium text-purple-800 mb-1">Recommended Coaches:</p>
+                                        {aiCoachResult.coaches || aiCoachResult.matches ? (
+                                            <ul className="text-xs text-purple-700 space-y-1">
+                                                {(Array.isArray(aiCoachResult.coaches || aiCoachResult.matches) ? (aiCoachResult.coaches || aiCoachResult.matches) : [aiCoachResult.coaches || aiCoachResult.matches]).map((coach: any, i: number) => (
+                                                    <li key={i} className="flex items-center gap-1">
+                                                        <Star className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                                                        {typeof coach === 'string' ? coach : coach.name || coach.coachName || JSON.stringify(coach)}
+                                                        {coach.matchScore && <span className="text-purple-500 ml-1">({coach.matchScore}% match)</span>}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-xs text-purple-700">
+                                                {aiCoachResult.recommendation || aiCoachResult.message || JSON.stringify(aiCoachResult)}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                {aiCoachError && (
+                                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                                        <p className="text-xs text-red-600">{aiCoachError}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </motion.div>
 
             {/* New Booking Modal */}
             {showBookingModal && (

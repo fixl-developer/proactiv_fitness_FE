@@ -7,90 +7,115 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import PageHero from '@/components/sections/PageHero'
 import TeamPreview from '@/components/sections/TeamPreview'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, ProgramLevelData } from '@/services/cmsService'
+
+const staticPrograms = [
+    {
+        level: 'Beginner',
+        ageGroup: '3-6 years',
+        duration: '45 minutes',
+        classSize: '6-8 students',
+        price: 'HK$800/month',
+        description: 'Perfect introduction to gymnastics focusing on basic movements, coordination, and fun.',
+        objectives: [
+            'Develop basic motor skills and coordination',
+            'Learn fundamental gymnastics positions',
+            'Build confidence and social skills',
+            'Introduction to apparatus (beam, bars, vault)',
+            'Safety awareness and following instructions'
+        ],
+        schedule: [
+            { day: 'Monday', time: '4:00 PM - 4:45 PM', location: 'Cyberport' },
+            { day: 'Wednesday', time: '4:00 PM - 4:45 PM', location: 'Wan Chai' },
+            { day: 'Saturday', time: '10:00 AM - 10:45 AM', location: 'Both Locations' }
+        ]
+    },
+    {
+        level: 'Intermediate',
+        ageGroup: '7-10 years',
+        duration: '60 minutes',
+        classSize: '8-10 students',
+        price: 'HK$1000/month',
+        description: 'Building on fundamental skills with more advanced techniques and apparatus work.',
+        objectives: [
+            'Master basic gymnastics skills',
+            'Learn intermediate tumbling sequences',
+            'Develop strength and flexibility',
+            'Introduction to competitive elements',
+            'Goal setting and achievement'
+        ],
+        schedule: [
+            { day: 'Tuesday', time: '5:00 PM - 6:00 PM', location: 'Cyberport' },
+            { day: 'Thursday', time: '5:00 PM - 6:00 PM', location: 'Wan Chai' },
+            { day: 'Saturday', time: '11:00 AM - 12:00 PM', location: 'Both Locations' }
+        ]
+    },
+    {
+        level: 'Advanced',
+        ageGroup: '11-16 years',
+        duration: '75 minutes',
+        classSize: '6-8 students',
+        price: 'HK$1200/month',
+        description: 'Advanced training for serious gymnasts looking to perfect their skills and techniques.',
+        objectives: [
+            'Perfect advanced gymnastics skills',
+            'Learn complex tumbling passes',
+            'Develop competitive routines',
+            'Mental preparation and focus',
+            'Leadership and mentoring skills'
+        ],
+        schedule: [
+            { day: 'Monday', time: '6:00 PM - 7:15 PM', location: 'Cyberport' },
+            { day: 'Wednesday', time: '6:00 PM - 7:15 PM', location: 'Wan Chai' },
+            { day: 'Saturday', time: '2:00 PM - 3:15 PM', location: 'Both Locations' }
+        ]
+    },
+    {
+        level: 'Competitive',
+        ageGroup: '8+ years',
+        duration: '90 minutes',
+        classSize: '4-6 students',
+        price: 'HK$1500/month',
+        description: 'Elite training program for gymnasts competing at local and international levels.',
+        objectives: [
+            'Master competition-level skills',
+            'Develop championship routines',
+            'Mental toughness and resilience',
+            'Competition preparation',
+            'Elite performance standards'
+        ],
+        schedule: [
+            { day: 'Tuesday', time: '6:30 PM - 8:00 PM', location: 'Cyberport' },
+            { day: 'Thursday', time: '6:30 PM - 8:00 PM', location: 'Wan Chai' },
+            { day: 'Saturday', time: '3:30 PM - 5:00 PM', location: 'Both Locations' }
+        ]
+    }
+]
 
 const SchoolGymnasticsPage = () => {
-    const programLevels = [
-        {
-            level: 'Beginner',
-            ageGroup: '3-6 years',
-            duration: '45 minutes',
-            classSize: '6-8 students',
-            price: 'HK$800/month',
-            description: 'Perfect introduction to gymnastics focusing on basic movements, coordination, and fun.',
-            objectives: [
-                'Develop basic motor skills and coordination',
-                'Learn fundamental gymnastics positions',
-                'Build confidence and social skills',
-                'Introduction to apparatus (beam, bars, vault)',
-                'Safety awareness and following instructions'
-            ],
-            schedule: [
-                { day: 'Monday', time: '4:00 PM - 4:45 PM', location: 'Cyberport' },
-                { day: 'Wednesday', time: '4:00 PM - 4:45 PM', location: 'Wan Chai' },
-                { day: 'Saturday', time: '10:00 AM - 10:45 AM', location: 'Both Locations' }
-            ]
-        },
-        {
-            level: 'Intermediate',
-            ageGroup: '7-10 years',
-            duration: '60 minutes',
-            classSize: '8-10 students',
-            price: 'HK$1000/month',
-            description: 'Building on fundamental skills with more advanced techniques and apparatus work.',
-            objectives: [
-                'Master basic gymnastics skills',
-                'Learn intermediate tumbling sequences',
-                'Develop strength and flexibility',
-                'Introduction to competitive elements',
-                'Goal setting and achievement'
-            ],
-            schedule: [
-                { day: 'Tuesday', time: '5:00 PM - 6:00 PM', location: 'Cyberport' },
-                { day: 'Thursday', time: '5:00 PM - 6:00 PM', location: 'Wan Chai' },
-                { day: 'Saturday', time: '11:00 AM - 12:00 PM', location: 'Both Locations' }
-            ]
-        },
-        {
-            level: 'Advanced',
-            ageGroup: '11-16 years',
-            duration: '75 minutes',
-            classSize: '6-8 students',
-            price: 'HK$1200/month',
-            description: 'Advanced training for serious gymnasts looking to perfect their skills and techniques.',
-            objectives: [
-                'Perfect advanced gymnastics skills',
-                'Learn complex tumbling passes',
-                'Develop competitive routines',
-                'Mental preparation and focus',
-                'Leadership and mentoring skills'
-            ],
-            schedule: [
-                { day: 'Monday', time: '6:00 PM - 7:15 PM', location: 'Cyberport' },
-                { day: 'Wednesday', time: '6:00 PM - 7:15 PM', location: 'Wan Chai' },
-                { day: 'Saturday', time: '2:00 PM - 3:15 PM', location: 'Both Locations' }
-            ]
-        },
-        {
-            level: 'Competitive',
-            ageGroup: '8+ years',
-            duration: '90 minutes',
-            classSize: '4-6 students',
-            price: 'HK$1500/month',
-            description: 'Elite training program for gymnasts competing at local and international levels.',
-            objectives: [
-                'Master competition-level skills',
-                'Develop championship routines',
-                'Mental toughness and resilience',
-                'Competition preparation',
-                'Elite performance standards'
-            ],
-            schedule: [
-                { day: 'Tuesday', time: '6:30 PM - 8:00 PM', location: 'Cyberport' },
-                { day: 'Thursday', time: '6:30 PM - 8:00 PM', location: 'Wan Chai' },
-                { day: 'Saturday', time: '3:30 PM - 5:00 PM', location: 'Both Locations' }
-            ]
-        }
-    ]
+    const { data: dynamicPrograms } = useCMSData<ProgramLevelData[]>(
+        () => CMSService.getProgramLevels(),
+        [],
+        []
+    )
+
+    const programs = dynamicPrograms.length > 0
+        ? dynamicPrograms.map((p) => ({
+            level: p.name,
+            ageGroup: p.ageGroup,
+            duration: p.duration,
+            classSize: p.classSize,
+            price: p.price,
+            description: p.description,
+            objectives: p.objectives,
+            schedule: p.schedule.map((s) => ({
+                day: s.days,
+                time: s.time,
+                location: s.location,
+            })),
+        }))
+        : staticPrograms
 
     return (
         <>
@@ -146,7 +171,7 @@ const SchoolGymnasticsPage = () => {
                         </motion.div>
 
                         <div className="space-y-12">
-                            {programLevels.map((program, index) => (
+                            {programs.map((program, index) => (
                                 <motion.div
                                     key={program.level}
                                     initial={{ opacity: 0, y: 30 }}

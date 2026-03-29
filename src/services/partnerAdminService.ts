@@ -132,17 +132,17 @@ class PartnerAdminService {
 
             // Transform backend data to frontend format
             return {
-                partnerName: 'Elite School Partners',
+                partnerName: data.partnerName || data.name || 'Partner',
                 totalCommission: data.totalRevenue || 125000,
                 monthlyCommission: data.monthlyRevenue || 18500,
                 commissionGrowth: data.studentGrowth || 22.5,
-                activeIntegrations: 8,
+                activeIntegrations: data.activeIntegrations || 8,
                 totalReferrals: data.totalStudents || 450,
                 conversionRate: data.engagementRate || 72.5,
                 partnerSatisfaction: data.satisfactionScore || 4.8,
-                pendingPayouts: 2,
-                criticalAlerts: 0,
-                warnings: 1
+                pendingPayouts: data.pendingPayouts || 2,
+                criticalAlerts: data.criticalAlerts || 0,
+                warnings: data.warnings || 1
             }
         } catch (error) {
             console.error('Error fetching dashboard data:', error)
