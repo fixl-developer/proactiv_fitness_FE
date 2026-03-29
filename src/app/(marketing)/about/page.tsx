@@ -3,8 +3,77 @@
 import { Award, Target, Heart, CheckCircle, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, AboutContentData } from '@/services/cmsService';
+
+const staticAbout: AboutContentData = {
+    mission: 'To provide a safe, supportive, and fun environment where children can develop their physical abilities, build confidence, and create lasting friendships through quality gymnastics and fitness programs.',
+    vision: 'To be the leading provider of youth fitness programs, inspiring the next generation to lead active, healthy lifestyles while achieving their personal best in a positive and encouraging atmosphere.',
+    values: [
+        {
+            title: 'Safety First',
+            description: 'We maintain the highest safety standards with certified coaches and state-of-the-art equipment.',
+            icon: 'CheckCircle',
+        },
+        {
+            title: 'Excellence',
+            description: 'We strive for excellence in coaching, facilities, and customer service to deliver the best experience.',
+            icon: 'Award',
+        },
+        {
+            title: 'Community',
+            description: 'We foster a supportive community where everyone feels welcome, valued, and encouraged.',
+            icon: 'Heart',
+        },
+    ],
+    stats: [
+        { label: 'Years Experience', value: '10+', icon: '📅' },
+        { label: 'Active Students', value: '5000+', icon: '👥' },
+        { label: 'Locations', value: '15+', icon: '📍' },
+        { label: 'Expert Coaches', value: '50+', icon: '🏅' },
+    ],
+    images: [],
+    history: 'ProActiv Fitness was founded in 2014 with a simple mission: to provide high-quality gymnastics and fitness programs that help children build confidence, develop skills, and have fun.\n\nWhat started as a single location with a handful of students has grown into a thriving network of 15+ centers serving over 5,000 active students across the region. Our success is built on our commitment to excellence, safety, and creating a positive environment where every child can thrive.\n\nToday, we\'re proud to be recognized as one of the leading youth fitness providers, with a team of 50+ certified coaches who are passionate about making a difference in children\'s lives. We continue to innovate and expand our programs to meet the evolving needs of our community.',
+    features: [],
+};
+
+const valueStyleMap: Record<string, { color: string; bgColor: string; iconBg: string; borderColor: string }> = {
+    'Safety First': { color: 'blue', bgColor: 'from-blue-50 to-blue-100', iconBg: 'from-blue-500 to-blue-600', borderColor: 'border-blue-200' },
+    'Excellence': { color: 'green', bgColor: 'from-green-50 to-green-100', iconBg: 'from-green-500 to-green-600', borderColor: 'border-green-200' },
+    'Community': { color: 'purple', bgColor: 'from-purple-50 to-purple-100', iconBg: 'from-purple-500 to-purple-600', borderColor: 'border-purple-200' },
+};
+
+const defaultValueStyle = { color: 'blue', bgColor: 'from-blue-50 to-blue-100', iconBg: 'from-blue-500 to-blue-600', borderColor: 'border-blue-200' };
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    CheckCircle,
+    Award,
+    Heart,
+    Target,
+    Lightbulb,
+};
+
+const colorCycle = [
+    { color: 'blue', bgColor: 'from-blue-50 to-blue-100', iconBg: 'from-blue-500 to-blue-600', borderColor: 'border-blue-200' },
+    { color: 'green', bgColor: 'from-green-50 to-green-100', iconBg: 'from-green-500 to-green-600', borderColor: 'border-green-200' },
+    { color: 'purple', bgColor: 'from-purple-50 to-purple-100', iconBg: 'from-purple-500 to-purple-600', borderColor: 'border-purple-200' },
+];
+
+const historyGradients = [
+    'from-blue-50 to-purple-50 border-blue-200',
+    'from-purple-50 to-pink-50 border-purple-200',
+    'from-pink-50 to-blue-50 border-pink-200',
+];
 
 export default function AboutPage() {
+    const { data: about } = useCMSData<AboutContentData | null>(
+        () => CMSService.getAbout(),
+        staticAbout,
+        []
+    );
+
+    const aboutData = about || staticAbout;
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -25,39 +94,7 @@ export default function AboutPage() {
         },
     };
 
-    const stats = [
-        { number: '10+', label: 'Years Experience', icon: '📅' },
-        { number: '5000+', label: 'Active Students', icon: '👥' },
-        { number: '15+', label: 'Locations', icon: '📍' },
-        { number: '50+', label: 'Expert Coaches', icon: '🏅' },
-    ];
-
-    const values = [
-        {
-            icon: CheckCircle,
-            title: 'Safety First',
-            description: 'We maintain the highest safety standards with certified coaches and state-of-the-art equipment.',
-            color: 'blue',
-            bgColor: 'from-blue-50 to-blue-100',
-            iconBg: 'from-blue-500 to-blue-600',
-        },
-        {
-            icon: Award,
-            title: 'Excellence',
-            description: 'We strive for excellence in coaching, facilities, and customer service to deliver the best experience.',
-            color: 'green',
-            bgColor: 'from-green-50 to-green-100',
-            iconBg: 'from-green-500 to-green-600',
-        },
-        {
-            icon: Heart,
-            title: 'Community',
-            description: 'We foster a supportive community where everyone feels welcome, valued, and encouraged.',
-            color: 'purple',
-            bgColor: 'from-purple-50 to-purple-100',
-            iconBg: 'from-purple-500 to-purple-600',
-        },
-    ];
+    const historyParagraphs = aboutData.history.split('\n').filter(p => p.trim() !== '');
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
@@ -123,10 +160,7 @@ export default function AboutPage() {
                                 Our Mission
                             </h2>
                             <p className="text-gray-700 leading-relaxed text-sm">
-                                To provide a safe, supportive, and fun environment where children
-                                can develop their physical abilities, build confidence, and create
-                                lasting friendships through quality gymnastics and fitness
-                                programs.
+                                {aboutData.mission}
                             </p>
                         </motion.div>
 
@@ -147,10 +181,7 @@ export default function AboutPage() {
                                 Our Vision
                             </h2>
                             <p className="text-gray-700 leading-relaxed text-sm">
-                                To be the leading provider of youth fitness programs, inspiring
-                                the next generation to lead active, healthy lifestyles while
-                                achieving their personal best in a positive and encouraging
-                                atmosphere.
+                                {aboutData.vision}
                             </p>
                         </motion.div>
                     </motion.div>
@@ -182,17 +213,18 @@ export default function AboutPage() {
                         viewport={{ once: true }}
                         className="grid grid-cols-1 md:grid-cols-3 gap-6"
                     >
-                        {values.map((value, index) => {
-                            const Icon = value.icon;
+                        {aboutData.values.map((value, index) => {
+                            const style = valueStyleMap[value.title] || colorCycle[index % colorCycle.length] || defaultValueStyle;
+                            const Icon = iconMap[value.icon] || CheckCircle;
                             return (
                                 <motion.div
                                     key={index}
                                     variants={itemVariants}
                                     whileHover={{ y: -4, scale: 1.02 }}
-                                    className={`bg-gradient-to-br ${value.bgColor} rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-${value.color}-200 text-center group`}
+                                    className={`bg-gradient-to-br ${style.bgColor} rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 ${style.borderColor} text-center group`}
                                 >
                                     <motion.div
-                                        className={`w-16 h-16 bg-gradient-to-br ${value.iconBg} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg`}
+                                        className={`w-16 h-16 bg-gradient-to-br ${style.iconBg} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg`}
                                         whileHover={{ scale: 1.15, rotate: 360 }}
                                         transition={{ duration: 0.6 }}
                                     >
@@ -233,34 +265,15 @@ export default function AboutPage() {
                         viewport={{ once: true }}
                         className="space-y-4"
                     >
-                        <motion.p
-                            variants={itemVariants}
-                            className="text-sm md:text-base text-gray-700 leading-relaxed bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200"
-                        >
-                            ProActiv Fitness was founded in 2014 with a simple mission: to
-                            provide high-quality gymnastics and fitness programs that help
-                            children build confidence, develop skills, and have fun.
-                        </motion.p>
-                        <motion.p
-                            variants={itemVariants}
-                            className="text-sm md:text-base text-gray-700 leading-relaxed bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200"
-                        >
-                            What started as a single location with a handful of students has
-                            grown into a thriving network of 15+ centers serving over 5,000
-                            active students across the region. Our success is built on our
-                            commitment to excellence, safety, and creating a positive
-                            environment where every child can thrive.
-                        </motion.p>
-                        <motion.p
-                            variants={itemVariants}
-                            className="text-sm md:text-base text-gray-700 leading-relaxed bg-gradient-to-r from-pink-50 to-blue-50 p-6 rounded-xl border border-pink-200"
-                        >
-                            Today, we're proud to be recognized as one of the leading youth
-                            fitness providers, with a team of 50+ certified coaches who are
-                            passionate about making a difference in children's lives. We
-                            continue to innovate and expand our programs to meet the evolving
-                            needs of our community.
-                        </motion.p>
+                        {historyParagraphs.map((paragraph, index) => (
+                            <motion.p
+                                key={index}
+                                variants={itemVariants}
+                                className={`text-sm md:text-base text-gray-700 leading-relaxed bg-gradient-to-r ${historyGradients[index % historyGradients.length]} p-6 rounded-xl border`}
+                            >
+                                {paragraph}
+                            </motion.p>
+                        ))}
                     </motion.div>
                 </div>
             </section>
@@ -285,7 +298,7 @@ export default function AboutPage() {
                         viewport={{ once: true }}
                         className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
                     >
-                        {stats.map((stat, index) => (
+                        {aboutData.stats.map((stat, index) => (
                             <motion.div
                                 key={index}
                                 variants={itemVariants}
@@ -297,7 +310,7 @@ export default function AboutPage() {
                                     animate={{ y: [0, -5, 0] }}
                                     transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
                                 >
-                                    {stat.number}
+                                    {stat.value}
                                 </motion.div>
                                 <div className="text-xs md:text-sm font-semibold opacity-90">
                                     {stat.label}

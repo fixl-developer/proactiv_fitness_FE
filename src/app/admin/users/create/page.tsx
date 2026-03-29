@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { UserPlus, Mail, Phone, Shield, Building2, MapPin, Save, X, AlertCircle, Eye, EyeOff, Search, Edit, Trash2, UserX, UserCheck, ChevronDown, Info, Lock, CheckCircle2, XCircle, ToggleLeft, ToggleRight, ShieldAlert, FileText, Briefcase } from 'lucide-react'
+import { UserPlus, Mail, Phone, Shield, Building2, MapPin, Save, X, AlertCircle, Eye, EyeOff, Search, Edit, Trash2, UserX, UserCheck, ChevronDown, Info, Lock, CheckCircle2, XCircle, ToggleLeft, ToggleRight, ShieldAlert, FileText, Briefcase, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -79,6 +79,8 @@ const PASSWORD_REQUIREMENTS = [
 const ROLES_NEEDING_LOCATION = ['COACH', 'LOCATION_MANAGER', 'SUPPORT_STAFF']
 // Roles that require a region / organization assignment
 const ROLES_NEEDING_ORGANIZATION = ['REGIONAL_ADMIN', 'FRANCHISE_OWNER', 'PARTNER_ADMIN']
+// Roles that require a region assignment
+const ROLES_NEEDING_REGION = ['REGIONAL_ADMIN']
 
 export default function CreateUserPage() {
   const router = useRouter()
@@ -96,17 +98,20 @@ export default function CreateUserPage() {
     role: '',
     locationId: '',
     organizationId: '',
+    regionId: '',
     partnerType: '',
   })
 
   // Current user state (from localStorage / auth)
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
-  // Locations & organizations fetched from API
+  // Locations, organizations & regions fetched from API
   const [locations, setLocations] = useState<Location[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [regions, setRegions] = useState<any[]>([])
   const [locationsLoading, setLocationsLoading] = useState(false)
   const [orgsLoading, setOrgsLoading] = useState(false)
+  const [regionsLoading, setRegionsLoading] = useState(false)
 
   // Users list state
   const [users, setUsers] = useState<User[]>([])
@@ -195,8 +200,14 @@ export default function CreateUserPage() {
 
         if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.regionId) {
           params.regionId = currentUser.regionId
-        } else if (currentUser.role === 'FRANCHISE_OWNER' && currentUser.franchiseId) {
-          params.franchiseId = currentUser.franchiseId
+        } else if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.organizationId) {
+          // Fallback: use organizationId as businessUnitId filter
+          params.businessUnitId = currentUser.organizationId
+        } else if (currentUser.role === 'FRANCHISE_OWNER') {
+          // FRANCHISE_OWNER: filter locations by their organization (businessUnitId)
+          if (currentUser.organizationId) {
+            params.businessUnitId = currentUser.organizationId
+          }
         }
 
         const data = await apiClient.get<any>('/locations', { params })
@@ -231,6 +242,23 @@ export default function CreateUserPage() {
       }
     }
     fetchOrgs()
+  }, [])
+
+  // Fetch regions (for REGIONAL_ADMIN assignment)
+  useEffect(() => {
+    const fetchRegions = async () => {
+      setRegionsLoading(true)
+      try {
+        const data = await apiClient.get<any>('/regions')
+        const list = data?.regions || data?.data || (Array.isArray(data) ? data : [])
+        setRegions(list)
+      } catch {
+        setRegions([])
+      } finally {
+        setRegionsLoading(false)
+      }
+    }
+    fetchRegions()
   }, [])
 
   // ---------------------------------------------------------------------------
@@ -316,6 +344,11 @@ export default function CreateUserPage() {
       errors.organizationId = 'Organization assignment is required for this role'
     }
 
+    // Region required for REGIONAL_ADMIN
+    if (ROLES_NEEDING_REGION.includes(formData.role) && !formData.regionId) {
+      errors.regionId = 'Region assignment is required for Regional Admin'
+    }
+
     // Partner type required for PARTNER_ADMIN
     if (formData.role === 'PARTNER_ADMIN' && !formData.partnerType) {
       errors.partnerType = 'Partner type is required for Partner Admin role'
@@ -350,6 +383,7 @@ export default function CreateUserPage() {
         phone: formData.phone.trim() || undefined,
         locationId: formData.locationId || undefined,
         organizationId: formData.organizationId || undefined,
+        regionId: formData.regionId || undefined,
         partnerType: formData.role === 'PARTNER_ADMIN' ? formData.partnerType : undefined,
         sendEmailVerification,
         gdprConsent,
@@ -367,6 +401,7 @@ export default function CreateUserPage() {
         role: allowedRoles.length > 0 ? allowedRoles[0].value : '',
         locationId: currentUser?.role === 'LOCATION_MANAGER' ? (currentUser.locationId || '') : '',
         organizationId: '',
+        regionId: '',
         partnerType: '',
       })
       setFieldErrors({})
@@ -453,6 +488,7 @@ export default function CreateUserPage() {
   const showLocationDropdown = ROLES_NEEDING_LOCATION.includes(formData.role) && currentUser?.role !== 'LOCATION_MANAGER'
   const showLocationAutoAssign = ROLES_NEEDING_LOCATION.includes(formData.role) && currentUser?.role === 'LOCATION_MANAGER'
   const showOrganizationDropdown = ROLES_NEEDING_ORGANIZATION.includes(formData.role)
+  const showRegionDropdown = ROLES_NEEDING_REGION.includes(formData.role)
   const showPartnerTypeDropdown = formData.role === 'PARTNER_ADMIN'
 
   // If user cannot create anyone, show access denied
@@ -706,7 +742,7 @@ export default function CreateUserPage() {
                         key={role.value}
                         type="button"
                         onClick={() => {
-                          setFormData({ ...formData, role: role.value, locationId: '', organizationId: '', partnerType: '' })
+                          setFormData({ ...formData, role: role.value, locationId: '', organizationId: '', regionId: '', partnerType: '' })
                           if (fieldErrors.role) setFieldErrors(prev => ({ ...prev, role: '' }))
                         }}
                         className={`p-4 border-2 rounded-lg text-left transition-all ${formData.role === role.value
@@ -832,7 +868,41 @@ export default function CreateUserPage() {
                 </div>
               )}
 
-              {/* Partner Type Selection - shown only for PARTNER_ADMIN role */}
+              {/* Region Assignment - shown for REGIONAL_ADMIN */}
+              {showRegionDropdown && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    Assign to Region <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.regionId}
+                    onChange={(e) => {
+                      setFormData({ ...formData, regionId: e.target.value })
+                      if (fieldErrors.regionId) setFieldErrors(prev => ({ ...prev, regionId: '' }))
+                    }}
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                      fieldErrors.regionId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                    }`}
+                  >
+                    <option value="">Select Region</option>
+                    {regionsLoading ? (
+                      <option disabled>Loading regions...</option>
+                    ) : (
+                      regions.map((region: any) => (
+                        <option key={region.id || region._id} value={region.id || region._id}>{region.name}</option>
+                      ))
+                    )}
+                  </select>
+                  {fieldErrors.regionId && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {fieldErrors.regionId}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Partner Type Selection - shown for PARTNER_ADMIN */}
               {showPartnerTypeDropdown && (
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -871,7 +941,7 @@ export default function CreateUserPage() {
               )}
 
               {/* Fallback when no assignment fields are visible */}
-              {!showLocationDropdown && !showLocationAutoAssign && !showOrganizationDropdown && !showPartnerTypeDropdown && (
+              {!showLocationDropdown && !showLocationAutoAssign && !showOrganizationDropdown && !showRegionDropdown && !showPartnerTypeDropdown && (
                 <div className="md:col-span-2 text-sm text-gray-500 italic">
                   No location or organization assignment is required for the selected role.
                 </div>

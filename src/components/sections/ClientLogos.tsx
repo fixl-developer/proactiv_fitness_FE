@@ -5,6 +5,59 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { FiStar, FiTrendingUp, FiAward, FiUsers } from 'react-icons/fi'
 import { useAIAnimations } from '@/hooks/useAIAnimations'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, ClientPartnerData } from '@/services/cmsService'
+
+const staticClients = [
+    {
+        name: 'Hong Kong International School',
+        logo: '/images/clients/client-1.png',
+        fallback: 'HKIS',
+        color: 'from-blue-500 to-cyan-500'
+    },
+    {
+        name: 'Discovery Bay International School',
+        logo: '/images/clients/client-2.png',
+        fallback: 'DBIS',
+        color: 'from-green-500 to-emerald-500'
+    },
+    {
+        name: 'German Swiss International School',
+        logo: '/images/clients/client-3.png',
+        fallback: 'GSIS',
+        color: 'from-purple-500 to-pink-500'
+    },
+    {
+        name: 'Kellett School',
+        logo: '/images/clients/client-4.png',
+        fallback: 'KS',
+        color: 'from-orange-500 to-red-500'
+    },
+    {
+        name: 'Hong Kong Academy',
+        logo: '/images/clients/client-5.png',
+        fallback: 'HKA',
+        color: 'from-teal-500 to-cyan-500'
+    },
+    {
+        name: 'Canadian International School',
+        logo: '/images/clients/client-6.png',
+        fallback: 'CDNIS',
+        color: 'from-indigo-500 to-purple-500'
+    },
+    {
+        name: 'Harrow International School',
+        logo: '/images/clients/client-7.png',
+        fallback: 'HIS',
+        color: 'from-pink-500 to-rose-500'
+    },
+    {
+        name: 'French International School',
+        logo: '/images/clients/client-8.png',
+        fallback: 'FIS',
+        color: 'from-yellow-500 to-orange-500'
+    }
+]
 
 const ClientLogos = () => {
     const [floatingIcons, setFloatingIcons] = useState<Array<{ id: number; left: number; top: number; fontSize: number; duration: number; delay: number }>>([])
@@ -22,56 +75,20 @@ const ClientLogos = () => {
         setFloatingIcons(generatedIcons)
     }, [])
 
-    const clients = [
-        {
-            name: 'Hong Kong International School',
-            logo: '/images/clients/client-1.png',
-            fallback: 'HKIS',
-            color: 'from-blue-500 to-cyan-500'
-        },
-        {
-            name: 'Discovery Bay International School',
-            logo: '/images/clients/client-2.png',
-            fallback: 'DBIS',
-            color: 'from-green-500 to-emerald-500'
-        },
-        {
-            name: 'German Swiss International School',
-            logo: '/images/clients/client-3.png',
-            fallback: 'GSIS',
-            color: 'from-purple-500 to-pink-500'
-        },
-        {
-            name: 'Kellett School',
-            logo: '/images/clients/client-4.png',
-            fallback: 'KS',
-            color: 'from-orange-500 to-red-500'
-        },
-        {
-            name: 'Hong Kong Academy',
-            logo: '/images/clients/client-5.png',
-            fallback: 'HKA',
-            color: 'from-teal-500 to-cyan-500'
-        },
-        {
-            name: 'Canadian International School',
-            logo: '/images/clients/client-6.png',
-            fallback: 'CDNIS',
-            color: 'from-indigo-500 to-purple-500'
-        },
-        {
-            name: 'Harrow International School',
-            logo: '/images/clients/client-7.png',
-            fallback: 'HIS',
-            color: 'from-pink-500 to-rose-500'
-        },
-        {
-            name: 'French International School',
-            logo: '/images/clients/client-8.png',
-            fallback: 'FIS',
-            color: 'from-yellow-500 to-orange-500'
-        }
-    ]
+    const { data: dynamicClients } = useCMSData<ClientPartnerData[]>(
+        () => CMSService.getPartners(),
+        [],
+        []
+    )
+
+    const clients = dynamicClients.length > 0
+        ? dynamicClients.map(c => ({
+            name: c.name,
+            logo: c.logo,
+            fallback: c.fallbackText,
+            color: c.color,
+        }))
+        : staticClients
 
     return (
         <section className="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-50 via-blue-50/20 to-purple-50/20 overflow-hidden">

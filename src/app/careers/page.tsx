@@ -6,106 +6,116 @@ import { FiMapPin, FiClock, FiUsers, FiStar, FiHeart, FiTrendingUp, FiAward, FiS
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import PageHero from '@/components/sections/PageHero'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, JobPositionData } from '@/services/cmsService'
+
+const staticPositions = [
+    {
+        id: '1',
+        title: 'Gymnastics Coach',
+        location: 'Cyberport',
+        type: 'Full-time',
+        experience: '2+ years',
+        description: 'We are seeking a passionate gymnastics coach to join our Cyberport team. The ideal candidate will have experience working with children and a strong background in gymnastics.',
+        requirements: [
+            'Gymnastics coaching certification (Level 2 or higher)',
+            'Minimum 2 years coaching experience',
+            'Experience working with children ages 3-16',
+            'First Aid and CPR certification',
+            'Excellent communication skills',
+            'Fluent in English and Cantonese'
+        ],
+        responsibilities: [
+            'Conduct gymnastics classes for various age groups',
+            'Develop lesson plans and track student progress',
+            'Ensure safety protocols are followed',
+            'Communicate with parents about student development',
+            'Assist with events and competitions',
+            'Maintain equipment and facility cleanliness'
+        ],
+        benefits: [
+            'Competitive salary package',
+            'Professional development opportunities',
+            'Health insurance coverage',
+            'Paid vacation and sick leave',
+            'Staff training and certification support',
+            'Friendly and supportive work environment'
+        ]
+    },
+    {
+        id: '2',
+        title: 'Assistant Coach',
+        location: 'Wan Chai',
+        type: 'Part-time',
+        experience: '1+ years',
+        description: 'Join our Wan Chai team as an Assistant Coach and help create positive experiences for young gymnasts while developing your coaching skills.',
+        requirements: [
+            'Basic gymnastics knowledge and skills',
+            'Minimum 1 year experience with children',
+            'Enthusiastic and energetic personality',
+            'First Aid certification preferred',
+            'Good communication skills',
+            'Available for evening and weekend classes'
+        ],
+        responsibilities: [
+            'Assist lead coaches during classes',
+            'Help with equipment setup and safety',
+            'Support student learning and development',
+            'Maintain positive classroom environment',
+            'Assist with birthday parties and events',
+            'Help with administrative tasks as needed'
+        ],
+        benefits: [
+            'Flexible scheduling',
+            'Training and mentorship provided',
+            'Opportunity for advancement',
+            'Staff discounts on programs',
+            'Professional development support',
+            'Fun and rewarding work environment'
+        ]
+    },
+    {
+        id: '3',
+        title: 'Camp Coordinator',
+        location: 'Both Locations',
+        type: 'Seasonal/Full-time',
+        experience: '3+ years',
+        description: 'Lead our holiday camp programs and create memorable experiences for children during school breaks. Perfect for someone with camp or program management experience.',
+        requirements: [
+            'Experience in camp or program coordination',
+            'Strong organizational and leadership skills',
+            'Background in child development or education',
+            'Event planning and management experience',
+            'Creative and innovative mindset',
+            'Excellent problem-solving abilities'
+        ],
+        responsibilities: [
+            'Plan and coordinate holiday camp programs',
+            'Manage camp staff and volunteers',
+            'Develop age-appropriate activities and curricula',
+            'Ensure safety and quality standards',
+            'Communicate with parents and handle inquiries',
+            'Manage camp logistics and resources'
+        ],
+        benefits: [
+            'Leadership role with growth potential',
+            'Seasonal flexibility',
+            'Creative freedom in program development',
+            'Comprehensive benefits package',
+            'Professional development opportunities',
+            'Make a positive impact on children\'s lives'
+        ]
+    }
+]
 
 const CareersPage = () => {
-    const openPositions = [
-        {
-            id: 1,
-            title: 'Gymnastics Coach',
-            location: 'Cyberport',
-            type: 'Full-time',
-            experience: '2+ years',
-            description: 'We are seeking a passionate gymnastics coach to join our Cyberport team. The ideal candidate will have experience working with children and a strong background in gymnastics.',
-            requirements: [
-                'Gymnastics coaching certification (Level 2 or higher)',
-                'Minimum 2 years coaching experience',
-                'Experience working with children ages 3-16',
-                'First Aid and CPR certification',
-                'Excellent communication skills',
-                'Fluent in English and Cantonese'
-            ],
-            responsibilities: [
-                'Conduct gymnastics classes for various age groups',
-                'Develop lesson plans and track student progress',
-                'Ensure safety protocols are followed',
-                'Communicate with parents about student development',
-                'Assist with events and competitions',
-                'Maintain equipment and facility cleanliness'
-            ],
-            benefits: [
-                'Competitive salary package',
-                'Professional development opportunities',
-                'Health insurance coverage',
-                'Paid vacation and sick leave',
-                'Staff training and certification support',
-                'Friendly and supportive work environment'
-            ]
-        },
-        {
-            id: 2,
-            title: 'Assistant Coach',
-            location: 'Wan Chai',
-            type: 'Part-time',
-            experience: '1+ years',
-            description: 'Join our Wan Chai team as an Assistant Coach and help create positive experiences for young gymnasts while developing your coaching skills.',
-            requirements: [
-                'Basic gymnastics knowledge and skills',
-                'Minimum 1 year experience with children',
-                'Enthusiastic and energetic personality',
-                'First Aid certification preferred',
-                'Good communication skills',
-                'Available for evening and weekend classes'
-            ],
-            responsibilities: [
-                'Assist lead coaches during classes',
-                'Help with equipment setup and safety',
-                'Support student learning and development',
-                'Maintain positive classroom environment',
-                'Assist with birthday parties and events',
-                'Help with administrative tasks as needed'
-            ],
-            benefits: [
-                'Flexible scheduling',
-                'Training and mentorship provided',
-                'Opportunity for advancement',
-                'Staff discounts on programs',
-                'Professional development support',
-                'Fun and rewarding work environment'
-            ]
-        },
-        {
-            id: 3,
-            title: 'Camp Coordinator',
-            location: 'Both Locations',
-            type: 'Seasonal/Full-time',
-            experience: '3+ years',
-            description: 'Lead our holiday camp programs and create memorable experiences for children during school breaks. Perfect for someone with camp or program management experience.',
-            requirements: [
-                'Experience in camp or program coordination',
-                'Strong organizational and leadership skills',
-                'Background in child development or education',
-                'Event planning and management experience',
-                'Creative and innovative mindset',
-                'Excellent problem-solving abilities'
-            ],
-            responsibilities: [
-                'Plan and coordinate holiday camp programs',
-                'Manage camp staff and volunteers',
-                'Develop age-appropriate activities and curricula',
-                'Ensure safety and quality standards',
-                'Communicate with parents and handle inquiries',
-                'Manage camp logistics and resources'
-            ],
-            benefits: [
-                'Leadership role with growth potential',
-                'Seasonal flexibility',
-                'Creative freedom in program development',
-                'Comprehensive benefits package',
-                'Professional development opportunities',
-                'Make a positive impact on children\'s lives'
-            ]
-        }
-    ]
+    const { data: dynamicPositions } = useCMSData<JobPositionData[]>(
+        () => CMSService.getJobPositions(),
+        [],
+        []
+    )
+
+    const positions = dynamicPositions.length > 0 ? dynamicPositions : staticPositions
 
     const benefits = [
         {
@@ -259,7 +269,7 @@ const CareersPage = () => {
                         </motion.div>
 
                         <div className="space-y-6">
-                            {openPositions.map((position, index) => (
+                            {positions.map((position, index) => (
                                 <motion.div
                                     key={position.id}
                                     initial={{ opacity: 0, y: 30 }}
@@ -297,7 +307,7 @@ const CareersPage = () => {
                                                 whileHover={{ x: 4 }}
                                             >
                                                 <FiStar className="w-5 h-5 flex-shrink-0" />
-                                                <span className="font-medium">{position.experience}</span>
+                                                <span className="font-medium">{'experience' in position ? (position as typeof staticPositions[number]).experience : position.salary || 'See details'}</span>
                                             </motion.div>
                                         </div>
                                     </div>

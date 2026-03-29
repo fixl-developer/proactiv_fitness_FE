@@ -14,24 +14,28 @@ import { FranchiseOwnerService, FranchiseStaff } from '@/services/franchiseOwner
 
 // ------- Types -------
 interface StaffFormData {
-    name: string
+    firstName: string
+    lastName: string
     email: string
     phone: string
-    role: 'COACH' | 'MANAGER' | 'SUPPORT_STAFF'
+    role: 'COACH' | 'LOCATION_MANAGER'
     location: string
+    password: string
 }
 
 type ModalMode = 'add' | 'edit' | 'view' | 'delete' | null
 
-const ROLES = ['COACH', 'MANAGER', 'SUPPORT_STAFF'] as const
+const ROLES = ['COACH', 'LOCATION_MANAGER'] as const
 const PAGE_SIZE = 10
 
 const defaultForm: StaffFormData = {
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     role: 'COACH',
     location: '',
+    password: '',
 }
 
 // ------- Helpers -------
@@ -139,12 +143,15 @@ export default function FranchiseStaffPage() {
 
     const openEditModal = (member: FranchiseStaff) => {
         setSelectedStaff(member)
+        const nameParts = (member.name || '').split(' ')
         setFormData({
-            name: member.name,
+            firstName: (member as any).firstName || nameParts[0] || '',
+            lastName: (member as any).lastName || nameParts.slice(1).join(' ') || '',
             email: member.email,
             phone: member.phone,
-            role: member.role,
+            role: member.role === 'MANAGER' ? 'LOCATION_MANAGER' : member.role as any,
             location: member.location,
+            password: '',
         })
         setModalError(null)
         setModalMode('edit')
@@ -167,11 +174,37 @@ export default function FranchiseStaffPage() {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
+    const validateForm = (): string | null => {
+        if (!formData.firstName.trim()) return 'First name is required'
+        if (!formData.lastName.trim()) return 'Last name is required'
+        if (!formData.email.trim()) return 'Email is required'
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Invalid email format'
+        if (modalMode === 'add' && !formData.password) return 'Password is required for new staff'
+        if (formData.password && formData.password.length < 8) return 'Password must be at least 8 characters'
+        return null
+    }
+
+    const buildPayload = () => {
+        const payload: any = {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+            email: formData.email.trim().toLowerCase(),
+            phone: formData.phone.trim(),
+            role: formData.role,
+            location: formData.location.trim(),
+        }
+        if (formData.password) payload.password = formData.password
+        return payload
+    }
+
     const handleCreate = async () => {
+        const error = validateForm()
+        if (error) { setModalError(error); return }
         try {
             setSubmitting(true)
             setModalError(null)
-            await FranchiseOwnerService.createStaff(formData)
+            await FranchiseOwnerService.createStaff(buildPayload())
             closeModal()
             fetchStaff()
         } catch (err: any) {
@@ -183,10 +216,12 @@ export default function FranchiseStaffPage() {
 
     const handleUpdate = async () => {
         if (!selectedStaff) return
+        const error = validateForm()
+        if (error) { setModalError(error); return }
         try {
             setSubmitting(true)
             setModalError(null)
-            await FranchiseOwnerService.updateStaff(selectedStaff.id, formData)
+            await FranchiseOwnerService.updateStaff(selectedStaff.id, buildPayload())
             closeModal()
             fetchStaff()
         } catch (err: any) {
@@ -633,20 +668,31 @@ export default function FranchiseStaffPage() {
                                     </div>
                                     <div className="p-6 space-y-4">
                                         {modalError && (
-                                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+                                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                                                 {modalError}
                                             </div>
                                         )}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                            <Input
-                                                placeholder="e.g. Jane Doe"
-                                                value={formData.name}
-                                                onChange={(e) => handleFormChange('name', e.target.value)}
-                                            />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                                                <Input
+                                                    placeholder="e.g. Jane"
+                                                    value={formData.firstName}
+                                                    onChange={(e) => handleFormChange('firstName', e.target.value)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                                                <Input
+                                                    placeholder="e.g. Doe"
+                                                    value={formData.lastName}
+                                                    onChange={(e) => handleFormChange('lastName', e.target.value)}
+                                                />
+                                            </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                                             <Input
                                                 type="email"
                                                 placeholder="e.g. jane@franchise.com"
@@ -664,7 +710,7 @@ export default function FranchiseStaffPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
                                             <select
                                                 value={formData.role}
                                                 onChange={(e) => handleFormChange('role', e.target.value)}
@@ -674,6 +720,7 @@ export default function FranchiseStaffPage() {
                                                     <option key={role} value={role}>{roleLabel(role)}</option>
                                                 ))}
                                             </select>
+                                            <p className="text-xs text-gray-400 mt-1">Franchise Owners can create Location Manager and Coach roles</p>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
@@ -681,6 +728,17 @@ export default function FranchiseStaffPage() {
                                                 placeholder="e.g. Main Location"
                                                 value={formData.location}
                                                 onChange={(e) => handleFormChange('location', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Password {modalMode === 'edit' ? '(leave blank to keep current)' : '*'}
+                                            </label>
+                                            <Input
+                                                type="password"
+                                                placeholder={modalMode === 'edit' ? '********' : 'Enter password (min 8 chars)'}
+                                                value={formData.password}
+                                                onChange={(e) => handleFormChange('password', e.target.value)}
                                             />
                                         </div>
                                     </div>
@@ -694,7 +752,7 @@ export default function FranchiseStaffPage() {
                                         </button>
                                         <button id="admin-franchise-staff-btn-9"
                                             onClick={modalMode === 'add' ? handleCreate : handleUpdate}
-                                            disabled={submitting || !formData.name.trim() || !formData.email.trim()}
+                                            disabled={submitting || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()}
                                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

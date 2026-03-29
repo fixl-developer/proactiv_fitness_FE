@@ -357,7 +357,17 @@ export default function RegionalStaffPage() {
     const [viewTarget, setViewTarget] = useState<RegionalStaff | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<RegionalStaff | null>(null)
 
+    // Toast state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Auto-dismiss toast
+    useEffect(() => {
+        if (!toast) return
+        const timer = setTimeout(() => setToast(null), 4000)
+        return () => clearTimeout(timer)
+    }, [toast])
 
     // ── Debounce search ──────────────────────────────────────────────
     useEffect(() => {
@@ -413,15 +423,17 @@ export default function RegionalStaffPage() {
         try {
             if (editTarget) {
                 await RegionalAdminService.updateStaff(editTarget.id, data)
+                setToast({ message: 'Staff member updated successfully', type: 'success' })
             } else {
                 await RegionalAdminService.createStaff(data)
+                setToast({ message: 'Staff member created successfully', type: 'success' })
             }
             setFormOpen(false)
             setEditTarget(null)
             fetchStaff()
         } catch (err: any) {
             console.error('Failed to save staff:', err)
-            alert(err?.message || 'Failed to save staff member')
+            setToast({ message: err?.message || 'Failed to save staff member', type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -434,10 +446,11 @@ export default function RegionalStaffPage() {
         try {
             await RegionalAdminService.deleteStaff(deleteTarget.id)
             setDeleteTarget(null)
+            setToast({ message: 'Staff member deleted successfully', type: 'success' })
             fetchStaff()
         } catch (err: any) {
             console.error('Failed to delete staff:', err)
-            alert(err?.message || 'Failed to delete staff member')
+            setToast({ message: err?.message || 'Failed to delete staff member', type: 'error' })
         } finally {
             setDeleting(false)
         }
@@ -459,6 +472,23 @@ export default function RegionalStaffPage() {
 
     return (
         <div className="space-y-6">
+            {/* Toast Notification */}
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg ${
+                            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }`}
+                    >
+                        <span className="text-sm font-medium">{toast.message}</span>
+                        <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70"><X className="w-4 h-4" /></button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>

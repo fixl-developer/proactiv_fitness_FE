@@ -5,11 +5,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { FiStar, FiChevronLeft, FiChevronRight, FiMessageCircle } from 'react-icons/fi'
 import { getRandomPersonImage } from '@/utils/imageUtils'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, TestimonialData } from '@/services/cmsService'
 
 const Testimonials = () => {
     const [currentTestimonial, setCurrentTestimonial] = useState(0)
     const [particles, setParticles] = useState<Array<{ id: number; left: number; top: number; fontSize: number; duration: number; delay: number }>>([])
     const [testimonials, setTestimonials] = useState<any[]>([])
+
+    const { data: cmsTestimonials } = useCMSData<TestimonialData[]>(
+        () => CMSService.getTestimonials(),
+        [],
+        []
+    )
 
     useEffect(() => {
         // Generate particles and testimonials only on client side to avoid hydration mismatch
@@ -23,60 +31,74 @@ const Testimonials = () => {
         }))
         setParticles(generatedParticles)
 
-        const generatedTestimonials = [
-            {
-                id: 1,
-                name: 'Jennifer Wong',
-                role: 'Parent of Emma (Age 7)',
-                rating: 5,
-                text: "ProActive Sports has been amazing for my daughter Emma. She started as a shy 5-year-old and now she's confident, strong, and absolutely loves gymnastics. The coaches are patient, professional, and really know how to work with children.",
-                image: getRandomPersonImage('female'),
-                fallback: 'bg-gradient-to-br from-pink-400 to-purple-500',
-                program: 'School Gymnastics Program'
-            },
-            {
-                id: 2,
-                name: 'David Chen',
-                role: 'Parent of Lucas (Age 10)',
-                rating: 5,
-                text: "We've tried several gymnastics schools, but ProActive Sports stands out. The facilities are excellent, the coaching is top-notch, and most importantly, my son Lucas has developed not just physical skills but also discipline and confidence.",
-                image: getRandomPersonImage('male'),
-                fallback: 'bg-gradient-to-br from-blue-400 to-cyan-500',
-                program: 'Advanced Training Program'
-            },
-            {
-                id: 3,
-                name: 'Sarah Mitchell',
-                role: 'Parent of Sophia (Age 6)',
-                rating: 5,
-                text: "The holiday camps at ProActive Sports are fantastic! Sophia always comes home excited about what she learned. The coaches make it fun while still teaching proper techniques. It's the perfect balance of learning and enjoyment.",
-                image: getRandomPersonImage('female'),
-                fallback: 'bg-gradient-to-br from-green-400 to-teal-500',
-                program: 'Holiday Camps'
-            },
-            {
-                id: 4,
-                name: 'Michael Johnson',
-                role: 'Parent of Alex (Age 8)',
-                rating: 5,
-                text: "We had Alex's birthday party at ProActive Sports and it was incredible! The staff handled everything perfectly, the kids had a blast, and Alex still talks about it months later. Highly recommend for parties!",
-                image: getRandomPersonImage('male'),
-                fallback: 'bg-gradient-to-br from-orange-400 to-red-500',
-                program: 'Birthday Party'
-            },
-            {
-                id: 5,
-                name: 'Lisa Zhang',
-                role: 'Parent of Chloe (Age 9)',
-                rating: 5,
-                text: "The progress Chloe has made at ProActive Sports is remarkable. From basic tumbling to advanced routines, the structured approach and individual attention from coaches has helped her excel beyond our expectations.",
-                image: getRandomPersonImage('female'),
-                fallback: 'bg-gradient-to-br from-purple-400 to-pink-500',
-                program: 'Competitive Training'
-            }
-        ]
-        setTestimonials(generatedTestimonials)
-    }, [])
+        if (cmsTestimonials && cmsTestimonials.length > 0) {
+            const mapped = cmsTestimonials.map(t => ({
+                id: t.id,
+                name: t.name,
+                role: t.role,
+                rating: t.rating,
+                text: t.text,
+                image: t.image || getRandomPersonImage(t.name.toLowerCase().includes('a') ? 'female' : 'male'),
+                fallback: t.fallbackGradient || 'bg-gradient-to-br from-blue-400 to-cyan-500',
+                program: t.program,
+            }))
+            setTestimonials(mapped)
+        } else {
+            const generatedTestimonials = [
+                {
+                    id: 1,
+                    name: 'Jennifer Wong',
+                    role: 'Parent of Emma (Age 7)',
+                    rating: 5,
+                    text: "ProActive Sports has been amazing for my daughter Emma. She started as a shy 5-year-old and now she's confident, strong, and absolutely loves gymnastics. The coaches are patient, professional, and really know how to work with children.",
+                    image: getRandomPersonImage('female'),
+                    fallback: 'bg-gradient-to-br from-pink-400 to-purple-500',
+                    program: 'School Gymnastics Program'
+                },
+                {
+                    id: 2,
+                    name: 'David Chen',
+                    role: 'Parent of Lucas (Age 10)',
+                    rating: 5,
+                    text: "We've tried several gymnastics schools, but ProActive Sports stands out. The facilities are excellent, the coaching is top-notch, and most importantly, my son Lucas has developed not just physical skills but also discipline and confidence.",
+                    image: getRandomPersonImage('male'),
+                    fallback: 'bg-gradient-to-br from-blue-400 to-cyan-500',
+                    program: 'Advanced Training Program'
+                },
+                {
+                    id: 3,
+                    name: 'Sarah Mitchell',
+                    role: 'Parent of Sophia (Age 6)',
+                    rating: 5,
+                    text: "The holiday camps at ProActive Sports are fantastic! Sophia always comes home excited about what she learned. The coaches make it fun while still teaching proper techniques. It's the perfect balance of learning and enjoyment.",
+                    image: getRandomPersonImage('female'),
+                    fallback: 'bg-gradient-to-br from-green-400 to-teal-500',
+                    program: 'Holiday Camps'
+                },
+                {
+                    id: 4,
+                    name: 'Michael Johnson',
+                    role: 'Parent of Alex (Age 8)',
+                    rating: 5,
+                    text: "We had Alex's birthday party at ProActive Sports and it was incredible! The staff handled everything perfectly, the kids had a blast, and Alex still talks about it months later. Highly recommend for parties!",
+                    image: getRandomPersonImage('male'),
+                    fallback: 'bg-gradient-to-br from-orange-400 to-red-500',
+                    program: 'Birthday Party'
+                },
+                {
+                    id: 5,
+                    name: 'Lisa Zhang',
+                    role: 'Parent of Chloe (Age 9)',
+                    rating: 5,
+                    text: "The progress Chloe has made at ProActive Sports is remarkable. From basic tumbling to advanced routines, the structured approach and individual attention from coaches has helped her excel beyond our expectations.",
+                    image: getRandomPersonImage('female'),
+                    fallback: 'bg-gradient-to-br from-purple-400 to-pink-500',
+                    program: 'Competitive Training'
+                }
+            ]
+            setTestimonials(generatedTestimonials)
+        }
+    }, [cmsTestimonials])
 
     // Auto-advance testimonials
     useEffect(() => {

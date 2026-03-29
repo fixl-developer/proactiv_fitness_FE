@@ -24,7 +24,8 @@ import {
     Building2,
     MessageSquare,
     ChevronDown,
-    ChevronRight
+    ChevronRight,
+    FileText
 } from 'lucide-react'
 
 interface MenuItem {
@@ -40,6 +41,28 @@ interface AdminLayoutProps {
 
 const adminMenuItems: MenuItem[] = [
     { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
+    {
+        icon: FileText,
+        label: 'Content Management',
+        href: '/admin/cms',
+        submenu: [
+            { label: 'All Content', href: '/admin/cms' },
+            { label: 'Hero Slides', href: '/admin/cms/hero-slides' },
+            { label: 'Services', href: '/admin/cms/services' },
+            { label: 'Testimonials', href: '/admin/cms/testimonials' },
+            { label: 'Assessments', href: '/admin/cms/assessments' },
+            { label: 'Class Sessions', href: '/admin/cms/classes' },
+            { label: 'Party Packages', href: '/admin/cms/party-packages' },
+            { label: 'Program Levels', href: '/admin/cms/programs' },
+            { label: 'Camp Programs', href: '/admin/cms/camps' },
+            { label: 'Blog Posts', href: '/admin/cms/blog' },
+            { label: 'Locations', href: '/admin/cms/locations' },
+            { label: 'Careers', href: '/admin/cms/careers' },
+            { label: 'FAQs', href: '/admin/cms/faqs' },
+            { label: 'About Page', href: '/admin/cms/about' },
+            { label: 'Contact Info', href: '/admin/cms/contact' },
+        ]
+    },
     {
         icon: Users,
         label: 'User Management',
