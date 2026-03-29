@@ -36,13 +36,15 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
                 }
 
                 // Then fetch fresh profile from API
+                // Backend route: GET /api/partners/:partnerId
                 const partnerId = JSON.parse(userData || '{}')?.id || ''
                 if (partnerId) {
-                    const response = await apiClient.get<any>(`/partners/${partnerId}/profile`)
+                    const response = await apiClient.get<any>(`/partners/${partnerId}`)
                     const profile = response?.data || response
                     if (profile) {
                         setPartnerProfile(profile)
-                        const type = profile.partnerType as PartnerTypeKey
+                        // partnerType comes from the profile response
+                        const type = (profile.partnerType || profile.businessType) as PartnerTypeKey
                         if (type) {
                             setPartnerType(type)
                             // Update localStorage cache
