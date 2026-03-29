@@ -2,27 +2,32 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
-import { authService } from '@/services/modules/auth.service'
 import NotificationBell from '@/components/shared/NotificationBell'
+import { PartnerProvider, usePartnerConfig } from '@/contexts/PartnerContext'
 import {
     LayoutDashboard, DollarSign, Settings, BarChart3,
     TrendingUp, Zap, LogOut, Menu, X, Briefcase,
     BookOpen, Users, FileText, Shield, MessageSquare,
-    Target, Book, HelpCircle, Wallet
+    Target, Book, HelpCircle, Wallet, GraduationCap,
+    Dumbbell, Building2, Trophy, Heart, Landmark, Medal
 } from 'lucide-react'
 
-export default function PartnerLayout({ children }: { children: React.ReactNode }) {
+// Map icon names to components for dynamic rendering
+const ICON_MAP: Record<string, any> = {
+    GraduationCap, Dumbbell, Building2, Trophy, Heart, Landmark, Medal, Briefcase
+}
+
+function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const [user, setUser] = useState<any>(null)
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const { config, partnerType } = usePartnerConfig()
 
     useEffect(() => {
-        // Check authentication and role
         const userData = localStorage.getItem('user')
         if (!userData) {
             window.location.href = '/login/staff'
@@ -33,7 +38,6 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        // Only PARTNER_ADMIN and ADMIN can access
         if (roleStr !== 'PARTNER_ADMIN' && roleStr !== 'ADMIN') {
             router.push('/unauthorized')
             return
@@ -44,10 +48,11 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
 
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
+    // Dynamic navigation based on partner type
     const navigation = [
         { name: 'Dashboard', href: '/partner/dashboard', icon: LayoutDashboard },
-        { name: 'Programs', href: '/partner/programs', icon: BookOpen },
-        { name: 'Students', href: '/partner/students', icon: Users },
+        { name: config.programLabel, href: '/partner/programs', icon: BookOpen },
+        { name: config.memberLabel, href: '/partner/students', icon: Users },
         { name: 'Reports', href: '/partner/reports', icon: FileText },
         { name: 'Commissions', href: '/partner/commissions', icon: DollarSign },
         { name: 'Analytics', href: '/partner/analytics', icon: BarChart3 },
@@ -61,6 +66,9 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
         { name: 'Compliance', href: '/partner/compliance', icon: Shield },
         { name: 'Settings', href: '/partner/settings', icon: Settings },
     ]
+
+    // Get the partner type icon
+    const PartnerIcon = ICON_MAP[config.iconName] || Briefcase
 
     if (!user) {
         return (
@@ -83,10 +91,10 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                             <Menu className="w-5 h-5" />
                         </button>
                         <div className="flex items-center gap-2">
-                            <Briefcase className="w-6 h-6 text-blue-600" />
+                            <PartnerIcon className={`w-6 h-6 ${config.color}`} />
                             <div>
                                 <h1 className="text-lg font-bold text-gray-900">Partner Portal</h1>
-                                <p className="text-xs text-gray-500">Partner Administration</p>
+                                <p className="text-xs text-gray-500">{config.label} Administration</p>
                             </div>
                         </div>
                     </div>
@@ -96,7 +104,7 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                                <p className="text-xs text-gray-500">{user.role}</p>
+                                <p className="text-xs text-gray-500">{config.label} Partner</p>
                             </div>
                             <button id="partner-layout-btn-3"
                                 onClick={handleLogoutClick}
@@ -114,6 +122,14 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                 className={`fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 transition-transform duration-300 z-40 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     } lg:translate-x-0`}
             >
+                {/* Partner Type Badge */}
+                <div className={`mx-4 mt-4 mb-2 px-3 py-2 rounded-lg ${config.bgColor}`}>
+                    <div className="flex items-center gap-2">
+                        <PartnerIcon className={`w-4 h-4 ${config.color}`} />
+                        <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
+                    </div>
+                </div>
+
                 <nav className="p-4 space-y-2">
                     {navigation.map((item) => (
                         <Link id="partner-layout-nav"
@@ -144,5 +160,13 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
                 unsavedPages={unsavedPages}
             />
         </div>
+    )
+}
+
+export default function PartnerLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <PartnerProvider>
+            <PartnerLayoutInner>{children}</PartnerLayoutInner>
+        </PartnerProvider>
     )
 }

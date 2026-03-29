@@ -146,8 +146,8 @@ export default function PartnerCommunicationPage() {
                 {
                     id: '3',
                     type: 'ENROLLMENT',
-                    title: 'New Student Enrollment',
-                    message: '5 new students enrolled through your referral link',
+                    title: 'New Enrollment',
+                    message: '5 new members enrolled through your referral link',
                     timestamp: '2024-03-13 08:20 AM',
                     status: 'READ',
                     priority: 'LOW'

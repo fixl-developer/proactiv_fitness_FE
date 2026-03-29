@@ -73,8 +73,8 @@ export default function PartnerCompliancePage() {
                         id: '1',
                         date: '2024-03-12',
                         type: 'Minor Injury',
-                        description: 'Student scraped knee during exercise',
-                        action: 'First aid applied, parent notified',
+                        description: 'Minor scrape during exercise session',
+                        action: 'First aid applied, emergency contact notified',
                         status: 'RESOLVED'
                     }
                 ]

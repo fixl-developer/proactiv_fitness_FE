@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { UserPlus, Mail, Phone, Shield, Building2, MapPin, Save, X, AlertCircle, Eye, EyeOff, Search, Edit, Trash2, UserX, UserCheck, ChevronDown, Info, Lock, CheckCircle2, XCircle, ToggleLeft, ToggleRight, ShieldAlert, FileText } from 'lucide-react'
+import { UserPlus, Mail, Phone, Shield, Building2, MapPin, Save, X, AlertCircle, Eye, EyeOff, Search, Edit, Trash2, UserX, UserCheck, ChevronDown, Info, Lock, CheckCircle2, XCircle, ToggleLeft, ToggleRight, ShieldAlert, FileText, Briefcase } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { PARTNER_TYPE_OPTIONS } from '@/config/partnerTypeConfig'
 
 // ---------------------------------------------------------------------------
 // RBAC Hierarchy – defines which roles each admin role is allowed to create
@@ -95,6 +96,7 @@ export default function CreateUserPage() {
     role: '',
     locationId: '',
     organizationId: '',
+    partnerType: '',
   })
 
   // Current user state (from localStorage / auth)
@@ -314,6 +316,11 @@ export default function CreateUserPage() {
       errors.organizationId = 'Organization assignment is required for this role'
     }
 
+    // Partner type required for PARTNER_ADMIN
+    if (formData.role === 'PARTNER_ADMIN' && !formData.partnerType) {
+      errors.partnerType = 'Partner type is required for Partner Admin role'
+    }
+
     // GDPR consent
     if (!gdprConsent) {
       errors.gdprConsent = 'Data processing consent is required to create a user'
@@ -343,6 +350,7 @@ export default function CreateUserPage() {
         phone: formData.phone.trim() || undefined,
         locationId: formData.locationId || undefined,
         organizationId: formData.organizationId || undefined,
+        partnerType: formData.role === 'PARTNER_ADMIN' ? formData.partnerType : undefined,
         sendEmailVerification,
         gdprConsent,
       })
@@ -359,6 +367,7 @@ export default function CreateUserPage() {
         role: allowedRoles.length > 0 ? allowedRoles[0].value : '',
         locationId: currentUser?.role === 'LOCATION_MANAGER' ? (currentUser.locationId || '') : '',
         organizationId: '',
+        partnerType: '',
       })
       setFieldErrors({})
       setGdprConsent(false)
@@ -444,6 +453,7 @@ export default function CreateUserPage() {
   const showLocationDropdown = ROLES_NEEDING_LOCATION.includes(formData.role) && currentUser?.role !== 'LOCATION_MANAGER'
   const showLocationAutoAssign = ROLES_NEEDING_LOCATION.includes(formData.role) && currentUser?.role === 'LOCATION_MANAGER'
   const showOrganizationDropdown = ROLES_NEEDING_ORGANIZATION.includes(formData.role)
+  const showPartnerTypeDropdown = formData.role === 'PARTNER_ADMIN'
 
   // If user cannot create anyone, show access denied
   if (currentUser && !ROLE_HIERARCHY[currentUser.role]) {
@@ -696,7 +706,7 @@ export default function CreateUserPage() {
                         key={role.value}
                         type="button"
                         onClick={() => {
-                          setFormData({ ...formData, role: role.value, locationId: '', organizationId: '' })
+                          setFormData({ ...formData, role: role.value, locationId: '', organizationId: '', partnerType: '' })
                           if (fieldErrors.role) setFieldErrors(prev => ({ ...prev, role: '' }))
                         }}
                         className={`p-4 border-2 rounded-lg text-left transition-all ${formData.role === role.value
@@ -822,8 +832,46 @@ export default function CreateUserPage() {
                 </div>
               )}
 
+              {/* Partner Type Selection - shown only for PARTNER_ADMIN role */}
+              {showPartnerTypeDropdown && (
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Partner Type <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Select the type of partner organization. This determines the dashboard terminology and experience.
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {PARTNER_TYPE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, partnerType: option.value })
+                          if (fieldErrors.partnerType) setFieldErrors(prev => ({ ...prev, partnerType: '' }))
+                        }}
+                        className={`p-3 border-2 rounded-lg text-left transition-all ${
+                          formData.partnerType === option.value
+                            ? 'border-blue-500 bg-blue-50 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
+                        <p className="text-xs text-gray-500 mt-1">{option.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                  {fieldErrors.partnerType && (
+                    <p className="text-sm text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {fieldErrors.partnerType}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Fallback when no assignment fields are visible */}
-              {!showLocationDropdown && !showLocationAutoAssign && !showOrganizationDropdown && (
+              {!showLocationDropdown && !showLocationAutoAssign && !showOrganizationDropdown && !showPartnerTypeDropdown && (
                 <div className="md:col-span-2 text-sm text-gray-500 italic">
                   No location or organization assignment is required for the selected role.
                 </div>
