@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Grid3X3, List, Calendar, Filter, Search } from 'lucide-react'
 import HorizontalSection from './HorizontalSection'
 import ScheduleView from './ScheduleView'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, AssessmentData, ClassSessionData } from '@/services/cmsService'
 
 interface Assessment {
     id: string
@@ -23,8 +25,8 @@ interface Assessment {
     category: string
 }
 
-// Mock data organized by categories - replace with actual API data
-const mockAssessmentsByCategory = {
+// Static data organized by categories - used as fallback when CMS data is unavailable
+const staticAssessmentsByCategory: Record<string, Assessment[]> = {
     'Assessments': [
         {
             id: '1',
@@ -721,8 +723,76 @@ export default function AssessmentListing({ onBookAssessment }: AssessmentListin
     const [searchQuery, setSearchQuery] = useState('')
     const [viewMode, setViewMode] = useState<'grid' | 'week' | 'schedule'>('grid')
 
+    const { data: cmsAssessments } = useCMSData<AssessmentData[]>(
+        () => CMSService.getAssessments(),
+        [],
+        []
+    )
+
+    const { data: cmsClasses } = useCMSData<ClassSessionData[]>(
+        () => CMSService.getClassSessions(),
+        [],
+        []
+    )
+
+    const assessmentsByCategory = useMemo(() => {
+        // If we have CMS data, group it by category
+        if (cmsAssessments.length > 0 || cmsClasses.length > 0) {
+            const grouped: Record<string, Assessment[]> = {}
+
+            // Add assessments
+            cmsAssessments.forEach(a => {
+                const cat = a.category || 'Assessments'
+                if (!grouped[cat]) grouped[cat] = []
+                grouped[cat].push({
+                    id: a.id,
+                    title: a.title,
+                    description: a.description,
+                    image: a.image,
+                    time: a.time,
+                    duration: a.duration,
+                    location: a.days,
+                    ageGroup: a.ageGroup,
+                    level: a.level,
+                    price: a.price,
+                    isFree: a.isFree,
+                    availableSlots: a.availableSlots,
+                    totalSlots: a.totalSlots,
+                    category: a.category,
+                })
+            })
+
+            // Add classes
+            cmsClasses.forEach(c => {
+                const cat = c.category || 'Classes'
+                if (!grouped[cat]) grouped[cat] = []
+                grouped[cat].push({
+                    id: c.id,
+                    title: c.title,
+                    description: c.description,
+                    image: c.image,
+                    time: c.time,
+                    duration: c.duration,
+                    location: c.days,
+                    ageGroup: c.ageGroup,
+                    level: c.level,
+                    price: c.price,
+                    isFree: c.isFree,
+                    availableSlots: c.availableSlots,
+                    totalSlots: c.totalSlots,
+                    category: c.category,
+                })
+            })
+
+            return grouped
+        }
+
+        // Fallback to static data
+        return staticAssessmentsByCategory
+    }, [cmsAssessments, cmsClasses])
+
     // Filter all assessments based on search
-    const filteredCategories = Object.entries(mockAssessmentsByCategory).reduce((acc, [category, assessments]) => {
+    const filteredCategories = Object.entries(assessmentsByCategory).reduce((acc, [category, assessments]) => {
         const filtered = assessments.filter(assessment =>
             assessment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             assessment.description.toLowerCase().includes(searchQuery.toLowerCase())

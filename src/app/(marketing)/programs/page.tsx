@@ -1,11 +1,9 @@
+'use client'
+
 import Link from 'next/link';
 import { Users, Calendar, Zap, PartyPopper, ArrowRight } from 'lucide-react';
-
-export const metadata = {
-    title: 'Our Programs - ProActiv Fitness',
-    description:
-        'Explore our range of gymnastics and fitness programs for all ages and skill levels.',
-};
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, ServiceCardData } from '@/services/cmsService';
 
 interface Program {
     id: number;
@@ -19,7 +17,7 @@ interface Program {
     link: string;
 }
 
-const programs: Program[] = [
+const staticPrograms: Program[] = [
     {
         id: 1,
         title: 'Gymnastics Programs',
@@ -91,7 +89,49 @@ const programs: Program[] = [
     },
 ];
 
+const emojiToIconMap: Record<string, React.ReactNode> = {
+    '🤸': <Users className="w-16 h-16" />,
+    '🏕️': <Calendar className="w-16 h-16" />,
+    '⚡': <Zap className="w-16 h-16" />,
+    '🎉': <PartyPopper className="w-16 h-16" />,
+    '👥': <Users className="w-16 h-16" />,
+    '📅': <Calendar className="w-16 h-16" />,
+    '🎂': <PartyPopper className="w-16 h-16" />,
+};
+
+const defaultColorCycle = [
+    { color: 'text-green-600', bgColor: 'bg-green-500' },
+    { color: 'text-red-600', bgColor: 'bg-red-500' },
+    { color: 'text-blue-600', bgColor: 'bg-blue-500' },
+    { color: 'text-purple-600', bgColor: 'bg-purple-900' },
+];
+
+function mapServiceToProgram(service: ServiceCardData, index: number): Program {
+    const style = defaultColorCycle[index % defaultColorCycle.length];
+    return {
+        id: index + 1,
+        title: service.title,
+        description: service.description,
+        icon: emojiToIconMap[service.emoji] || <Users className="w-16 h-16" />,
+        color: service.color ? `text-${service.color}-600` : style.color,
+        bgColor: service.gradient ? service.gradient : style.bgColor,
+        ageRange: '',
+        features: service.features || [],
+        link: service.href || '#',
+    };
+}
+
 export default function ProgramsPage() {
+    const { data: services } = useCMSData<ServiceCardData[]>(
+        () => CMSService.getServices(),
+        [],
+        []
+    );
+
+    const programs: Program[] = services.length > 0
+        ? services.map(mapServiceToProgram)
+        : staticPrograms;
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Hero Section */}
@@ -121,9 +161,11 @@ export default function ProgramsPage() {
                                             <div className="mb-4">{program.icon}</div>
                                             <h2 className="text-3xl font-bold mb-2">{program.title}</h2>
                                             <p className="text-white/90 mb-4">{program.description}</p>
-                                            <div className="inline-block bg-white/20 px-4 py-2 rounded-full text-sm font-semibold">
-                                                Ages: {program.ageRange}
-                                            </div>
+                                            {program.ageRange && (
+                                                <div className="inline-block bg-white/20 px-4 py-2 rounded-full text-sm font-semibold">
+                                                    Ages: {program.ageRange}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

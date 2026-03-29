@@ -8,79 +8,125 @@ import { FiUsers, FiClock, FiStar, FiGift, FiCamera, FiMusic } from 'react-icons
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { getRandomImage } from '@/utils/imageUtils'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, PartyPackageData, FAQItemData } from '@/services/cmsService'
+
+const staticPackages = [
+    {
+        id: 'basic',
+        name: 'Basic Party',
+        duration: '1.5 hours',
+        maxKids: 10,
+        coaches: 1,
+        partyRoom: '30 minutes',
+        features: [
+            'Up to 10 children',
+            '1 professional coach',
+            'Basic gymnastics equipment',
+            'Party room for 30 minutes',
+            'Birthday child gets special recognition',
+            'Basic decorations included'
+        ],
+        notIncluded: [
+            'Food and drinks',
+            'Photography',
+            'Custom decorations'
+        ]
+    },
+    {
+        id: 'premium',
+        name: 'Premium Party',
+        duration: '2 hours',
+        maxKids: 15,
+        coaches: 2,
+        partyRoom: '45 minutes',
+        popular: true,
+        features: [
+            'Up to 15 children',
+            '2 professional coaches',
+            'Full equipment access',
+            'Party room for 45 minutes',
+            'Themed decorations included',
+            'Birthday child gets medal',
+            'Group photo session',
+            'Party games and activities'
+        ],
+        notIncluded: [
+            'Food and drinks',
+            'Professional photography'
+        ]
+    },
+    {
+        id: 'deluxe',
+        name: 'Deluxe Party',
+        duration: '2.5 hours',
+        maxKids: 20,
+        coaches: 3,
+        partyRoom: '1 hour',
+        features: [
+            'Up to 20 children',
+            '3 professional coaches',
+            'Full facility access',
+            'Party room for 1 hour',
+            'Premium decorations & setup',
+            'Birthday child gets trophy',
+            'Professional group photos',
+            'Cake cutting ceremony',
+            'Party favors for all children',
+            'Dedicated party coordinator'
+        ],
+        notIncluded: [
+            'Food and drinks (catering available)'
+        ]
+    }
+]
+
+const staticFAQs = [
+    {
+        question: 'How do I book a Birthday Party?',
+        answer: 'Drop us a message on WhatsApp with your preferred date and time request and we will get back to you as soon as possible to help book your party.'
+    },
+    {
+        question: 'How much does the party cost?',
+        answer: 'Party pricing varies based on the package selected, number of children, and any additional services. Please contact us for a detailed quote tailored to your needs.'
+    },
+    {
+        question: 'Where are you located?',
+        answer: 'We have two locations: Cyberport and Wan Chai. Both venues are fully equipped for amazing birthday parties!'
+    },
+    {
+        question: 'What is the minimum age to attend a party?',
+        answer: 'Children from 3 years old and above can attend our birthday parties. We tailor activities to suit different age groups.'
+    },
+    {
+        question: 'Do I need to bring my own food and drinks?',
+        answer: 'Food and drinks are not included in the base package, but we offer catering services as an add-on. You\'re also welcome to bring your own refreshments.'
+    },
+    {
+        question: 'What if I need to reschedule my party?',
+        answer: 'We understand plans can change. Please contact us as soon as possible if you need to reschedule, and we\'ll do our best to accommodate your new date.'
+    }
+]
 
 const BirthdayPartiesPage = () => {
     const [selectedPackage, setSelectedPackage] = useState('basic')
 
-    const packages = [
-        {
-            id: 'basic',
-            name: 'Basic Party',
-            duration: '1.5 hours',
-            maxKids: 10,
-            coaches: 1,
-            partyRoom: '30 minutes',
-            features: [
-                'Up to 10 children',
-                '1 professional coach',
-                'Basic gymnastics equipment',
-                'Party room for 30 minutes',
-                'Birthday child gets special recognition',
-                'Basic decorations included'
-            ],
-            notIncluded: [
-                'Food and drinks',
-                'Photography',
-                'Custom decorations'
-            ]
-        },
-        {
-            id: 'premium',
-            name: 'Premium Party',
-            duration: '2 hours',
-            maxKids: 15,
-            coaches: 2,
-            partyRoom: '45 minutes',
-            popular: true,
-            features: [
-                'Up to 15 children',
-                '2 professional coaches',
-                'Full equipment access',
-                'Party room for 45 minutes',
-                'Themed decorations included',
-                'Birthday child gets medal',
-                'Group photo session',
-                'Party games and activities'
-            ],
-            notIncluded: [
-                'Food and drinks',
-                'Professional photography'
-            ]
-        },
-        {
-            id: 'deluxe',
-            name: 'Deluxe Party',
-            duration: '2.5 hours',
-            maxKids: 20,
-            coaches: 3,
-            partyRoom: '1 hour',
-            features: [
-                'Up to 20 children',
-                '3 professional coaches',
-                'Full facility access',
-                'Party room for 1 hour',
-                'Premium decorations & setup',
-                'Birthday child gets trophy',
-                'Professional group photos',
-                'Cake cutting ceremony',
-                'Party favors for all children',
-                'Dedicated party coordinator'
-            ],
-            notIncluded: [
-                'Food and drinks (catering available)'
-            ]
-        }
-    ]
+    const { data: dynamicPackages } = useCMSData<PartyPackageData[]>(
+        () => CMSService.getPartyPackages(),
+        [],
+        []
+    )
+
+    const { data: dynamicFAQs } = useCMSData<FAQItemData[]>(
+        () => CMSService.getFAQs('birthday-parties'),
+        [],
+        []
+    )
+
+    const packages = dynamicPackages.length > 0 ? dynamicPackages : staticPackages
+    const faqs = dynamicFAQs.length > 0
+        ? dynamicFAQs.map(f => ({ question: f.question, answer: f.answer }))
+        : staticFAQs
 
     const addOns = [
         {
@@ -514,47 +560,14 @@ const BirthdayPartiesPage = () => {
                         </div>
 
                         <div className="max-w-3xl mx-auto space-y-4">
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">How do I book a Birthday Party?</summary>
-                                <p className="mt-3 text-white/90">
-                                    Drop us a message on WhatsApp with your preferred date and time request and we will get back to you as soon as possible to help book your party.
-                                </p>
-                            </details>
-
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">How much does the party cost?</summary>
-                                <p className="mt-3 text-white/90">
-                                    Party pricing varies based on the package selected, number of children, and any additional services. Please contact us for a detailed quote tailored to your needs.
-                                </p>
-                            </details>
-
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">Where are you located?</summary>
-                                <p className="mt-3 text-white/90">
-                                    We have two locations: Cyberport and Wan Chai. Both venues are fully equipped for amazing birthday parties!
-                                </p>
-                            </details>
-
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">What is the minimum age to attend a party?</summary>
-                                <p className="mt-3 text-white/90">
-                                    Children from 3 years old and above can attend our birthday parties. We tailor activities to suit different age groups.
-                                </p>
-                            </details>
-
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">Do I need to bring my own food and drinks?</summary>
-                                <p className="mt-3 text-white/90">
-                                    Food and drinks are not included in the base package, but we offer catering services as an add-on. You're also welcome to bring your own refreshments.
-                                </p>
-                            </details>
-
-                            <details className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
-                                <summary className="font-semibold text-lg">What if I need to reschedule my party?</summary>
-                                <p className="mt-3 text-white/90">
-                                    We understand plans can change. Please contact us as soon as possible if you need to reschedule, and we'll do our best to accommodate your new date.
-                                </p>
-                            </details>
+                            {faqs.map((faq, index) => (
+                                <details key={index} className="bg-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/20 transition-colors">
+                                    <summary className="font-semibold text-lg">{faq.question}</summary>
+                                    <p className="mt-3 text-white/90">
+                                        {faq.answer}
+                                    </p>
+                                </details>
+                            ))}
                         </div>
                     </div>
                 </section>

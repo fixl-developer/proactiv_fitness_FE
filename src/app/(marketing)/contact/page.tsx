@@ -9,6 +9,8 @@ import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, ContactInfoData } from '@/services/cmsService';
 
 const contactSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -20,8 +22,26 @@ const contactSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactSchema>;
 
+const staticContactInfo: ContactInfoData = {
+    phone: '+1 (234) 567-890',
+    email: 'info@proactivfitness.com',
+    address: '123 Fitness Street\nNew York, NY 10001',
+    hours: 'Mon-Fri: 9:00 AM - 8:00 PM\nSat-Sun: 9:00 AM - 6:00 PM',
+    whatsapp: '',
+    socialLinks: [],
+    mapUrl: '',
+};
+
 export default function ContactPage() {
     const [isLoading, setIsLoading] = useState(false);
+
+    const { data: dynamicContactInfo } = useCMSData<ContactInfoData | null>(
+        () => CMSService.getContactInfo(),
+        null,
+        []
+    );
+
+    const contactInfo = dynamicContactInfo || staticContactInfo;
 
     const {
         register,
@@ -116,10 +136,10 @@ export default function ContactPage() {
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Phone</h3>
                                     <p className="text-gray-600 text-sm mb-2">Give us a call</p>
                                     <a id="marketing-contact-link-tel1234567890"
-                                        href="tel:+1234567890"
+                                        href={`tel:${contactInfo.phone.replace(/[^+\d]/g, '')}`}
                                         className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
                                     >
-                                        +1 (234) 567-890
+                                        {contactInfo.phone}
                                     </a>
                                 </motion.div>
 
@@ -144,10 +164,10 @@ export default function ContactPage() {
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Email</h3>
                                     <p className="text-gray-600 text-sm mb-2">Send us an email</p>
                                     <a id="marketing-contact-link-mailtoinfoproactivfitnesscom"
-                                        href="mailto:info@proactivfitness.com"
+                                        href={`mailto:${contactInfo.email}`}
                                         className="text-purple-600 font-semibold hover:text-purple-700 transition-colors break-all"
                                     >
-                                        info@proactivfitness.com
+                                        {contactInfo.email}
                                     </a>
                                 </motion.div>
 
@@ -174,9 +194,12 @@ export default function ContactPage() {
                                     </h3>
                                     <p className="text-gray-600 text-sm mb-2">Visit our main office</p>
                                     <p className="text-gray-700 text-sm">
-                                        123 Fitness Street
-                                        <br />
-                                        New York, NY 10001
+                                        {contactInfo.address.split('\n').map((line, i, arr) => (
+                                            <span key={i}>
+                                                {line}
+                                                {i < arr.length - 1 && <br />}
+                                            </span>
+                                        ))}
                                     </p>
                                 </motion.div>
 
@@ -201,8 +224,9 @@ export default function ContactPage() {
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Hours</h3>
                                     <p className="text-gray-600 text-sm mb-2">We're open</p>
                                     <div className="text-gray-700 text-sm space-y-1">
-                                        <p>Mon-Fri: 9:00 AM - 8:00 PM</p>
-                                        <p>Sat-Sun: 9:00 AM - 6:00 PM</p>
+                                        {contactInfo.hours.split('\n').map((line, i) => (
+                                            <p key={i}>{line}</p>
+                                        ))}
                                     </div>
                                 </motion.div>
                             </div>

@@ -4,9 +4,20 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { FiMapPin, FiClock, FiPhone, FiMail, FiNavigation, FiWifi, FiShield } from 'react-icons/fi'
 import TeamPreview from '@/components/sections/TeamPreview'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, LocationDetailData } from '@/services/cmsService'
 
-const WanChaiLocationPage = () => {
-    const services = [
+const staticLocationData = {
+    address: 'Unit 456, Wan Chai Tower, 183 Queen\'s Road East, Wan Chai, Hong Kong',
+    phone: '+852 2234 5678',
+    email: 'wanchai@proactivsports.net',
+    transportation: '3 minutes walk from Wan Chai MTR Station (Exit A3)',
+    hours: [
+        { day: 'Mon-Fri', time: '4:00 PM - 8:00 PM' },
+        { day: 'Sat', time: '9:00 AM - 5:00 PM' },
+        { day: 'Sun', time: 'Closed' },
+    ],
+    services: [
         {
             title: 'Gymnastics Programs',
             description: 'Comprehensive gymnastics training for all ages and abilities',
@@ -25,9 +36,8 @@ const WanChaiLocationPage = () => {
             icon: '??',
             programs: ['Standard Packages', 'Premium Parties', 'Custom Themes', 'Group Bookings']
         }
-    ]
-
-    const facilities = [
+    ],
+    facilities: [
         {
             name: 'Training Hall',
             description: 'Large, well-equipped gymnastics training space',
@@ -48,9 +58,8 @@ const WanChaiLocationPage = () => {
             description: 'Flexible space for parties and events',
             features: ['Party setup', 'Audio/visual equipment', 'Catering space', 'Decoration options']
         }
-    ]
-
-    const schedule = [
+    ],
+    schedule: [
         {
             day: 'Monday',
             classes: [
@@ -101,9 +110,8 @@ const WanChaiLocationPage = () => {
                 { time: '3:30 PM - 4:30 PM', program: 'Open Gym', spots: 'Available' }
             ]
         }
-    ]
-
-    const teamMembers = [
+    ],
+    team: [
         {
             name: 'Sarah Wong',
             role: 'Location Manager',
@@ -132,7 +140,39 @@ const WanChaiLocationPage = () => {
             experience: '11+ years',
             image: ''
         }
-    ]
+    ],
+}
+
+const WanChaiLocationPage = () => {
+    const { data: dynamicLocation } = useCMSData<LocationDetailData | null>(
+        () => CMSService.getLocationBySlug('wan-chai'),
+        null,
+        []
+    )
+
+    const locationData = dynamicLocation
+        ? {
+            ...staticLocationData,
+            address: dynamicLocation.address || staticLocationData.address,
+            phone: dynamicLocation.phone || staticLocationData.phone,
+            email: dynamicLocation.email || staticLocationData.email,
+            hours: dynamicLocation.hours?.length ? dynamicLocation.hours : staticLocationData.hours,
+            facilities: dynamicLocation.facilities?.length ? dynamicLocation.facilities : staticLocationData.facilities,
+            schedule: dynamicLocation.schedule?.length
+                ? dynamicLocation.schedule.map(s => ({
+                    day: s.day,
+                    classes: s.slots.map(slot => ({
+                        time: slot.time,
+                        program: slot.program,
+                        spots: slot.spots,
+                    })),
+                }))
+                : staticLocationData.schedule,
+            team: dynamicLocation.team?.length ? dynamicLocation.team : staticLocationData.team,
+        }
+        : staticLocationData
+
+    const { services, facilities, schedule } = locationData
 
     return (
         <div>
@@ -260,7 +300,7 @@ const WanChaiLocationPage = () => {
                                     <FiMapPin className="w-5 h-5 text-secondary-600 mt-1 flex-shrink-0" />
                                     <div>
                                         <div className="font-medium text-gray-900">Address</div>
-                                        <div className="text-gray-600 text-sm">Unit 456, Wan Chai Tower, 183 Queen's Road East, Wan Chai, Hong Kong</div>
+                                        <div className="text-gray-600 text-sm">{locationData.address}</div>
                                     </div>
                                 </div>
 
@@ -268,7 +308,7 @@ const WanChaiLocationPage = () => {
                                     <FiNavigation className="w-5 h-5 text-secondary-600 mt-1 flex-shrink-0" />
                                     <div>
                                         <div className="font-medium text-gray-900">Transportation</div>
-                                        <div className="text-gray-600 text-sm">3 minutes walk from Wan Chai MTR Station (Exit A3)</div>
+                                        <div className="text-gray-600 text-sm">{locationData.transportation}</div>
                                     </div>
                                 </div>
 
@@ -277,9 +317,9 @@ const WanChaiLocationPage = () => {
                                     <div>
                                         <div className="font-medium text-gray-900">Operating Hours</div>
                                         <div className="text-gray-600 text-sm">
-                                            Mon-Fri: 4:00 PM - 8:00 PM<br />
-                                            Sat: 9:00 AM - 5:00 PM<br />
-                                            Sun: Closed
+                                            {locationData.hours.map((h, i) => (
+                                                <span key={i}>{h.day}: {h.time}<br /></span>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -298,11 +338,11 @@ const WanChaiLocationPage = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center space-x-3">
                                         <FiPhone className="w-5 h-5" />
-                                        <span>+852 2234 5678</span>
+                                        <span>{locationData.phone}</span>
                                     </div>
                                     <div className="flex items-center space-x-3">
                                         <FiMail className="w-5 h-5" />
-                                        <span>wanchai@proactivsports.net</span>
+                                        <span>{locationData.email}</span>
                                     </div>
                                 </div>
                                 <Link id="marketing-locations-wan-chai-nav-book-trial-2"
@@ -485,15 +525,15 @@ const WanChaiLocationPage = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center space-x-3">
                                     <FiMapPin className="w-5 h-5 text-secondary-200" />
-                                    <span className="text-secondary-100">Unit 456, Wan Chai Tower, 183 Queen's Road East</span>
+                                    <span className="text-secondary-100">{locationData.address}</span>
                                 </div>
                                 <div className="flex items-center space-x-3">
                                     <FiPhone className="w-5 h-5 text-secondary-200" />
-                                    <span className="text-secondary-100">+852 2234 5678</span>
+                                    <span className="text-secondary-100">{locationData.phone}</span>
                                 </div>
                                 <div className="flex items-center space-x-3">
                                     <FiMail className="w-5 h-5 text-secondary-200" />
-                                    <span className="text-secondary-100">wanchai@proactivsports.net</span>
+                                    <span className="text-secondary-100">{locationData.email}</span>
                                 </div>
                             </div>
                         </motion.div>

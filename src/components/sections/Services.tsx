@@ -4,6 +4,51 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { FiArrowRight, FiStar, FiCheck } from 'react-icons/fi'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, ServiceCardData } from '@/services/cmsService'
+
+const staticServices = [
+    {
+        title: 'GYMNASTICS PROGRAMS',
+        description: 'Comprehensive gymnastics programs designed for schools, bringing professional coaching directly to your educational institution.',
+        features: ['Ages 3-16 Programs', 'Professional Coaches', 'School Integration', 'Progress Tracking'],
+        href: '/locations/wan-chai',
+        image: '/images/services/school-gymnastics.jpg',
+        emoji: '🤸‍♀️',
+        color: 'green',
+        gradient: 'from-green-400 to-green-600'
+    },
+    {
+        title: 'GYMNASTICS CAMPS',
+        description: 'Fun-filled holiday camps that combine skill development with exciting activities and games during school breaks.',
+        features: ['Daily Activities', 'Skill Development', 'Fun Games', 'Professional Supervision'],
+        href: '/camps/gymnastics',
+        image: '/images/services/holiday-camps.jpg',
+        emoji: '🏕️',
+        color: 'red',
+        gradient: 'from-red-400 to-red-600'
+    },
+    {
+        title: 'PRIVATE COACHING',
+        description: 'One-on-one personalized coaching sessions tailored to individual needs and skill levels for accelerated progress.',
+        features: ['Personalized Training', 'Flexible Schedule', 'Individual Attention', 'Rapid Progress'],
+        href: '/private-coaching',
+        image: '/images/services/private-coaching.jpg',
+        emoji: '👨‍🏫',
+        color: 'blue',
+        gradient: 'from-blue-400 to-blue-600'
+    },
+    {
+        title: 'BIRTHDAY PARTIES',
+        description: 'Unforgettable birthday celebrations with gymnastics activities, games, and professional hosting for memorable experiences.',
+        features: ['Party Hosting', 'Gymnastics Fun', 'Games & Activities', 'Memorable Experience'],
+        href: '/birthday-parties',
+        image: '/images/services/birthday-parties.jpg',
+        emoji: '🎉',
+        color: 'darkblue',
+        gradient: 'from-blue-800 to-blue-900'
+    }
+]
 
 const Services = () => {
     const [flippedCard, setFlippedCard] = useState<number | null>(null)
@@ -23,48 +68,24 @@ const Services = () => {
         setParticles(generatedParticles)
     }, [])
 
-    const services = [
-        {
-            title: 'GYMNASTICS PROGRAMS',
-            description: 'Comprehensive gymnastics programs designed for schools, bringing professional coaching directly to your educational institution.',
-            features: ['Ages 3-16 Programs', 'Professional Coaches', 'School Integration', 'Progress Tracking'],
-            href: '/locations/wan-chai',
-            image: '/images/services/school-gymnastics.jpg',
-            emoji: '🤸‍♀️',
-            color: 'green',
-            gradient: 'from-green-400 to-green-600'
-        },
-        {
-            title: 'GYMNASTICS CAMPS',
-            description: 'Fun-filled holiday camps that combine skill development with exciting activities and games during school breaks.',
-            features: ['Daily Activities', 'Skill Development', 'Fun Games', 'Professional Supervision'],
-            href: '/camps/gymnastics',
-            image: '/images/services/holiday-camps.jpg',
-            emoji: '🏕️',
-            color: 'red',
-            gradient: 'from-red-400 to-red-600'
-        },
-        {
-            title: 'PRIVATE COACHING',
-            description: 'One-on-one personalized coaching sessions tailored to individual needs and skill levels for accelerated progress.',
-            features: ['Personalized Training', 'Flexible Schedule', 'Individual Attention', 'Rapid Progress'],
-            href: '/private-coaching',
-            image: '/images/services/private-coaching.jpg',
-            emoji: '👨‍🏫',
-            color: 'blue',
-            gradient: 'from-blue-400 to-blue-600'
-        },
-        {
-            title: 'BIRTHDAY PARTIES',
-            description: 'Unforgettable birthday celebrations with gymnastics activities, games, and professional hosting for memorable experiences.',
-            features: ['Party Hosting', 'Gymnastics Fun', 'Games & Activities', 'Memorable Experience'],
-            href: '/birthday-parties',
-            image: '/images/services/birthday-parties.jpg',
-            emoji: '🎉',
-            color: 'darkblue',
-            gradient: 'from-blue-800 to-blue-900'
-        }
-    ]
+    const { data: dynamicServices } = useCMSData<ServiceCardData[]>(
+        () => CMSService.getServices(),
+        [],
+        []
+    )
+
+    const services = dynamicServices.length > 0
+        ? dynamicServices.map(s => ({
+            title: s.title,
+            description: s.description,
+            features: s.features,
+            href: s.href,
+            image: s.image,
+            emoji: s.emoji,
+            color: s.color,
+            gradient: s.gradient,
+        }))
+        : staticServices
 
     // Ripple effect
     const createRipple = (e: React.MouseEvent<HTMLDivElement>, index: number) => {

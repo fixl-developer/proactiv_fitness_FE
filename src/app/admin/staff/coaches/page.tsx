@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { coachAdminService, CoachListItem, CreateCoachPayload, CoachStats } from '@/services/modules/coach-admin.service'
+import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 
 // ==================== FALLBACK DATA ====================
@@ -84,13 +85,63 @@ export default function CoachesPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
 
+    // Location & current user state
+    const [locations, setLocations] = useState<any[]>([])
+    const [currentUser, setCurrentUser] = useState<any>(null)
+
     // Form state
     const [formData, setFormData] = useState<CreateCoachPayload>({
         firstName: '', lastName: '', email: '', password: '',
         phone: '', specializations: [], skills: [],
-        experienceYears: 0, maxHoursPerWeek: 40
+        experienceYears: 0, maxHoursPerWeek: 40,
+        locationId: '', organizationId: ''
     })
     const [editFormData, setEditFormData] = useState<any>({})
+
+    // ==================== LOAD CURRENT USER & LOCATIONS ====================
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('user') || localStorage.getItem('currentUser')
+            if (stored) {
+                const parsed = JSON.parse(stored)
+                const rawRole = typeof parsed.role === 'object' ? parsed.role?.name : parsed.role
+                parsed.role = rawRole?.toUpperCase?.() || ''
+                setCurrentUser(parsed)
+            }
+        } catch { /* ignore */ }
+    }, [])
+
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!currentUser) return
+            try {
+                const params: Record<string, string> = {}
+
+                if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.organizationId) {
+                    params.businessUnitId = currentUser.organizationId
+                } else if (currentUser.role === 'FRANCHISE_OWNER' && currentUser.organizationId) {
+                    params.businessUnitId = currentUser.organizationId
+                }
+
+                const data = await apiClient.get<any>('/locations', { params })
+                const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
+                setLocations(list)
+
+                // LOCATION_MANAGER: auto-assign their location
+                if (currentUser.role === 'LOCATION_MANAGER' && currentUser.locationId) {
+                    setFormData(prev => ({
+                        ...prev,
+                        locationId: currentUser.locationId,
+                        organizationId: currentUser.organizationId || ''
+                    }))
+                }
+            } catch {
+                setLocations([])
+            }
+        }
+        fetchLocations()
+    }, [currentUser])
 
     // ==================== DATA FETCHING ====================
 
@@ -466,6 +517,34 @@ export default function CoachesPage() {
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
                                     <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+1-555-0100" />
+                                </div>
+
+                                {/* Location Assignment */}
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                        Assign to Location <span className="text-red-500">*</span>
+                                    </label>
+                                    {currentUser?.role === 'LOCATION_MANAGER' ? (
+                                        <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm">
+                                            {currentUser?.locationName || 'Your location (auto-assigned)'}
+                                        </div>
+                                    ) : (
+                                        <select
+                                            value={formData.locationId || ''}
+                                            onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        >
+                                            <option value="">Select Location</option>
+                                            {locations.map((loc: any) => (
+                                                <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                                                    {loc.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {currentUser?.role === 'LOCATION_MANAGER' && (
+                                        <p className="text-xs text-gray-400 mt-1">Coach will be assigned to your location automatically</p>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">

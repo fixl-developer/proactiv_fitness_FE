@@ -6,9 +6,18 @@ import Image from 'next/image'
 import { FiMapPin, FiClock, FiPhone, FiMail, FiTruck, FiWifi, FiShield, FiStar, FiArrowRight } from 'react-icons/fi'
 import TeamPreview from '@/components/sections/TeamPreview'
 import Services from '@/components/sections/Services'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, LocationDetailData } from '@/services/cmsService'
 
-const CyberportLocationPage = () => {
-    const facilities = [
+const staticLocationData = {
+    address: 'Shop 123, Cyberport 3, 100 Cyberport Road, Cyberport, Hong Kong',
+    phone: '+852 2234 5678',
+    email: 'cyberport@proactivsports.net',
+    hours: [
+        { day: 'Mon-Fri', time: '3:30PM-8:30PM' },
+        { day: 'Sat-Sun', time: '9:00AM-6:00PM' },
+    ],
+    facilities: [
         {
             name: 'Main Gymnasium',
             description: 'Spacious training area with professional gymnastics equipment',
@@ -29,9 +38,8 @@ const CyberportLocationPage = () => {
             description: 'Dedicated space for birthday celebrations',
             features: ['Tables and chairs', 'Decorations setup', 'Sound system', 'Kitchen access']
         }
-    ]
-
-    const schedule = [
+    ],
+    schedule: [
         {
             day: 'Monday',
             classes: [
@@ -89,7 +97,38 @@ const CyberportLocationPage = () => {
                 { time: '11:30 AM - 12:30 PM', program: 'Intermediate Skills', spots: 'Available' }
             ]
         }
-    ]
+    ],
+}
+
+const CyberportLocationPage = () => {
+    const { data: dynamicLocation } = useCMSData<LocationDetailData | null>(
+        () => CMSService.getLocationBySlug('cyberport'),
+        null,
+        []
+    )
+
+    const locationData = dynamicLocation
+        ? {
+            ...staticLocationData,
+            address: dynamicLocation.address || staticLocationData.address,
+            phone: dynamicLocation.phone || staticLocationData.phone,
+            email: dynamicLocation.email || staticLocationData.email,
+            hours: dynamicLocation.hours?.length ? dynamicLocation.hours : staticLocationData.hours,
+            facilities: dynamicLocation.facilities?.length ? dynamicLocation.facilities : staticLocationData.facilities,
+            schedule: dynamicLocation.schedule?.length
+                ? dynamicLocation.schedule.map(s => ({
+                    day: s.day,
+                    classes: s.slots.map(slot => ({
+                        time: slot.time,
+                        program: slot.program,
+                        spots: slot.spots,
+                    })),
+                }))
+                : staticLocationData.schedule,
+        }
+        : staticLocationData
+
+    const { facilities, schedule } = locationData
 
     return (
         <div>
@@ -398,7 +437,7 @@ const CyberportLocationPage = () => {
                                     </div>
                                     <div>
                                         <div className="font-semibold text-gray-900">Address</div>
-                                        <div className="text-gray-600 text-sm">Shop 123, Cyberport 3, 100 Cyberport Road, Cyberport, Hong Kong</div>
+                                        <div className="text-gray-600 text-sm">{locationData.address}</div>
                                     </div>
                                 </motion.div>
 
@@ -805,9 +844,7 @@ const CyberportLocationPage = () => {
                             </div>
                             <h3 className="font-semibold mb-2">Address</h3>
                             <p className="text-primary-100 text-sm">
-                                Shop 123, Cyberport 3<br />
-                                100 Cyberport Road<br />
-                                Cyberport, Hong Kong
+                                {locationData.address}
                             </p>
                         </motion.div>
 
@@ -823,8 +860,8 @@ const CyberportLocationPage = () => {
                             </div>
                             <h3 className="font-semibold mb-2">Phone</h3>
                             <p className="text-primary-100 text-sm">
-                                +852 2234 5678<br />
-                                <span className="text-xs">Mon-Fri: 9AM-8PM<br />Sat-Sun: 9AM-6PM</span>
+                                {locationData.phone}<br />
+                                <span className="text-xs">{locationData.hours.map(h => `${h.day}: ${h.time}`).join(' | ')}</span>
                             </p>
                         </motion.div>
 
@@ -840,7 +877,7 @@ const CyberportLocationPage = () => {
                             </div>
                             <h3 className="font-semibold mb-2">Email</h3>
                             <p className="text-primary-100 text-sm">
-                                cyberport@proactivsports.net<br />
+                                {locationData.email}<br />
                                 <span className="text-xs">We reply within 24 hours</span>
                             </p>
                         </motion.div>
@@ -857,8 +894,9 @@ const CyberportLocationPage = () => {
                             </div>
                             <h3 className="font-semibold mb-2">Hours</h3>
                             <p className="text-primary-100 text-sm">
-                                Mon-Fri: 3:30PM-8:30PM<br />
-                                Sat-Sun: 9:00AM-6:00PM<br />
+                                {locationData.hours.map((h, i) => (
+                                    <span key={i}>{h.day}: {h.time}<br /></span>
+                                ))}
                                 <span className="text-xs">Holiday hours may vary</span>
                             </p>
                         </motion.div>
