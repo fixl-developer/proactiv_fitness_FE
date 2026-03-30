@@ -122,20 +122,12 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
                 className={`fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 transition-transform duration-300 z-40 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                     } lg:translate-x-0`}
             >
-                {/* Partner Type Badge */}
-                <div className={`mx-4 mt-4 mb-2 px-3 py-2 rounded-lg ${config.bgColor}`}>
-                    <div className="flex items-center gap-2">
-                        <PartnerIcon className={`w-4 h-4 ${config.color}`} />
-                        <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
-                    </div>
-                </div>
-
-                <nav className="p-4 space-y-2">
+                <nav className="p-2 space-y-1">
                     {navigation.map((item) => (
                         <Link id="partner-layout-nav"
                             key={item.name}
                             href={item.href}
-                            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
+                            className="flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                         >
                             <item.icon className="w-5 h-5" />
                             <span className="font-medium">{item.name}</span>
