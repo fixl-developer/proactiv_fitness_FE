@@ -651,10 +651,27 @@ const ParentChildrenPage = () => {
                                                             )}
                                                         </Button>
                                                         {aiReportResult[childId] && (
-                                                            <div className="mt-2 p-2 bg-white rounded border border-indigo-100">
+                                                            <div className="mt-2 p-2 bg-white rounded border border-indigo-100 space-y-1">
+                                                                {aiReportResult[childId].overallGrade && (
+                                                                    <p className="text-sm font-bold text-indigo-800">
+                                                                        Overall Grade: {aiReportResult[childId].overallGrade}
+                                                                        {aiReportResult[childId].termName && <span className="font-normal text-xs ml-2">({aiReportResult[childId].termName})</span>}
+                                                                    </p>
+                                                                )}
                                                                 <p className="text-xs text-indigo-800">
-                                                                    {aiReportResult[childId].summary || aiReportResult[childId].report || aiReportResult[childId].message || JSON.stringify(aiReportResult[childId])}
+                                                                    {aiReportResult[childId].parentSummary || aiReportResult[childId].summary || aiReportResult[childId].coachComments || ''}
                                                                 </p>
+                                                                {Array.isArray(aiReportResult[childId].categories) && aiReportResult[childId].categories.map((cat: any, ci: number) => (
+                                                                    <p key={ci} className="text-xs text-gray-600">{cat.name}: {cat.grade} - {cat.comments}</p>
+                                                                ))}
+                                                                {Array.isArray(aiReportResult[childId].nextTermGoals) && aiReportResult[childId].nextTermGoals.length > 0 && (
+                                                                    <div className="mt-1">
+                                                                        <p className="text-xs font-semibold text-indigo-700">Next Term Goals:</p>
+                                                                        {aiReportResult[childId].nextTermGoals.map((goal: string, gi: number) => (
+                                                                            <p key={gi} className="text-xs text-gray-600">- {goal}</p>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                         {aiReportError[childId] && (
@@ -692,13 +709,21 @@ const ParentChildrenPage = () => {
                                                             )}
                                                         </Button>
                                                         {aiReadinessResult[childId] && (
-                                                            <div className="mt-2 p-2 bg-white rounded border border-purple-100">
+                                                            <div className="mt-2 p-2 bg-white rounded border border-purple-100 space-y-1">
                                                                 <p className="text-xs text-purple-800">
-                                                                    {aiReadinessResult[childId].readiness !== undefined && (
-                                                                        <span className="font-semibold">Readiness: {aiReadinessResult[childId].readiness}% - </span>
+                                                                    {aiReadinessResult[childId].overallScore !== undefined && (
+                                                                        <span className="font-semibold">Readiness: {aiReadinessResult[childId].overallScore}% - </span>
                                                                     )}
-                                                                    {aiReadinessResult[childId].summary || aiReadinessResult[childId].assessment || aiReadinessResult[childId].message || JSON.stringify(aiReadinessResult[childId])}
+                                                                    {aiReadinessResult[childId].readyForLevel && (
+                                                                        <span>Level: {aiReadinessResult[childId].readyForLevel}</span>
+                                                                    )}
                                                                 </p>
+                                                                {Array.isArray(aiReadinessResult[childId].categories) && aiReadinessResult[childId].categories.map((cat: any, ci: number) => (
+                                                                    <p key={ci} className="text-xs text-gray-600">{cat.name}: {cat.score}% ({cat.status})</p>
+                                                                ))}
+                                                                {Array.isArray(aiReadinessResult[childId].areasToImprove) && aiReadinessResult[childId].areasToImprove.length > 0 && (
+                                                                    <p className="text-xs text-purple-600 mt-1">Improve: {aiReadinessResult[childId].areasToImprove.join(', ')}</p>
+                                                                )}
                                                             </div>
                                                         )}
                                                         {aiReadinessError[childId] && (

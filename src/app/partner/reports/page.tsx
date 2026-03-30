@@ -8,11 +8,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     FileText, Download, Calendar, Eye, Plus,
     BarChart3, PieChart, Users, DollarSign,
-    FileCheck, Clock, X, Loader2, Trash2, AlertCircle
+    FileCheck, Clock, X, Loader2, Trash2, AlertCircle,
+    Brain, RefreshCw, Sparkles, TrendingUp, Zap
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { usePartnerConfig } from '@/contexts/PartnerContext'
+import { apiClient } from '@/services/api/client'
 
 interface ReportSummary {
     totalReports: number
@@ -120,6 +122,17 @@ export default function PartnerReportsPage() {
     const [showGenerateModal, setShowGenerateModal] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [deletingReportId, setDeletingReportId] = useState<string | null>(null)
+    const [aiReportInsights, setAiReportInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiReportInsights = async () => {
+        setAiLoading(true)
+        try {
+            const result = await apiClient.get<any>('/advanced-analytics/insights')
+            setAiReportInsights(result?.data)
+        } catch (err) { console.error('AI report insights unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
 
     // Form state
     const [formData, setFormData] = useState({
@@ -159,6 +172,7 @@ export default function PartnerReportsPage() {
             return
         }
         fetchReports(selectedPeriod)
+        loadAiReportInsights()
     }, [isAuthenticated, router, selectedPeriod, fetchReports])
 
     const handlePeriodChange = (period: string) => {
@@ -422,6 +436,56 @@ export default function PartnerReportsPage() {
                     </button>
                 ))}
             </div>
+
+            {/* AI Report Insights */}
+            <Card className="border-purple-200">
+                <CardContent className="pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <span className="font-semibold text-sm">AI Report Insights</span>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiReportInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    {aiLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                            <p className="text-xs text-gray-500">AI analyzing report data...</p>
+                        </div>
+                    ) : aiReportInsights ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {(aiReportInsights.insights || []).slice(0, 3).map((insight: any, idx: number) => (
+                                <div key={idx} className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-1 mb-1">
+                                        {idx === 0 ? <TrendingUp className="w-3 h-3 text-purple-600" /> :
+                                         idx === 1 ? <Sparkles className="w-3 h-3 text-green-600" /> :
+                                         <Zap className="w-3 h-3 text-amber-600" />}
+                                        <span className="text-xs font-semibold text-purple-700">{insight.title || `Insight ${idx + 1}`}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-700">{insight.description || insight.action || ''}</p>
+                                    {insight.priority && <Badge className="mt-1 text-xs bg-purple-100 text-purple-700">{insight.priority}</Badge>}
+                                </div>
+                            ))}
+                            {(aiReportInsights.insights || []).length === 0 && aiReportInsights.keyMetricsSummary && (
+                                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 col-span-3">
+                                    <p className="text-sm text-purple-800">{aiReportInsights.keyMetricsSummary}</p>
+                                </div>
+                            )}
+                            {aiReportInsights.immediateActions?.map((action: string, idx: number) => (
+                                <div key={`action-${idx}`} className="p-2 bg-amber-50 rounded-lg border border-amber-200 flex items-start gap-2">
+                                    <Zap className="w-3 h-3 text-amber-600 mt-0.5 flex-shrink-0" />
+                                    <p className="text-xs text-amber-800">{action}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400">AI insights unavailable. <button onClick={loadAiReportInsights} className="text-purple-600 hover:underline">Generate</button></p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Quick Report Templates */}
             <Card>

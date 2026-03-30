@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import PartnerAnalyticsService from '@/services/modules/partner-analytics.service'
 import { motion } from 'framer-motion'
-import { AlertCircle, Star, CheckCircle, AlertTriangle, Award, TrendingUp, Target, RefreshCw } from 'lucide-react'
+import { AlertCircle, Star, CheckCircle, AlertTriangle, Award, TrendingUp, Target, RefreshCw, Brain, Loader2, Sparkles, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { apiClient } from '@/services/api/client'
 
 export default function Performance() {
     const router = useRouter()
@@ -16,6 +18,22 @@ export default function Performance() {
     const [metrics, setMetrics] = useState<any>(null)
     const [goals, setGoals] = useState<any[]>([])
     const [refreshing, setRefreshing] = useState(false)
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiPerformanceInsights = async () => {
+        setAiLoading(true)
+        try {
+            const [predictionsRes, insightsRes] = await Promise.allSettled([
+                apiClient.get<any>('/advanced-analytics/predictive/partner-performance'),
+                apiClient.get<any>('/advanced-analytics/insights'),
+            ])
+            const predictions = predictionsRes.status === 'fulfilled' ? predictionsRes.value?.data : null
+            const insights = insightsRes.status === 'fulfilled' ? insightsRes.value?.data : null
+            setAiInsights({ predictions, insights })
+        } catch (err) { console.error('AI unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -24,6 +42,7 @@ export default function Performance() {
         }
 
         loadPerformance()
+        loadAiPerformanceInsights()
     }, [isAuthenticated, router, user])
 
     const loadPerformance = async () => {
@@ -232,6 +251,72 @@ export default function Performance() {
                         </motion.div>
                     </>
                 )}
+
+                {/* AI Performance Insights */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                    <Card className="border-purple-200">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Brain className="w-5 h-5 text-purple-600" />
+                                    <CardTitle className="text-base">AI Performance Coach</CardTitle>
+                                    <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                                </div>
+                                <button onClick={loadAiPerformanceInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                    <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {aiLoading ? (
+                                <div className="flex items-center justify-center py-6 gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                    <p className="text-sm text-gray-500">AI analyzing performance...</p>
+                                </div>
+                            ) : aiInsights ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <TrendingUp className="w-4 h-4 text-blue-600" />
+                                            <span className="text-xs font-semibold text-blue-700 uppercase">Growth Forecast</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-blue-900">{aiInsights.predictions?.predictions?.enrollmentGrowth || '--'}%</p>
+                                        <p className="text-xs text-blue-600 mt-1">Predicted enrollment growth</p>
+                                    </div>
+                                    <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Sparkles className="w-4 h-4 text-green-600" />
+                                            <span className="text-xs font-semibold text-green-700 uppercase">Retention</span>
+                                        </div>
+                                        <p className="text-2xl font-bold text-green-900">{aiInsights.predictions?.predictions?.studentRetention || '--'}%</p>
+                                        <p className="text-xs text-green-600 mt-1">Student retention prediction</p>
+                                    </div>
+                                    <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Brain className="w-4 h-4 text-purple-600" />
+                                            <span className="text-xs font-semibold text-purple-700 uppercase">AI Advice</span>
+                                        </div>
+                                        <p className="text-sm font-medium text-purple-900">
+                                            {aiInsights.predictions?.reasoning || aiInsights.insights?.keyMetricsSummary || 'AI analyzing performance patterns...'}
+                                        </p>
+                                    </div>
+                                    {aiInsights.predictions?.actionItems?.map((action: string, idx: number) => (
+                                        <div key={idx} className="p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start gap-2">
+                                            <Zap className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                            <p className="text-sm text-amber-800">{action}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-4">
+                                    <Brain className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">AI performance analysis unavailable</p>
+                                    <button onClick={loadAiPerformanceInsights} className="mt-1 text-xs text-purple-600 hover:underline">Retry</button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </div>
         </div>
     )

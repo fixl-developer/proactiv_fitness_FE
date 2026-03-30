@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import CommissionService from '@/services/modules/commission.service'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, Plus, DollarSign, CheckCircle, Clock, TrendingUp, Download, FileText, X, CreditCard, Building2, Smartphone, Banknote, ArrowRight } from 'lucide-react'
+import { AlertCircle, Plus, DollarSign, CheckCircle, Clock, TrendingUp, Download, FileText, X, CreditCard, Building2, Smartphone, Banknote, ArrowRight, Brain, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { apiClient } from '@/services/api/client'
 
 const PAYMENT_METHODS = [
     { value: 'bank_transfer', label: 'Bank Transfer', icon: Building2, description: 'Direct deposit to your bank account' },
@@ -39,7 +41,19 @@ export default function Commissions() {
     const [payoutError, setPayoutError] = useState<string | null>(null)
     const [payoutSuccess, setPayoutSuccess] = useState<string | null>(null)
 
+    const [aiForecast, setAiForecast] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
     const partnerId = user?.id || 'partner-1'
+
+    const loadAiRevenueForecast = async () => {
+        setAiLoading(true)
+        try {
+            const result = await apiClient.get<any>('/advanced-analytics/predictive/partner-revenue')
+            setAiForecast(result?.data)
+        } catch (err) { console.error('AI revenue forecast unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
 
     const loadData = useCallback(async () => {
         try {
@@ -67,6 +81,7 @@ export default function Commissions() {
             return
         }
         loadData()
+        loadAiRevenueForecast()
     }, [isAuthenticated, router, loadData])
 
     const openPayoutModal = () => {
@@ -265,6 +280,48 @@ export default function Commissions() {
                         </motion.div>
                     ))}
                 </div>
+
+                {/* AI Revenue Forecast */}
+                <Card className="border-purple-200">
+                    <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <span className="font-semibold text-sm">AI Revenue Forecast</span>
+                                <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                            </div>
+                            <button onClick={loadAiRevenueForecast} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                        {aiLoading ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                                <p className="text-xs text-gray-500">Forecasting revenue...</p>
+                            </div>
+                        ) : aiForecast ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                                    <p className="text-xs font-semibold text-green-700 uppercase flex items-center gap-1"><DollarSign className="w-3 h-3" /> Revenue Projection</p>
+                                    <p className="text-xl font-bold text-green-900 mt-1">
+                                        {aiForecast.predictions?.revenueProjection ? `$${(aiForecast.predictions.revenueProjection / 1000).toFixed(1)}K` : '--'}
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <p className="text-xs font-semibold text-blue-700 uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Growth</p>
+                                    <p className="text-xl font-bold text-blue-900 mt-1">{aiForecast.predictions?.enrollmentGrowth || '--'}%</p>
+                                </div>
+                                <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200 sm:col-span-2">
+                                    <p className="text-xs font-semibold text-purple-700 uppercase flex items-center gap-1"><Sparkles className="w-3 h-3" /> AI Insight</p>
+                                    <p className="text-sm text-purple-800 mt-1">{aiForecast.reasoning || 'AI analyzing commission patterns...'}</p>
+                                    <Badge className="mt-1 bg-purple-100 text-purple-700 text-xs">{aiForecast.aiPowered ? 'AI Active' : 'Fallback'}</Badge>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-400">AI forecast unavailable. <button onClick={loadAiRevenueForecast} className="text-purple-600 hover:underline">Retry</button></p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Commission History Table */}
                 {loading ? (

@@ -181,20 +181,23 @@ How can I help you today?`
 
             const result = await response.json()
 
-            if (result.success) {
+            if (result.success && result.data) {
+                const data = result.data
                 // Start streaming animation
-                animateText(result.response, aiMessageId, result.suggestions)
-                setConversationHistory(result.conversationHistory)
+                animateText(data.response, aiMessageId, data.suggestions)
+                setConversationHistory(data.conversationHistory || [])
 
                 // Check if user wants to book
-                if (result.intent && (result.intent.intent === 'book_trial' || result.intent.intent === 'book_assessment')) {
+                const intent = data.intent || data.bookingIntent
+                if (intent && (intent === 'book_trial' || intent === 'book_assessment' || intent.intent === 'book_trial' || intent.intent === 'book_assessment')) {
+                    const intentData = typeof intent === 'object' ? intent : { intent }
                     setIsBookingMode(true)
                     setBookingData({
-                        type: result.intent.intent === 'book_trial' ? 'trial' : 'assessment',
-                        childName: result.intent.childName || '',
-                        childAge: result.intent.childAge || '',
-                        program: result.intent.program || '',
-                        location: result.intent.location || '',
+                        type: (intentData.intent === 'book_trial' || intent === 'book_trial') ? 'trial' : 'assessment',
+                        childName: intentData.childName || '',
+                        childAge: intentData.childAge || '',
+                        program: intentData.program || '',
+                        location: intentData.location || '',
                         parentName: '',
                         parentEmail: '',
                         parentPhone: '',
@@ -205,7 +208,7 @@ How can I help you today?`
                     setBookingStep(1)
                 }
             } else {
-                throw new Error(result.message)
+                throw new Error(result.message || 'Failed to get response')
             }
         } catch (error) {
             console.error('Chat error:', error)
@@ -240,11 +243,11 @@ How can I help you today?`
 
             const result = await response.json()
 
-            if (result.success) {
+            if (result.success && result.data) {
                 const confirmationMessage: Message = {
                     id: Date.now().toString(),
                     type: 'ai',
-                    content: result.confirmationMessage,
+                    content: result.data.confirmationMessage,
                     timestamp: new Date()
                 }
                 setMessages(prev => [...prev, confirmationMessage])
@@ -259,7 +262,7 @@ How can I help you today?`
             const errorMessage: Message = {
                 id: Date.now().toString(),
                 type: 'ai',
-                content: `Sorry, there was an error with your booking: ${error.message}. Please try again or contact us directly.`,
+                content: `Sorry, there was an error with your booking: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or contact us directly.`,
                 timestamp: new Date()
             }
             setMessages(prev => [...prev, errorMessage])

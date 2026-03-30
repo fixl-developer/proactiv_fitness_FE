@@ -439,6 +439,9 @@ const CoachDashboard = () => {
                             <Brain className="w-5 h-5 text-purple-600" />
                             <CardTitle>AI Coaching Insights</CardTitle>
                             <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                            {aiInsights && !aiInsights.aiPowered && (
+                                <Badge className="bg-yellow-100 text-yellow-700 text-xs">Fallback</Badge>
+                            )}
                         </div>
                         <Button variant="outline" size="sm" onClick={loadAiInsights} disabled={aiLoading}>
                             <RefreshCw className={`w-4 h-4 mr-1 ${aiLoading ? 'animate-spin' : ''}`} />
@@ -456,13 +459,17 @@ const CoachDashboard = () => {
                         <div className="space-y-4">
                             {/* Overall Assessment */}
                             {aiInsights.overallAssessment && (
-                                <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+                                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
                                     <div className="flex items-start gap-2">
-                                        <Sparkles className="w-4 h-4 text-purple-600 mt-0.5" />
+                                        <Sparkles className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-purple-900">{aiInsights.overallAssessment}</p>
+                                            <p className="text-sm font-semibold text-purple-900 mb-1">Overall Assessment</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed">{aiInsights.overallAssessment}</p>
                                             {aiInsights.focusArea && (
-                                                <p className="text-xs text-purple-600 mt-1">Focus Area: {aiInsights.focusArea}</p>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <Target className="w-3 h-3 text-purple-600" />
+                                                    <span className="text-xs font-medium text-purple-700">Focus Area: {aiInsights.focusArea}</span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -472,28 +479,50 @@ const CoachDashboard = () => {
                             {/* AI Recommendations */}
                             {aiInsights.recommendations?.length > 0 ? (
                                 <div className="space-y-3">
-                                    <h4 className="text-sm font-medium text-gray-700">AI Recommendations</h4>
-                                    {aiInsights.recommendations.slice(0, 4).map((rec: any, index: number) => (
+                                    <h4 className="text-sm font-semibold text-gray-700">AI Recommendations</h4>
+                                    {aiInsights.recommendations.slice(0, 6).map((rec: any, index: number) => (
                                         <motion.div
                                             key={index}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
-                                            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                                            className="p-4 bg-gray-50 rounded-lg border border-gray-100"
                                         >
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                                                rec.priority === 1 ? 'bg-red-500' : rec.priority === 2 ? 'bg-orange-500' : 'bg-blue-500'
-                                            }`}>
-                                                {rec.priority || index + 1}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">{rec.skill || rec.suggestion || rec}</p>
-                                                {rec.suggestion && rec.skill && (
-                                                    <p className="text-xs text-gray-600 mt-1">{rec.suggestion}</p>
-                                                )}
-                                                {rec.level && (
-                                                    <Badge className="mt-1 bg-gray-100 text-gray-600 text-xs">{rec.level}</Badge>
-                                                )}
+                                            <div className="flex items-start gap-3">
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${
+                                                    (rec.priority || index + 1) <= 1 ? 'bg-red-500' : (rec.priority || index + 1) <= 2 ? 'bg-orange-500' : (rec.priority || index + 1) <= 3 ? 'bg-blue-500' : 'bg-gray-400'
+                                                }`}>
+                                                    P{rec.priority || index + 1}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="text-sm font-medium text-gray-900">{rec.skill || rec.suggestion || rec}</p>
+                                                        {rec.level && (
+                                                            <Badge className="bg-blue-100 text-blue-700 text-xs">{rec.level}</Badge>
+                                                        )}
+                                                    </div>
+                                                    {rec.suggestion && rec.skill && (
+                                                        <p className="text-xs text-gray-600 mt-1">{rec.suggestion}</p>
+                                                    )}
+                                                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                                        {rec.estimatedTimeWeeks && (
+                                                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" /> {rec.estimatedTimeWeeks} weeks
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {rec.drills && rec.drills.length > 0 && (
+                                                        <div className="mt-2 space-y-1">
+                                                            <p className="text-xs font-medium text-gray-500">Recommended Drills:</p>
+                                                            {rec.drills.map((drill: string, di: number) => (
+                                                                <div key={di} className="flex items-center gap-1.5">
+                                                                    <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+                                                                    <span className="text-xs text-gray-600">{drill}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -536,6 +565,7 @@ const CoachDashboard = () => {
 function CoachAITools() {
     const [studentId, setStudentId] = useState('')
     const [videoUrl, setVideoUrl] = useState('')
+    const [exerciseType, setExerciseType] = useState('')
     const [loading, setLoading] = useState<string | null>(null)
     const [results, setResults] = useState<Record<string, any>>({})
 
@@ -543,9 +573,10 @@ function CoachAITools() {
         setLoading(key)
         try {
             const res = await fn()
-            setResults(prev => ({ ...prev, [key]: { success: true, data: res?.data || res } }))
+            const data = res?.data || res
+            setResults(prev => ({ ...prev, [key]: { success: true, data } }))
         } catch {
-            setResults(prev => ({ ...prev, [key]: { success: false, data: { message: 'AI service unavailable right now' } } }))
+            setResults(prev => ({ ...prev, [key]: { success: false, data: null } }))
         } finally { setLoading(null) }
     }
 
@@ -556,16 +587,158 @@ function CoachAITools() {
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                     <Video className="w-4 h-4 text-blue-600" /> AI Video Analysis
                 </h4>
-                <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video URL" className="w-full px-3 py-2 border rounded-lg text-sm" />
                 <input value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Student ID" className="w-full px-3 py-2 border rounded-lg text-sm" />
-                <button onClick={() => callAI('video', () => apiClient.post('/ai-video-analysis/analyze-video', { videoUrl, studentId }))} disabled={loading === 'video'} className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors">
+                <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Video URL" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <input value={exerciseType} onChange={e => setExerciseType(e.target.value)} placeholder="Exercise type (e.g. cartwheel, handstand)" className="w-full px-3 py-2 border rounded-lg text-sm" />
+                <button
+                    onClick={() => callAI('video', () => apiClient.post('/ai-video-analysis/analyze-video', { videoUrl, studentId, exerciseType: exerciseType || 'general' }))}
+                    disabled={loading === 'video' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'video' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} Analyze Form
                 </button>
-                <button onClick={() => callAI('videoHistory', () => apiClient.get(`/ai-video-analysis/student/${studentId || 'default'}/history`))} disabled={loading === 'videoHistory'} className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors">
+                <button
+                    onClick={() => callAI('videoHistory', () => apiClient.get(`/ai-video-analysis/student/${studentId}/history`))}
+                    disabled={loading === 'videoHistory' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-medium text-blue-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'videoHistory' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />} View History
                 </button>
-                {results.video && <div className="p-3 bg-blue-50 rounded-lg text-xs"><p className="font-medium text-blue-700 mb-1">Analysis:</p><p>{results.video.data?.formScore ? `Form Score: ${results.video.data.formScore}` : results.video.data?.message || JSON.stringify(results.video.data).slice(0, 150)}</p></div>}
-                {results.videoHistory && <div className="p-3 bg-blue-50 rounded-lg text-xs"><p className="font-medium text-blue-700 mb-1">History:</p><p>{Array.isArray(results.videoHistory.data) ? `${results.videoHistory.data.length} analyses found` : results.videoHistory.data?.message || 'No history'}</p></div>}
+
+                {/* Video Analysis Results - Full Detail */}
+                {results.video && (
+                    <div className="space-y-2">
+                        {results.video.success ? (() => {
+                            const v = results.video.data
+                            const analysis = v?.analysis || v?.formAnalysis || {}
+                            const injury = v?.injuryRisk || {}
+                            return (
+                                <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 space-y-3">
+                                    {/* Form Score */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-blue-800">Form Score</span>
+                                        <div className={`text-lg font-bold px-3 py-0.5 rounded-full ${(v?.formScore || 0) >= 80 ? 'bg-green-100 text-green-700' : (v?.formScore || 0) >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                            {v?.formScore || 0}/100
+                                        </div>
+                                    </div>
+                                    <Progress value={v?.formScore || 0} className="h-2" />
+
+                                    {/* Analysis Details */}
+                                    {(analysis.posture || analysis.alignment || analysis.movement) && (
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {analysis.posture && (
+                                                <div className="text-center p-2 bg-white rounded border">
+                                                    <p className="text-xs text-gray-500">Posture</p>
+                                                    <p className="text-xs font-bold text-gray-800">{analysis.posture}</p>
+                                                </div>
+                                            )}
+                                            {analysis.alignment && (
+                                                <div className="text-center p-2 bg-white rounded border">
+                                                    <p className="text-xs text-gray-500">Alignment</p>
+                                                    <p className="text-xs font-bold text-gray-800">{analysis.alignment}</p>
+                                                </div>
+                                            )}
+                                            {analysis.movement && (
+                                                <div className="text-center p-2 bg-white rounded border">
+                                                    <p className="text-xs text-gray-500">Movement</p>
+                                                    <p className="text-xs font-bold text-gray-800">{analysis.movement}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Safety Risk */}
+                                    {analysis.safetyRisk && (
+                                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${
+                                            analysis.safetyRisk === 'high' ? 'bg-red-100 text-red-700' : analysis.safetyRisk === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                        }`}>
+                                            <AlertCircle className="w-3 h-3" /> Safety Risk: {analysis.safetyRisk.toUpperCase()}
+                                        </div>
+                                    )}
+
+                                    {/* Overall Assessment */}
+                                    {analysis.overallAssessment && (
+                                        <p className="text-xs text-gray-700 bg-white p-2 rounded border">{analysis.overallAssessment}</p>
+                                    )}
+
+                                    {/* Issues Found */}
+                                    {analysis.issues?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-red-700 mb-1">Issues Found:</p>
+                                            {analysis.issues.map((issue: string, i: number) => (
+                                                <div key={i} className="flex items-start gap-1.5 py-0.5">
+                                                    <AlertCircle className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                                                    <span className="text-xs text-gray-700">{issue}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Immediate Corrections */}
+                                    {analysis.immediateCorrections?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-orange-700 mb-1">Immediate Corrections:</p>
+                                            {analysis.immediateCorrections.map((c: string, i: number) => (
+                                                <div key={i} className="flex items-start gap-1.5 py-0.5">
+                                                    <Wrench className="w-3 h-3 text-orange-500 mt-0.5 flex-shrink-0" />
+                                                    <span className="text-xs text-gray-700">{c}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Injury Risk */}
+                                    {injury.riskLevel && (
+                                        <div className={`p-2 rounded-lg border ${injury.riskLevel === 'high' ? 'bg-red-50 border-red-200' : injury.riskLevel === 'medium' ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                                            <p className="text-xs font-semibold mb-1">Injury Risk: {injury.riskLevel.toUpperCase()}</p>
+                                            {injury.riskFactors?.map((f: string, i: number) => (
+                                                <p key={i} className="text-xs text-gray-600">- {f}</p>
+                                            ))}
+                                            {injury.recommendations?.map((r: string, i: number) => (
+                                                <div key={i} className="flex items-start gap-1 mt-1">
+                                                    <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                                    <span className="text-xs text-gray-600">{r}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {!v?.aiPowered && v?.aiPowered === false && <p className="text-xs text-yellow-600">Fallback mode - AI unavailable</p>}
+                                </div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">AI video analysis unavailable. Check student ID and try again.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Video History Results */}
+                {results.videoHistory && (
+                    <div className="space-y-2">
+                        {results.videoHistory.success ? (() => {
+                            const hist = results.videoHistory.data
+                            const records = hist?.records || hist?.data || (Array.isArray(hist) ? hist : [])
+                            return records.length > 0 ? (
+                                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
+                                    <p className="text-xs font-semibold text-blue-700">{records.length} analysis records found</p>
+                                    {records.slice(0, 3).map((r: any, i: number) => (
+                                        <div key={i} className="p-2 bg-white rounded border text-xs">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">{r.exerciseType || 'General'}</span>
+                                                <span className={`font-bold ${(r.formScore || 0) >= 80 ? 'text-green-600' : 'text-orange-600'}`}>{r.formScore || 0}/100</span>
+                                            </div>
+                                            {r.analyzedAt && <p className="text-gray-400 mt-0.5">{new Date(r.analyzedAt).toLocaleDateString()}</p>}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-700">No analysis history found for this student.</div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">Could not load history.</div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Student Digital Twin */}
@@ -573,18 +746,203 @@ function CoachAITools() {
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                     <Users className="w-4 h-4 text-purple-600" /> Student Digital Twin
                 </h4>
-                <button onClick={() => callAI('profile', () => apiClient.get(`/student-digital-twin/profile/${studentId || 'default'}`))} disabled={loading === 'profile'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                <button
+                    onClick={() => callAI('profile', () => apiClient.get(`/student-digital-twin/profile/${studentId}`))}
+                    disabled={loading === 'profile' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'profile' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} View Student Profile
                 </button>
-                <button onClick={() => callAI('learningPath', () => apiClient.post(`/student-digital-twin/learning-path/${studentId || 'default'}`))} disabled={loading === 'learningPath'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                <button
+                    onClick={() => callAI('learningPath', () => apiClient.post(`/student-digital-twin/learning-path/${studentId}`))}
+                    disabled={loading === 'learningPath' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'learningPath' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Route className="w-4 h-4" />} Generate Learning Path
                 </button>
-                <button onClick={() => callAI('competition', () => apiClient.get(`/student-digital-twin/competition-readiness/${studentId || 'default'}`))} disabled={loading === 'competition'} className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors">
+                <button
+                    onClick={() => callAI('competition', () => apiClient.get(`/student-digital-twin/competition-readiness/${studentId}`))}
+                    disabled={loading === 'competition' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-sm font-medium text-purple-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'competition' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />} Competition Readiness
                 </button>
-                {results.profile && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Profile:</p><p>{results.profile.data?.studentName || results.profile.data?.message || JSON.stringify(results.profile.data).slice(0, 150)}</p></div>}
-                {results.learningPath && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Learning Path:</p><p>{Array.isArray(results.learningPath.data?.steps) ? `${results.learningPath.data.steps.length} steps generated` : results.learningPath.data?.message || 'Path generated'}</p></div>}
-                {results.competition && <div className="p-3 bg-purple-50 rounded-lg text-xs"><p className="font-medium text-purple-700 mb-1">Readiness:</p><p>{results.competition.data?.readinessScore ? `Score: ${results.competition.data.readinessScore}%` : results.competition.data?.message || JSON.stringify(results.competition.data).slice(0, 150)}</p></div>}
+
+                {/* Profile Results - Full Detail */}
+                {results.profile && (
+                    <div className="space-y-2">
+                        {results.profile.success ? (() => {
+                            const p = results.profile.data?.data || results.profile.data
+                            return (
+                                <div className="p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 space-y-2">
+                                    {p?.studentName && <p className="text-sm font-semibold text-purple-800">{p.studentName}</p>}
+                                    {p?.age && <p className="text-xs text-gray-600">Age: {p.age} | Level: {p.skillLevel || p.level || 'N/A'}</p>}
+
+                                    {/* Strengths */}
+                                    {p?.strengths?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-green-700 mb-1">Strengths:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {p.strengths.map((s: string, i: number) => (
+                                                    <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{s}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Areas for Improvement */}
+                                    {p?.areasForImprovement?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-orange-700 mb-1">Needs Work:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {p.areasForImprovement.map((a: string, i: number) => (
+                                                    <span key={i} className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{a}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Skills Breakdown */}
+                                    {p?.skills && typeof p.skills === 'object' && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-purple-700 mb-1">Skills:</p>
+                                            {Object.entries(p.skills).slice(0, 6).map(([skill, val]: [string, any]) => (
+                                                <div key={skill} className="flex items-center justify-between mb-1">
+                                                    <span className="text-xs text-gray-600 capitalize">{skill}</span>
+                                                    <span className="text-xs font-bold text-gray-800">{typeof val === 'number' ? `${val}%` : String(val)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {p?.insights && <p className="text-xs text-gray-600 bg-white p-2 rounded border">{p.insights}</p>}
+                                    {p?.aiPowered === false && <p className="text-xs text-yellow-600">Fallback mode</p>}
+                                </div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">Profile unavailable. Enter a valid Student ID.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Learning Path Results - Full Detail */}
+                {results.learningPath && (
+                    <div className="space-y-2">
+                        {results.learningPath.success ? (() => {
+                            const lp = results.learningPath.data?.data || results.learningPath.data
+                            const steps = lp?.steps || lp?.path || lp?.weeklyPlan || []
+                            const milestones = lp?.milestones || []
+                            return (
+                                <div className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200 space-y-2">
+                                    <p className="text-xs font-semibold text-purple-700">Learning Path ({steps.length} steps)</p>
+                                    {lp?.timeline && <p className="text-xs text-gray-500">Duration: {lp.timeline}</p>}
+
+                                    {/* Goals */}
+                                    {lp?.goals?.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {lp.goals.map((g: string, i: number) => (
+                                                <span key={i} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{g}</span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Steps */}
+                                    {steps.slice(0, 4).map((step: any, i: number) => (
+                                        <div key={i} className="p-2 bg-white rounded border text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                                    {step.week || i + 1}
+                                                </div>
+                                                <span className="font-medium text-gray-900">{step.focus || step.title || step.name || `Step ${i + 1}`}</span>
+                                            </div>
+                                            {step.exercises?.length > 0 && (
+                                                <div className="ml-7 mt-1 space-y-0.5">
+                                                    {step.exercises.slice(0, 3).map((ex: string, j: number) => (
+                                                        <p key={j} className="text-gray-500">- {ex}</p>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Milestones */}
+                                    {milestones.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-green-700 mb-1">Milestones:</p>
+                                            {milestones.slice(0, 3).map((m: any, i: number) => (
+                                                <div key={i} className="flex items-center gap-2 py-0.5">
+                                                    <Trophy className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                                                    <span className="text-xs text-gray-700">Week {m.week}: {m.milestone}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Safety Notes */}
+                                    {lp?.safetyNotes?.length > 0 && (
+                                        <div className="p-2 bg-yellow-50 rounded border border-yellow-200">
+                                            <p className="text-xs font-semibold text-yellow-700 mb-1">Safety Notes:</p>
+                                            {lp.safetyNotes.map((n: string, i: number) => (
+                                                <p key={i} className="text-xs text-gray-600">- {n}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">Learning path generation failed.</div>
+                        )}
+                    </div>
+                )}
+
+                {/* Competition Readiness Results - Full Detail */}
+                {results.competition && (
+                    <div className="space-y-2">
+                        {results.competition.success ? (() => {
+                            const c = results.competition.data?.data || results.competition.data
+                            const score = c?.readinessScore || c?.overallScore || 0
+                            return (
+                                <div className="p-3 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-yellow-800">Competition Readiness</span>
+                                        <span className={`text-lg font-bold ${score >= 80 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                            {score}%
+                                        </span>
+                                    </div>
+                                    <Progress value={score} className="h-2" />
+
+                                    {c?.readyAreas?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-green-700 mb-1">Ready:</p>
+                                            {c.readyAreas.map((a: string, i: number) => (
+                                                <div key={i} className="flex items-center gap-1"><CheckCircle className="w-3 h-3 text-green-500" /><span className="text-xs">{a}</span></div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {c?.needsWork?.length > 0 && (
+                                        <div>
+                                            <p className="text-xs font-semibold text-orange-700 mb-1">Needs Work:</p>
+                                            {c.needsWork.map((a: string, i: number) => (
+                                                <div key={i} className="flex items-center gap-1"><AlertCircle className="w-3 h-3 text-orange-500" /><span className="text-xs">{a}</span></div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {(c?.strengths?.length > 0) && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {c.strengths.map((s: string, i: number) => (
+                                                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{s}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {c?.recommendation && <p className="text-xs text-gray-600 bg-white p-2 rounded border">{c.recommendation}</p>}
+                                    {c?.insights && <p className="text-xs text-gray-600 bg-white p-2 rounded border">{c.insights}</p>}
+                                </div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">Competition readiness check failed.</div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* AI Coach Assistant */}
@@ -592,15 +950,81 @@ function CoachAITools() {
                 <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                     <Wrench className="w-4 h-4 text-green-600" /> AI Coach Assistant
                 </h4>
-                <button onClick={() => callAI('corrections', () => apiClient.get(`/ai-coach-assistant/corrections/${studentId || 'default'}`))} disabled={loading === 'corrections'} className="flex items-center gap-2 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-sm font-medium text-green-700 w-full transition-colors">
+                <button
+                    onClick={() => callAI('corrections', () => apiClient.get(`/ai-coach-assistant/corrections/${studentId}`))}
+                    disabled={loading === 'corrections' || !studentId}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-sm font-medium text-green-700 w-full transition-colors disabled:opacity-50"
+                >
                     {loading === 'corrections' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Get Form Corrections
                 </button>
+
+                {/* Form Corrections Results - Full Detail */}
                 {results.corrections && (
-                    <div className="p-3 bg-green-50 rounded-lg text-xs space-y-2">
-                        <p className="font-medium text-green-700">Form Corrections:</p>
-                        {Array.isArray(results.corrections.data?.corrections) ? results.corrections.data.corrections.map((c: any, i: number) => (
-                            <div key={i} className="p-2 bg-white rounded"><p className="font-medium">{c.area || c.title}</p><p className="text-gray-600">{c.suggestion || c.description}</p></div>
-                        )) : <p>{results.corrections.data?.message || 'No corrections needed - great form!'}</p>}
+                    <div className="space-y-2">
+                        {results.corrections.success ? (() => {
+                            const cr = results.corrections.data?.data || results.corrections.data
+                            const corrections = cr?.corrections || []
+                            const warmup = cr?.warmupRoutine || []
+                            const progression = cr?.progressionPlan || ''
+                            return (
+                                <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 space-y-3">
+                                    {corrections.length > 0 ? (
+                                        <>
+                                            <p className="text-xs font-semibold text-green-700">{corrections.length} Corrections Found</p>
+                                            {corrections.map((c: any, i: number) => (
+                                                <div key={i} className="p-2 bg-white rounded border space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-medium text-gray-900">{c.issue || c.area || c.title}</span>
+                                                        {c.priority && (
+                                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                                c.priority === 'high' ? 'bg-red-100 text-red-700' : c.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                                            }`}>{c.priority}</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-blue-700">{c.correction || c.suggestion || c.description}</p>
+                                                    {c.drillRecommendation && (
+                                                        <div className="flex items-start gap-1">
+                                                            <Target className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                                                            <span className="text-xs text-purple-700">Drill: {c.drillRecommendation}</span>
+                                                        </div>
+                                                    )}
+                                                    {c.expectedImprovement && (
+                                                        <p className="text-xs text-gray-500">Expected: {c.expectedImprovement}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <p className="text-xs text-green-700">No corrections needed - excellent form!</p>
+                                    )}
+
+                                    {/* Warmup Routine */}
+                                    {warmup.length > 0 && (
+                                        <div className="p-2 bg-orange-50 rounded border border-orange-200">
+                                            <p className="text-xs font-semibold text-orange-700 mb-1">Warmup Routine:</p>
+                                            {warmup.map((w: string, i: number) => (
+                                                <div key={i} className="flex items-center gap-1 py-0.5">
+                                                    <span className="text-xs text-orange-600 font-medium">{i + 1}.</span>
+                                                    <span className="text-xs text-gray-600">{w}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Progression Plan */}
+                                    {progression && (
+                                        <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                                            <p className="text-xs font-semibold text-blue-700 mb-1">Progression Plan:</p>
+                                            <p className="text-xs text-gray-700">{progression}</p>
+                                        </div>
+                                    )}
+
+                                    {cr?.aiPowered === false && <p className="text-xs text-yellow-600">Fallback mode</p>}
+                                </div>
+                            )
+                        })() : (
+                            <div className="p-3 bg-red-50 rounded-lg text-xs text-red-700">Form corrections unavailable. Enter a valid Student ID.</div>
+                        )}
                     </div>
                 )}
             </div>

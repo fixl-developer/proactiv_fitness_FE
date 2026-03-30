@@ -71,7 +71,7 @@ const ParentDashboard = () => {
             setAiLoading(true)
             setAiError(null)
             setSelectedChildIdForAi(childId)
-            const response = await apiClient.post<any>('/parent-ai-assistant/report', { childId })
+            const response = await apiClient.post<any>(`/parent-ai-assistant/generate-report/${childId}`)
             const data = response?.data || response
             setAiReport(data)
         } catch (err) {
@@ -89,7 +89,7 @@ const ParentDashboard = () => {
             setAiAnswerLoading(true)
             setAiError(null)
             const response = await apiClient.post<any>('/parent-ai-assistant/ask', {
-                childId: selectedChildIdForAi,
+                studentId: selectedChildIdForAi,
                 question: aiQuestion.trim()
             })
             const data = response?.data || response

@@ -425,8 +425,8 @@ const TeamPreview = () => {
                                                         {member.role}
                                                     </p>
 
-                                                    {/* Specialization - Fixed Height */}
-                                                    <div className="flex flex-wrap gap-1 justify-center mb-4 min-h-[50px]">
+                                                    {/* Specialization */}
+                                                    <div className="flex flex-wrap gap-1 justify-center mb-2">
                                                         {member.specialization.split(',').slice(0, 2).map((spec: string, idx: number) => (
                                                             <span
                                                                 key={idx}

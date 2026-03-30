@@ -33,23 +33,44 @@ export default function ParentNutritionPage() {
     const [generating, setGenerating] = useState(false)
     const [loadingRecipes, setLoadingRecipes] = useState(false)
     const [recipesError, setRecipesError] = useState<string | null>(null)
+    const [children, setChildren] = useState<any[]>([])
+    const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
 
     const loadData = useCallback(async () => {
         setIsLoading(true)
         setError(null)
 
+        // First load children to get childId for nutrition endpoints
+        let childId: string | null = selectedChildId
+        if (!childId) {
+            try {
+                const childrenRes = await apiClient.get('/parent/children')
+                const childrenData = childrenRes?.data || childrenRes || []
+                const childList = Array.isArray(childrenData) ? childrenData : (childrenData.children || [])
+                setChildren(childList)
+                if (childList.length > 0) {
+                    childId = childList[0]._id || childList[0].id
+                    setSelectedChildId(childId)
+                }
+            } catch (err) {
+                console.error('Failed to load children:', err)
+            }
+        }
+
         // Load recommendations - try AI endpoint first, fallback to parent/nutrition
         let recommendationsLoaded = false
-        try {
-            const aiRecResponse = await apiClient.get('/smart-nutrition/recommendations')
-            const aiRecData = aiRecResponse?.data || aiRecResponse || {}
-            const aiRecs = Array.isArray(aiRecData) ? aiRecData : (aiRecData.recommendations || [])
-            if (aiRecs.length > 0) {
-                setRecommendations(aiRecs)
-                recommendationsLoaded = true
+        if (childId) {
+            try {
+                const aiRecResponse = await apiClient.get(`/nutrition/recommendations/${childId}`)
+                const aiRecData = aiRecResponse?.data || aiRecResponse || {}
+                const aiRecs = Array.isArray(aiRecData) ? aiRecData : (aiRecData.recommendations || [])
+                if (aiRecs.length > 0) {
+                    setRecommendations(aiRecs)
+                    recommendationsLoaded = true
+                }
+            } catch (err) {
+                console.error('AI recommendations not available, falling back:', err)
             }
-        } catch (err) {
-            console.error('AI recommendations not available, falling back:', err)
         }
 
         if (!recommendationsLoaded) {
@@ -63,7 +84,6 @@ export default function ParentNutritionPage() {
             } catch (err) {
                 console.error('Failed to load nutrition:', err)
                 setError('Failed to load nutrition data')
-                // Set default recommendations
                 setRecommendations([
                     { id: '1', title: 'Stay Hydrated', description: 'Ensure your child drinks at least 8 glasses of water daily, especially before and after swimming.', priority: 'high' },
                     { id: '2', title: 'Protein Rich Meals', description: 'Include lean protein in every meal to support muscle recovery after training sessions.', priority: 'medium' },
@@ -73,25 +93,28 @@ export default function ParentNutritionPage() {
         }
 
         // Load existing AI meal plans
-        try {
-            const mealPlanResponse = await apiClient.get('/smart-nutrition/meal-plans')
-            const mealPlanData = mealPlanResponse?.data || mealPlanResponse || {}
-            const plans = Array.isArray(mealPlanData) ? mealPlanData : (mealPlanData.mealPlans || mealPlanData.plans || [])
-            if (plans.length > 0) {
-                setMealPlans(plans)
+        if (childId) {
+            try {
+                const mealPlanResponse = await apiClient.get(`/nutrition/meal-plans/${childId}`)
+                const mealPlanData = mealPlanResponse?.data || mealPlanResponse || {}
+                const plans = Array.isArray(mealPlanData) ? mealPlanData : (mealPlanData.mealPlans || mealPlanData.plans || [])
+                if (plans.length > 0) {
+                    setMealPlans(plans)
+                }
+            } catch (err) {
+                console.error('AI meal plans not available:', err)
             }
-        } catch (err) {
-            console.error('AI meal plans not available:', err)
-            // Keep whatever meal plans were loaded from the fallback above
         }
 
         setIsLoading(false)
-    }, [])
+    }, [selectedChildId])
 
     const handleGeneratePlan = async () => {
+        if (!selectedChildId) return
         setGenerating(true)
         try {
-            const response = await apiClient.post('/smart-nutrition/generate-meal-plan', {
+            const response = await apiClient.post('/nutrition/meal-plans', {
+                childId: selectedChildId,
                 age: 10,
                 duration: 7,
                 activityLevel: 'moderate',
@@ -102,7 +125,6 @@ export default function ParentNutritionPage() {
             if (newPlan && (newPlan._id || newPlan.id || newPlan.duration)) {
                 setMealPlans(prev => [newPlan, ...prev])
             } else {
-                // Server returned unexpected shape - use as-is with fallback fields
                 setMealPlans(prev => [{
                     _id: `plan-${Date.now()}`,
                     duration: 7,
@@ -116,7 +138,6 @@ export default function ParentNutritionPage() {
             }
         } catch (err) {
             console.error('Failed to generate plan via AI, creating local placeholder:', err)
-            // Fallback: create a local placeholder plan
             const newPlan = {
                 _id: `plan-${Date.now()}`,
                 duration: 7,
@@ -136,7 +157,7 @@ export default function ParentNutritionPage() {
         setLoadingRecipes(true)
         setRecipesError(null)
         try {
-            const response = await apiClient.get('/smart-nutrition/recipes')
+            const response = await apiClient.get('/nutrition/recipes')
             const data = response?.data || response || {}
             const recipeList = Array.isArray(data) ? data : (data.recipes || [])
             setRecipes(recipeList)
@@ -175,7 +196,20 @@ export default function ParentNutritionPage() {
                         <Badge className="ml-2 bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
                     </p>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
+                    {children.length > 1 && (
+                        <select
+                            value={selectedChildId || ''}
+                            onChange={(e) => { setSelectedChildId(e.target.value); }}
+                            className="text-sm border rounded-lg px-3 py-1.5 bg-white"
+                        >
+                            {children.map((child: any) => (
+                                <option key={child._id || child.id} value={child._id || child.id}>
+                                    {child.firstName || child.name} {child.lastName || ''}
+                                </option>
+                            ))}
+                        </select>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => loadData()}>
                         <FileText className="w-4 h-4 mr-1" />
                         Refresh

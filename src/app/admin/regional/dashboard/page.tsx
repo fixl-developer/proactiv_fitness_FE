@@ -538,25 +538,106 @@ export default function RegionalAdminDashboard() {
                                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                                 <p className="text-sm text-gray-500">Analyzing data with AI...</p>
                             </div>
-                        ) : aiData ? (
-                            <div className="space-y-3">
-                                {(Array.isArray(aiData) ? aiData : aiData?.recommendations || aiData?.suggestions || [aiData]).slice(0, 5).map((item: any, i: number) => (
-                                    <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
-                                            {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
-                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
+                        ) : (() => {
+                            const insights = aiData?.data || aiData
+                            if (!insights) return (
+                                <div className="text-center py-6">
+                                    <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                                </div>
+                            )
+                            const locations = insights.locations || []
+                            const topPerformers = insights.topPerformers || []
+                            const underPerformers = insights.underPerformers || []
+                            const insightText = insights.insights || ''
+                            const isAI = insights.aiPowered !== false
+                            return (
+                                <div className="space-y-4">
+                                    {/* AI Analysis Summary */}
+                                    {insightText && (
+                                        <div className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Sparkles className="w-4 h-4 text-purple-600" />
+                                                <span className="text-sm font-semibold text-purple-800">AI Analysis</span>
+                                                {!isAI && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Fallback Mode</span>}
+                                            </div>
+                                            <p className="text-sm text-gray-700 leading-relaxed">{insightText}</p>
                                         </div>
+                                    )}
+
+                                    {/* Top & Under Performers */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {topPerformers.length > 0 && (
+                                            <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                                <h4 className="text-sm font-semibold text-green-800 flex items-center gap-2 mb-2">
+                                                    <ArrowUp className="w-4 h-4" /> Top Performers
+                                                </h4>
+                                                {topPerformers.map((name: string, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 py-1">
+                                                        <CheckCircle className="w-3 h-3 text-green-600" />
+                                                        <span className="text-sm text-gray-800">{name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {underPerformers.length > 0 && (
+                                            <div className="p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-lg border border-orange-200">
+                                                <h4 className="text-sm font-semibold text-orange-800 flex items-center gap-2 mb-2">
+                                                    <ArrowDown className="w-4 h-4" /> Needs Improvement
+                                                </h4>
+                                                {underPerformers.map((name: string, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 py-1">
+                                                        <AlertTriangle className="w-3 h-3 text-orange-600" />
+                                                        <span className="text-sm text-gray-800">{name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6">
-                                <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
-                            </div>
-                        )}
+
+                                    {/* Location Benchmarks */}
+                                    {locations.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Location Benchmarks</h4>
+                                            <div className="space-y-3">
+                                                {locations.slice(0, 5).map((loc: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm font-medium text-gray-900">
+                                                                #{loc.rank || i + 1} {loc.locationName || loc.name || `Location ${i + 1}`}
+                                                            </span>
+                                                            <Badge variant={i === 0 ? 'default' : i < locations.length / 2 ? 'secondary' : 'destructive'}>
+                                                                Rank #{loc.rank || i + 1}
+                                                            </Badge>
+                                                        </div>
+                                                        {loc.metrics && (
+                                                            <div className="grid grid-cols-4 gap-2 mt-2">
+                                                                <div className="text-center p-2 bg-white rounded border">
+                                                                    <p className="text-xs text-gray-500">Revenue</p>
+                                                                    <p className="text-sm font-bold text-blue-600">${((loc.metrics.revenue || 0) / 1000).toFixed(0)}K</p>
+                                                                </div>
+                                                                <div className="text-center p-2 bg-white rounded border">
+                                                                    <p className="text-xs text-gray-500">Retention</p>
+                                                                    <p className="text-sm font-bold text-green-600">{loc.metrics.retention || 0}%</p>
+                                                                </div>
+                                                                <div className="text-center p-2 bg-white rounded border">
+                                                                    <p className="text-xs text-gray-500">Enrollment</p>
+                                                                    <p className="text-sm font-bold text-purple-600">{loc.metrics.enrollment || 0}</p>
+                                                                </div>
+                                                                <div className="text-center p-2 bg-white rounded border">
+                                                                    <p className="text-xs text-gray-500">Satisfaction</p>
+                                                                    <p className="text-sm font-bold text-orange-600">{loc.metrics.satisfaction || 0}/10</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
                     </div>
                 </div>
             </div>
@@ -581,26 +662,82 @@ export default function RegionalAdminDashboard() {
                                 <p className="text-sm text-gray-500">Analyzing revenue data...</p>
                             </div>
                         ) : revenueIntelData ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Churn Risk Analysis */}
                                 <div className="space-y-3">
                                     <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                         <AlertTriangle className="w-4 h-4 text-red-500" />
                                         Churn Risk Analysis
                                     </h4>
-                                    {(Array.isArray(revenueIntelData.churnRisk) ? revenueIntelData.churnRisk : revenueIntelData.churnRisk?.atRiskMembers || revenueIntelData.churnRisk?.risks || []).slice(0, 4).map((risk: any, i: number) => (
-                                        <div key={`churn-${i}`} className="p-3 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg border border-red-200">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Sparkles className="w-3 h-3 text-red-500" />
-                                                <span className="text-xs font-semibold text-red-700 uppercase">At Risk</span>
+                                    {(() => {
+                                        const churn = revenueIntelData.churnRisk?.data || revenueIntelData.churnRisk
+                                        if (!churn) return <p className="text-xs text-gray-400 italic">Churn analysis unavailable</p>
+
+                                        const riskScore = churn.riskScore ?? 0
+                                        const riskLevel = churn.riskLevel || 'unknown'
+                                        const factors = churn.factors || []
+                                        const actions = churn.retentionActions || []
+                                        const isAI = churn.aiPowered !== false
+
+                                        const riskColors: Record<string, string> = {
+                                            low: 'text-green-700 bg-green-100',
+                                            medium: 'text-yellow-700 bg-yellow-100',
+                                            high: 'text-orange-700 bg-orange-100',
+                                            critical: 'text-red-700 bg-red-100',
+                                            unknown: 'text-gray-700 bg-gray-100'
+                                        }
+
+                                        return (
+                                            <div className="space-y-3">
+                                                {/* Risk Score Card */}
+                                                <div className="p-4 bg-gradient-to-br from-red-50 to-orange-50 rounded-lg border border-red-200">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm font-medium text-gray-700">Overall Risk Score</span>
+                                                        <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${riskColors[riskLevel] || riskColors.unknown}`}>
+                                                            {riskLevel}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-end gap-2">
+                                                        <span className="text-3xl font-bold text-gray-900">{riskScore}</span>
+                                                        <span className="text-sm text-gray-500 mb-1">/100</span>
+                                                    </div>
+                                                    <Progress value={riskScore} className="h-2 mt-2" />
+                                                    {!isAI && <p className="text-xs text-yellow-600 mt-1">Fallback mode - AI unavailable</p>}
+                                                </div>
+
+                                                {/* Risk Factors */}
+                                                {factors.length > 0 && factors.map((f: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-white rounded-lg border border-gray-200">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-sm font-medium text-gray-900">{f.factor}</span>
+                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${(f.impact || 0) > 60 ? 'bg-red-100 text-red-700' : (f.impact || 0) > 30 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                                                                Impact: {f.impact || 0}%
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600">{f.description}</p>
+                                                        <Progress value={f.impact || 0} className="h-1.5 mt-2" />
+                                                    </div>
+                                                ))}
+
+                                                {/* Retention Actions */}
+                                                {actions.length > 0 && (
+                                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                        <h5 className="text-xs font-semibold text-blue-800 mb-2">Recommended Actions</h5>
+                                                        {actions.map((action: string, i: number) => (
+                                                            <div key={i} className="flex items-start gap-2 py-1">
+                                                                <CheckCircle className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                                <span className="text-xs text-gray-700">{action}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {factors.length === 0 && actions.length === 0 && riskScore === 0 && (
+                                                    <p className="text-xs text-gray-400 italic">No churn risks detected - all members healthy</p>
+                                                )}
                                             </div>
-                                            <p className="text-sm font-medium text-gray-900">{risk.title || risk.memberName || risk.name || JSON.stringify(risk).slice(0, 80)}</p>
-                                            <p className="text-xs text-gray-600 mt-1">{risk.description || risk.reason || risk.riskLevel || ''}</p>
-                                        </div>
-                                    ))}
-                                    {(Array.isArray(revenueIntelData.churnRisk) ? revenueIntelData.churnRisk : revenueIntelData.churnRisk?.atRiskMembers || revenueIntelData.churnRisk?.risks || []).length === 0 && (
-                                        <p className="text-xs text-gray-400 italic">No churn risks detected</p>
-                                    )}
+                                        )
+                                    })()}
                                 </div>
 
                                 {/* Upsell Opportunities */}
@@ -609,19 +746,73 @@ export default function RegionalAdminDashboard() {
                                         <TrendingUp className="w-4 h-4 text-green-500" />
                                         Upsell Opportunities
                                     </h4>
-                                    {(Array.isArray(revenueIntelData.upsellOpportunities) ? revenueIntelData.upsellOpportunities : revenueIntelData.upsellOpportunities?.opportunities || revenueIntelData.upsellOpportunities?.suggestions || []).slice(0, 4).map((opp: any, i: number) => (
-                                        <div key={`upsell-${i}`} className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Sparkles className="w-3 h-3 text-green-500" />
-                                                <span className="text-xs font-semibold text-green-700 uppercase">Opportunity</span>
+                                    {(() => {
+                                        const upsell = revenueIntelData.upsellOpportunities?.data || revenueIntelData.upsellOpportunities
+                                        if (!upsell) return <p className="text-xs text-gray-400 italic">Upsell analysis unavailable</p>
+
+                                        const opportunities = upsell.opportunities || []
+                                        const totalRevenue = upsell.totalEstimatedRevenue || 0
+                                        const upsellInsights = upsell.insights || ''
+                                        const isAI = upsell.aiPowered !== false
+
+                                        return (
+                                            <div className="space-y-3">
+                                                {/* Revenue Summary */}
+                                                <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-sm font-medium text-gray-700">Total Potential Revenue</span>
+                                                        {!isAI && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Fallback</span>}
+                                                    </div>
+                                                    <p className="text-3xl font-bold text-green-700">${totalRevenue.toLocaleString()}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">{opportunities.length} opportunities identified</p>
+                                                </div>
+
+                                                {/* AI Insights */}
+                                                {upsellInsights && (
+                                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Sparkles className="w-3 h-3 text-purple-600" />
+                                                            <span className="text-xs font-semibold text-purple-800">AI Insight</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-700">{upsellInsights}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Individual Opportunities */}
+                                                {opportunities.slice(0, 4).map((opp: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-white rounded-lg border border-gray-200">
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-sm font-medium text-gray-900">
+                                                                {opp.studentId ? `Student ${opp.studentId.slice(-6)}` : `Opportunity ${i + 1}`}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                                                                +${(opp.estimatedRevenue || 0).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        {opp.suggestedPrograms?.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {opp.suggestedPrograms.map((prog: string, j: number) => (
+                                                                    <span key={j} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{prog}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {opp.reasoning && <p className="text-xs text-gray-600 mt-1">{opp.reasoning}</p>}
+                                                        {opp.confidence != null && (
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <span className="text-xs text-gray-500">Confidence:</span>
+                                                                <Progress value={(opp.confidence || 0) * 100} className="h-1.5 flex-1" />
+                                                                <span className="text-xs font-medium text-gray-700">{Math.round((opp.confidence || 0) * 100)}%</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+
+                                                {opportunities.length === 0 && (
+                                                    <p className="text-xs text-gray-400 italic">No upsell opportunities found at this time</p>
+                                                )}
                                             </div>
-                                            <p className="text-sm font-medium text-gray-900">{opp.title || opp.name || opp.product || JSON.stringify(opp).slice(0, 80)}</p>
-                                            <p className="text-xs text-gray-600 mt-1">{opp.description || opp.potentialRevenue || opp.reason || ''}</p>
-                                        </div>
-                                    ))}
-                                    {(Array.isArray(revenueIntelData.upsellOpportunities) ? revenueIntelData.upsellOpportunities : revenueIntelData.upsellOpportunities?.opportunities || revenueIntelData.upsellOpportunities?.suggestions || []).length === 0 && (
-                                        <p className="text-xs text-gray-400 italic">No upsell opportunities found</p>
-                                    )}
+                                        )
+                                    })()}
                                 </div>
                             </div>
                         ) : (
@@ -654,33 +845,100 @@ export default function RegionalAdminDashboard() {
                                 <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                                 <p className="text-sm text-gray-500">Optimizing regional schedule...</p>
                             </div>
-                        ) : schedulerData ? (
-                            <div className="space-y-3">
-                                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-blue-500" />
-                                    Optimize Regional Schedule
-                                </h4>
-                                {(Array.isArray(schedulerData) ? schedulerData : schedulerData?.suggestions || schedulerData?.recommendations || schedulerData?.optimizations || []).slice(0, 5).map((item: any, i: number) => (
-                                    <div key={`sched-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                                        <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.suggestion || item.name || JSON.stringify(item).slice(0, 100)}</p>
-                                            {(item.description || item.impact) && <p className="text-xs text-gray-600 mt-0.5">{item.description || item.impact}</p>}
-                                            {item.timeSaved && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Saves {item.timeSaved}</span>}
+                        ) : (() => {
+                            const sched = schedulerData?.data || schedulerData
+                            if (!sched) return (
+                                <div className="text-center py-6">
+                                    <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-500">Smart scheduler unavailable</p>
+                                    <button onClick={loadSmartScheduler} className="mt-2 text-sm text-blue-600 hover:underline">Optimize Schedule</button>
+                                </div>
+                            )
+
+                            const slots = sched.suggestedSlots || []
+                            const reasoning = sched.reasoning || ''
+                            const conflicts = sched.conflictsResolved || []
+                            const improvement = sched.expectedImprovementPercent || 0
+                            const isAI = sched.aiPowered !== false
+
+                            return (
+                                <div className="space-y-4">
+                                    {/* Improvement Summary */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 text-center">
+                                            <p className="text-xs text-gray-500 mb-1">Expected Improvement</p>
+                                            <p className="text-2xl font-bold text-blue-700">{improvement}%</p>
+                                            {!isAI && <p className="text-xs text-yellow-600 mt-1">Fallback mode</p>}
+                                        </div>
+                                        <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 text-center">
+                                            <p className="text-xs text-gray-500 mb-1">Optimized Slots</p>
+                                            <p className="text-2xl font-bold text-green-700">{slots.length}</p>
+                                        </div>
+                                        <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200 text-center">
+                                            <p className="text-xs text-gray-500 mb-1">Conflicts Resolved</p>
+                                            <p className="text-2xl font-bold text-purple-700">{conflicts.length}</p>
                                         </div>
                                     </div>
-                                ))}
-                                {(Array.isArray(schedulerData) ? schedulerData : schedulerData?.suggestions || schedulerData?.recommendations || schedulerData?.optimizations || []).length === 0 && (
-                                    <p className="text-xs text-gray-400 italic">Schedule is already optimized</p>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-center py-6">
-                                <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">Smart scheduler unavailable</p>
-                                <button onClick={loadSmartScheduler} className="mt-2 text-sm text-blue-600 hover:underline">Optimize Schedule</button>
-                            </div>
-                        )}
+
+                                    {/* AI Reasoning */}
+                                    {reasoning && (
+                                        <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Brain className="w-4 h-4 text-blue-600" />
+                                                <span className="text-sm font-semibold text-blue-800">AI Reasoning</span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 leading-relaxed">{reasoning}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Suggested Time Slots */}
+                                    {slots.length > 0 && (
+                                        <div>
+                                            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-blue-500" />
+                                                Suggested Schedule Slots
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {slots.slice(0, 6).map((slot: any, i: number) => (
+                                                    <div key={i} className="p-3 bg-white rounded-lg border border-gray-200 flex items-center justify-between">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-gray-900">{slot.dayOfWeek}</p>
+                                                            <p className="text-xs text-gray-500">{slot.timeSlot}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-sm font-bold text-blue-700">{slot.expectedDemand || 0}</p>
+                                                            <p className="text-xs text-gray-500">demand</p>
+                                                        </div>
+                                                        <div className="ml-2">
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${(slot.score || 0) >= 80 ? 'bg-green-100 text-green-700' : (slot.score || 0) >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                                                {slot.score || 0}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Conflicts Resolved */}
+                                    {conflicts.length > 0 && (
+                                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                            <h5 className="text-xs font-semibold text-green-800 mb-2">Conflicts Resolved</h5>
+                                            {conflicts.map((conflict: string, i: number) => (
+                                                <div key={i} className="flex items-start gap-2 py-1">
+                                                    <CheckCircle className="w-3 h-3 text-green-600 mt-0.5 flex-shrink-0" />
+                                                    <span className="text-xs text-gray-700">{conflict}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {slots.length === 0 && !reasoning && (
+                                        <p className="text-xs text-gray-400 italic text-center">Schedule is already optimized - no changes needed</p>
+                                    )}
+                                </div>
+                            )
+                        })()}
                     </div>
                 </div>
             </div>

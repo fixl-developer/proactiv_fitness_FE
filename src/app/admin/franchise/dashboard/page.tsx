@@ -17,6 +17,12 @@ import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
 
+const toArray = (val: any): any[] => {
+    if (Array.isArray(val)) return val
+    if (val == null || typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return []
+    return [val]
+}
+
 const FALLBACK_FRANCHISE = {
     franchiseName: 'My Franchise', totalLocations: 0, totalStaff: 0, totalStudents: 0,
     totalRevenue: 0, monthlyRevenue: 0, revenueGrowth: 0, occupancyRate: 0,
@@ -62,8 +68,13 @@ export default function FranchiseOwnerDashboard() {
     const loadContentEngine = async () => {
         setContentLoading(true)
         try {
-            const res = await apiClient.post('/ai-content-engine/generate-social-post', { topic: 'franchise promotions' })
-            setContentData(res?.data || res)
+            const res = await apiClient.post('/ai-content-engine/generate-social-post', {
+                topic: 'franchise promotions and fitness programs',
+                targetAudience: 'potential and existing members',
+                tone: 'energetic and motivating',
+                platform: 'instagram'
+            })
+            setContentData(res?.data?.data || res?.data || res)
         } catch (err) {
             console.error('AI Content Engine unavailable:', err)
             setContentData(null)
@@ -75,8 +86,13 @@ export default function FranchiseOwnerDashboard() {
     const loadAiCommunication = async () => {
         setCommLoading(true)
         try {
-            const res = await apiClient.post('/ai-communication/optimize-message', { message: 'Monthly update', channels: ['email'] })
-            setCommData(res?.data || res)
+            const res = await apiClient.post('/ai-communication/optimize-message', {
+                originalMessage: 'Monthly update for all members - new programs, schedule changes, and upcoming events',
+                targetAudience: 'all members',
+                channels: ['email', 'sms', 'push'],
+                tone: 'professional and motivating'
+            })
+            setCommData(res?.data?.data || res?.data || res)
         } catch (err) {
             console.error('AI Communication unavailable:', err)
             setCommData(null)
@@ -89,7 +105,7 @@ export default function FranchiseOwnerDashboard() {
         setGlobalIntelLoading(true)
         try {
             const res = await apiClient.get('/global-intelligence/benchmarks')
-            setGlobalIntelData(res?.data || res)
+            setGlobalIntelData(res?.data?.data || res?.data || res)
         } catch (err) {
             console.error('Global Intelligence unavailable:', err)
             setGlobalIntelData(null)
@@ -482,37 +498,51 @@ export default function FranchiseOwnerDashboard() {
                         </div>
                     ) : aiInsights ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Churn Risk Analysis */}
-                            {(Array.isArray(aiInsights.churnRisk) ? aiInsights.churnRisk : aiInsights.churnRisk?.atRiskStudents || aiInsights.churnRisk?.risks || []).slice(0, 3).map((risk: any, i: number) => (
-                                <div key={`churn-${i}`} className="p-4 bg-gradient-to-br from-red-50 to-orange-100 rounded-lg border border-red-200">
+                            {/* Churn Risk Overview */}
+                            {aiInsights.churnRisk && (
+                                <div className="p-4 bg-gradient-to-br from-red-50 to-orange-100 rounded-lg border border-red-200">
                                     <div className="flex items-center gap-2 mb-2">
                                         <AlertTriangle className="w-4 h-4 text-red-600" />
                                         <span className="text-xs font-semibold text-red-700 uppercase">Churn Risk</span>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-900">{risk.title || risk.studentName || risk.name || risk}</p>
-                                    <p className="text-xs text-gray-600 mt-1">{risk.description || risk.reason || risk.riskLevel || ''}</p>
+                                    <p className="text-sm font-medium text-gray-900">
+                                        Risk Score: {aiInsights.churnRisk.riskScore ?? 'N/A'}/100
+                                    </p>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        Level: {aiInsights.churnRisk.riskLevel || 'Unknown'} | {aiInsights.churnRisk.urgency || ''}
+                                    </p>
+                                </div>
+                            )}
+                            {/* Churn Risk Factors */}
+                            {toArray(aiInsights.churnRisk?.factors).slice(0, 2).map((factor: any, i: number) => (
+                                <div key={`factor-${i}`} className="p-4 bg-gradient-to-br from-red-50 to-orange-100 rounded-lg border border-red-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                                        <span className="text-xs font-semibold text-red-700 uppercase">Risk Factor</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-900">{factor.factor || factor.title || factor.name || factor}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{factor.description || `Impact: ${factor.impact || 0}%`}</p>
                                 </div>
                             ))}
-                            {/* Schedule Optimization */}
-                            {(Array.isArray(aiInsights.scheduleOptimization) ? aiInsights.scheduleOptimization : aiInsights.scheduleOptimization?.suggestions || aiInsights.scheduleOptimization?.recommendations || []).slice(0, 3).map((sched: any, i: number) => (
+                            {/* Schedule Optimization Slots */}
+                            {toArray(aiInsights.scheduleOptimization?.suggestedSlots).slice(0, 3).map((slot: any, i: number) => (
                                 <div key={`sched-${i}`} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Clock className="w-4 h-4 text-blue-600" />
                                         <span className="text-xs font-semibold text-blue-700 uppercase">Schedule Optimization</span>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-900">{sched.title || sched.suggestion || sched.name || sched}</p>
-                                    <p className="text-xs text-gray-600 mt-1">{sched.description || sched.impact || ''}</p>
+                                    <p className="text-sm font-medium text-gray-900">{slot.dayOfWeek} - {slot.timeSlot}</p>
+                                    <p className="text-xs text-gray-600 mt-1">Expected Demand: {slot.expectedDemand} | Score: {slot.score}/100</p>
                                 </div>
                             ))}
-                            {/* Revenue Predictions */}
-                            {(aiInsights.churnRisk?.revenuePredictions || aiInsights.scheduleOptimization?.revenueImpact || []).slice(0, 2).map((pred: any, i: number) => (
-                                <div key={`pred-${i}`} className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
+                            {/* Retention Actions */}
+                            {toArray(aiInsights.churnRisk?.retentionActions).slice(0, 2).map((action: any, i: number) => (
+                                <div key={`action-${i}`} className="p-4 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg border border-green-200">
                                     <div className="flex items-center gap-2 mb-2">
                                         <TrendingUp className="w-4 h-4 text-green-600" />
-                                        <span className="text-xs font-semibold text-green-700 uppercase">Revenue Prediction</span>
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Retention Action</span>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-900">{pred.title || pred.prediction || pred.name || pred}</p>
-                                    <p className="text-xs text-gray-600 mt-1">{pred.description || pred.amount || ''}</p>
+                                    <p className="text-sm font-medium text-gray-900">{typeof action === 'string' ? action : action.title || action.action || JSON.stringify(action)}</p>
                                 </div>
                             ))}
                         </div>
@@ -549,18 +579,31 @@ export default function FranchiseOwnerDashboard() {
                             <div className="space-y-3">
                                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                     <Sparkles className="w-4 h-4 text-pink-500" />
-                                    Generate Promo Content
+                                    AI Generated Promo Content
                                 </h4>
-                                {(Array.isArray(contentData) ? contentData : contentData?.posts || contentData?.content || contentData?.suggestions || [contentData]).slice(0, 5).map((item: any, i: number) => (
-                                    <div key={`content-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg border border-pink-200">
-                                        <Sparkles className="w-4 h-4 text-pink-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.headline || item.content || JSON.stringify(item).slice(0, 120)}</p>
-                                            {(item.description || item.body || item.caption) && <p className="text-xs text-gray-600 mt-1">{item.description || item.body || item.caption}</p>}
-                                            {item.platform && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">{item.platform}</span>}
-                                        </div>
+                                <div className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg border border-pink-200">
+                                    <p className="text-sm font-bold text-gray-900">{contentData.title || contentData.headline || 'Generated Post'}</p>
+                                    {contentData.body && <p className="text-sm text-gray-700 mt-2">{contentData.body}</p>}
+                                    {contentData.callToAction && <p className="text-sm text-pink-700 font-semibold mt-2">{contentData.callToAction}</p>}
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {toArray(contentData.hashtags).map((tag: string, i: number) => (
+                                            <span key={`tag-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">{tag}</span>
+                                        ))}
                                     </div>
-                                ))}
+                                    <div className="flex items-center gap-2 mt-3">
+                                        {contentData.platform && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{contentData.platform}</span>}
+                                        {contentData.bestPostingTime && <span className="text-xs text-gray-500">Best time: {contentData.bestPostingTime}</span>}
+                                        {contentData.aiPowered && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">AI Generated</span>}
+                                    </div>
+                                </div>
+                                {toArray(contentData.mediaSuggestions).length > 0 && (
+                                    <div className="p-3 bg-gray-50 rounded-lg">
+                                        <p className="text-xs font-semibold text-gray-600 mb-1">Media Suggestions:</p>
+                                        {toArray(contentData.mediaSuggestions).map((suggestion: string, i: number) => (
+                                            <p key={`media-${i}`} className="text-xs text-gray-500">- {suggestion}</p>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center py-6">
@@ -598,14 +641,17 @@ export default function FranchiseOwnerDashboard() {
                                     <Brain className="w-4 h-4 text-indigo-500" />
                                     Optimize Member Messages
                                 </h4>
-                                {(Array.isArray(commData) ? commData : commData?.optimizedMessages || commData?.suggestions || commData?.recommendations || [commData]).slice(0, 5).map((item: any, i: number) => (
+                                {commData.recommendedChannel && (
+                                    <p className="text-xs text-indigo-600 mb-2">Recommended Channel: <span className="font-semibold">{commData.recommendedChannel}</span></p>
+                                )}
+                                {toArray(commData?.optimizedVersions || commData?.optimizedMessages || commData?.suggestions || commData?.recommendations).slice(0, 5).map((item: any, i: number) => (
                                     <div key={`comm-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-lg border border-indigo-200">
                                         <Brain className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.subject || item.optimizedMessage || item.message || JSON.stringify(item).slice(0, 120)}</p>
-                                            {(item.description || item.body || item.preview) && <p className="text-xs text-gray-600 mt-1">{item.description || item.body || item.preview}</p>}
+                                            <p className="text-sm font-medium text-gray-900">{item.subject || item.title || item.optimizedMessage || item.message || JSON.stringify(item).slice(0, 120)}</p>
+                                            {(item.content || item.description || item.body) && <p className="text-xs text-gray-600 mt-1">{(item.content || item.description || item.body || '').slice(0, 200)}</p>}
                                             {item.channel && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{item.channel}</span>}
-                                            {item.improvementScore && <span className="inline-block mt-1 ml-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">+{item.improvementScore}% improvement</span>}
+                                            {item.reasoning && <p className="text-xs text-gray-400 mt-1 italic">{item.reasoning}</p>}
                                         </div>
                                     </div>
                                 ))}
@@ -646,17 +692,52 @@ export default function FranchiseOwnerDashboard() {
                                     <Sparkles className="w-4 h-4 text-purple-500" />
                                     Franchise Benchmarks
                                 </h4>
-                                {(Array.isArray(globalIntelData) ? globalIntelData : globalIntelData?.benchmarks || globalIntelData?.recommendations || globalIntelData?.insights || [globalIntelData]).slice(0, 5).map((item: any, i: number) => (
+                                {/* Location Benchmarks */}
+                                {toArray(globalIntelData?.locations).slice(0, 5).map((loc: any, i: number) => (
                                     <div key={`gi-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-lg border border-purple-200">
                                         <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.name || item.metric || item.recommendation || JSON.stringify(item).slice(0, 120)}</p>
-                                            {(item.description || item.value || item.insight) && <p className="text-xs text-gray-600 mt-1">{item.description || item.value || item.insight}</p>}
-                                            {item.ranking && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Rank: {item.ranking}</span>}
-                                            {item.percentile && <span className="inline-block mt-1 ml-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Top {item.percentile}%</span>}
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-gray-900">{loc.locationName || loc.name || `Location ${i + 1}`}</p>
+                                                {loc.rank && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Rank #{loc.rank}</span>}
+                                            </div>
+                                            {loc.metrics && (
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    {loc.metrics.revenue != null && <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Revenue: ${(loc.metrics.revenue / 1000).toFixed(0)}K</span>}
+                                                    {loc.metrics.retention != null && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Retention: {loc.metrics.retention}%</span>}
+                                                    {loc.metrics.enrollment != null && <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">Enrollment: {loc.metrics.enrollment}</span>}
+                                                    {loc.metrics.satisfaction != null && <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">Satisfaction: {loc.metrics.satisfaction}/10</span>}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
+                                {/* Top & Under Performers */}
+                                <div className="flex gap-3">
+                                    {toArray(globalIntelData?.topPerformers).length > 0 && (
+                                        <div className="flex-1 p-3 bg-green-50 rounded-lg border border-green-200">
+                                            <p className="text-xs font-semibold text-green-700 mb-1">Top Performers</p>
+                                            {toArray(globalIntelData.topPerformers).map((name: string, i: number) => (
+                                                <p key={`top-${i}`} className="text-xs text-green-600">{name}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {toArray(globalIntelData?.underPerformers).length > 0 && (
+                                        <div className="flex-1 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                            <p className="text-xs font-semibold text-orange-700 mb-1">Need Improvement</p>
+                                            {toArray(globalIntelData.underPerformers).map((name: string, i: number) => (
+                                                <p key={`under-${i}`} className="text-xs text-orange-600">{name}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Insights */}
+                                {globalIntelData?.insights && (
+                                    <div className="p-3 bg-gray-50 rounded-lg">
+                                        <p className="text-xs font-semibold text-gray-600 mb-1">AI Insights</p>
+                                        <p className="text-xs text-gray-500">{globalIntelData.insights}</p>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center py-6">

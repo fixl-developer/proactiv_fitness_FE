@@ -8,12 +8,15 @@ import { motion } from 'framer-motion'
 import {
     Megaphone, Target, TrendingUp, Users, Mail,
     Plus, Edit2, Eye, Play, Pause, BarChart3, Calendar,
-    MousePointer, Award, ExternalLink, AlertCircle
+    MousePointer, Award, ExternalLink, AlertCircle,
+    Brain, Loader2, RefreshCw, Sparkles, Zap
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { contentEngineService } from '@/services/advancedAIServices'
+import { apiClient } from '@/services/api/client'
 
 export default function PartnerMarketingPage() {
     const router = useRouter()
@@ -36,6 +39,24 @@ export default function PartnerMarketingPage() {
         description: '',
     })
 
+    const [aiContent, setAiContent] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiMarketing = async () => {
+        setAiLoading(true)
+        try {
+            const [socialRes, emailRes] = await Promise.allSettled([
+                contentEngineService.generateSocialPost({ topic: 'partner program promotions', platform: 'instagram' }),
+                contentEngineService.generateEmail({ type: 'promotional', audience: 'parents', subject: 'New programs available' }),
+            ])
+            setAiContent({
+                social: socialRes.status === 'fulfilled' ? socialRes.value?.data || socialRes.value : null,
+                email: emailRes.status === 'fulfilled' ? emailRes.value?.data || emailRes.value : null,
+            })
+        } catch (err) { console.error('AI marketing unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/login')
@@ -43,6 +64,7 @@ export default function PartnerMarketingPage() {
         }
 
         fetchMarketingData()
+        loadAiMarketing()
     }, [isAuthenticated, router])
 
     const fetchMarketingData = async () => {
@@ -239,6 +261,68 @@ export default function PartnerMarketingPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* AI Marketing Assistant */}
+            <Card className="border-purple-200">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle className="text-base">AI Marketing Assistant</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiMarketing} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">AI generating marketing content...</p>
+                        </div>
+                    ) : aiContent ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {aiContent.social && (
+                                <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                                        <span className="text-xs font-semibold text-indigo-700 uppercase">AI Social Post</span>
+                                    </div>
+                                    <p className="text-sm text-gray-800">{aiContent.social.content || aiContent.social.body || aiContent.social.post || JSON.stringify(aiContent.social).slice(0, 200)}</p>
+                                    {aiContent.social.hashtags && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {(Array.isArray(aiContent.social.hashtags) ? aiContent.social.hashtags : []).map((tag: string, i: number) => (
+                                                <span key={i} className="text-xs text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">#{tag}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {aiContent.email && (
+                                <div className="p-4 bg-gradient-to-br from-rose-50 to-pink-50 rounded-lg border border-rose-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Mail className="w-4 h-4 text-rose-600" />
+                                        <span className="text-xs font-semibold text-rose-700 uppercase">AI Email Draft</span>
+                                    </div>
+                                    <p className="text-xs font-medium text-gray-700 mb-1">Subject: {aiContent.email.subject || aiContent.email.title || 'Generated email'}</p>
+                                    <p className="text-sm text-gray-800">{(aiContent.email.body || aiContent.email.content || '').substring(0, 200)}...</p>
+                                    {aiContent.email.callToAction && (
+                                        <Badge className="mt-2 bg-rose-100 text-rose-700 text-xs">CTA: {aiContent.email.callToAction}</Badge>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <Brain className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI marketing tools unavailable</p>
+                            <button onClick={loadAiMarketing} className="mt-1 text-xs text-purple-600 hover:underline">Generate Content</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Campaign Performance Chart */}
             <Card>

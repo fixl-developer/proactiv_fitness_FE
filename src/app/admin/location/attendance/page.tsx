@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, CheckCircle, XCircle, Clock, Calendar, Download,
-    Filter, Search, TrendingUp
+    Filter, Search, TrendingUp, Brain, Loader2, RefreshCw, Sparkles, AlertTriangle
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { LocationManagerService } from '@/services/locationManagerService'
+import { smartSchedulerService } from '@/services/advancedAIServices'
 
 export default function LocationAttendancePage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -20,6 +21,20 @@ export default function LocationAttendancePage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [attendanceData, setAttendanceData] = useState<any>(null)
+    const [aiPredictions, setAiPredictions] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiPredictions = async () => {
+        setAiLoading(true)
+        try {
+            const result = await smartSchedulerService.predictAttendance({ classId: 'location-all', date: new Date().toISOString() })
+            setAiPredictions(result?.data || result)
+        } catch (err) {
+            console.error('AI attendance prediction unavailable:', err)
+        } finally {
+            setAiLoading(false)
+        }
+    }
 
     const fetchAttendance = useCallback(async () => {
         try {
@@ -38,6 +53,7 @@ export default function LocationAttendancePage() {
 
     useEffect(() => {
         fetchAttendance()
+        loadAiPredictions()
     }, [fetchAttendance])
 
     const summary = attendanceData?.summary || attendanceData?.statusCounts || {}
@@ -172,6 +188,93 @@ export default function LocationAttendancePage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* AI Attendance Predictions */}
+            <Card className="border-purple-200">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Attendance Predictions</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiPredictions} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-6 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing attendance patterns...</p>
+                        </div>
+                    ) : aiPredictions ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                                    <span className="text-xs font-semibold text-blue-700 uppercase">No-Show Rate</span>
+                                </div>
+                                <p className="text-2xl font-bold text-blue-900">
+                                    {Math.round((aiPredictions.classNoShowRate || aiPredictions.noShowProbability || 0.15) * 100)}%
+                                </p>
+                                <p className="text-xs text-blue-600 mt-1">AI predicted no-show probability</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Sparkles className="w-4 h-4 text-green-600" />
+                                    <span className="text-xs font-semibold text-green-700 uppercase">Overbooking</span>
+                                </div>
+                                <p className="text-2xl font-bold text-green-900">
+                                    +{aiPredictions.recommendedOverbooking || 1}
+                                </p>
+                                <p className="text-xs text-green-600 mt-1">Recommended overbooking slots</p>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Brain className="w-4 h-4 text-purple-600" />
+                                    <span className="text-xs font-semibold text-purple-700 uppercase">AI Insight</span>
+                                </div>
+                                <p className="text-sm font-medium text-purple-900">
+                                    {aiPredictions.insights || 'Analyzing patterns for better predictions...'}
+                                </p>
+                                <Badge className="mt-2 bg-purple-100 text-purple-700 text-xs">
+                                    {aiPredictions.aiPowered ? 'AI Active' : 'Fallback Mode'}
+                                </Badge>
+                            </div>
+                            {/* Per-student predictions */}
+                            {aiPredictions.predictions && Array.isArray(aiPredictions.predictions) && aiPredictions.predictions.length > 0 && (
+                                <div className="col-span-full">
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                        High No-Show Risk Students
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {aiPredictions.predictions
+                                            .filter((p: any) => p.noShowProbability > 0.3)
+                                            .slice(0, 6)
+                                            .map((pred: any, idx: number) => (
+                                                <div key={idx} className="flex items-center justify-between p-2 bg-amber-50 rounded-lg border border-amber-200">
+                                                    <span className="text-sm text-gray-700">{pred.studentId}</span>
+                                                    <Badge variant="destructive" className="text-xs">
+                                                        {Math.round(pred.noShowProbability * 100)}% risk
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI predictions unavailable</p>
+                            <button onClick={loadAiPredictions} className="mt-2 text-sm text-purple-600 hover:underline">Generate Predictions</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Search & Filter */}
             <Card>

@@ -20,53 +20,35 @@ const AIManagementPage = () => {
     const [aiData, setAiData] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
 
-    // Hardcoded fallback metrics
-    const fallbackMetrics = [
-        {
-            title: 'Chatbot Interactions',
-            value: '2,847',
-            growth: '+23.5%',
-            icon: MessageSquare,
-            color: 'text-blue-600',
-            status: 'excellent'
-        },
-        {
-            title: 'Resolution Rate',
-            value: '87.3%',
-            growth: '+5.2%',
-            icon: Target,
-            color: 'text-green-600',
-            status: 'excellent'
-        },
-        {
-            title: 'Avg Response Time',
-            value: '1.2s',
-            growth: '-0.3s',
-            icon: Clock,
-            color: 'text-purple-600',
-            status: 'excellent'
-        },
-        {
-            title: 'Human Handovers',
-            value: '18.5%',
-            growth: '+2.1%',
-            icon: Users,
-            color: 'text-orange-600',
-            status: 'needs-attention'
-        }
-    ]
-
     const loadAiInsights = async () => {
         try {
             setAiLoading(true)
-            const token = localStorage.getItem('accessToken') || localStorage.getItem('token')
-            const response: any = await apiClient.get('/advanced-analytics/insights', {
-                headers: { Authorization: `Bearer ${token}` }
+            const [insightsRes, predictionsRes] = await Promise.allSettled([
+                apiClient.get<any>('/advanced-analytics/insights'),
+                apiClient.get<any>('/advanced-analytics/predictive/ai-system'),
+            ])
+
+            const insights = insightsRes.status === 'fulfilled' ? insightsRes.value?.data : null
+            const predictions = predictionsRes.status === 'fulfilled' ? predictionsRes.value?.data : null
+
+            setAiData({
+                metrics: {
+                    chatbotInteractions: insights?.totalInteractions || predictions?.predictions?.revenueProjection ? Math.round((predictions?.predictions?.revenueProjection || 0) / 10) : null,
+                    resolutionRate: insights?.successfulResolutions && insights?.totalInteractions
+                        ? Math.round((insights.successfulResolutions / insights.totalInteractions) * 1000) / 10
+                        : null,
+                    avgResponseTime: insights?.avgResponseTime || null,
+                    humanHandovers: insights?.handoverRate || null,
+                },
+                insights: insights?.insights || predictions?.actionItems?.map((item: string) => ({
+                    title: item,
+                    description: predictions?.reasoning || '',
+                    score: predictions?.confidence || null,
+                })) || [],
+                aiPowered: insights?.aiPowered || predictions?.aiPowered || false,
             })
-            setAiData(response?.data || response)
         } catch (err) {
             console.error('Failed to load AI insights:', err)
-            // Graceful fallback - aiData stays null, hardcoded metrics used
         } finally {
             setAiLoading(false)
         }
@@ -84,41 +66,41 @@ const AIManagementPage = () => {
         setTimeout(() => setIsLoading(false), 1000)
     }, [])
 
-    // Use live data if available, otherwise fallback
-    const aiMetrics = aiData?.metrics ? [
+    // Build metrics from live data with graceful fallback
+    const aiMetrics = [
         {
             title: 'Chatbot Interactions',
-            value: aiData.metrics.chatbotInteractions?.toLocaleString() || '2,847',
-            growth: aiData.metrics.chatbotGrowth || '+23.5%',
+            value: aiData?.metrics?.chatbotInteractions?.toLocaleString() || '---',
+            growth: aiData?.aiPowered ? 'AI Active' : 'Loading...',
             icon: MessageSquare,
             color: 'text-blue-600',
             status: 'excellent'
         },
         {
             title: 'Resolution Rate',
-            value: `${aiData.metrics.resolutionRate || 87.3}%`,
-            growth: aiData.metrics.resolutionGrowth || '+5.2%',
+            value: aiData?.metrics?.resolutionRate ? `${aiData.metrics.resolutionRate}%` : '---',
+            growth: aiData?.aiPowered ? 'AI Active' : 'Loading...',
             icon: Target,
             color: 'text-green-600',
             status: 'excellent'
         },
         {
             title: 'Avg Response Time',
-            value: `${aiData.metrics.avgResponseTime || 1.2}s`,
-            growth: aiData.metrics.responseTimeChange || '-0.3s',
+            value: aiData?.metrics?.avgResponseTime ? `${aiData.metrics.avgResponseTime}s` : '---',
+            growth: aiData?.aiPowered ? 'AI Active' : 'Loading...',
             icon: Clock,
             color: 'text-purple-600',
             status: 'excellent'
         },
         {
             title: 'Human Handovers',
-            value: `${aiData.metrics.humanHandovers || 18.5}%`,
-            growth: aiData.metrics.handoverChange || '+2.1%',
+            value: aiData?.metrics?.humanHandovers ? `${aiData.metrics.humanHandovers}%` : '---',
+            growth: aiData?.aiPowered ? 'AI Active' : 'Loading...',
             icon: Users,
             color: 'text-orange-600',
-            status: aiData.metrics.humanHandovers > 20 ? 'needs-attention' : 'excellent'
+            status: (aiData?.metrics?.humanHandovers || 0) > 20 ? 'needs-attention' : 'excellent'
         }
-    ] : fallbackMetrics
+    ]
 
     // AI System Components
     const aiSystems = [
@@ -164,9 +146,9 @@ const AIManagementPage = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button id="admin-ai-refresh-btn" variant="outline" size="sm">
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Refresh
+                    <Button id="admin-ai-refresh-btn" variant="outline" size="sm" onClick={loadAiInsights} disabled={aiLoading}>
+                        <RefreshCw className={`w-4 h-4 mr-2 ${aiLoading ? 'animate-spin' : ''}`} />
+                        {aiLoading ? 'Loading...' : 'Refresh'}
                     </Button>
                     <Button id="admin-ai-settings-btn">
                         <Settings className="w-4 h-4 mr-2" />
