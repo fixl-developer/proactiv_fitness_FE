@@ -3,17 +3,20 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, HeroSlide } from '@/services/cmsService';
 
 interface Slide {
-    id: number;
+    id: number | string;
     image: string;
     title: string;
     subtitle: string;
     cta: string;
     ctaLink: string;
+    fallbackGradient?: string;
 }
 
-const slides: Slide[] = [
+const staticSlides: Slide[] = [
     {
         id: 1,
         image: '/images/hero-1.jpg',
@@ -48,25 +51,52 @@ const slides: Slide[] = [
     },
 ];
 
+function mapCMSSlide(s: HeroSlide): Slide {
+    return {
+        id: s.id,
+        image: s.image,
+        title: s.title,
+        subtitle: s.subtitle || '',
+        cta: s.ctaText || 'LEARN MORE',
+        ctaLink: s.ctaLink || '/',
+        fallbackGradient: s.fallbackGradient,
+    };
+}
+
 export function HeroCarousel() {
+    const { data: cmsSlides } = useCMSData<HeroSlide[]>(
+        () => CMSService.getHeroSlides(),
+        [],
+        []
+    );
+
+    const slides: Slide[] = cmsSlides.length > 0
+        ? cmsSlides.map(mapCMSSlide)
+        : staticSlides;
+
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
+    // Reset current slide if slides change
+    useEffect(() => {
+        setCurrentSlide(0);
+    }, [slides.length]);
+
     // Auto-rotate every 4 seconds
     useEffect(() => {
-        if (!isAutoPlaying) return;
+        if (!isAutoPlaying || slides.length <= 1) return;
 
         const interval = setInterval(() => {
             setCurrentSlide((prev) => (prev + 1) % slides.length);
         }, 4000);
 
         return () => clearInterval(interval);
-    }, [isAutoPlaying]);
+    }, [isAutoPlaying, slides.length]);
 
     const goToSlide = (index: number) => {
         setCurrentSlide(index);
         setIsAutoPlaying(false);
-        setTimeout(() => setIsAutoPlaying(true), 10000); // Resume after 10s
+        setTimeout(() => setIsAutoPlaying(true), 10000);
     };
 
     const nextSlide = () => {
@@ -92,10 +122,12 @@ export function HeroCarousel() {
                 >
                     {/* Background Image */}
                     <div
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{
-                            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${slide.image})`,
-                        }}
+                        className={`absolute inset-0 bg-cover bg-center ${!slide.image || slide.image.startsWith('/images/') ? (slide.fallbackGradient || 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800') : ''}`}
+                        style={
+                            slide.image && !slide.image.startsWith('/images/')
+                                ? { backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${slide.image})` }
+                                : { backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${slide.image})` }
+                        }
                     />
 
                     {/* Content */}
@@ -119,36 +151,40 @@ export function HeroCarousel() {
             ))}
 
             {/* Navigation Arrows */}
-            <button id="marketing-hero-carousel-btn-previous-slide"
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-                aria-label="Previous slide"
-            >
-                <ChevronLeft className="w-6 h-6" />
-            </button>
+            {slides.length > 1 && (
+                <>
+                    <button id="marketing-hero-carousel-btn-previous-slide"
+                        onClick={prevSlide}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+                        aria-label="Previous slide"
+                    >
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
 
-            <button id="marketing-hero-carousel-btn-next-slide"
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-                aria-label="Next slide"
-            >
-                <ChevronRight className="w-6 h-6" />
-            </button>
+                    <button id="marketing-hero-carousel-btn-next-slide"
+                        onClick={nextSlide}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+                        aria-label="Next slide"
+                    >
+                        <ChevronRight className="w-6 h-6" />
+                    </button>
 
-            {/* Dots Indicator */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
-                {slides.map((_, index) => (
-                    <button id="marketing-hero-carousel-btn"
-                        key={index}
-                        onClick={() => goToSlide(index)}
-                        className={`w-3 h-3 rounded-full transition-all ${index === currentSlide
-                                ? 'bg-white w-8'
-                                : 'bg-white/50 hover:bg-white/75'
-                            }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                    />
-                ))}
-            </div>
+                    {/* Dots Indicator */}
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
+                        {slides.map((_, index) => (
+                            <button id="marketing-hero-carousel-btn"
+                                key={index}
+                                onClick={() => goToSlide(index)}
+                                className={`w-3 h-3 rounded-full transition-all ${index === currentSlide
+                                        ? 'bg-white w-8'
+                                        : 'bg-white/50 hover:bg-white/75'
+                                    }`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }

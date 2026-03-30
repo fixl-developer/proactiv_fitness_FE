@@ -524,6 +524,18 @@ class CMSAdminServiceClass {
             return response.data.data
         },
     }
+
+    // Seed default data (only fills empty collections)
+    async seedDefaultData(): Promise<{ seeded: string[]; skipped: string[] }> {
+        const response = await apiClient.post<any>(`${this.baseUrl}/seed`)
+        return response.data.data
+    }
+
+    // Reset all data and re-seed with defaults
+    async resetAndSeedData(): Promise<{ cleared: string[]; seeded: string[]; skipped: string[] }> {
+        const response = await apiClient.post<any>(`${this.baseUrl}/reset-and-seed`)
+        return response.data.data
+    }
 }
 
 export const CMSService = new CMSPublicService()

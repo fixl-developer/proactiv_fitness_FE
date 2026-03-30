@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { Users, Calendar, Zap, PartyPopper } from 'lucide-react';
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, ServiceCardData } from '@/services/cmsService';
 
 interface Service {
-    id: number;
+    id: number | string;
     title: string;
     description: string;
     icon: React.ReactNode;
@@ -13,7 +15,21 @@ interface Service {
     link: string;
 }
 
-const services: Service[] = [
+const emojiToIconMap: Record<string, React.ReactNode> = {
+    '🤸': <Users className="w-12 h-12" />,
+    '🏕️': <Calendar className="w-12 h-12" />,
+    '⚡': <Zap className="w-12 h-12" />,
+    '🎉': <PartyPopper className="w-12 h-12" />,
+};
+
+const defaultColorCycle = [
+    { color: 'text-green-600', bgColor: 'bg-green-500' },
+    { color: 'text-red-600', bgColor: 'bg-red-500' },
+    { color: 'text-blue-600', bgColor: 'bg-blue-500' },
+    { color: 'text-purple-600', bgColor: 'bg-purple-900' },
+];
+
+const staticServices: Service[] = [
     {
         id: 1,
         title: 'Gymnastics Programs',
@@ -52,7 +68,30 @@ const services: Service[] = [
     },
 ];
 
+function mapCMSService(s: ServiceCardData, index: number): Service {
+    const style = defaultColorCycle[index % defaultColorCycle.length];
+    return {
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        icon: emojiToIconMap[s.emoji] || <Users className="w-12 h-12" />,
+        color: s.color ? `text-${s.color}-600` : style.color,
+        bgColor: s.gradient ? `bg-gradient-to-r ${s.gradient}` : style.bgColor,
+        link: s.href || '#',
+    };
+}
+
 export function ServicesSection() {
+    const { data: cmsServices } = useCMSData<ServiceCardData[]>(
+        () => CMSService.getServices(),
+        [],
+        []
+    );
+
+    const services: Service[] = cmsServices.length > 0
+        ? cmsServices.map(mapCMSService)
+        : staticServices;
+
     return (
         <section className="py-20 bg-gray-50">
             <div className="container mx-auto px-4">

@@ -43,6 +43,13 @@ export interface PartnerTypeConfig {
     terminologyClassPlural: string
     primaryColor: string
     icon: string
+    // Derived labels used across partner dashboard pages
+    memberLabel: string
+    memberLabelSingular: string
+    memberLabelLower: string
+    enrolledLabel: string
+    programLabel: string
+    programLabelSingular: string
 }
 
 const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
@@ -57,6 +64,12 @@ const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
         terminologyClassPlural: 'Classes',
         primaryColor: 'blue',
         icon: 'GraduationCap',
+        memberLabel: 'Students',
+        memberLabelSingular: 'Student',
+        memberLabelLower: 'students',
+        enrolledLabel: 'enrolled',
+        programLabel: 'Programs',
+        programLabelSingular: 'Program',
     },
     gym: {
         key: 'gym',
@@ -69,6 +82,12 @@ const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
         terminologyClassPlural: 'Sessions',
         primaryColor: 'green',
         icon: 'Dumbbell',
+        memberLabel: 'Members',
+        memberLabelSingular: 'Member',
+        memberLabelLower: 'members',
+        enrolledLabel: 'enrolled',
+        programLabel: 'Sessions',
+        programLabelSingular: 'Session',
     },
     club: {
         key: 'club',
@@ -81,6 +100,12 @@ const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
         terminologyClassPlural: 'Trainings',
         primaryColor: 'purple',
         icon: 'Trophy',
+        memberLabel: 'Athletes',
+        memberLabelSingular: 'Athlete',
+        memberLabelLower: 'athletes',
+        enrolledLabel: 'enrolled',
+        programLabel: 'Trainings',
+        programLabelSingular: 'Training',
     },
     franchise: {
         key: 'franchise',
@@ -93,6 +118,12 @@ const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
         terminologyClassPlural: 'Classes',
         primaryColor: 'orange',
         icon: 'Building2',
+        memberLabel: 'Students',
+        memberLabelSingular: 'Student',
+        memberLabelLower: 'students',
+        enrolledLabel: 'enrolled',
+        programLabel: 'Programs',
+        programLabelSingular: 'Program',
     },
     other: {
         key: 'other',
@@ -105,6 +136,12 @@ const partnerTypeConfigs: Record<PartnerTypeKey, PartnerTypeConfig> = {
         terminologyClassPlural: 'Programs',
         primaryColor: 'gray',
         icon: 'Users',
+        memberLabel: 'Participants',
+        memberLabelSingular: 'Participant',
+        memberLabelLower: 'participants',
+        enrolledLabel: 'enrolled',
+        programLabel: 'Programs',
+        programLabelSingular: 'Program',
     },
 }
 
