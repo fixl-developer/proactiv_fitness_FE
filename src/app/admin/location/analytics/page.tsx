@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     BarChart3, Users, TrendingUp, Calendar, LineChart as LineChartIcon,
-    Clock, DollarSign, Activity, Star
+    Clock, DollarSign, Activity, Star, Brain, Loader2, RefreshCw, Sparkles, Zap, AlertTriangle
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import {
     PieChart, Pie, Cell
 } from 'recharts'
 import { LocationManagerService, LocationAnalytics } from '@/services/locationManagerService'
+import { apiClient } from '@/services/api/client'
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4']
 
@@ -23,6 +24,27 @@ export default function LocationAnalyticsPage() {
     const [error, setError] = useState<string | null>(null)
     const [timeRange, setTimeRange] = useState('30d')
     const [analyticsData, setAnalyticsData] = useState<any>(null)
+    const [aiPredictions, setAiPredictions] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiPredictions = async () => {
+        setAiLoading(true)
+        try {
+            const [predictionsRes, trendsRes, insightsRes] = await Promise.allSettled([
+                apiClient.get<any>('/advanced-analytics/predictive/location'),
+                apiClient.get<any>('/advanced-analytics/trends/revenue'),
+                apiClient.get<any>('/advanced-analytics/insights'),
+            ])
+            const predictions = predictionsRes.status === 'fulfilled' ? predictionsRes.value?.data : null
+            const trends = trendsRes.status === 'fulfilled' ? trendsRes.value?.data : null
+            const insights = insightsRes.status === 'fulfilled' ? insightsRes.value?.data : null
+            setAiPredictions({ predictions, trends, insights })
+        } catch (err) {
+            console.error('AI predictions unavailable:', err)
+        } finally {
+            setAiLoading(false)
+        }
+    }
 
     const fetchAnalytics = useCallback(async () => {
         try {
@@ -41,6 +63,7 @@ export default function LocationAnalyticsPage() {
 
     useEffect(() => {
         fetchAnalytics()
+        loadAiPredictions()
     }, [fetchAnalytics])
 
     const totalStudents = analyticsData?.totalStudents ?? analyticsData?.students?.total ?? 0
@@ -377,6 +400,150 @@ export default function LocationAnalyticsPage() {
                     </CardContent>
                 </Card>
             </motion.div>
+
+            {/* AI Predictive Analytics */}
+            <Card className="border-purple-200">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle>AI Predictive Analytics</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiPredictions} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Running AI predictive models...</p>
+                        </div>
+                    ) : aiPredictions ? (
+                        <div className="space-y-4">
+                            {/* Prediction Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Users className="w-4 h-4 text-blue-600" />
+                                        <span className="text-xs font-semibold text-blue-700 uppercase">Retention Forecast</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-blue-900">
+                                        {aiPredictions.predictions?.predictions?.studentRetention || '--'}%
+                                    </p>
+                                    <p className="text-xs text-blue-600 mt-1">Predicted student retention</p>
+                                </div>
+                                <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <TrendingUp className="w-4 h-4 text-green-600" />
+                                        <span className="text-xs font-semibold text-green-700 uppercase">Growth Forecast</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-900">
+                                        {aiPredictions.predictions?.predictions?.enrollmentGrowth || '--'}%
+                                    </p>
+                                    <p className="text-xs text-green-600 mt-1">Enrollment growth prediction</p>
+                                </div>
+                                <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <DollarSign className="w-4 h-4 text-orange-600" />
+                                        <span className="text-xs font-semibold text-orange-700 uppercase">Revenue Projection</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-orange-900">
+                                        {aiPredictions.predictions?.predictions?.revenueProjection
+                                            ? `${(aiPredictions.predictions.predictions.revenueProjection / 1000).toFixed(0)}K`
+                                            : '--'}
+                                    </p>
+                                    <p className="text-xs text-orange-600 mt-1">Projected revenue</p>
+                                </div>
+                                <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                                        <span className="text-xs font-semibold text-red-700 uppercase">Churn Risk</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-red-900">
+                                        {aiPredictions.predictions?.predictions?.churnRisk || '--'}%
+                                    </p>
+                                    <p className="text-xs text-red-600 mt-1">At-risk students</p>
+                                </div>
+                            </div>
+
+                            {/* AI Reasoning & Actions */}
+                            {(aiPredictions.predictions?.reasoning || aiPredictions.insights) && (
+                                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Sparkles className="w-4 h-4 text-purple-600" />
+                                        <span className="text-sm font-semibold text-purple-800">AI Analysis</span>
+                                    </div>
+                                    <p className="text-sm text-purple-700">
+                                        {aiPredictions.predictions?.reasoning || aiPredictions.insights?.keyMetricsSummary || 'AI is analyzing location performance patterns...'}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Key Drivers */}
+                            {aiPredictions.predictions?.keyDrivers && Array.isArray(aiPredictions.predictions.keyDrivers) && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <Zap className="w-4 h-4 text-amber-500" /> Key Drivers
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {aiPredictions.predictions.keyDrivers.map((driver: string, idx: number) => (
+                                            <Badge key={idx} variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">
+                                                {driver}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Items */}
+                            {aiPredictions.predictions?.actionItems && Array.isArray(aiPredictions.predictions.actionItems) && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <Brain className="w-4 h-4 text-purple-500" /> AI Recommended Actions
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {aiPredictions.predictions.actionItems.map((action: string, idx: number) => (
+                                            <div key={idx} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                                                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium mt-0.5">{idx + 1}</span>
+                                                <p className="text-sm text-gray-700">{action}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Revenue Trend Forecast */}
+                            {aiPredictions.trends?.forecast && Array.isArray(aiPredictions.trends.forecast) && aiPredictions.trends.forecast.length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2">AI Revenue Forecast</h4>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                                        {aiPredictions.trends.forecast.slice(0, 5).map((f: any, idx: number) => (
+                                            <div key={idx} className="p-3 bg-gray-50 rounded-lg text-center border">
+                                                <p className="text-xs text-gray-500">{f.period || `Period ${idx + 1}`}</p>
+                                                <p className="text-lg font-bold text-gray-900">{Math.round(f.predictedValue || 0)}</p>
+                                                <p className="text-xs text-green-600">{Math.round(f.confidence || 0)}% confidence</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">
+                                {aiPredictions.predictions?.aiPowered ? 'AI Active' : 'Fallback Mode'} | Confidence: {aiPredictions.predictions?.confidence || '--'}%
+                            </Badge>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <Brain className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI predictive analytics unavailable</p>
+                            <button onClick={loadAiPredictions} className="mt-2 text-sm text-purple-600 hover:underline">Generate Predictions</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {!analyticsData && !error && (
                 <Card>

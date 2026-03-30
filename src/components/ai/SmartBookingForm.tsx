@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { apiClient } from '@/services/api/client'
 import {
     FiUser,
     FiMail,
@@ -92,16 +93,38 @@ const SmartBookingForm = ({
         setIsAnalyzing(true)
 
         try {
-            // Mock AI analysis - Replace with actual API call
-            const insights = await mockAnalyzeFormData(formData)
-            setAiInsights(insights)
+            // Call AI chatbot for personalized form analysis
+            const message = `Analyze this booking: Child age ${formData.childAge}, experience: ${formData.experience || 'none'}, goals: ${formData.goals?.join(', ') || 'general'}, location: ${formData.location || 'any'}.`
+            const res = await apiClient.post<any>('/ai/chat', {
+                message,
+                conversationHistory: [],
+            })
 
-            // Show recommendations if child age is provided
+            const aiData = res?.data
+            const insights: AIInsight[] = []
+
+            if (aiData?.response) {
+                insights.push({
+                    type: 'suggestion',
+                    message: aiData.response.substring(0, 200),
+                    confidence: aiData.aiPowered ? 0.92 : 0.7,
+                })
+            }
+            if (aiData?.suggestions && Array.isArray(aiData.suggestions)) {
+                aiData.suggestions.forEach((s: string) => {
+                    insights.push({ type: 'optimization', message: s, confidence: 0.85 })
+                })
+            }
+
+            setAiInsights(insights.length > 0 ? insights : getDefaultInsights(formData))
+
             if (formData.childAge) {
                 setShowRecommendations(true)
             }
         } catch (error) {
             console.error('Error analyzing form data:', error)
+            setAiInsights(getDefaultInsights(formData))
+            if (formData.childAge) setShowRecommendations(true)
         } finally {
             setIsAnalyzing(false)
         }
@@ -109,15 +132,25 @@ const SmartBookingForm = ({
 
     const generateTimeSlotSuggestions = async () => {
         try {
-            const suggestions = await mockGenerateTimeSlots({
-                location: formData.location,
-                date: formData.preferredDate,
-                childAge: formData.childAge,
-                program: formData.program
+            const res = await apiClient.post<any>('/smart-scheduler/optimize-schedule', {
+                locationId: formData.location || 'default',
             })
-            setTimeSlotSuggestions(suggestions)
+
+            const scheduleData = res?.data
+            if (scheduleData?.optimizedSchedule && Array.isArray(scheduleData.optimizedSchedule)) {
+                setTimeSlotSuggestions(scheduleData.optimizedSchedule.slice(0, 3).map((s: any, idx: number) => ({
+                    date: formData.preferredDate || s.date || new Date().toISOString().split('T')[0],
+                    time: s.time || `${10 + idx * 2}:00 AM`,
+                    score: s.recommendationScore || (0.95 - idx * 0.06),
+                    reasoning: s.reasons || ['AI-optimized slot', 'Based on availability patterns'],
+                    availability: idx === 0 ? 'high' : 'medium',
+                })))
+            } else {
+                setTimeSlotSuggestions(getDefaultTimeSlots(formData))
+            }
         } catch (error) {
             console.error('Error generating time slot suggestions:', error)
+            setTimeSlotSuggestions(getDefaultTimeSlots(formData))
         }
     }
 
@@ -581,10 +614,8 @@ const SmartBookingForm = ({
     )
 }
 
-// Mock functions - Replace with actual API calls
-const mockAnalyzeFormData = async (formData: any): Promise<AIInsight[]> => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
+// Fallback insights when AI API is unavailable
+const getDefaultInsights = (formData: any): AIInsight[] => {
     const insights: AIInsight[] = []
 
     if (formData.childAge) {
@@ -594,6 +625,12 @@ const mockAnalyzeFormData = async (formData: any): Promise<AIInsight[]> => {
                 type: 'suggestion',
                 message: 'Perfect age for our Beginner program! This age group learns through play and develops fundamental movement skills.',
                 confidence: 0.95
+            })
+        } else if (age >= 7 && age <= 12) {
+            insights.push({
+                type: 'suggestion',
+                message: 'Great age for skill development! Our structured programs build strength, flexibility, and technique.',
+                confidence: 0.92
             })
         }
     }
@@ -606,37 +643,29 @@ const mockAnalyzeFormData = async (formData: any): Promise<AIInsight[]> => {
         })
     }
 
-    if (formData.goals.includes('Build Confidence') && formData.goals.includes('Make Friends')) {
-        insights.push({
-            type: 'suggestion',
-            message: 'Group classes would be ideal for building confidence and social skills. Our small class sizes ensure personal attention.',
-            confidence: 0.92
-        })
-    }
-
     return insights
 }
 
-const mockGenerateTimeSlots = async (criteria: any): Promise<TimeSlotSuggestion[]> => {
-    await new Promise(resolve => setTimeout(resolve, 800))
-
+// Fallback time slots when Smart Scheduler API is unavailable
+const getDefaultTimeSlots = (formData: any): TimeSlotSuggestion[] => {
+    const date = formData.preferredDate || new Date().toISOString().split('T')[0]
     return [
         {
-            date: criteria.date,
+            date,
             time: '10:00 AM',
             score: 0.95,
             reasoning: ['Optimal time for young children', 'High coach availability', 'Small class size'],
             availability: 'high'
         },
         {
-            date: criteria.date,
+            date,
             time: '3:00 PM',
             score: 0.88,
             reasoning: ['Good for after-school activities', 'Popular time slot', 'Experienced coach available'],
             availability: 'medium'
         },
         {
-            date: criteria.date,
+            date,
             time: '11:00 AM',
             score: 0.82,
             reasoning: ['Weekend favorite', 'Family-friendly timing', 'Multiple programs available'],

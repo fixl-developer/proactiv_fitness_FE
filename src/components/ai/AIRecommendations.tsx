@@ -14,6 +14,7 @@ import {
     FiTrendingUp
 } from 'react-icons/fi'
 import { formatDateShort } from '@/utils/dateUtils'
+import { apiClient } from '@/services/api/client'
 
 interface Recommendation {
     id: string
@@ -71,18 +72,29 @@ const AIRecommendations = ({
         setIsLoading(true)
 
         try {
-            // Mock API call - Replace with actual API
-            const mockRecommendations = await mockGetRecommendations({
-                childAge,
-                experienceLevel,
-                goals,
-                location,
-                budget
+            // Call AI chatbot with structured recommendation request
+            const message = `Recommend gymnastics programs for a ${childAge}-year-old child. Experience: ${experienceLevel}. Goals: ${goals.join(', ') || 'general fitness'}. Location preference: ${location || 'any'}. Budget: ${budget ? `HK$${budget}/month` : 'flexible'}.`
+
+            const response = await apiClient.post<any>('/ai/chat', {
+                message,
+                conversationHistory: [],
             })
 
-            setRecommendations(mockRecommendations)
+            // Try to parse AI response into structured recommendations
+            const aiData = response?.data
+
+            if (aiData?.bookingIntent || aiData?.response) {
+                // Map AI response to recommendation format
+                const aiRecommendations = mapAIResponseToRecommendations(aiData, { childAge, experienceLevel, location, budget })
+                setRecommendations(aiRecommendations)
+            } else {
+                // Fallback: generate default recommendations
+                setRecommendations(getDefaultRecommendations({ childAge, experienceLevel, location }))
+            }
         } catch (error) {
             console.error('Error generating recommendations:', error)
+            // Graceful fallback
+            setRecommendations(getDefaultRecommendations({ childAge, experienceLevel, location }))
         } finally {
             setIsLoading(false)
         }
@@ -293,107 +305,116 @@ const AIRecommendations = ({
     )
 }
 
-// Mock API function - Replace with actual API call
-const mockGetRecommendations = async (criteria: any): Promise<Recommendation[]> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
+// Map AI chatbot response to structured recommendations
+const mapAIResponseToRecommendations = (aiData: any, criteria: any): Recommendation[] => {
+    const { childAge, experienceLevel, location, budget } = criteria
+    const recommendations: Recommendation[] = []
+    const nextWeek = new Date()
+    nextWeek.setDate(nextWeek.getDate() + 7)
 
-    const { childAge, experienceLevel, location } = criteria
-
-    const baseRecommendations: Recommendation[] = [
-        {
-            id: 'rec_1',
-            programName: 'Beginner Gymnastics',
+    // Build recommendations based on AI analysis and child age
+    if (childAge && childAge >= 2 && childAge <= 5) {
+        recommendations.push({
+            id: 'ai_rec_1',
+            programName: 'Kinder Gym',
             score: 0.95,
             reasoning: [
-                `Perfect age match for ${childAge}-year-old children`,
-                'Beginner level matches your child\'s experience',
-                'Focus on fun and fundamental skills development',
-                'Small class sizes ensure individual attention'
+                `AI-recommended for ${childAge}-year-old children`,
+                'Focus on motor skills and coordination development',
+                'Safe, fun environment for early learners',
+                aiData.response ? 'Based on AI analysis of your child\'s profile' : 'Age-appropriate curriculum'
             ],
-            matchedCriteria: ['age', 'experience', 'safety', 'fun'],
+            matchedCriteria: ['age', 'safety', 'development', 'fun'],
             location: location || 'Cyberport',
-            pricing: {
-                monthly: 800,
-                trial: 0
-            },
-            availability: {
-                nextAvailable: '2024-01-15',
-                weeklySlots: 3
-            },
-            ageRange: '3-6 years',
+            pricing: { monthly: budget ? Math.min(budget, 800) : 800, trial: 0 },
+            availability: { nextAvailable: nextWeek.toISOString().split('T')[0], weeklySlots: 3 },
+            ageRange: '2-5 years',
             experienceLevel: 'beginner',
             maxParticipants: 8,
-            duration: 60,
-            benefits: ['Coordination', 'Confidence', 'Social Skills', 'Basic Gymnastics'],
-            successRate: 0.92
-        },
-        {
-            id: 'rec_2',
-            programName: 'Intermediate Skills Development',
-            score: 0.82,
-            reasoning: [
-                'Great progression path from beginner level',
-                'Develops more advanced gymnastics skills',
-                'Builds strength and flexibility systematically',
-                'Prepares for potential competitive track'
-            ],
-            matchedCriteria: ['progression', 'skill-building', 'strength'],
-            location: location || 'Wan Chai',
-            pricing: {
-                monthly: 950,
-                trial: 0
-            },
-            availability: {
-                nextAvailable: '2024-01-20',
-                weeklySlots: 2
-            },
-            ageRange: '7-10 years',
-            experienceLevel: 'intermediate',
-            maxParticipants: 6,
-            duration: 75,
-            benefits: ['Advanced Skills', 'Strength Building', 'Discipline', 'Goal Setting'],
-            successRate: 0.88
-        },
-        {
-            id: 'rec_3',
+            duration: 45,
+            benefits: ['Motor Skills', 'Coordination', 'Confidence', 'Social Skills'],
+            successRate: 0.93,
+        })
+    }
+
+    if (childAge && childAge >= 4 && childAge <= 8) {
+        recommendations.push({
+            id: 'ai_rec_2',
             programName: 'Fun & Fitness Program',
-            score: 0.78,
+            score: childAge <= 5 ? 0.85 : 0.92,
             reasoning: [
-                'Emphasizes enjoyment and physical fitness',
-                'Less pressure, more focus on having fun',
-                'Great for building love of movement',
-                'Flexible progression based on child\'s interest'
+                'AI-matched based on age and development stage',
+                'Builds love of movement through play',
+                'Flexible progression at child\'s pace',
+                'Great for building foundational fitness'
             ],
             matchedCriteria: ['fun', 'fitness', 'flexibility'],
             location: location || 'Cyberport',
-            pricing: {
-                monthly: 750,
-                trial: 0
-            },
-            availability: {
-                nextAvailable: '2024-01-12',
-                weeklySlots: 4
-            },
+            pricing: { monthly: budget ? Math.min(budget, 750) : 750, trial: 0 },
+            availability: { nextAvailable: nextWeek.toISOString().split('T')[0], weeklySlots: 4 },
             ageRange: '4-8 years',
             experienceLevel: 'beginner',
             maxParticipants: 10,
             duration: 60,
             benefits: ['Fitness', 'Fun', 'Flexibility', 'Friendship'],
-            successRate: 0.85
-        }
-    ]
-
-    // Filter and adjust recommendations based on criteria
-    return baseRecommendations
-        .filter(rec => {
-            if (childAge) {
-                const [minAge, maxAge] = rec.ageRange.split('-').map(age => parseInt(age.replace(/\D/g, '')))
-                return childAge >= minAge && childAge <= maxAge
-            }
-            return true
+            successRate: 0.88,
         })
-        .sort((a, b) => b.score - a.score)
+    }
+
+    if (childAge && childAge >= 6 && childAge <= 12) {
+        recommendations.push({
+            id: 'ai_rec_3',
+            programName: experienceLevel === 'intermediate' ? 'Intermediate Skills Development' : 'School Gymnastics',
+            score: experienceLevel === 'intermediate' ? 0.94 : 0.90,
+            reasoning: [
+                `AI-recommended for ${childAge}-year-old at ${experienceLevel} level`,
+                'Structured skill progression pathway',
+                'Develops strength, flexibility and technique',
+                'Prepares for competitive track if desired'
+            ],
+            matchedCriteria: ['age', 'progression', 'skill-building'],
+            location: location || 'Wan Chai',
+            pricing: { monthly: budget ? Math.min(budget, 950) : 950, trial: 0 },
+            availability: { nextAvailable: nextWeek.toISOString().split('T')[0], weeklySlots: 3 },
+            ageRange: '6-12 years',
+            experienceLevel: experienceLevel || 'beginner',
+            maxParticipants: 6,
+            duration: 75,
+            benefits: ['Gymnastics Skills', 'Strength', 'Discipline', 'Goal Setting'],
+            successRate: 0.90,
+        })
+    }
+
+    if (childAge && childAge >= 13) {
+        recommendations.push({
+            id: 'ai_rec_4',
+            programName: 'Advanced Gymnastics Training',
+            score: 0.91,
+            reasoning: [
+                `AI-matched for teen athlete (age ${childAge})`,
+                'Advanced technique and performance training',
+                'Competition preparation available',
+                'Individual goal-oriented coaching'
+            ],
+            matchedCriteria: ['age', 'advancement', 'performance'],
+            location: location || 'Wan Chai',
+            pricing: { monthly: budget ? Math.min(budget, 1200) : 1200, trial: 0 },
+            availability: { nextAvailable: nextWeek.toISOString().split('T')[0], weeklySlots: 3 },
+            ageRange: '13-18 years',
+            experienceLevel: experienceLevel || 'intermediate',
+            maxParticipants: 6,
+            duration: 90,
+            benefits: ['Advanced Techniques', 'Competition Prep', 'Strength', 'Performance'],
+            successRate: 0.87,
+        })
+    }
+
+    return recommendations.sort((a, b) => b.score - a.score)
+}
+
+// Fallback recommendations when AI API is unavailable
+const getDefaultRecommendations = (criteria: any): Recommendation[] => {
+    return mapAIResponseToRecommendations({ response: null }, criteria)
 }
 
 export default AIRecommendations

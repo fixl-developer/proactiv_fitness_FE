@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Plus, Edit2, Trash2, Eye, Calendar, Users, Clock, Award, X, Save } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, Calendar, Users, Clock, Award, X, Save, Brain, Loader2, RefreshCw, Sparkles, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService, LocationClass } from '@/services/locationManagerService'
+import { smartSchedulerService } from '@/services/advancedAIServices'
 
 export default function LocationClassesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -20,6 +21,20 @@ export default function LocationClassesPage() {
     const [editingClass, setEditingClass] = useState<any>(null)
     const [formData, setFormData] = useState({ name: '', level: 'BEGINNER', coach: '', schedule: '', capacity: 20, room: '' })
     const [isSaving, setIsSaving] = useState(false)
+    const [aiSchedule, setAiSchedule] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiOptimization = async () => {
+        setAiLoading(true)
+        try {
+            const result = await smartSchedulerService.optimizeSchedule({ locationId: 'current' })
+            setAiSchedule(result?.data || result)
+        } catch (err) {
+            console.error('AI schedule optimization unavailable:', err)
+        } finally {
+            setAiLoading(false)
+        }
+    }
 
     const fetchClasses = useCallback(async () => {
         try {
@@ -40,6 +55,7 @@ export default function LocationClassesPage() {
 
     useEffect(() => {
         fetchClasses()
+        loadAiOptimization()
     }, [fetchClasses])
 
     const handleOpenCreate = () => {
@@ -148,6 +164,63 @@ export default function LocationClassesPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* AI Schedule Optimization */}
+            <Card className="border-purple-200">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle className="text-base">AI Schedule Optimization</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiOptimization} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-4 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Optimizing schedule...</p>
+                        </div>
+                    ) : aiSchedule ? (
+                        <div className="space-y-3">
+                            {/* Optimization insights */}
+                            {aiSchedule.insights && (
+                                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Sparkles className="w-4 h-4 text-purple-600" />
+                                        <span className="text-sm font-semibold text-purple-800">AI Recommendation</span>
+                                    </div>
+                                    <p className="text-sm text-purple-700">{aiSchedule.insights}</p>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {(aiSchedule.recommendations || aiSchedule.optimizedSchedule || []).slice(0, 3).map((rec: any, idx: number) => (
+                                    <div key={idx} className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Zap className="w-3 h-3 text-blue-600" />
+                                            <span className="text-xs font-semibold text-blue-700">{rec.action || rec.time || `Suggestion ${idx + 1}`}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-700">{rec.reason || rec.programName || rec.description || 'AI-optimized recommendation'}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">
+                                {aiSchedule.aiPowered ? 'AI Active' : 'Fallback Mode'}
+                            </Badge>
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <Brain className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">AI optimization unavailable</p>
+                            <button onClick={loadAiOptimization} className="mt-1 text-xs text-purple-600 hover:underline">Retry</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 gap-6">
                 {classes.map((cls, idx) => (

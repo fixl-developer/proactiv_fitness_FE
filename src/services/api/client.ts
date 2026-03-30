@@ -22,7 +22,7 @@ class ApiClient {
     private circuitBreakers: Map<string, CircuitBreakerState> = new Map()
     private requestTimeout = 30000 // 30 seconds
 
-    constructor(baseURL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api') {
+    constructor(baseURL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1') {
         this.client = axios.create({
             baseURL,
             timeout: this.requestTimeout,

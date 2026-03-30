@@ -6,8 +6,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, Plus, BookOpen, CheckCircle, Users, DollarSign, Edit, Eye, Trash2 } from 'lucide-react'
+import { AlertCircle, Plus, BookOpen, CheckCircle, Users, DollarSign, Edit, Eye, Trash2, Brain, Loader2, RefreshCw, Sparkles, TrendingUp } from 'lucide-react'
 import { usePartnerConfig } from '@/contexts/PartnerContext'
+import { Badge } from '@/components/ui/badge'
+import { revenueIntelligenceService } from '@/services/advancedAIServices'
 
 interface ProgramForm {
     name: string
@@ -40,8 +42,19 @@ export default function Programs() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [editForm, setEditForm] = useState<ProgramForm>({ ...emptyForm })
     const [saving, setSaving] = useState(false)
+    const [aiOptimization, setAiOptimization] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
 
     const partnerId = user?.id || ''
+
+    const loadAiProgramInsights = async () => {
+        setAiLoading(true)
+        try {
+            const result = await revenueIntelligenceService.getOptimizationSuggestions()
+            setAiOptimization(result?.data || result)
+        } catch (err) { console.error('AI unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -64,6 +77,7 @@ export default function Programs() {
         }
 
         loadPrograms()
+        loadAiProgramInsights()
     }, [isAuthenticated, router, user, partnerId])
 
     const stats = useMemo(() => {
@@ -276,6 +290,47 @@ export default function Programs() {
                         <p className="text-red-800">{error}</p>
                     </div>
                 )}
+
+                {/* AI Program Optimization */}
+                <Card className="border-purple-200 mb-6">
+                    <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <span className="font-semibold text-sm">AI Program Optimizer</span>
+                                <Badge className="bg-purple-100 text-purple-700 text-xs">AI</Badge>
+                            </div>
+                            <button onClick={loadAiProgramInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                        {aiLoading ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                                <p className="text-xs text-gray-500">Analyzing programs...</p>
+                            </div>
+                        ) : aiOptimization ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {(Array.isArray(aiOptimization) ? aiOptimization : aiOptimization.suggestions || aiOptimization.recommendations || []).slice(0, 3).map((tip: any, i: number) => (
+                                    <div key={i} className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                                        <div className="flex items-center gap-1 mb-1">
+                                            <Sparkles className="w-3 h-3 text-purple-600" />
+                                            <span className="text-xs font-semibold text-purple-700">{tip.title || tip.name || `Tip ${i + 1}`}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-700">{tip.description || tip.suggestion || tip.reason || tip}</p>
+                                    </div>
+                                ))}
+                                {(!Array.isArray(aiOptimization) && !aiOptimization.suggestions && !aiOptimization.recommendations) && (
+                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 col-span-3">
+                                        <p className="text-sm text-purple-800">{aiOptimization.message || 'AI is analyzing your programs for optimization opportunities.'}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-400">AI unavailable. <button onClick={loadAiProgramInsights} className="text-purple-600 hover:underline">Retry</button></p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">

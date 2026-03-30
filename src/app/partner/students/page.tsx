@@ -6,8 +6,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, Search, Users, UserCheck, UserX, DollarSign, Plus, Download, Eye, Edit, Trash2 } from 'lucide-react'
+import { AlertCircle, Search, Users, UserCheck, UserX, DollarSign, Plus, Download, Eye, Edit, Trash2, Brain, Loader2, RefreshCw, Sparkles, AlertTriangle, TrendingUp } from 'lucide-react'
 import { usePartnerConfig } from '@/contexts/PartnerContext'
+import { Badge } from '@/components/ui/badge'
+import { revenueIntelligenceService } from '@/services/advancedAIServices'
 
 const emptyForm = { name: '', email: '', phone: '', enrolledPrograms: '', status: 'active' }
 
@@ -25,8 +27,19 @@ export default function Students() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [editForm, setEditForm] = useState(emptyForm)
     const [submitting, setSubmitting] = useState(false)
+    const [aiChurn, setAiChurn] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
 
     const partnerId = user?.id || ''
+
+    const loadAiChurnAnalysis = async () => {
+        setAiLoading(true)
+        try {
+            const result = await revenueIntelligenceService.getChurnRisk(partnerId || 'partner')
+            setAiChurn(result?.data || result)
+        } catch (err) { console.error('AI churn unavailable:', err) }
+        finally { setAiLoading(false) }
+    }
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -48,7 +61,10 @@ export default function Students() {
             }
         }
 
-        if (partnerId) loadStudents()
+        if (partnerId) {
+            loadStudents()
+            loadAiChurnAnalysis()
+        }
     }, [isAuthenticated, router, user, partnerId])
 
     const filteredStudents = students.filter(student =>
@@ -268,6 +284,50 @@ export default function Students() {
                         <p className="text-red-800">{error}</p>
                     </div>
                 )}
+
+                {/* AI Churn Analysis */}
+                <Card className="border-purple-200 mb-6">
+                    <CardContent className="pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <span className="font-semibold text-sm">AI Student Retention Analysis</span>
+                                <Badge className="bg-purple-100 text-purple-700 text-xs">AI</Badge>
+                            </div>
+                            <button onClick={loadAiChurnAnalysis} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                                <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                        {aiLoading ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                                <p className="text-xs text-gray-500">Analyzing retention...</p>
+                            </div>
+                        ) : aiChurn ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div className="p-3 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
+                                    <p className="text-xs font-semibold text-red-700 uppercase flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Churn Risk</p>
+                                    <p className="text-xl font-bold text-red-900 mt-1">{aiChurn.riskScore || '--'}%</p>
+                                    <p className="text-xs text-red-600">{aiChurn.riskLevel || 'unknown'} risk</p>
+                                </div>
+                                <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                    <p className="text-xs font-semibold text-blue-700 uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Urgency</p>
+                                    <p className="text-sm font-bold text-blue-900 mt-1">{aiChurn.urgency || 'N/A'}</p>
+                                </div>
+                                <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200 sm:col-span-2">
+                                    <p className="text-xs font-semibold text-green-700 uppercase flex items-center gap-1"><Sparkles className="w-3 h-3" /> AI Retention Actions</p>
+                                    <div className="mt-1 space-y-1">
+                                        {(aiChurn.retentionActions || []).slice(0, 3).map((action: string, i: number) => (
+                                            <p key={i} className="text-xs text-green-800">• {action}</p>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-gray-400">AI analysis unavailable. <button onClick={loadAiChurnAnalysis} className="text-purple-600 hover:underline">Retry</button></p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Search */}
                 <div className="mb-6">

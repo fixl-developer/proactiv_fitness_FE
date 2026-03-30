@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 const getAuthHeaders = () => {
     const token = typeof window !== 'undefined'
@@ -59,8 +59,8 @@ export const parentAIService = {
         const res = await axios.post(`${API_URL}/parent-ai-assistant/generate-report/${studentId}`, { period }, { headers: getAuthHeaders() });
         return res.data;
     },
-    async askQuestion(message: string, conversationHistory?: any[]) {
-        const res = await axios.post(`${API_URL}/parent-ai-assistant/ask`, { message, conversationHistory }, { headers: getAuthHeaders() });
+    async askQuestion(data: { studentId: string; question: string; conversationHistory?: any[] }) {
+        const res = await axios.post(`${API_URL}/parent-ai-assistant/ask`, data, { headers: getAuthHeaders() });
         return res.data;
     },
     async getMilestones(studentId: string) {
@@ -103,20 +103,20 @@ export const revenueIntelligenceService = {
 
 // ─── 5. AI Content Engine ──────────────────────────────────────
 export const contentEngineService = {
-    async generateSocialPost(data: { topic: string; platform?: string }) {
-        const res = await axios.post(`${API_URL}/ai-content-engine/social-post`, data, { headers: getAuthHeaders() });
+    async generateSocialPost(data: { topic: string; platform?: string; targetAudience?: string; tone?: string }) {
+        const res = await axios.post(`${API_URL}/ai-content-engine/generate-social-post`, data, { headers: getAuthHeaders() });
         return res.data;
     },
-    async generateEmail(data: { type: string; audience: string; subject?: string }) {
-        const res = await axios.post(`${API_URL}/ai-content-engine/email`, data, { headers: getAuthHeaders() });
+    async generateEmail(data: { topic: string; targetAudience?: string; tone?: string; campaignType?: string }) {
+        const res = await axios.post(`${API_URL}/ai-content-engine/generate-email`, data, { headers: getAuthHeaders() });
         return res.data;
     },
-    async generateArticle(data: { topic: string; keywords?: string[] }) {
-        const res = await axios.post(`${API_URL}/ai-content-engine/article`, data, { headers: getAuthHeaders() });
+    async generateArticle(data: { topic: string; targetAudience?: string; tone?: string; wordCount?: number }) {
+        const res = await axios.post(`${API_URL}/ai-content-engine/generate-article`, data, { headers: getAuthHeaders() });
         return res.data;
     },
-    async generateAdCopy(data: { product: string; platform: string; audience: string }) {
-        const res = await axios.post(`${API_URL}/ai-content-engine/ad-copy`, data, { headers: getAuthHeaders() });
+    async generateAdCopy(data: { topic: string; targetAudience?: string; tone?: string; adPlatform?: string; budget?: number }) {
+        const res = await axios.post(`${API_URL}/ai-content-engine/generate-ad-copy`, data, { headers: getAuthHeaders() });
         return res.data;
     },
     async getSeoSuggestions(pageUrl: string) {
@@ -151,23 +151,23 @@ export const workflowOrchestratorService = {
 
 // ─── 7. Smart Support ──────────────────────────────────────────
 export const smartSupportService = {
-    async classifyTicket(data: { subject: string; description: string }) {
-        const res = await axios.post(`${API_URL}/smart-support/classify`, data, { headers: getAuthHeaders() });
+    async classifyTicket(data: { ticketRef: string; subject: string; message: string; memberHistory?: string }) {
+        const res = await axios.post(`${API_URL}/smart-support/classify-ticket`, data, { headers: getAuthHeaders() });
         return res.data;
     },
-    async routeTicket(data: { ticketId: string; classification: any }) {
-        const res = await axios.post(`${API_URL}/smart-support/route`, data, { headers: getAuthHeaders() });
+    async routeTicket(data: { ticketRef: string; category: string; priority: string; subject: string; message: string; availableAgents?: string[] }) {
+        const res = await axios.post(`${API_URL}/smart-support/route-ticket`, data, { headers: getAuthHeaders() });
         return res.data;
     },
     async suggestResponse(ticketId: string) {
         const res = await axios.get(`${API_URL}/smart-support/suggest-response/${ticketId}`, { headers: getAuthHeaders() });
         return res.data;
     },
-    async analyzeSentiment(data: { text: string }) {
+    async analyzeSentiment(data: { ticketRef: string; message: string }) {
         const res = await axios.post(`${API_URL}/smart-support/analyze-sentiment`, data, { headers: getAuthHeaders() });
         return res.data;
     },
-    async autoResolve(data: { ticketId: string; question: string }) {
+    async autoResolve(data: { ticketRef: string; subject: string; message: string; category?: string }) {
         const res = await axios.post(`${API_URL}/smart-support/auto-resolve`, data, { headers: getAuthHeaders() });
         return res.data;
     },
@@ -248,7 +248,7 @@ export const digitalTwinService = {
 // ─── 11. AI Gamification Engine ────────────────────────────────
 export const gamificationEngineService = {
     async getChallenges(studentId: string) {
-        const res = await axios.get(`${API_URL}/ai-gamification-engine/challenges/${studentId}`, { headers: getAuthHeaders() });
+        const res = await axios.post(`${API_URL}/ai-gamification-engine/generate-challenges/${studentId}`, {}, { headers: getAuthHeaders() });
         return res.data;
     },
     async adjustDifficulty(data: { studentId: string; currentPerformance: any }) {

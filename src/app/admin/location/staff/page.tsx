@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save, UserCheck, Award, Activity, Loader2, AlertTriangle, Lock, Shield } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone, CheckCircle, AlertCircle, X, Save, UserCheck, Award, Activity, Loader2, AlertTriangle, Lock, Shield, Brain, RefreshCw, Sparkles, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Progress } from '@/components/ui/progress'
 import { LocationManagerService } from '@/services/locationManagerService'
+import { apiClient } from '@/services/api/client'
 
 const ALLOWED_ROLES = ['COACH'] as const
 const ROLE_LABELS: Record<string, string> = {
@@ -369,6 +371,22 @@ export default function LocationStaffPage() {
     // Toast state
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+    // AI state
+    const [aiInsights, setAiInsights] = useState<any>(null)
+    const [aiLoading, setAiLoading] = useState(false)
+
+    const loadAiStaffInsights = async () => {
+        setAiLoading(true)
+        try {
+            const result = await apiClient.get<any>('/advanced-analytics/insights')
+            setAiInsights(result?.data || result)
+        } catch (err) {
+            console.error('AI staff insights unavailable:', err)
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
     const fetchStaff = useCallback(async () => {
         try {
             setIsLoading(true)
@@ -389,6 +407,7 @@ export default function LocationStaffPage() {
 
     useEffect(() => {
         fetchStaff()
+        loadAiStaffInsights()
     }, [fetchStaff])
 
     const handleOpenCreate = () => {
@@ -483,6 +502,85 @@ export default function LocationStaffPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* AI Staff Optimization */}
+            <Card className="border-purple-200">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Brain className="w-5 h-5 text-purple-600" />
+                            <CardTitle className="text-base">AI Staff Optimization</CardTitle>
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
+                        </div>
+                        <button onClick={loadAiStaffInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${aiLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {aiLoading ? (
+                        <div className="flex items-center justify-center py-4 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                            <p className="text-sm text-gray-500">Analyzing staff performance...</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Activity className="w-4 h-4 text-blue-600" />
+                                    <span className="text-xs font-semibold text-blue-700 uppercase">Utilization Analysis</span>
+                                </div>
+                                {(() => {
+                                    const avgUtil = staff.length > 0 ? Math.round(staff.reduce((sum, s) => sum + (s.utilization || 0), 0) / staff.length) : 0
+                                    const underUtilized = staff.filter(s => (s.utilization || 0) < 50).length
+                                    return (
+                                        <>
+                                            <p className="text-sm font-medium text-blue-900">Average: {avgUtil}%</p>
+                                            <Progress value={avgUtil} className="h-2 mt-2" />
+                                            {underUtilized > 0 && (
+                                                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                                    <AlertTriangle className="w-3 h-3" />
+                                                    {underUtilized} staff under-utilized (&lt;50%)
+                                                </p>
+                                            )}
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <TrendingUp className="w-4 h-4 text-green-600" />
+                                    <span className="text-xs font-semibold text-green-700 uppercase">Performance Score</span>
+                                </div>
+                                {(() => {
+                                    const avgSat = staff.length > 0 ? (staff.reduce((sum, s) => sum + (s.satisfaction || 0), 0) / staff.length).toFixed(1) : '0'
+                                    return (
+                                        <>
+                                            <p className="text-2xl font-bold text-green-900">{avgSat}/5.0</p>
+                                            <p className="text-xs text-green-600 mt-1">Avg staff satisfaction score</p>
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Sparkles className="w-4 h-4 text-purple-600" />
+                                    <span className="text-xs font-semibold text-purple-700 uppercase">AI Recommendation</span>
+                                </div>
+                                <p className="text-sm font-medium text-purple-900">
+                                    {aiInsights?.insights?.[0]?.title || aiInsights?.keyMetricsSummary || (staff.length > 0 ? 'Staff performance is being monitored by AI' : 'Add staff to enable AI analysis')}
+                                </p>
+                                {aiInsights?.immediateActions?.[0] && (
+                                    <p className="text-xs text-purple-600 mt-2">{aiInsights.immediateActions[0]}</p>
+                                )}
+                                <Badge className="mt-2 bg-purple-100 text-purple-700 text-xs">
+                                    {aiInsights?.aiPowered ? 'AI Active' : 'Analysis Mode'}
+                                </Badge>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Search & Filter */}
             <Card>
