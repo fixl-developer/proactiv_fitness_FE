@@ -177,17 +177,6 @@ export default function PartnerDashboard() {
                             {profile.tier.charAt(0).toUpperCase() + profile.tier.slice(1)} Partner
                         </Badge>
                     )}
-                    <button
-                        onClick={() => router.push('/partner/notifications')}
-                        className="relative p-2 bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
-                    >
-                        <Bell className="w-5 h-5 text-gray-600" />
-                        {unreadNotifications > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                {unreadNotifications}
-                            </span>
-                        )}
-                    </button>
                 </div>
             </div>
 
