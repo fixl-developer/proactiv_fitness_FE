@@ -1,12 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
     Image, Star, Layers, MessageSquare, Users, Info, Zap,
     ClipboardList, BookOpen, PartyPopper, GraduationCap, Tent,
-    MapPin, FileText, Briefcase, Phone, HelpCircle, BarChart3
+    MapPin, FileText, Briefcase, Phone, HelpCircle, BarChart3,
+    Database, RefreshCw, Loader2, CheckCircle, AlertTriangle
 } from 'lucide-react'
+import { CMSAdminService } from '@/services/cmsService'
 
 const cmsModules = [
     {
@@ -148,15 +151,143 @@ const cmsModules = [
 ]
 
 export default function AdminCMSPage() {
+    const [seeding, setSeeding] = useState(false)
+    const [resetting, setResetting] = useState(false)
+    const [seedResult, setSeedResult] = useState<{ seeded: string[]; skipped: string[] } | null>(null)
+    const [showResetConfirm, setShowResetConfirm] = useState(false)
+
+    const handleSeedData = async () => {
+        try {
+            setSeeding(true)
+            setSeedResult(null)
+            const result = await CMSAdminService.seedDefaultData()
+            setSeedResult(result)
+        } catch (error) {
+            console.error('Seed failed:', error)
+            alert('Failed to seed data. Please check if the backend is running.')
+        } finally {
+            setSeeding(false)
+        }
+    }
+
+    const handleResetAndSeed = async () => {
+        try {
+            setResetting(true)
+            setSeedResult(null)
+            setShowResetConfirm(false)
+            const result = await CMSAdminService.resetAndSeedData()
+            setSeedResult({ seeded: result.seeded, skipped: result.skipped })
+        } catch (error) {
+            console.error('Reset failed:', error)
+            alert('Failed to reset and seed data.')
+        } finally {
+            setResetting(false)
+        }
+    }
+
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900">Content Management</h1>
-                <p className="text-gray-500 mt-2">
-                    Manage all website content from here. Changes will reflect on the live website immediately.
-                </p>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Content Management</h1>
+                    <p className="text-gray-500 mt-2">
+                        Manage all website content from here. Changes will reflect on the live website immediately.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleSeedData}
+                        disabled={seeding || resetting}
+                        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 text-sm"
+                    >
+                        {seeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
+                        {seeding ? 'Seeding...' : 'Seed Default Data'}
+                    </motion.button>
+                    <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setShowResetConfirm(true)}
+                        disabled={seeding || resetting}
+                        className="flex items-center gap-2 bg-white border border-red-300 text-red-600 px-4 py-2.5 rounded-lg font-medium hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                    >
+                        {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        {resetting ? 'Resetting...' : 'Reset & Re-seed'}
+                    </motion.button>
+                </div>
             </div>
+
+            {/* Reset Confirmation Dialog */}
+            {showResetConfirm && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3"
+                >
+                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <h4 className="font-semibold text-red-800">Are you sure?</h4>
+                        <p className="text-sm text-red-600 mt-1">
+                            This will delete ALL existing CMS content and replace it with default data. This action cannot be undone.
+                        </p>
+                        <div className="flex items-center gap-3 mt-3">
+                            <button
+                                onClick={handleResetAndSeed}
+                                className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 transition-colors"
+                            >
+                                Yes, Reset Everything
+                            </button>
+                            <button
+                                onClick={() => setShowResetConfirm(false)}
+                                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Seed Result */}
+            {seedResult && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-50 border border-green-200 rounded-xl p-4"
+                >
+                    <div className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <h4 className="font-semibold text-green-800">Seed Complete!</h4>
+                            {seedResult.seeded.length > 0 && (
+                                <div className="mt-2">
+                                    <p className="text-sm text-green-700 font-medium">Seeded:</p>
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {seedResult.seeded.map(item => (
+                                            <span key={item} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">{item}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {seedResult.skipped.length > 0 && (
+                                <div className="mt-2">
+                                    <p className="text-sm text-gray-600 font-medium">Skipped (already has data):</p>
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {seedResult.skipped.map(item => (
+                                            <span key={item} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{item}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={() => setSeedResult(null)} className="text-green-400 hover:text-green-600 transition-colors">
+                            <span className="text-lg">&times;</span>
+                        </button>
+                    </div>
+                </motion.div>
+            )}
 
             {/* Module Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,17 +1,20 @@
 'use client';
 
 import { Star, Quote } from 'lucide-react';
+import { useCMSData } from '@/hooks/useCMSData';
+import { CMSService, TestimonialData } from '@/services/cmsService';
 
 interface Testimonial {
-    id: number;
+    id: number | string;
     name: string;
     role: string;
     content: string;
     rating: number;
     avatar: string;
+    image?: string;
 }
 
-const testimonials: Testimonial[] = [
+const staticTestimonials: Testimonial[] = [
     {
         id: 1,
         name: 'Sarah Johnson',
@@ -41,7 +44,33 @@ const testimonials: Testimonial[] = [
     },
 ];
 
+function getInitials(name: string): string {
+    return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function mapCMSTestimonial(t: TestimonialData): Testimonial {
+    return {
+        id: t.id,
+        name: t.name,
+        role: t.role,
+        content: t.text,
+        rating: t.rating,
+        avatar: getInitials(t.name),
+        image: t.image,
+    };
+}
+
 export function TestimonialsSection() {
+    const { data: cmsTestimonials } = useCMSData<TestimonialData[]>(
+        () => CMSService.getTestimonials(),
+        [],
+        []
+    );
+
+    const testimonials: Testimonial[] = cmsTestimonials.length > 0
+        ? cmsTestimonials.map(mapCMSTestimonial)
+        : staticTestimonials;
+
     return (
         <section className="py-20 bg-white">
             <div className="container mx-auto px-4">
@@ -77,14 +106,22 @@ export function TestimonialsSection() {
 
                             {/* Content */}
                             <p className="text-gray-700 mb-6 leading-relaxed">
-                                "{testimonial.content}"
+                                &ldquo;{testimonial.content}&rdquo;
                             </p>
 
                             {/* Author */}
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-                                    {testimonial.avatar}
-                                </div>
+                                {testimonial.image ? (
+                                    <img
+                                        src={testimonial.image}
+                                        alt={testimonial.name}
+                                        className="w-12 h-12 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+                                        {testimonial.avatar}
+                                    </div>
+                                )}
                                 <div>
                                     <div className="font-semibold text-gray-900">
                                         {testimonial.name}
