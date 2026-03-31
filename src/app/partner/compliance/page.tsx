@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import PartnerPortalService from '@/services/modules/partner-portal.service'
+import PartnerAnalyticsService from '@/services/modules/partner-analytics.service'
 import { motion } from 'framer-motion'
 import {
     Shield, CheckCircle, AlertTriangle, XCircle, FileText,
@@ -35,49 +36,42 @@ export default function PartnerCompliancePage() {
             setError(null)
 
             const partnerId = user?.id || 'partner-1'
-            const [agreementsRes, documentsRes] = await Promise.all([
+
+            const [agreementsRes, documentsRes, complianceRes] = await Promise.allSettled([
                 PartnerPortalService.getPartnerAgreements(partnerId),
-                PartnerPortalService.getPartnerDocuments(partnerId)
+                PartnerPortalService.getPartnerDocuments(partnerId),
+                PartnerAnalyticsService.getComplianceMetrics(partnerId)
             ])
 
+            const agreements = agreementsRes.status === 'fulfilled' ? agreementsRes.value : []
+            const documents = documentsRes.status === 'fulfilled' ? documentsRes.value : []
+            const complianceMetrics = complianceRes.status === 'fulfilled' ? complianceRes.value : null
+
             setComplianceData({
-                overallScore: 92,
-                certifications: (documentsRes || []).map((doc: any) => ({
+                overallScore: complianceMetrics?.complianceScore || 0,
+                status: complianceMetrics?.status || 'pending',
+                documentsSubmitted: complianceMetrics?.documentsSubmitted || 0,
+                documentsExpiring: complianceMetrics?.documentsExpiring || 0,
+                auditsPassed: complianceMetrics?.auditsPassed || 0,
+                auditsFailed: complianceMetrics?.auditsFailed || 0,
+                certifications: (documents || []).map((doc: any) => ({
                     id: doc.id,
                     name: doc.name,
                     status: doc.status === 'active' ? 'VALID' : doc.status === 'expired' ? 'EXPIRED' : 'EXPIRING',
-                    expiryDate: doc.expiresAt || '2024-12-31',
-                    issuer: 'Proactive Gymnastics',
+                    expiryDate: doc.expiresAt || 'N/A',
+                    issuer: 'Proactiv Fitness',
                     score: 95
                 })),
-                auditLogs: [
-                    {
-                        id: '1',
-                        date: '2024-03-15',
-                        type: 'Safety Inspection',
-                        result: 'PASSED',
-                        inspector: 'John Safety',
-                        notes: 'All safety protocols followed correctly'
-                    },
-                    {
-                        id: '2',
-                        date: '2024-03-10',
-                        type: 'Documentation Review',
-                        result: 'PASSED',
-                        inspector: 'Mary Compliance',
-                        notes: 'All required documents up to date'
-                    }
-                ],
-                safetyRecords: [
-                    {
-                        id: '1',
-                        date: '2024-03-12',
-                        type: 'Minor Injury',
-                        description: 'Minor scrape during exercise session',
-                        action: 'First aid applied, emergency contact notified',
-                        status: 'RESOLVED'
-                    }
-                ]
+                agreements: (agreements || []).map((a: any) => ({
+                    id: a.id,
+                    type: a.type,
+                    status: a.status?.toUpperCase() || 'ACTIVE',
+                    startDate: a.startDate,
+                    endDate: a.endDate,
+                    signedAt: a.signedAt
+                })),
+                auditLogs: [],
+                safetyRecords: []
             })
         } catch (err) {
             console.error('Error fetching compliance data:', err)

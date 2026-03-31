@@ -177,69 +177,73 @@ export default function Programs() {
 
     const renderFormFields = () => (
         <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Program name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Program name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                        type="text"
+                        value={editForm.category}
+                        onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                        placeholder="e.g. Fitness, Yoga, CrossFit"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                     value={editForm.description}
                     onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
+                    rows={2}
                     placeholder="Program description"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <input
-                    type="text"
-                    value={editForm.category}
-                    onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g. Fitness, Yoga, CrossFit"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                    value={editForm.status}
-                    onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{config.enrolledLabel} {config.memberLabel}</label>
-                <input
-                    type="number"
-                    min="0"
-                    value={editForm.enrolledStudents}
-                    onChange={e => setEditForm(prev => ({ ...prev, enrolledStudents: e.target.value }))}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Revenue ($)</label>
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={editForm.revenue}
-                    onChange={e => setEditForm(prev => ({ ...prev, revenue: e.target.value }))}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                        value={editForm.status}
+                        onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{config.enrolledLabel} {config.memberLabel}</label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={editForm.enrolledStudents}
+                        onChange={e => setEditForm(prev => ({ ...prev, enrolledStudents: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Revenue ($)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editForm.revenue}
+                        onChange={e => setEditForm(prev => ({ ...prev, revenue: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
             </div>
         </div>
     )
@@ -457,7 +461,7 @@ export default function Programs() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit {config.programLabelSingular}</h2>
@@ -484,7 +488,7 @@ export default function Programs() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New {config.programLabelSingular}</h2>

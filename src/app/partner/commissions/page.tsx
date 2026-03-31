@@ -430,7 +430,7 @@ export default function Commissions() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                         >
                             {/* Modal Header */}
                             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -509,31 +509,31 @@ export default function Commissions() {
 
                                 {/* Bank Details */}
                                 {payoutForm.method === 'bank_transfer' && (
-                                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-700">Bank Details</h4>
-                                        <input
-                                            type="text"
-                                            placeholder="Account Holder Name"
-                                            value={payoutForm.bankDetails.accountName}
-                                            onChange={(e) => setPayoutForm(prev => ({
-                                                ...prev,
-                                                bankDetails: { ...prev.bankDetails, accountName: e.target.value }
-                                            }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                            required
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Account Number"
-                                            value={payoutForm.bankDetails.accountNumber}
-                                            onChange={(e) => setPayoutForm(prev => ({
-                                                ...prev,
-                                                bankDetails: { ...prev.bankDetails, accountNumber: e.target.value }
-                                            }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                            required
-                                        />
-                                        <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-4 bg-gray-50 rounded-lg">
+                                        <h4 className="text-sm font-medium text-gray-700 mb-3">Bank Details</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Account Holder Name"
+                                                value={payoutForm.bankDetails.accountName}
+                                                onChange={(e) => setPayoutForm(prev => ({
+                                                    ...prev,
+                                                    bankDetails: { ...prev.bankDetails, accountName: e.target.value }
+                                                }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                required
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Account Number"
+                                                value={payoutForm.bankDetails.accountNumber}
+                                                onChange={(e) => setPayoutForm(prev => ({
+                                                    ...prev,
+                                                    bankDetails: { ...prev.bankDetails, accountNumber: e.target.value }
+                                                }))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                required
+                                            />
                                             <input
                                                 type="text"
                                                 placeholder="Bank Name"
@@ -595,7 +595,7 @@ export default function Commissions() {
                                     <textarea
                                         value={payoutForm.notes}
                                         onChange={(e) => setPayoutForm(prev => ({ ...prev, notes: e.target.value }))}
-                                        rows={3}
+                                        rows={2}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
                                         placeholder="Add any notes for this payout request..."
                                     />

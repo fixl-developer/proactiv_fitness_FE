@@ -73,40 +73,7 @@ export default function PartnerSupportPage() {
                 }))
             })))
 
-            setFaqs([
-                {
-                    id: '1',
-                    question: 'How do I set up API integrations?',
-                    answer: 'To set up API integrations, go to the Integrations page and follow the step-by-step guide for each service.',
-                    category: 'Technical',
-                    helpful: 45,
-                    views: 120
-                },
-                {
-                    id: '2',
-                    question: 'When are commissions paid out?',
-                    answer: 'Commissions are paid out monthly on the 15th of each month for the previous month\'s earnings.',
-                    category: 'Billing',
-                    helpful: 38,
-                    views: 95
-                },
-                {
-                    id: '3',
-                    question: 'How can I track member progress?',
-                    answer: 'You can track progress through the Members page in your partner dashboard, which shows attendance, achievements, and performance metrics.',
-                    category: 'General',
-                    helpful: 32,
-                    views: 78
-                },
-                {
-                    id: '4',
-                    question: 'What marketing materials are available?',
-                    answer: 'We provide various marketing materials including email templates, social media assets, and brand guidelines in the Resources section.',
-                    category: 'Marketing',
-                    helpful: 28,
-                    views: 65
-                }
-            ])
+            setFaqs([])
         } catch (err: any) {
             console.error('Error fetching support data:', err)
             setError('Failed to load support data')

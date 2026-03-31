@@ -60,62 +60,15 @@ export default function PartnerIntegrationsPage() {
                 }))
                 setIntegrations(mapped)
             } else {
-                // Fallback to defaults if API returns unexpected shape
-                setIntegrations(getDefaultIntegrations())
+                setIntegrations([])
             }
         } catch (err) {
             console.error('Error fetching integrations:', err)
-            setError('Failed to load integrations from API - showing default data')
-            setIntegrations(getDefaultIntegrations())
+            setError('Failed to load integrations')
         } finally {
             setIsLoading(false)
         }
     }
-
-    const getDefaultIntegrations = () => [
-        {
-            id: '1',
-            name: 'Google Calendar',
-            description: 'Sync class schedules and events with Google Calendar',
-            category: 'Scheduling',
-            status: 'CONNECTED',
-            icon: Calendar,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50',
-            lastSync: '2024-03-15 10:30 AM',
-            syncFrequency: 'Real-time',
-            dataPoints: 1250,
-            health: 98
-        },
-        {
-            id: '2',
-            name: 'Mailchimp',
-            description: 'Email marketing and newsletter management',
-            category: 'Marketing',
-            status: 'CONNECTED',
-            icon: Mail,
-            color: 'text-yellow-600',
-            bgColor: 'bg-yellow-50',
-            lastSync: '2024-03-15 09:15 AM',
-            syncFrequency: 'Hourly',
-            dataPoints: 850,
-            health: 95
-        },
-        {
-            id: '3',
-            name: 'Stripe',
-            description: 'Payment processing and financial transactions',
-            category: 'Payments',
-            status: 'CONNECTED',
-            icon: Database,
-            color: 'text-purple-600',
-            bgColor: 'bg-purple-50',
-            lastSync: '2024-03-15 11:45 AM',
-            syncFrequency: 'Real-time',
-            dataPoints: 2100,
-            health: 100
-        }
-    ]
 
     const getStatusColor = (status: string) => {
         switch (status) {
