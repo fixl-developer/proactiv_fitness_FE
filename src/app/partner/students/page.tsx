@@ -175,57 +175,61 @@ export default function Students() {
     // Reusable form fields component for Add & Edit modals
     const renderFormFields = (isAdd: boolean) => (
         <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
-                <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder={`${config.memberLabelSingular} name`}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+                    <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder={`${config.memberLabelSingular} name`}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
+                    <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="student@example.com"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
-                <input
-                    type="email"
-                    value={editForm.email}
-                    onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="student@example.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                    type="tel"
-                    value={editForm.phone}
-                    onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+91 98765 43210"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Enrolled Programs</label>
-                <input
-                    type="number"
-                    min="0"
-                    value={editForm.enrolledPrograms}
-                    onChange={e => setEditForm(prev => ({ ...prev, enrolledPrograms: e.target.value }))}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                    value={editForm.status}
-                    onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                        type="tel"
+                        value={editForm.phone}
+                        onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+91 98765 43210"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Enrolled Programs</label>
+                    <input
+                        type="number"
+                        min="0"
+                        value={editForm.enrolledPrograms}
+                        onChange={e => setEditForm(prev => ({ ...prev, enrolledPrograms: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select
+                        value={editForm.status}
+                        onChange={e => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
             </div>
         </div>
     )
@@ -424,7 +428,7 @@ export default function Students() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4"
+                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl mx-4"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedStudent.name}</h2>
@@ -473,7 +477,7 @@ export default function Students() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4"
+                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl mx-4"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Edit {config.memberLabelSingular}</h2>
@@ -496,7 +500,7 @@ export default function Students() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4"
+                        className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl mx-4"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New {config.memberLabelSingular}</h2>

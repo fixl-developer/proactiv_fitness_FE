@@ -1,20 +1,46 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Globe, ChevronDown, Utensils } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Settings, Menu, Utensils, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
 import NotificationBell from '@/components/shared/NotificationBell'
 
+const navigation = [
+    { name: 'Dashboard', href: '/user/dashboard', icon: LayoutDashboard },
+    { name: 'My Classes', href: '/user/my-classes', icon: Calendar },
+    { name: 'Bookings', href: '/user/bookings', icon: Calendar },
+    { name: 'Payments', href: '/user/payments', icon: CreditCard },
+    { name: 'Progress', href: '/user/progress', icon: TrendingUp },
+    { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
+    { name: 'Achievements', href: '/user/achievements', icon: Award },
+    { name: 'Profile', href: '/user/profile', icon: User }
+]
+
+const colors = {
+    gradient: 'from-emerald-500 to-teal-600',
+    bg: 'from-emerald-50 to-teal-50',
+    text: 'text-emerald-600',
+    activeBg: 'bg-emerald-50',
+    hoverBg: 'hover:bg-emerald-50/60',
+}
+
+const SIDEBAR_EXPANDED = 256
+const SIDEBAR_COLLAPSED = 72
+
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
-    const { isAuthenticated, isLoading, user, logout, softLogout } = useAuth()
-    const [isProfileOpen, setIsProfileOpen] = useState(false)
-    const { showLogoutModal, unsavedPages, handleLogoutClick: triggerLogout, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
-    const profileRef = useRef<HTMLDivElement>(null)
+    const { isAuthenticated, isLoading, user } = useAuth()
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
+
+    const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -22,155 +48,174 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         }
     }, [isAuthenticated, isLoading, router])
 
-    // Close dropdown on outside click
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-                setIsProfileOpen(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
-
-    const navigation = [
-        { name: 'Dashboard', href: '/user/dashboard', icon: LayoutDashboard },
-        { name: 'My Classes', href: '/user/my-classes', icon: Calendar },
-        { name: 'Bookings', href: '/user/bookings', icon: Calendar },
-        { name: 'Payments', href: '/user/payments', icon: CreditCard },
-        { name: 'Progress', href: '/user/progress', icon: TrendingUp },
-        { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
-        { name: 'Achievements', href: '/user/achievements', icon: Award },
-        { name: 'Profile', href: '/user/profile', icon: User }
-    ]
-
-    const handleLogoutClick = () => {
-        setIsProfileOpen(false)
-        triggerLogout()
-    }
-
-    const getInitials = () => {
-        const u = user as any
-        if (!u) return 'U'
-        const firstName = u.firstName || ''
-        const lastName = u.lastName || ''
-        if (firstName && lastName) {
-            return (firstName[0] + lastName[0]).toUpperCase()
-        }
-        const name = u.name || u.email || ''
-        if (!name) return 'U'
-        const parts = name.trim().split(' ')
-        if (parts.length >= 2) {
-            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        }
-        return name[0].toUpperCase()
-    }
-
     const displayName = user?.name || (user as any)?.firstName || 'User'
+    const userEmail = user?.email || ''
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Sidebar */}
-            <div className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-30">
-                <div className="flex flex-col h-full">
-                    {/* Logo */}
-                    <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/50">
+            {/* Sidebar - Fixed */}
+            <div
+                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
+                style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
+            >
+                {/* Sidebar Header */}
+                <div className="p-4 border-b border-gray-200/50">
+                    <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
+                        <div className={`w-10 h-10 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
                             <span className="text-white font-bold text-xl">P</span>
                         </div>
-                        <div>
-                            <h1 className="font-bold text-gray-900">ProActiv</h1>
-                            <p className="text-xs text-gray-500">User Portal</p>
-                        </div>
+                        {!sidebarCollapsed && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <h2 className="text-lg font-bold text-gray-900">ProActiv</h2>
+                                <p className={`text-sm ${colors.text} font-medium`}>User Portal</p>
+                            </motion.div>
+                        )}
                     </div>
+                </div>
 
-                    {/* Navigation */}
-                    <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+                {/* Sidebar Menu - Scrollable */}
+                <div className="flex-1 overflow-y-auto p-2">
+                    <nav className="space-y-1">
                         {navigation.map((item) => {
                             const isActive = pathname === item.href
-                            const Icon = item.icon
                             return (
-                                <button id={`user-layout-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-btn`}
-                                    key={item.name}
-                                    onClick={() => router.push(item.href)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-emerald-50 text-emerald-700'
-                                        : 'text-gray-700 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    {item.name}
-                                </button>
+                                <div key={item.name} className="relative">
+                                    <button
+                                        id={`user-layout-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-btn`}
+                                        onClick={() => router.push(item.href)}
+                                        onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
+                                        onMouseLeave={() => setHoveredItem(null)}
+                                        className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
+                                            isActive
+                                                ? `${colors.activeBg} ${colors.text} font-semibold`
+                                                : `text-gray-700 ${colors.hoverBg} hover:text-gray-900`
+                                        }`}
+                                    >
+                                        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? colors.text : 'text-gray-600'}`} />
+                                        {!sidebarCollapsed && (
+                                            <span className="font-medium text-sm">{item.name}</span>
+                                        )}
+                                    </button>
+
+                                    {/* Tooltip for collapsed state */}
+                                    {sidebarCollapsed && hoveredItem === item.href && (
+                                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
+                                            {item.name}
+                                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                                        </div>
+                                    )}
+                                </div>
                             )
                         })}
                     </nav>
                 </div>
+
+                {/* Collapse Toggle */}
+                <div className="flex-shrink-0 px-2 py-2 border-t border-gray-200/50">
+                    <button
+                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        {sidebarCollapsed ? (
+                            <PanelLeftOpen className="w-5 h-5" />
+                        ) : (
+                            <div className="flex items-center space-x-2 w-full justify-center">
+                                <PanelLeftClose className="w-5 h-5" />
+                                <span className="text-sm font-medium">Collapse</span>
+                            </div>
+                        )}
+                    </button>
+                </div>
+
+                {/* Sidebar Footer - User Info + Logout */}
+                <div className="flex-shrink-0 border-t border-gray-200/50 bg-white px-3 pt-3 pb-2">
+                    <div className="space-y-2">
+                        {sidebarCollapsed ? (
+                            <div className="flex justify-center">
+                                <div className={`w-9 h-9 bg-gradient-to-br ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                    <User className="w-4 h-4 text-white" />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
+                                <div className="flex items-center space-x-3">
+                                    <div className={`w-8 h-8 bg-gradient-to-br ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                        <User className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
+                                        <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-center">
+                            <Button
+                                id="user-layout-logout-btn"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleLogoutClick}
+                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'w-9 h-9 p-0' : 'flex-1'}`}
+                            >
+                                <LogOut className={`w-4 h-4 ${sidebarCollapsed ? '' : 'mr-2'}`} />
+                                {!sidebarCollapsed && 'Logout'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Main Content Area */}
-            <div className="pl-64">
-                {/* Top Header */}
-                <header className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-800">
-                            {navigation.find(n => n.href === pathname)?.name || 'Dashboard'}
-                        </h2>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                    <NotificationBell />
-                    {/* Profile Dropdown */}
-                    <div className="relative" ref={profileRef}>
-                        <button id="user-layout-profile-dropdown-btn"
-                            onClick={() => setIsProfileOpen(!isProfileOpen)}
-                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                            <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
-                                {getInitials()}
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+                {/* Header - Fixed */}
+                <motion.header
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
+                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                >
+                    <div className="flex items-center justify-between px-6 py-4">
+                        <div className="flex items-center space-x-4">
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            >
+                                <Menu className="w-5 h-5 text-gray-600" />
+                            </button>
+                            <div>
+                                <h1 className="text-xl font-semibold text-gray-900">User Dashboard</h1>
+                                <p className="text-sm text-gray-500">Welcome back, {displayName.split(' ')[0]}!</p>
                             </div>
-                        </button>
+                        </div>
 
-                        {isProfileOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-2xl border border-gray-100 py-1 z-50 overflow-hidden">
-                                {/* User Info */}
-                                <div className="px-4 py-3 border-b border-gray-100">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                                            {getInitials()}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
-                                            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Visit Website */}
-                                <button id="user-layout-visit-website-btn"
-                                    onClick={() => { setIsProfileOpen(false); router.push('/') }}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                    <Globe className="w-4 h-4 text-emerald-600" />
-                                    <span className="font-medium">Visit Website</span>
-                                </button>
-
-                                {/* Logout */}
-                                <button id="user-layout-logout-btn"
-                                    onClick={handleLogoutClick}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                    <span className="font-medium">Logout</span>
-                                </button>
-                            </div>
-                        )}
+                        <div className="flex items-center space-x-3">
+                            <NotificationBell />
+                            <Button id="user-layout-settings-btn" variant="outline" size="sm" onClick={() => router.push('/user/profile')}>
+                                <Settings className="w-4 h-4 mr-2" />
+                                Profile
+                            </Button>
+                        </div>
                     </div>
-                    </div>
-                </header>
+                </motion.header>
 
-                {/* Page Content */}
-                <main className="p-8">
-                    {children}
+                {/* Main Content */}
+                <main className="pt-20 p-6 min-h-screen">
+                    <motion.div
+                        key={pathname}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {children}
+                    </motion.div>
                 </main>
             </div>
 

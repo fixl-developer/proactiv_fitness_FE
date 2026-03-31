@@ -53,106 +53,10 @@ export default function PartnerCommunicationPage() {
             ])
 
             const fetchedMessages = (messagesRes as any)?.data?.messages || (messagesRes as any)?.messages || []
-            setMessages(fetchedMessages.length > 0 ? fetchedMessages : [
-                {
-                    id: '1',
-                    type: 'SUPPORT',
-                    subject: 'Integration Setup Help',
-                    from: 'Sarah Johnson',
-                    fromEmail: 'sarah@proactive.com',
-                    timestamp: '2024-03-15 10:30 AM',
-                    status: 'UNREAD',
-                    priority: 'HIGH',
-                    preview: 'Hi, I need help setting up the Google Calendar integration...',
-                    messages: [
-                        {
-                            id: 'm1',
-                            sender: 'Sarah Johnson',
-                            content: 'Hi, I need help setting up the Google Calendar integration for our partner account. The webhook URL seems to be not working.',
-                            timestamp: '2024-03-15 10:30 AM',
-                            isOwn: false
-                        }
-                    ]
-                },
-                {
-                    id: '2',
-                    type: 'BILLING',
-                    subject: 'Monthly Invoice Available',
-                    from: 'Billing Team',
-                    fromEmail: 'billing@proactive.com',
-                    timestamp: '2024-03-14 02:15 PM',
-                    status: 'READ',
-                    priority: 'MEDIUM',
-                    preview: 'Your monthly invoice for March 2024 is now available...',
-                    messages: [
-                        {
-                            id: 'm2',
-                            sender: 'Billing Team',
-                            content: 'Your monthly invoice for March 2024 is now available in your partner portal. Total amount: $2,850.',
-                            timestamp: '2024-03-14 02:15 PM',
-                            isOwn: false
-                        }
-                    ]
-                },
-                {
-                    id: '3',
-                    type: 'MARKETING',
-                    subject: 'New Marketing Campaign Opportunity',
-                    from: 'Marketing Team',
-                    fromEmail: 'marketing@proactive.com',
-                    timestamp: '2024-03-13 11:45 AM',
-                    status: 'READ',
-                    priority: 'LOW',
-                    preview: 'We have a new summer camp promotion campaign that might interest you...',
-                    messages: [
-                        {
-                            id: 'm3',
-                            sender: 'Marketing Team',
-                            content: 'We have a new summer camp promotion campaign that might interest your partner network. Would you like to participate?',
-                            timestamp: '2024-03-13 11:45 AM',
-                            isOwn: false
-                        },
-                        {
-                            id: 'm4',
-                            sender: 'You',
-                            content: 'Yes, please send me more details about the campaign requirements and commission structure.',
-                            timestamp: '2024-03-13 12:30 PM',
-                            isOwn: true
-                        }
-                    ]
-                }
-            ])
+            setMessages(fetchedMessages)
 
             const fetchedNotifications = (notificationsRes as any)?.notifications || []
-            setNotifications(fetchedNotifications.length > 0 ? fetchedNotifications : [
-                {
-                    id: '1',
-                    type: 'SYSTEM',
-                    title: 'Integration Health Alert',
-                    message: 'Your Stripe integration health score has dropped to 85%',
-                    timestamp: '2024-03-15 09:15 AM',
-                    status: 'UNREAD',
-                    priority: 'HIGH'
-                },
-                {
-                    id: '2',
-                    type: 'COMMISSION',
-                    title: 'Commission Payment Processed',
-                    message: 'Your monthly commission of $2,850 has been processed',
-                    timestamp: '2024-03-14 03:30 PM',
-                    status: 'READ',
-                    priority: 'MEDIUM'
-                },
-                {
-                    id: '3',
-                    type: 'ENROLLMENT',
-                    title: 'New Enrollment',
-                    message: '5 new members enrolled through your referral link',
-                    timestamp: '2024-03-13 08:20 AM',
-                    status: 'READ',
-                    priority: 'LOW'
-                }
-            ])
+            setNotifications(fetchedNotifications)
         } catch (err: any) {
             console.error('Error fetching communication data:', err)
             setError('Failed to load communication data')
@@ -387,25 +291,27 @@ export default function PartnerCommunicationPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-4 space-y-4">
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">To</label>
-                                <input
-                                    type="text"
-                                    value={composeRecipient}
-                                    onChange={(e) => setComposeRecipient(e.target.value)}
-                                    placeholder="Recipient email or name..."
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">Subject</label>
-                                <input
-                                    type="text"
-                                    value={composeSubject}
-                                    onChange={(e) => setComposeSubject(e.target.value)}
-                                    placeholder="Message subject..."
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">To</label>
+                                    <input
+                                        type="text"
+                                        value={composeRecipient}
+                                        onChange={(e) => setComposeRecipient(e.target.value)}
+                                        placeholder="Recipient email or name..."
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Subject</label>
+                                    <input
+                                        type="text"
+                                        value={composeSubject}
+                                        onChange={(e) => setComposeSubject(e.target.value)}
+                                        placeholder="Message subject..."
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700 mb-1 block">Message</label>

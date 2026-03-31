@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,11 +21,13 @@ import {
     Shield,
     UserCheck,
     Menu,
-    Building2,
     MessageSquare,
     ChevronDown,
     ChevronRight,
-    FileText
+    ChevronLeft,
+    FileText,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react'
 
 interface MenuItem {
@@ -165,14 +167,21 @@ const colors = {
     text: 'text-red-600'
 }
 
+const SIDEBAR_EXPANDED = 280
+const SIDEBAR_COLLAPSED = 72
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
-    const { logout, softLogout } = useAuth()
+    useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
     const [userName, setUserName] = useState('Admin User')
     const [userEmail, setUserEmail] = useState('admin@proactiv.com')
+
+    const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 
     // Load user data from localStorage
     useEffect(() => {
@@ -205,6 +214,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         })
     }, [pathname])
 
+    // Collapse submenus when sidebar collapses
+    useEffect(() => {
+        if (sidebarCollapsed) {
+            setExpandedMenus([])
+        }
+    }, [sidebarCollapsed])
+
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {
         setExpandedMenus(prev =>
@@ -227,70 +243,91 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
             {/* Sidebar - Fixed Position */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50"
-                style={{ width: '280px', display: 'flex', flexDirection: 'column' }}
+                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
+                style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
                 <div className="p-4 border-b border-gray-200/50">
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center space-x-3"
-                    >
-                        <div className={`w-10 h-10 bg-gradient-to-r ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
-                            <Shield className="w-6 h-6 text-white" />
+                    <div className="flex items-center justify-between">
+                        <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'space-x-3'}`}>
+                            <div className={`w-10 h-10 bg-gradient-to-r ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                <Shield className="w-6 h-6 text-white" />
+                            </div>
+                            {!sidebarCollapsed && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <h2 className="text-lg font-bold text-gray-900">ProActive Sports</h2>
+                                    <p className={`text-sm ${colors.text} font-medium capitalize`}>
+                                        Admin Portal
+                                    </p>
+                                </motion.div>
+                            )}
                         </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">ProActive Sports</h2>
-                            <p className={`text-sm ${colors.text} font-medium capitalize`}>
-                                Admin Portal
-                            </p>
-                        </div>
-                    </motion.div>
+                    </div>
                 </div>
 
-                {/* Sidebar Menu - Scrollable, takes remaining space */}
+                {/* Sidebar Menu - Scrollable */}
                 <div className="flex-1 overflow-y-auto p-2">
                     <nav className="space-y-1">
                         {adminMenuItems.map((item, index) => (
-                            <motion.div
-                                key={item.href}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
+                            <div key={item.href} className="relative">
                                 {item.submenu ? (
                                     // Menu item with submenu
-                                    <div className="relative">
+                                    <div className="relative group">
                                         <button id="admin-layout-btn"
-                                            onClick={() => toggleSubmenu(item.href)}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
+                                            onClick={() => {
+                                                if (sidebarCollapsed) {
+                                                    setSidebarCollapsed(false)
+                                                    setTimeout(() => toggleSubmenu(item.href), 300)
+                                                } else {
+                                                    toggleSubmenu(item.href)
+                                                }
+                                            }}
+                                            onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
+                                            onMouseLeave={() => setHoveredItem(null)}
+                                            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                 ? `bg-gray-100 ${colors.text}`
                                                 : 'text-gray-700 hover:text-gray-900'
                                                 }`}
                                         >
-                                            <div className="flex items-center space-x-3">
-                                                <item.icon className={`w-5 h-5 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
+                                            <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                                                <item.icon className={`w-5 h-5 flex-shrink-0 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                     ? colors.text
                                                     : 'text-gray-600'
                                                     }`} />
-                                                <span className="font-medium">{item.label}</span>
+                                                {!sidebarCollapsed && (
+                                                    <span className="font-medium text-sm">{item.label}</span>
+                                                )}
                                             </div>
-                                            {expandedMenus.includes(item.href) ? (
-                                                <ChevronDown className="w-4 h-4" />
-                                            ) : (
-                                                <ChevronRight className="w-4 h-4" />
+                                            {!sidebarCollapsed && (
+                                                expandedMenus.includes(item.href) ? (
+                                                    <ChevronDown className="w-4 h-4" />
+                                                ) : (
+                                                    <ChevronRight className="w-4 h-4" />
+                                                )
                                             )}
                                         </button>
 
-                                        {/* Submenu */}
-                                        {expandedMenus.includes(item.href) && (
+                                        {/* Tooltip for collapsed state */}
+                                        {sidebarCollapsed && hoveredItem === item.href && (
+                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
+                                                {item.label}
+                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                                            </div>
+                                        )}
+
+                                        {/* Submenu - only when expanded */}
+                                        {!sidebarCollapsed && expandedMenus.includes(item.href) && (
                                             <motion.div
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
                                                 transition={{ duration: 0.2 }}
-                                                className="mt-2 ml-8 space-y-1 bg-gray-50 rounded-lg p-2 border border-gray-200"
+                                                className="mt-1 ml-8 space-y-1 bg-gray-50 rounded-lg p-2 border border-gray-200"
                                             >
                                                 {item.submenu?.map((subItem: { label: string; href: string }) => (
                                                     <button id="admin-layout-btn-2"
@@ -309,52 +346,92 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                     </div>
                                 ) : (
                                     // Regular menu item
-                                    <button id="admin-layout-btn-3"
-                                        onClick={(e) => handleNavigation(item.href, e)}
-                                        className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${isActiveLink(item.href)
-                                            ? `bg-gray-100 ${colors.text}`
-                                            : 'text-gray-700 hover:text-gray-900'
-                                            }`}
-                                    >
-                                        <item.icon className={`w-5 h-5 ${isActiveLink(item.href) ? colors.text : 'text-gray-600'}`} />
-                                        <span className="font-medium">{item.label}</span>
-                                    </button>
+                                    <div className="relative group">
+                                        <button id="admin-layout-btn-3"
+                                            onClick={(e) => handleNavigation(item.href, e)}
+                                            onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
+                                            onMouseLeave={() => setHoveredItem(null)}
+                                            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${isActiveLink(item.href)
+                                                ? `bg-gray-100 ${colors.text}`
+                                                : 'text-gray-700 hover:text-gray-900'
+                                                }`}
+                                        >
+                                            <item.icon className={`w-5 h-5 flex-shrink-0 ${isActiveLink(item.href) ? colors.text : 'text-gray-600'}`} />
+                                            {!sidebarCollapsed && (
+                                                <span className="font-medium text-sm">{item.label}</span>
+                                            )}
+                                        </button>
+
+                                        {/* Tooltip for collapsed state */}
+                                        {sidebarCollapsed && hoveredItem === item.href && (
+                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
+                                                {item.label}
+                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
-                            </motion.div>
+                            </div>
                         ))}
                     </nav>
+                </div>
+
+                {/* Collapse Toggle Button */}
+                <div className="flex-shrink-0 px-2 py-2 border-t border-gray-200/50">
+                    <button
+                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        {sidebarCollapsed ? (
+                            <PanelLeftOpen className="w-5 h-5" />
+                        ) : (
+                            <div className="flex items-center space-x-2 w-full justify-center">
+                                <PanelLeftClose className="w-5 h-5" />
+                                <span className="text-sm font-medium">Collapse</span>
+                            </div>
+                        )}
+                    </button>
                 </div>
 
                 {/* Sidebar Footer - pinned to bottom */}
                 <div className="flex-shrink-0 border-t border-gray-200/50 bg-white px-3 pt-3 pb-2">
                     <div className="space-y-2">
                         {/* User Info */}
-                        <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
-                            <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
+                        {sidebarCollapsed ? (
+                            <div className="flex justify-center">
+                                <div className={`w-9 h-9 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
                                     <User className="w-4 h-4 text-white" />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                        {userName}
-                                    </p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                        {userEmail}
-                                    </p>
+                            </div>
+                        ) : (
+                            <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
+                                <div className="flex items-center space-x-3">
+                                    <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                        <User className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                            {userName}
+                                        </p>
+                                        <p className="text-xs text-gray-500 truncate">
+                                            {userEmail}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Action Buttons */}
-                        <div className="flex space-x-2">
+                        <div className="flex justify-center">
                             <Button id="admin-layout-btn-5"
                                 variant="outline"
                                 size="sm"
                                 onClick={handleLogoutClick}
-                                className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'w-9 h-9 p-0' : 'flex-1'}`}
                             >
-                                <LogOut className="w-4 h-4 mr-2" />
-                                Logout
+                                <LogOut className={`w-4 h-4 ${sidebarCollapsed ? '' : 'mr-2'}`} />
+                                {!sidebarCollapsed && 'Logout'}
                             </Button>
                         </div>
                     </div>
@@ -362,17 +439,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* Main Content Area */}
-            <div style={{ marginLeft: '280px' }}>
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
                 {/* Header - Fixed Position */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm"
-                    style={{ left: '280px', right: 0 }}
+                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
+                    style={{ left: `${sidebarWidth}px`, right: 0 }}
                 >
                     <div className="flex items-center justify-between px-6 py-4">
                         <div className="flex items-center space-x-4">
-                            <Menu className="w-5 h-5 text-gray-600" />
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            >
+                                <Menu className="w-5 h-5 text-gray-600" />
+                            </button>
                             <div>
                                 <h1 className="text-xl font-semibold text-gray-900">
                                     Admin Dashboard
@@ -396,7 +479,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 {/* Main Content */}
                 <main className="pt-20 p-6 min-h-screen">
                     <motion.div
-                        key={pathname} // This will trigger animation on route change
+                        key={pathname}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
