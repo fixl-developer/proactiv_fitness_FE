@@ -3,11 +3,22 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Phone, Calendar, Users } from 'lucide-react';
+import { useState } from 'react';
 
 import {
     registerStep2Schema,
     type RegisterStep2Data,
 } from '@/lib/validations/auth';
+import {
+    validateName,
+    validatePhone,
+    validateDateOfBirth,
+    validateSelect,
+    filterNameInput,
+    filterPhoneInput,
+    FORMAT_HINTS,
+} from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 interface RegisterStep2Props {
     onComplete: (data: RegisterStep2Data) => void;
@@ -20,6 +31,8 @@ export function RegisterStep2({
     onBack,
     initialData,
 }: RegisterStep2Props) {
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const {
         register,
         handleSubmit,
@@ -29,8 +42,58 @@ export function RegisterStep2({
         defaultValues: initialData,
     });
 
+    const validateField = (field: string, value: string) => {
+        let error: string | null = null;
+        switch (field) {
+            case 'firstName':
+                error = validateName(value, 'First name');
+                break;
+            case 'lastName':
+                error = validateName(value, 'Last name');
+                break;
+            case 'phone':
+                error = validatePhone(value);
+                break;
+            case 'dateOfBirth':
+                error = validateDateOfBirth(value);
+                break;
+            case 'gender':
+                error = validateSelect(value, 'Gender');
+                break;
+        }
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            if (error) {
+                next[field] = error;
+            } else {
+                delete next[field];
+            }
+            return next;
+        });
+    };
+
+    const handleFormSubmit = (data: RegisterStep2Data) => {
+        const errs: Record<string, string> = {};
+        const fnErr = validateName(data.firstName, 'First name');
+        if (fnErr) errs.firstName = fnErr;
+        const lnErr = validateName(data.lastName, 'Last name');
+        if (lnErr) errs.lastName = lnErr;
+        const phErr = validatePhone(data.phone);
+        if (phErr) errs.phone = phErr;
+        const dobErr = validateDateOfBirth(data.dateOfBirth);
+        if (dobErr) errs.dateOfBirth = dobErr;
+        const gErr = validateSelect(data.gender, 'Gender');
+        if (gErr) errs.gender = gErr;
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            return;
+        }
+        onComplete(data);
+    };
+
     return (
-        <form id="form-components-auth-RegisterStep2" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep2" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
                 <p className="text-gray-600 mt-2">Tell us about yourself</p>
@@ -46,8 +109,13 @@ export function RegisterStep2({
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            {...register('firstName')}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            {...register('firstName', {
+                                onChange: (e) => validateField('firstName', e.target.value),
+                            })}
+                            onKeyDown={filterNameInput}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                errors.firstName || fieldErrors.firstName ? 'border-red-500' : 'border-gray-300'
+                            }`}
                             placeholder="John"
                         />
                     </div>
@@ -56,6 +124,7 @@ export function RegisterStep2({
                             {errors.firstName.message}
                         </p>
                     )}
+                    <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
                 </div>
 
                 <div>
@@ -66,8 +135,13 @@ export function RegisterStep2({
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            {...register('lastName')}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            {...register('lastName', {
+                                onChange: (e) => validateField('lastName', e.target.value),
+                            })}
+                            onKeyDown={filterNameInput}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                errors.lastName || fieldErrors.lastName ? 'border-red-500' : 'border-gray-300'
+                            }`}
                             placeholder="Doe"
                         />
                     </div>
@@ -76,6 +150,7 @@ export function RegisterStep2({
                             {errors.lastName.message}
                         </p>
                     )}
+                    <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
                 </div>
             </div>
 
@@ -88,14 +163,20 @@ export function RegisterStep2({
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type="tel"
-                        {...register('phone')}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        {...register('phone', {
+                            onChange: (e) => validateField('phone', e.target.value),
+                        })}
+                        onKeyDown={filterPhoneInput}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                            errors.phone || fieldErrors.phone ? 'border-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="+1234567890"
                     />
                 </div>
                 {errors.phone && (
                     <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
                 )}
+                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
             </div>
 
             {/* Date of Birth & Gender */}
@@ -108,8 +189,12 @@ export function RegisterStep2({
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="date"
-                            {...register('dateOfBirth')}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            {...register('dateOfBirth', {
+                                onChange: (e) => validateField('dateOfBirth', e.target.value),
+                            })}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                errors.dateOfBirth || fieldErrors.dateOfBirth ? 'border-red-500' : 'border-gray-300'
+                            }`}
                         />
                     </div>
                     {errors.dateOfBirth && (
@@ -117,6 +202,7 @@ export function RegisterStep2({
                             {errors.dateOfBirth.message}
                         </p>
                     )}
+                    <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors.dateOfBirth} />
                 </div>
 
                 <div>
@@ -126,8 +212,12 @@ export function RegisterStep2({
                     <div className="relative">
                         <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <select id="select-components-auth-RegisterStep2-1"
-                            {...register('gender')}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
+                            {...register('gender', {
+                                onChange: (e) => validateField('gender', e.target.value),
+                            })}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                                errors.gender || fieldErrors.gender ? 'border-red-500' : 'border-gray-300'
+                            }`}
                         >
                             <option value="">Select gender</option>
                             <option value="male">Male</option>
@@ -138,6 +228,7 @@ export function RegisterStep2({
                     {errors.gender && (
                         <p className="mt-1 text-sm text-red-600">{errors.gender.message}</p>
                     )}
+                    <FormFieldHint hint={FORMAT_HINTS.gender} error={fieldErrors.gender} />
                 </div>
             </div>
 

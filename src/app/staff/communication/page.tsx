@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService } from '@/services/supportStaffService'
 import { Megaphone, MessageSquare, Bell, Send, AlertCircle, Clock, User } from 'lucide-react'
+import { validateRequired, validateTextArea, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function Communication() {
     const router = useRouter()
@@ -21,6 +23,7 @@ export default function Communication() {
         recipients: 'all',
         priority: 'low'
     })
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     const loadData = async () => {
         setLoading(true)
@@ -50,10 +53,13 @@ export default function Communication() {
     }, [isAuthenticated, router])
 
     const handleSendMessage = async () => {
-        if (!formData.subject.trim() || !formData.message.trim()) {
-            setError('Subject and message are required')
-            return
-        }
+        const newErrors: Record<string, string> = {}
+        const subErr = validateRequired(formData.subject, 'Subject')
+        if (subErr) newErrors.subject = subErr
+        const msgErr = validateTextArea(formData.message, 'Message', 1, 5000)
+        if (msgErr) newErrors.message = msgErr
+        setFormErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
         setSending(true)
         setError(null)
         try {
@@ -273,10 +279,15 @@ export default function Communication() {
                                             id="staff-communication-subject-input"
                                             type="text"
                                             value={formData.subject}
-                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, subject: e.target.value })
+                                                const err = validateRequired(e.target.value, 'Subject')
+                                                setFormErrors(prev => { const n = { ...prev }; if (err) n.subject = err; else delete n.subject; return n })
+                                            }}
                                             placeholder="Enter message subject"
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${formErrors.subject ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.subject} error={formErrors.subject} />
                                     </div>
 
                                     <div>
@@ -284,11 +295,16 @@ export default function Communication() {
                                         <textarea
                                             id="staff-communication-message-input"
                                             value={formData.message}
-                                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, message: e.target.value })
+                                                const err = validateTextArea(e.target.value, 'Message', 1, 5000)
+                                                setFormErrors(prev => { const n = { ...prev }; if (err) n.message = err; else delete n.message; return n })
+                                            }}
                                             placeholder="Type your message here..."
                                             rows={5}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-vertical"
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-vertical ${formErrors.message ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.message} error={formErrors.message} />
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

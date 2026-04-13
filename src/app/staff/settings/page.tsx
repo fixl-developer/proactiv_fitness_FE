@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService, StaffSettings } from '@/services/supportStaffService'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { User, Bell, Shield, Settings, Save, CheckCircle, XCircle } from 'lucide-react'
+import { validateName, validateEmail, validatePhone, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (val: boolean) => void }) {
     return (
@@ -39,6 +41,7 @@ export default function StaffSettingsPage() {
     const [saving, setSaving] = useState(false)
     const [settings, setSettings] = useState<StaffSettings>(defaultSettings)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const originalSettingsRef = useRef<string>('')
 
     useEffect(() => {
@@ -95,6 +98,22 @@ export default function StaffSettingsPage() {
     }
 
     const handleSave = async () => {
+        const newErrors: Record<string, string> = {}
+        const fnErr = validateName(settings.profile.firstName, 'First Name')
+        if (fnErr) newErrors.firstName = fnErr
+        const lnErr = validateName(settings.profile.lastName, 'Last Name')
+        if (lnErr) newErrors.lastName = lnErr
+        const emErr = validateEmail(settings.profile.email)
+        if (emErr) newErrors.email = emErr
+        if (settings.profile.phone) {
+            const phErr = validatePhone(settings.profile.phone, false)
+            if (phErr) newErrors.phone = phErr
+        }
+        setErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) {
+            showToast('error', 'Please fix validation errors before saving.')
+            return
+        }
         setSaving(true)
         try {
             await supportStaffService.updateSettings(settings)
@@ -162,18 +181,30 @@ export default function StaffSettingsPage() {
                                         <input
                                             type="text"
                                             value={settings.profile.firstName}
-                                            onChange={e => updateProfile('firstName', e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            onKeyDown={filterNameInput}
+                                            onChange={e => {
+                                                updateProfile('firstName', e.target.value)
+                                                const err = validateName(e.target.value, 'First Name')
+                                                setErrors(prev => { const n = { ...prev }; if (err) n.firstName = err; else delete n.firstName; return n })
+                                            }}
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.firstName ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
                                         <input
                                             type="text"
                                             value={settings.profile.lastName}
-                                            onChange={e => updateProfile('lastName', e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            onKeyDown={filterNameInput}
+                                            onChange={e => {
+                                                updateProfile('lastName', e.target.value)
+                                                const err = validateName(e.target.value, 'Last Name')
+                                                setErrors(prev => { const n = { ...prev }; if (err) n.lastName = err; else delete n.lastName; return n })
+                                            }}
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -182,18 +213,31 @@ export default function StaffSettingsPage() {
                                         <input
                                             type="email"
                                             value={settings.profile.email}
-                                            onChange={e => updateProfile('email', e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            onChange={e => {
+                                                updateProfile('email', e.target.value)
+                                                const err = validateEmail(e.target.value)
+                                                setErrors(prev => { const n = { ...prev }; if (err) n.email = err; else delete n.email; return n })
+                                            }}
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                                         <input
                                             type="tel"
                                             value={settings.profile.phone}
-                                            onChange={e => updateProfile('phone', e.target.value)}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            onKeyDown={filterPhoneInput}
+                                            onChange={e => {
+                                                updateProfile('phone', e.target.value)
+                                                if (e.target.value) {
+                                                    const err = validatePhone(e.target.value, false)
+                                                    setErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
+                                                }
+                                            }}
+                                            className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -308,9 +352,11 @@ export default function StaffSettingsPage() {
                                         min={5}
                                         max={480}
                                         value={settings.security.sessionTimeout}
+                                        onKeyDown={filterNumberInput}
                                         onChange={e => updateSecurity('sessionTimeout', parseInt(e.target.value) || 30)}
                                         className="w-full max-w-xs px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
+                                    <FormFieldHint hint="5-480 minutes" />
                                 </div>
                                 <div className="px-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Password Last Changed</label>

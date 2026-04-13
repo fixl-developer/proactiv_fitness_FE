@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { coachService, CoachProfile, CoachReportData } from '@/services/modules/coach.service'
 import { toast } from 'sonner'
+import { validateName, validateEmail, validatePhone, validateTextArea, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ==================== MOCK DATA ====================
 
@@ -61,6 +63,7 @@ const CoachProfilePage = () => {
     const [showAddCert, setShowAddCert] = useState(false)
     const [goals, setGoals] = useState<string[]>([])
     const [newGoal, setNewGoal] = useState('')
+    const [errors, setErrors] = useState<Record<string, string>>({})
 
     const coachId = user?.id || ''
 
@@ -179,9 +182,30 @@ const CoachProfilePage = () => {
 
     // ==================== SAVE PROFILE ====================
 
+    const validateProfileForm = (): boolean => {
+        const newErrors: Record<string, string> = {}
+        const fnErr = validateName(editedProfile.firstName, 'First Name')
+        if (fnErr) newErrors.firstName = fnErr
+        const lnErr = validateName(editedProfile.lastName, 'Last Name')
+        if (lnErr) newErrors.lastName = lnErr
+        const emErr = validateEmail(editedProfile.email)
+        if (emErr) newErrors.email = emErr
+        const phErr = validatePhone(editedProfile.phone, false)
+        if (phErr) newErrors.phone = phErr
+        const bioErr = validateTextArea(editedProfile.bio, 'Bio', 0, 2000)
+        if (bioErr) newErrors.bio = bioErr
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
     const handleSave = async () => {
         if (!coachId) {
             toast.error('User ID not found. Cannot save profile.')
+            return
+        }
+
+        if (!validateProfileForm()) {
+            toast.error('Please fix the validation errors before saving.')
             return
         }
 
@@ -405,17 +429,24 @@ const CoachProfilePage = () => {
                                         First Name
                                     </label>
                                     {isEditing ? (
+                                        <>
                                         <Input
                                             value={editedProfile.firstName}
-                                            onChange={(e) =>
+                                            onKeyDown={filterNameInput}
+                                            onChange={(e) => {
                                                 setEditedProfile({
                                                     ...editedProfile,
                                                     firstName: e.target.value,
                                                     name: `${e.target.value} ${editedProfile.lastName}`.trim(),
                                                 })
-                                            }
+                                                const err = validateName(e.target.value, 'First Name')
+                                                setErrors(prev => { const n = { ...prev }; if (err) n.firstName = err; else delete n.firstName; return n })
+                                            }}
                                             placeholder="First name"
+                                            className={errors.firstName ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
+                                        </>
                                     ) : (
                                         <p className="text-gray-900 font-medium flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
@@ -428,17 +459,24 @@ const CoachProfilePage = () => {
                                         Last Name
                                     </label>
                                     {isEditing ? (
+                                        <>
                                         <Input
                                             value={editedProfile.lastName}
-                                            onChange={(e) =>
+                                            onKeyDown={filterNameInput}
+                                            onChange={(e) => {
                                                 setEditedProfile({
                                                     ...editedProfile,
                                                     lastName: e.target.value,
                                                     name: `${editedProfile.firstName} ${e.target.value}`.trim(),
                                                 })
-                                            }
+                                                const err = validateName(e.target.value, 'Last Name')
+                                                setErrors(prev => { const n = { ...prev }; if (err) n.lastName = err; else delete n.lastName; return n })
+                                            }}
                                             placeholder="Last name"
+                                            className={errors.lastName ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
+                                        </>
                                     ) : (
                                         <p className="text-gray-900 font-medium">
                                             {displayProfile.lastName || displayProfile.name.split(' ').slice(1).join(' ') || '-'}
@@ -453,12 +491,20 @@ const CoachProfilePage = () => {
                                     Email Address
                                 </label>
                                 {isEditing ? (
+                                    <>
                                     <Input
                                         type="email"
                                         value={editedProfile.email}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, email: e.target.value })}
+                                        onChange={(e) => {
+                                            setEditedProfile({ ...editedProfile, email: e.target.value })
+                                            const err = validateEmail(e.target.value)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.email = err; else delete n.email; return n })
+                                        }}
                                         placeholder="email@example.com"
+                                        className={errors.email ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
+                                    </>
                                 ) : (
                                     <p className="text-gray-900 font-medium flex items-center gap-2">
                                         <Mail className="w-4 h-4 text-gray-400" />
@@ -473,11 +519,20 @@ const CoachProfilePage = () => {
                                     Phone Number
                                 </label>
                                 {isEditing ? (
+                                    <>
                                     <Input
                                         value={editedProfile.phone}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, phone: e.target.value })}
+                                        onKeyDown={filterPhoneInput}
+                                        onChange={(e) => {
+                                            setEditedProfile({ ...editedProfile, phone: e.target.value })
+                                            const err = validatePhone(e.target.value, false)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
+                                        }}
                                         placeholder="+91-0000000000"
+                                        className={errors.phone ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
+                                    </>
                                 ) : (
                                     <p className="text-gray-900 font-medium flex items-center gap-2">
                                         <Phone className="w-4 h-4 text-gray-400" />
@@ -511,12 +566,19 @@ const CoachProfilePage = () => {
                                     Professional Bio
                                 </label>
                                 {isEditing ? (
+                                    <>
                                     <Textarea
                                         value={editedProfile.bio}
-                                        onChange={(e) => setEditedProfile({ ...editedProfile, bio: e.target.value })}
-                                        className="min-h-24"
+                                        onChange={(e) => {
+                                            setEditedProfile({ ...editedProfile, bio: e.target.value })
+                                            const err = validateTextArea(e.target.value, 'Bio', 0, 2000)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.bio = err; else delete n.bio; return n })
+                                        }}
+                                        className={`min-h-24 ${errors.bio ? 'border-red-500' : ''}`}
                                         placeholder="Tell us about your coaching experience..."
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.description} error={errors.bio} />
+                                    </>
                                 ) : (
                                     <p className="text-gray-700">{displayProfile.bio || 'No bio provided.'}</p>
                                 )}

@@ -10,6 +10,8 @@ import { AlertCircle, Plus, BookOpen, CheckCircle, Users, DollarSign, Edit, Eye,
 import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { Badge } from '@/components/ui/badge'
 import { revenueIntelligenceService } from '@/services/advancedAIServices'
+import { validateRequired, validateTextArea, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface ProgramForm {
     name: string
@@ -44,6 +46,25 @@ export default function Programs() {
     const [saving, setSaving] = useState(false)
     const [aiOptimization, setAiOptimization] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+    const validateProgramForm = (): boolean => {
+        const newErrors: Record<string, string> = {}
+        const nameErr = validateRequired(editForm.name, 'Program Name')
+        if (nameErr) newErrors.name = nameErr
+        const descErr = validateTextArea(editForm.description, 'Description', 0, 2000)
+        if (descErr) newErrors.description = descErr
+        if (editForm.enrolledStudents) {
+            const studErr = validateNumber(editForm.enrolledStudents, 'Enrolled Students', 0)
+            if (studErr) newErrors.enrolledStudents = studErr
+        }
+        if (editForm.revenue) {
+            const revErr = validateNumber(editForm.revenue, 'Revenue', 0)
+            if (revErr) newErrors.revenue = revErr
+        }
+        setFormErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
 
     const partnerId = user?.id || ''
 
@@ -119,10 +140,7 @@ export default function Programs() {
     }
 
     const handleEditSave = async () => {
-        if (!editForm.name.trim()) {
-            alert('Program name is required.')
-            return
-        }
+        if (!validateProgramForm()) return
         try {
             setSaving(true)
             const updated = await PartnerPortalService.updatePartnerProgram(partnerId, selectedProgram.id, {
@@ -142,10 +160,7 @@ export default function Programs() {
     }
 
     const handleAddProgram = async () => {
-        if (!editForm.name.trim()) {
-            alert('Program name is required.')
-            return
-        }
+        if (!validateProgramForm()) return
         try {
             setSaving(true)
             const newProgram = await PartnerPortalService.createPartnerProgram(partnerId, {
@@ -183,10 +198,15 @@ export default function Programs() {
                     <input
                         type="text"
                         value={editForm.name}
-                        onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, name: e.target.value }))
+                            const err = validateRequired(e.target.value, 'Program Name')
+                            setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
+                        }}
                         placeholder="Program name"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint="Enter program name" error={formErrors.name} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -203,11 +223,16 @@ export default function Programs() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                     value={editForm.description}
-                    onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={e => {
+                        setEditForm(prev => ({ ...prev, description: e.target.value }))
+                        const err = validateTextArea(e.target.value, 'Description', 0, 2000)
+                        setFormErrors(prev => { const n = { ...prev }; if (err) n.description = err; else delete n.description; return n })
+                    }}
                     rows={2}
                     placeholder="Program description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                <FormFieldHint hint={FORMAT_HINTS.description} error={formErrors.description} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -227,10 +252,18 @@ export default function Programs() {
                         type="number"
                         min="0"
                         value={editForm.enrolledStudents}
-                        onChange={e => setEditForm(prev => ({ ...prev, enrolledStudents: e.target.value }))}
+                        onKeyDown={filterNumberInput}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, enrolledStudents: e.target.value }))
+                            if (e.target.value) {
+                                const err = validateNumber(e.target.value, 'Enrolled Students', 0)
+                                setFormErrors(prev => { const n = { ...prev }; if (err) n.enrolledStudents = err; else delete n.enrolledStudents; return n })
+                            }
+                        }}
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.enrolledStudents ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.capacity} error={formErrors.enrolledStudents} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Revenue ($)</label>
@@ -239,10 +272,18 @@ export default function Programs() {
                         min="0"
                         step="0.01"
                         value={editForm.revenue}
-                        onChange={e => setEditForm(prev => ({ ...prev, revenue: e.target.value }))}
+                        onKeyDown={filterNumberInput}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, revenue: e.target.value }))
+                            if (e.target.value) {
+                                const err = validateNumber(e.target.value, 'Revenue', 0)
+                                setFormErrors(prev => { const n = { ...prev }; if (err) n.revenue = err; else delete n.revenue; return n })
+                            }
+                        }}
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.revenue ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.amount} error={formErrors.revenue} />
                 </div>
             </div>
         </div>

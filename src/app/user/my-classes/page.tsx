@@ -95,8 +95,8 @@ export default function MyClassesPage() {
     const loadAiRecommendations = useCallback(async () => {
         try {
             setAiLoading(true)
-            const data = await aiCoachService.getRecommendations({ studentId: user?.id || '', skillLevel: 'all' })
-            setAiRecommendations(data)
+            const response = await aiCoachService.getRecommendations({ studentId: user?.id || '', skillLevel: 'all' })
+            setAiRecommendations(response?.data || response)
         } catch (error) {
             console.error('Error loading AI recommendations:', error)
             setAiRecommendations(null)
@@ -109,8 +109,8 @@ export default function MyClassesPage() {
         try {
             setAiInsightsLoading(true)
             const userId = user?.id || ''
-            const response = await apiClient.get(`/student-digital-twin/skill-gaps/${userId}`)
-            setSkillGaps(response)
+            const response = await apiClient.get<any>(`/student-digital-twin/skill-gaps/${userId}`)
+            setSkillGaps(response?.data || response)
         } catch (error) {
             console.error('Skill gap analysis unavailable:', error)
             setSkillGaps(null)
@@ -123,8 +123,8 @@ export default function MyClassesPage() {
         try {
             setLearningPathLoading(true)
             const userId = user?.id || ''
-            const response = await apiClient.post('/student-digital-twin/learning-path', { studentId: userId })
-            setLearningPath(response)
+            const response = await apiClient.post<any>(`/student-digital-twin/learning-path/${userId}`)
+            setLearningPath(response?.data || response)
         } catch (error) {
             console.error('Learning path generation unavailable:', error)
             setLearningPath(null)
@@ -342,7 +342,12 @@ export default function MyClassesPage() {
                         </div>
                     ) : aiRecommendations ? (
                         <div className="space-y-2">
-                            {(aiRecommendations.recommendations || aiRecommendations.insights || []).slice(0, 3).map((item: any, i: number) => (
+                            {(
+                                (Array.isArray(aiRecommendations?.recommendations) ? aiRecommendations.recommendations : null) || 
+                                (Array.isArray(aiRecommendations?.insights) ? aiRecommendations.insights : null) || 
+                                (Array.isArray(aiRecommendations?.data) ? aiRecommendations.data : null) || 
+                                []
+                            ).slice(0, 3).map((item: any, i: number) => (
                                 <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
                                     <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                     <p className="text-sm text-gray-700">{item.suggestion || item.title || item.description || item}</p>
@@ -650,7 +655,12 @@ export default function MyClassesPage() {
                                     Skill Gap Analysis
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {(skillGaps.gaps || skillGaps.skillGaps || skillGaps.data || []).map((gap: any, idx: number) => (
+                                    {(
+                                        (Array.isArray(skillGaps?.skillGaps) ? skillGaps.skillGaps : null) || 
+                                        (Array.isArray(skillGaps?.gaps) ? skillGaps.gaps : null) || 
+                                        (Array.isArray(skillGaps?.data) ? skillGaps.data : null) || 
+                                        (Array.isArray(skillGaps) ? skillGaps : [])
+                                    ).map((gap: any, idx: number) => (
                                         <div key={idx} className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-sm font-medium text-gray-900">{gap.skillName || gap.skill || gap.name}</span>
@@ -705,15 +715,21 @@ export default function MyClassesPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="space-y-2"
                                     >
-                                        {(learningPath.steps || learningPath.path || learningPath.data || []).map((step: any, idx: number) => (
+                                        {(
+                                            (Array.isArray(learningPath?.phases) ? learningPath.phases : null) || 
+                                            (Array.isArray(learningPath?.steps) ? learningPath.steps : null) || 
+                                            (Array.isArray(learningPath?.path) ? learningPath.path : null) || 
+                                            (Array.isArray(learningPath?.data) ? learningPath.data : null) || 
+                                            (Array.isArray(learningPath) ? learningPath : [])
+                                        ).map((step: any, idx: number) => (
                                             <div key={idx} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
                                                 <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
                                                     {idx + 1}
                                                 </div>
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-900">{step.title || step.name || step.step || `Step ${idx + 1}`}</p>
-                                                    {(step.description || step.details) && (
-                                                        <p className="text-xs text-gray-500 mt-0.5">{step.description || step.details}</p>
+                                                    {(step.description || step.details || step.goals?.join(', ')) && (
+                                                        <p className="text-xs text-gray-500 mt-0.5">{step.description || step.details || step.goals?.join(', ')}</p>
                                                     )}
                                                 </div>
                                             </div>

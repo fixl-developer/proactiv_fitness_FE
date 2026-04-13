@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import apiClient from '@/lib/apiClient'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
+import { validateName, validatePhone, validateDateOfBirth, validateTextArea, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface EmergencyContact {
     name: string
@@ -67,6 +69,7 @@ export default function ProfilePage() {
     const [isSaving, setIsSaving] = useState(false)
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
     const [saveSuccess, setSaveSuccess] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
@@ -125,6 +128,21 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         if (!profile) return
+        // Validate all fields
+        const errors: Record<string, string> = {}
+        const fnErr = validateName(profile.firstName, 'First name'); if (fnErr) errors.firstName = fnErr
+        const lnErr = validateName(profile.lastName, 'Last name'); if (lnErr) errors.lastName = lnErr
+        if (profile.phone) { const pe = validatePhone(profile.phone, false); if (pe) errors.phone = pe }
+        if (profile.dateOfBirth) { const de = validateDateOfBirth(profile.dateOfBirth, false); if (de) errors.dateOfBirth = de }
+        if (profile.bio) { const be = validateTextArea(profile.bio, 'Bio', 0, 500); if (be) errors.bio = be }
+        if (profile.emergencyContact?.name) { const en = validateName(profile.emergencyContact.name, 'Contact name'); if (en) errors.ecName = en }
+        if (profile.emergencyContact?.phone) { const ep = validatePhone(profile.emergencyContact.phone, false); if (ep) errors.ecPhone = ep }
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors)
+            alert('Please fix the validation errors before saving.')
+            return
+        }
+        setFieldErrors({})
         try {
             setIsSaving(true)
             await apiClient.put('/user/profile/profile', profile)
@@ -356,10 +374,16 @@ export default function ProfilePage() {
                                     <input
                                         type="text"
                                         value={profile?.firstName || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, firstName: e.target.value } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? { ...prev, firstName: e.target.value } : prev)
+                                            const err = validateName(e.target.value, 'First name')
+                                            setFieldErrors(prev => { const n = {...prev}; if (err) n.firstName = err; else delete n.firstName; return n })
+                                        }}
+                                        onKeyDown={filterNameInput}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.firstName ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -369,10 +393,16 @@ export default function ProfilePage() {
                                     <input
                                         type="text"
                                         value={profile?.lastName || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, lastName: e.target.value } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? { ...prev, lastName: e.target.value } : prev)
+                                            const err = validateName(e.target.value, 'Last name')
+                                            setFieldErrors(prev => { const n = {...prev}; if (err) n.lastName = err; else delete n.lastName; return n })
+                                        }}
+                                        onKeyDown={filterNameInput}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.lastName ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -395,10 +425,16 @@ export default function ProfilePage() {
                                     <input
                                         type="tel"
                                         value={profile?.phone || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, phone: e.target.value } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? { ...prev, phone: e.target.value } : prev)
+                                            const err = validatePhone(e.target.value, false)
+                                            setFieldErrors(prev => { const n = {...prev}; if (err) n.phone = err; else delete n.phone; return n })
+                                        }}
+                                        onKeyDown={filterPhoneInput}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.phone ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -408,10 +444,15 @@ export default function ProfilePage() {
                                     <input
                                         type="date"
                                         value={profile?.dateOfBirth || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? { ...prev, dateOfBirth: e.target.value } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? { ...prev, dateOfBirth: e.target.value } : prev)
+                                            const err = validateDateOfBirth(e.target.value, false)
+                                            setFieldErrors(prev => { const n = {...prev}; if (err) n.dateOfBirth = err; else delete n.dateOfBirth; return n })
+                                        }}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.dateOfBirth ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors.dateOfBirth} />}
                                 </div>
                             </div>
                         </CardContent>
@@ -425,16 +466,21 @@ export default function ProfilePage() {
                         <CardContent>
                             <textarea
                                 value={profile?.bio || ''}
-                                onChange={(e) => setProfile((prev) => prev ? { ...prev, bio: e.target.value } : prev)}
+                                onChange={(e) => {
+                                    setProfile((prev) => prev ? { ...prev, bio: e.target.value } : prev)
+                                    const err = validateTextArea(e.target.value, 'Bio', 0, 500)
+                                    setFieldErrors(prev => { const n = {...prev}; if (err) n.bio = err; else delete n.bio; return n })
+                                }}
                                 disabled={!isEditing}
                                 rows={4}
                                 maxLength={500}
                                 placeholder="Tell us about yourself..."
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors resize-none"
+                                className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors resize-none ${fieldErrors.bio ? 'border-red-500' : 'border-gray-200'}`}
                             />
                             <p className="text-xs text-gray-500 mt-2">
                                 {profile?.bio?.length || 0} / 500 characters
                             </p>
+                            {isEditing && <FormFieldHint error={fieldErrors.bio} />}
                         </CardContent>
                     </Card>
 
@@ -453,39 +499,59 @@ export default function ProfilePage() {
                                     <input
                                         type="text"
                                         value={profile?.emergencyContact?.name || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? {
-                                            ...prev,
-                                            emergencyContact: { ...prev.emergencyContact, name: e.target.value }
-                                        } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? {
+                                                ...prev,
+                                                emergencyContact: { ...prev.emergencyContact, name: e.target.value }
+                                            } : prev)
+                                            if (e.target.value) {
+                                                const err = validateName(e.target.value, 'Contact name')
+                                                setFieldErrors(prev => { const n = {...prev}; if (err) n.ecName = err; else delete n.ecName; return n })
+                                            }
+                                        }}
+                                        onKeyDown={filterNameInput}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.ecName ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.ecName} />}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700">Phone</label>
                                     <input
                                         type="tel"
                                         value={profile?.emergencyContact?.phone || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? {
-                                            ...prev,
-                                            emergencyContact: { ...prev.emergencyContact, phone: e.target.value }
-                                        } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? {
+                                                ...prev,
+                                                emergencyContact: { ...prev.emergencyContact, phone: e.target.value }
+                                            } : prev)
+                                            if (e.target.value) {
+                                                const err = validatePhone(e.target.value, false)
+                                                setFieldErrors(prev => { const n = {...prev}; if (err) n.ecPhone = err; else delete n.ecPhone; return n })
+                                            }
+                                        }}
+                                        onKeyDown={filterPhoneInput}
                                         disabled={!isEditing}
-                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
+                                        className={`w-full px-4 py-3 border-2 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors ${fieldErrors.ecPhone ? 'border-red-500' : 'border-gray-200'}`}
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.ecPhone} />}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-700">Relationship</label>
                                     <input
                                         type="text"
                                         value={profile?.emergencyContact?.relationship || ''}
-                                        onChange={(e) => setProfile((prev) => prev ? {
-                                            ...prev,
-                                            emergencyContact: { ...prev.emergencyContact, relationship: e.target.value }
-                                        } : prev)}
+                                        onChange={(e) => {
+                                            setProfile((prev) => prev ? {
+                                                ...prev,
+                                                emergencyContact: { ...prev.emergencyContact, relationship: e.target.value }
+                                            } : prev)
+                                        }}
+                                        onKeyDown={filterNameInput}
                                         disabled={!isEditing}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg disabled:bg-gray-50 focus:border-emerald-500 focus:outline-none transition-colors"
                                     />
+                                    {isEditing && <FormFieldHint hint={FORMAT_HINTS.relationship} />}
                                 </div>
                             </div>
                         </CardContent>

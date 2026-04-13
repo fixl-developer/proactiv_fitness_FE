@@ -1,14 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
-// Auth header helper
-const getAuthHeaders = () => {
-    const token = typeof window !== 'undefined'
-        ? localStorage.getItem('accessToken') || localStorage.getItem('token')
-        : null;
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import { apiClient } from '@/services/api/client';
 
 export interface AICoachSession {
     sessionId?: string;
@@ -61,17 +51,11 @@ class AICoachService {
         videoUrl: string;
         sessionType: string;
     }) {
-        const response = await axios.post(`${API_URL}/ai-coach-assistant/analyze-form`, data, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.post<any>('/ai-coach-assistant/analyze-form', data);
     }
 
     async getSession(sessionId: string) {
-        const response = await axios.get(`${API_URL}/ai-coach-assistant/sessions/${sessionId}`, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.get<any>(`/ai-coach-assistant/sessions/${sessionId}`);
     }
 
     async listSessions(filters: {
@@ -80,26 +64,17 @@ class AICoachService {
         tenantId: string;
         sessionType?: string;
     }) {
-        const response = await axios.get(`${API_URL}/ai-coach-assistant/sessions`, {
-            params: filters,
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.get<any>('/ai-coach-assistant/sessions', { params: filters });
     }
 
     async generateWorkoutSuggestion(data: WorkoutSuggestion) {
-        const response = await axios.post(`${API_URL}/ai-coach-assistant/workout-suggestions`, data, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.post<any>('/ai-coach-assistant/workout-suggestions', data);
     }
 
     async predictProgress(studentId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/ai-coach-assistant/predict-progress`, {
-            params: { studentId, tenantId },
-            headers: getAuthHeaders(),
+        return apiClient.get<any>('/ai-coach-assistant/predict-progress', {
+            params: { studentId, tenantId }
         });
-        return response.data;
     }
 
     async submitFeedback(sessionId: string, feedback: {
@@ -107,17 +82,11 @@ class AICoachService {
         comments?: string;
         rating?: number;
     }) {
-        const response = await axios.post(`${API_URL}/ai-coach-assistant/sessions/${sessionId}/feedback`, feedback, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.post<any>(`/ai-coach-assistant/sessions/${sessionId}/feedback`, feedback);
     }
 
     async getInjuryPrevention(studentId: string) {
-        const response = await axios.get(`${API_URL}/ai-coach-assistant/injury-prevention/${studentId}`, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.get<any>(`/ai-coach-assistant/injury-prevention/${studentId}`);
     }
 
     // ─── AI Coach Core Endpoints ───────────────────────────────
@@ -127,37 +96,27 @@ class AICoachService {
         performanceData?: any;
         skillLevel?: string;
     }) {
-        const response = await axios.post(`${API_URL}/ai-coach/recommendations`, data, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.post<any>('/ai-coach/recommendations', data);
     }
 
     async analyzePerformance(data: {
         studentId: string;
         performanceMetrics: any;
     }) {
-        const response = await axios.post(`${API_URL}/ai-coach/analyze`, data, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.post<any>('/ai-coach/analyze', data);
     }
 
     async getCoachingPlan(studentId: string) {
-        const response = await axios.get(`${API_URL}/ai-coach/coaching-plan/${studentId}`, {
-            headers: getAuthHeaders(),
-        });
-        return response.data;
+        return apiClient.get<any>(`/ai-coach/coaching-plan/${studentId}`);
     }
 
     // ─── AI Chatbot (public, no auth needed) ───────────────────
 
     async chat(message: string, conversationHistory: any[] = []) {
-        const response = await axios.post(`${API_URL}/ai/chat`, {
+        return apiClient.post<any>('/ai/chat', {
             message,
             conversationHistory,
         });
-        return response.data;
     }
 }
 

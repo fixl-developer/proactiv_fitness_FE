@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import BookingService from '@/services/modules/booking.service'
 import { apiClient } from '@/services/api/client'
+import { validateName, validateSelect, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function BookingsPage() {
     const [bookings, setBookings] = useState<any[]>([])
@@ -33,6 +35,7 @@ export default function BookingsPage() {
         location: '',
         notes: '',
     })
+    const [bookingErrors, setBookingErrors] = useState<Record<string, string>>({})
     // AI Schedule Optimizer state
     const [aiPredictLoading, setAiPredictLoading] = useState(false)
     const [aiPredictResult, setAiPredictResult] = useState<any>(null)
@@ -124,7 +127,15 @@ export default function BookingsPage() {
 
     const handleCreateBooking = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!bookingForm.program || !bookingForm.date || !bookingForm.timeSlot || !bookingForm.location) return
+        const errors: Record<string, string> = {}
+        const progErr = validateSelect(bookingForm.program, 'Program'); if (progErr) errors.program = progErr
+        const tsErr = validateSelect(bookingForm.timeSlot, 'Time slot'); if (tsErr) errors.timeSlot = tsErr
+        const locErr = validateSelect(bookingForm.location, 'Location'); if (locErr) errors.location = locErr
+        if (!bookingForm.date) errors.date = 'Date is required'
+        if (bookingForm.childName) { const cn = validateName(bookingForm.childName, 'Child name'); if (cn) errors.childName = cn }
+        if (bookingForm.notes) { const ne = validateTextArea(bookingForm.notes, 'Notes', 0, 500); if (ne) errors.notes = ne }
+        if (Object.keys(errors).length > 0) { setBookingErrors(errors); return }
+        setBookingErrors({})
 
         setBookingSubmitting(true)
         try {
@@ -684,10 +695,15 @@ export default function BookingsPage() {
                                         <input
                                             type="text"
                                             value={bookingForm.childName}
-                                            onChange={e => setBookingForm(prev => ({ ...prev, childName: e.target.value }))}
+                                            onChange={e => {
+                                                setBookingForm(prev => ({ ...prev, childName: e.target.value }))
+                                                if (e.target.value) { const err = validateName(e.target.value, 'Child name'); setBookingErrors(prev => { const n = {...prev}; if (err) n.childName = err; else delete n.childName; return n }) }
+                                            }}
+                                            onKeyDown={filterNameInput}
                                             placeholder="Child's name"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${bookingErrors.childName ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.name} error={bookingErrors.childName} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
@@ -741,11 +757,15 @@ export default function BookingsPage() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                                         <textarea
                                             value={bookingForm.notes}
-                                            onChange={e => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                                            onChange={e => {
+                                                setBookingForm(prev => ({ ...prev, notes: e.target.value }))
+                                                if (e.target.value) { const err = validateTextArea(e.target.value, 'Notes', 0, 500); setBookingErrors(prev => { const n = {...prev}; if (err) n.notes = err; else delete n.notes; return n }) }
+                                            }}
                                             placeholder="Any special requirements or notes..."
                                             rows={2}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none ${bookingErrors.notes ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.message} error={bookingErrors.notes} />
                                     </div>
                                     <div className="flex justify-end gap-3 pt-4 border-t">
                                         <button

@@ -9,6 +9,8 @@ import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 import { useCMSData } from '@/hooks/useCMSData';
 import { CMSService, ContactInfoData } from '@/services/cmsService';
 
@@ -258,14 +260,11 @@ export default function ContactPage() {
                                             <input
                                                 type="text"
                                                 {...register('name')}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                onKeyDown={filterNameInput}
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="John Doe"
                                             />
-                                            {errors.name && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.name.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.name?.message} />
                                         </motion.div>
 
                                         {/* Email & Phone */}
@@ -282,14 +281,10 @@ export default function ContactPage() {
                                                 <input
                                                     type="email"
                                                     {...register('email')}
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="john@example.com"
                                                 />
-                                                {errors.email && (
-                                                    <p className="mt-1 text-sm text-red-600">
-                                                        {errors.email.message}
-                                                    </p>
-                                                )}
+                                                <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email?.message} />
                                             </motion.div>
 
                                             <motion.div
@@ -304,14 +299,11 @@ export default function ContactPage() {
                                                 <input
                                                     type="tel"
                                                     {...register('phone')}
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    onKeyDown={filterPhoneInput}
+                                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="+1234567890"
                                                 />
-                                                {errors.phone && (
-                                                    <p className="mt-1 text-sm text-red-600">
-                                                        {errors.phone.message}
-                                                    </p>
-                                                )}
+                                                <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone?.message} />
                                             </motion.div>
                                         </div>
 
@@ -328,14 +320,10 @@ export default function ContactPage() {
                                             <input
                                                 type="text"
                                                 {...register('subject')}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.subject ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="How can we help you?"
                                             />
-                                            {errors.subject && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.subject.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.subject} error={errors.subject?.message} />
                                         </motion.div>
 
                                         {/* Message */}
@@ -351,14 +339,10 @@ export default function ContactPage() {
                                             <textarea
                                                 {...register('message')}
                                                 rows={5}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.message ? 'border-red-500' : 'border-gray-300'}`}
                                                 placeholder="Tell us more about your inquiry..."
                                             />
-                                            {errors.message && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.message.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.message} error={errors.message?.message} />
                                         </motion.div>
 
                                         {/* Submit Button */}

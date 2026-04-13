@@ -19,6 +19,8 @@ import {
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react'
+import { validateTextArea, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'resolved', 'closed'] as const
 const TYPE_OPTIONS = ['general', 'billing', 'technical', 'complaint', 'suggestion'] as const
@@ -69,6 +71,7 @@ export default function CustomerInquiries() {
     const [responseMessage, setResponseMessage] = useState('')
     const [isInternal, setIsInternal] = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const [responseError, setResponseError] = useState('')
 
     // Status update
     const [newStatus, setNewStatus] = useState('')
@@ -111,7 +114,10 @@ export default function CustomerInquiries() {
     const resolvedCount = inquiries.filter((i) => i.status === 'resolved').length
 
     const handleRespond = async () => {
-        if (!respondModal || !responseMessage.trim()) return
+        if (!respondModal) return
+        const err = validateTextArea(responseMessage, 'Response', 1, 5000)
+        if (err) { setResponseError(err); return }
+        setResponseError('')
         setSubmitting(true)
         try {
             await supportStaffService.respondToInquiry(respondModal.id, responseMessage.trim(), isInternal)
@@ -427,11 +433,16 @@ export default function CustomerInquiries() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Your Response</label>
                             <textarea
                                 value={responseMessage}
-                                onChange={(e) => setResponseMessage(e.target.value)}
+                                onChange={(e) => {
+                                    setResponseMessage(e.target.value)
+                                    const err = validateTextArea(e.target.value, 'Response', 1, 5000)
+                                    setResponseError(err || '')
+                                }}
                                 placeholder="Type your response here..."
                                 rows={5}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
+                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none ${responseError ? 'border-red-500' : 'border-gray-200'}`}
                             />
+                            <FormFieldHint hint={FORMAT_HINTS.message} error={responseError} />
 
                             <label className="flex items-center gap-2 mt-4 cursor-pointer">
                                 <input

@@ -6,6 +6,8 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, UserPlus } from 'lucide
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/modules/auth.service';
+import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateDateOfBirth, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 export default function UserRegisterPage() {
     return (
@@ -20,6 +22,7 @@ function UserRegisterContent() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [formData, setFormData] = useState({
         firstName: '',
@@ -31,59 +34,53 @@ function UserRegisterContent() {
         confirmPassword: ''
     });
 
-    // Real-time field validation on blur
-    const validateField = (field: string, value: string) => {
-        const newErrors = { ...formErrors };
-        delete newErrors[field]; // clear previous error
+    // Real-time field validation helper
+    const handleFieldChange = (field: string, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+
+        const newErrors = { ...errors };
+        let error: string | null = null;
 
         switch (field) {
             case 'firstName':
-                if (!value.trim()) newErrors.firstName = 'First name is required';
+                error = validateName(value, 'First name');
                 break;
             case 'lastName':
-                if (!value.trim()) newErrors.lastName = 'Last name is required';
+                error = validateName(value, 'Last name');
                 break;
             case 'email':
-                if (!value.trim()) {
-                    newErrors.email = 'Email is required';
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                    newErrors.email = 'Format: john.doe@example.com';
-                }
+                error = validateEmail(value);
                 break;
             case 'phone':
-                if (value && !/^\+?[1-9]\d{1,14}$/.test(value.replace(/\s/g, ''))) {
-                    newErrors.phone = 'Format: +919876543210 (country code + number, no spaces)';
-                }
+                error = validatePhone(value, false);
+                break;
+            case 'dateOfBirth':
+                error = validateDateOfBirth(value, false);
                 break;
             case 'password':
-                if (!value) {
-                    newErrors.password = 'Password is required';
-                } else if (value.length < 8) {
-                    newErrors.password = 'Minimum 8 characters required';
-                } else if (!/(?=.*[a-z])/.test(value)) {
-                    newErrors.password = 'Must include a lowercase letter (a-z)';
-                } else if (!/(?=.*[A-Z])/.test(value)) {
-                    newErrors.password = 'Must include an uppercase letter (A-Z)';
-                } else if (!/(?=.*\d)/.test(value)) {
-                    newErrors.password = 'Must include a number (0-9)';
-                } else if (!/(?=.*[@$!%*?&])/.test(value)) {
-                    newErrors.password = 'Must include a special character (@$!%*?&)';
-                }
-                // Also revalidate confirmPassword if it has value
-                if (formData.confirmPassword && value !== formData.confirmPassword) {
-                    newErrors.confirmPassword = 'Passwords do not match';
-                } else {
-                    delete newErrors.confirmPassword;
+                error = validatePassword(value);
+                // Also revalidate confirmPassword if it has a value
+                if (formData.confirmPassword) {
+                    const confirmErr = validateConfirmPassword(value, formData.confirmPassword);
+                    if (confirmErr) {
+                        newErrors.confirmPassword = confirmErr;
+                    } else {
+                        delete newErrors.confirmPassword;
+                    }
                 }
                 break;
             case 'confirmPassword':
-                if (!value) {
-                    newErrors.confirmPassword = 'Please confirm your password';
-                } else if (value !== formData.password) {
-                    newErrors.confirmPassword = 'Passwords do not match';
-                }
+                error = validateConfirmPassword(formData.password, value);
                 break;
         }
+
+        if (error) {
+            newErrors[field] = error;
+        } else {
+            delete newErrors[field];
+        }
+
+        setErrors(newErrors);
         setFormErrors(newErrors);
     };
 
@@ -91,30 +88,28 @@ function UserRegisterContent() {
         e.preventDefault();
         setIsLoading(true);
         setFormErrors({});
+        setErrors({});
 
-        // Validation
-        const errors: Record<string, string> = {};
-        if (!formData.firstName) errors.firstName = 'First name is required';
-        if (!formData.lastName) errors.lastName = 'Last name is required';
-        if (!formData.email) errors.email = 'Email is required';
-        if (formData.phone && !/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s/g, ''))) {
-            errors.phone = 'Phone must be in format: +852XXXXXXXX (no spaces)';
-        }
-        if (!formData.password) {
-            errors.password = 'Password is required';
-        } else if (formData.password.length < 8) {
-            errors.password = 'Password must be at least 8 characters';
-        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
-            errors.password = 'Password needs uppercase, lowercase, number & special char (@$!%*?&)';
-        }
-        if (!formData.confirmPassword) {
-            errors.confirmPassword = 'Please confirm your password';
-        } else if (formData.password !== formData.confirmPassword) {
-            errors.confirmPassword = 'Passwords do not match';
-        }
+        // Validate ALL fields using shared validators
+        const submitErrors: Record<string, string> = {};
+        const firstNameErr = validateName(formData.firstName, 'First name');
+        if (firstNameErr) submitErrors.firstName = firstNameErr;
+        const lastNameErr = validateName(formData.lastName, 'Last name');
+        if (lastNameErr) submitErrors.lastName = lastNameErr;
+        const emailErr = validateEmail(formData.email);
+        if (emailErr) submitErrors.email = emailErr;
+        const phoneErr = validatePhone(formData.phone, false);
+        if (phoneErr) submitErrors.phone = phoneErr;
+        const dobErr = validateDateOfBirth(formData.dateOfBirth, false);
+        if (dobErr) submitErrors.dateOfBirth = dobErr;
+        const passwordErr = validatePassword(formData.password);
+        if (passwordErr) submitErrors.password = passwordErr;
+        const confirmErr = validateConfirmPassword(formData.password, formData.confirmPassword);
+        if (confirmErr) submitErrors.confirmPassword = confirmErr;
 
-        if (Object.keys(errors).length > 0) {
-            setFormErrors(errors);
+        if (Object.keys(submitErrors).length > 0) {
+            setErrors(submitErrors);
+            setFormErrors(submitErrors);
             setIsLoading(false);
             return;
         }
@@ -143,6 +138,7 @@ function UserRegisterContent() {
                     fieldErrors[field] = e.msg || e.message;
                 });
                 setFormErrors(fieldErrors);
+                setErrors(fieldErrors);
             } else {
                 setFormErrors({ general: backendMessage || err.message || 'Registration failed. Please try again.' });
             }
@@ -208,13 +204,13 @@ function UserRegisterContent() {
                                         <input id="input-text-account-register"
                                             type="text"
                                             value={formData.firstName}
-                                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                                            onBlur={(e) => validateField('firstName', e.target.value)}
-                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.firstName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                            onKeyDown={filterNameInput}
+                                            onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                             placeholder="John"
                                         />
                                     </div>
-                                    {formErrors.firstName && <p className="text-xs text-red-600 mt-1">{formErrors.firstName}</p>}
+                                    <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-gray-700">Last Name</label>
@@ -223,13 +219,13 @@ function UserRegisterContent() {
                                         <input id="input-text-account-register"
                                             type="text"
                                             value={formData.lastName}
-                                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                            onBlur={(e) => validateField('lastName', e.target.value)}
-                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.lastName ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                            onKeyDown={filterNameInput}
+                                            onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                             placeholder="Doe"
                                         />
                                     </div>
-                                    {formErrors.lastName && <p className="text-xs text-red-600 mt-1">{formErrors.lastName}</p>}
+                                    <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
                                 </div>
                             </div>
 
@@ -241,13 +237,12 @@ function UserRegisterContent() {
                                     <input id="input-email-account-register"
                                         type="email"
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        onBlur={(e) => validateField('email', e.target.value)}
-                                        className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                        onChange={(e) => handleFieldChange('email', e.target.value)}
+                                        className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="john.doe@example.com"
                                     />
                                 </div>
-                                {formErrors.email ? <p className="text-xs text-red-600 mt-1">{formErrors.email}</p> : <p className="text-xs text-gray-400 mt-1">e.g. john.doe@example.com</p>}
+                                <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                             </div>
 
                             {/* Phone & DOB */}
@@ -259,13 +254,13 @@ function UserRegisterContent() {
                                         <input id="input-tel-account-register"
                                             type="tel"
                                             value={formData.phone}
-                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            onBlur={(e) => validateField('phone', e.target.value)}
-                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.phone ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                            onKeyDown={filterPhoneInput}
+                                            onChange={(e) => handleFieldChange('phone', e.target.value)}
+                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                             placeholder="+919876543210"
                                         />
                                     </div>
-                                    {formErrors.phone ? <p className="text-xs text-red-600 mt-1">{formErrors.phone}</p> : <p className="text-xs text-gray-400 mt-1">Format: +919876543210 (no spaces)</p>}
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-gray-700">Date of Birth</label>
@@ -274,11 +269,11 @@ function UserRegisterContent() {
                                         <input id="input-date-account-register"
                                             type="date"
                                             value={formData.dateOfBirth}
-                                            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all"
+                                            onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
+                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.dateOfBirth ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         />
                                     </div>
-                                    {formErrors.dateOfBirth && <p className="text-xs text-red-600">{formErrors.dateOfBirth}</p>}
+                                    <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={errors.dateOfBirth} />
                                 </div>
                             </div>
 
@@ -290,9 +285,8 @@ function UserRegisterContent() {
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        onBlur={(e) => validateField('password', e.target.value)}
-                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                        onChange={(e) => handleFieldChange('password', e.target.value)}
+                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="e.g. Test@1234"
                                     />
                                     <button id="btn-account-register-1" type="button" onClick={() => setShowPassword(!showPassword)}
@@ -300,11 +294,7 @@ function UserRegisterContent() {
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
-                                {formErrors.password ? (
-                                    <p className="text-xs text-red-600 mt-1">{formErrors.password}</p>
-                                ) : (
-                                    <p className="text-xs text-gray-400 mt-1">Min 8 chars: uppercase (A-Z) + lowercase (a-z) + number (0-9) + special (@$!%*?&)</p>
-                                )}
+                                <FormFieldHint hint={FORMAT_HINTS.password} error={errors.password} />
                             </div>
 
                             {/* Confirm Password */}
@@ -315,9 +305,8 @@ function UserRegisterContent() {
                                     <input
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        onBlur={(e) => validateField('confirmPassword', e.target.value)}
-                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${formErrors.confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
+                                        onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+                                        className={`w-full pl-10 pr-12 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.confirmPassword ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         placeholder="Re-enter password"
                                     />
                                     <button id="btn-account-register-2" type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -325,11 +314,7 @@ function UserRegisterContent() {
                                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
-                                {formErrors.confirmPassword ? (
-                                    <p className="text-xs text-red-600 mt-1">{formErrors.confirmPassword}</p>
-                                ) : (
-                                    <p className="text-xs text-gray-400 mt-1">Must match the password above</p>
-                                )}
+                                <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={errors.confirmPassword} />
                             </div>
 
                             {/* Submit */}

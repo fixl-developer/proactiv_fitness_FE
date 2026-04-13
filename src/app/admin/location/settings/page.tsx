@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
+import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateAddress, validateZipCode, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function LocationSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -21,6 +23,8 @@ export default function LocationSettingsPage() {
     const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
     const [passwordError, setPasswordError] = useState<string | null>(null)
     const [passwordSuccess, setPasswordSuccess] = useState(false)
+    const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
+    const [passwordFieldErrors, setPasswordFieldErrors] = useState<Record<string, string>>({})
 
     const [settings, setSettings] = useState({
         locationName: '',
@@ -98,9 +102,31 @@ export default function LocationSettingsPage() {
 
     const handleInputChange = (field: string, value: any) => {
         setSettings(prev => ({ ...prev, [field]: value }))
+        if (typeof value === 'string') {
+            let error: string | null = null
+            if (field === 'locationName') error = validateName(value, 'Location name')
+            else if (field === 'managerName') error = validateName(value, 'Manager name')
+            else if (field === 'managerEmail') error = validateEmail(value)
+            else if (field === 'managerPhone') error = validatePhone(value, false)
+            else if (field === 'businessPhone') error = validatePhone(value, false)
+            else if (field === 'address' && value) error = validateAddress(value)
+            else if (field === 'city' && value) error = validateName(value, 'City')
+            else if (field === 'state' && value) error = validateName(value, 'State')
+            else if (field === 'zipCode' && value) error = validateZipCode(value, false)
+            setSettingsErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+        }
     }
 
     const handleSaveSettings = async () => {
+        const errs: Record<string, string> = {}
+        if (settings.locationName) { const e = validateName(settings.locationName, 'Location name'); if (e) errs.locationName = e }
+        if (settings.managerName) { const e = validateName(settings.managerName, 'Manager name'); if (e) errs.managerName = e }
+        if (settings.managerEmail) { const e = validateEmail(settings.managerEmail); if (e) errs.managerEmail = e }
+        if (settings.managerPhone) { const e = validatePhone(settings.managerPhone, false); if (e) errs.managerPhone = e }
+        if (settings.businessPhone) { const e = validatePhone(settings.businessPhone, false); if (e) errs.businessPhone = e }
+        if (settings.zipCode) { const e = validateZipCode(settings.zipCode, false); if (e) errs.zipCode = e }
+        setSettingsErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             setSaveSuccess(false)
@@ -119,14 +145,12 @@ export default function LocationSettingsPage() {
         setPasswordError(null)
         setPasswordSuccess(false)
 
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setPasswordError('Passwords do not match')
-            return
-        }
-        if (passwordData.newPassword.length < 6) {
-            setPasswordError('Password must be at least 6 characters')
-            return
-        }
+        const errs: Record<string, string> = {}
+        if (!passwordData.currentPassword) errs.currentPassword = 'Current password is required'
+        const npErr = validatePassword(passwordData.newPassword); if (npErr) errs.newPassword = npErr
+        const cpErr = validateConfirmPassword(passwordData.newPassword, passwordData.confirmPassword); if (cpErr) errs.confirmPassword = cpErr
+        setPasswordFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
 
         try {
             await LocationManagerService.changePassword(passwordData.currentPassword, passwordData.newPassword)
@@ -194,7 +218,8 @@ export default function LocationSettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Location Name</label>
-                                    <Input value={settings.locationName} onChange={(e) => handleInputChange('locationName', e.target.value)} placeholder="Enter location name" />
+                                    <Input value={settings.locationName} onChange={(e) => handleInputChange('locationName', e.target.value)} onKeyDown={filterNameInput} placeholder="Enter location name" className={settingsErrors.locationName ? 'border-red-500' : ''} />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={settingsErrors.locationName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Location Code</label>
@@ -204,21 +229,25 @@ export default function LocationSettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Manager Name</label>
-                                    <Input value={settings.managerName} onChange={(e) => handleInputChange('managerName', e.target.value)} placeholder="Enter manager name" />
+                                    <Input value={settings.managerName} onChange={(e) => handleInputChange('managerName', e.target.value)} onKeyDown={filterNameInput} placeholder="Enter manager name" className={settingsErrors.managerName ? 'border-red-500' : ''} />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={settingsErrors.managerName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Manager Email</label>
-                                    <Input type="email" value={settings.managerEmail} onChange={(e) => handleInputChange('managerEmail', e.target.value)} placeholder="Enter manager email" />
+                                    <Input type="email" value={settings.managerEmail} onChange={(e) => handleInputChange('managerEmail', e.target.value)} placeholder="Enter manager email" className={settingsErrors.managerEmail ? 'border-red-500' : ''} />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={settingsErrors.managerEmail} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Manager Phone</label>
-                                    <Input type="tel" value={settings.managerPhone} onChange={(e) => handleInputChange('managerPhone', e.target.value)} placeholder="Enter manager phone" />
+                                    <Input type="tel" value={settings.managerPhone} onChange={(e) => handleInputChange('managerPhone', e.target.value)} onKeyDown={filterPhoneInput} placeholder="Enter manager phone" className={settingsErrors.managerPhone ? 'border-red-500' : ''} />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={settingsErrors.managerPhone} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Business Phone</label>
-                                    <Input type="tel" value={settings.businessPhone} onChange={(e) => handleInputChange('businessPhone', e.target.value)} placeholder="Enter business phone" />
+                                    <Input type="tel" value={settings.businessPhone} onChange={(e) => handleInputChange('businessPhone', e.target.value)} onKeyDown={filterPhoneInput} placeholder="Enter business phone" className={settingsErrors.businessPhone ? 'border-red-500' : ''} />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={settingsErrors.businessPhone} />
                                 </div>
                             </div>
                         </CardContent>
@@ -324,21 +353,35 @@ export default function LocationSettingsPage() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
                                 <div className="relative">
                                     <Input type={showPassword ? 'text' : 'password'} value={passwordData.currentPassword}
-                                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} placeholder="Enter current password" />
+                                        onChange={(e) => { setPasswordData({ ...passwordData, currentPassword: e.target.value }); setPasswordFieldErrors(prev => { const n = { ...prev }; delete n.currentPassword; return n }) }}
+                                        placeholder="Enter current password" className={passwordFieldErrors.currentPassword ? 'border-red-500' : ''} />
                                     <button id="admin-location-settings-btn-2" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
+                                <FormFieldHint error={passwordFieldErrors.currentPassword} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
                                 <Input type="password" value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} placeholder="Enter new password" />
+                                    onChange={(e) => {
+                                        setPasswordData({ ...passwordData, newPassword: e.target.value })
+                                        const err = validatePassword(e.target.value)
+                                        setPasswordFieldErrors(prev => { const n = { ...prev }; if (err) n.newPassword = err; else delete n.newPassword; return n })
+                                    }}
+                                    placeholder="Enter new password" className={passwordFieldErrors.newPassword ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.password} error={passwordFieldErrors.newPassword} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
                                 <Input type="password" value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} placeholder="Confirm new password" />
+                                    onChange={(e) => {
+                                        setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                                        const err = validateConfirmPassword(passwordData.newPassword, e.target.value)
+                                        setPasswordFieldErrors(prev => { const n = { ...prev }; if (err) n.confirmPassword = err; else delete n.confirmPassword; return n })
+                                    }}
+                                    placeholder="Confirm new password" className={passwordFieldErrors.confirmPassword ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={passwordFieldErrors.confirmPassword} />
                             </div>
                             <button id="admin-location-settings-btn-update-password" onClick={handleChangePassword}
                                 disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}

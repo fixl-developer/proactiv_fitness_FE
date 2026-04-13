@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Calendar, CheckCircle, Clock, XCircle, DollarSign } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { validateRequired, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ── Fallback mock data ──────────────────────────────────────────────
 const MOCK_BOOKINGS = [
@@ -53,6 +55,7 @@ export default function OperationsBookingsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [createForm, setCreateForm] = useState({ userId: '', sessionId: '', notes: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [bookingErrors, setBookingErrors] = useState<Record<string, string>>({})
 
   // ── Load data ───────────────────────────────────────────────────
   const loadBookings = useCallback(async () => {
@@ -106,11 +109,18 @@ export default function OperationsBookingsPage() {
   }, [loadBookings, loadStats])
 
   // ── Create booking ────────────────────────────────────────────
+  const validateBookingForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const userErr = validateRequired(createForm.userId, 'User ID')
+    if (userErr) errs.userId = userErr
+    const sessErr = validateRequired(createForm.sessionId, 'Session ID')
+    if (sessErr) errs.sessionId = sessErr
+    setBookingErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const handleCreate = async () => {
-    if (!createForm.userId || !createForm.sessionId) {
-      toast.error('User ID and Session ID are required')
-      return
-    }
+    if (!validateBookingForm()) return
     setSubmitting(true)
     try {
       await apiClient.post('/bookings', {
@@ -173,7 +183,7 @@ export default function OperationsBookingsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Bookings Management</h1>
-        <button id="btn-admin-operations-bookings-1" onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+        <button id="btn-admin-operations-bookings-1" onClick={() => { setBookingErrors({}); setShowCreate(true) }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
           + New Booking
         </button>
       </div>
@@ -297,11 +307,27 @@ export default function OperationsBookingsPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">User ID *</label>
-                <input id="input-text-admin-operations-bookings" type="text" value={createForm.userId} onChange={(e) => setCreateForm({ ...createForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-bookings-userid" type="text" value={createForm.userId}
+                  onChange={(e) => {
+                    setCreateForm({ ...createForm, userId: e.target.value })
+                    const err = validateRequired(e.target.value, 'User ID')
+                    setBookingErrors((prev) => ({ ...prev, userId: err || '' }))
+                  }}
+                  placeholder="e.g. user-xyz456"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${bookingErrors.userId ? 'border-red-500' : ''}`} />
+                <FormFieldHint error={bookingErrors.userId} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Session ID *</label>
-                <input id="input-text-admin-operations-bookings" type="text" value={createForm.sessionId} onChange={(e) => setCreateForm({ ...createForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-bookings-sessionid" type="text" value={createForm.sessionId}
+                  onChange={(e) => {
+                    setCreateForm({ ...createForm, sessionId: e.target.value })
+                    const err = validateRequired(e.target.value, 'Session ID')
+                    setBookingErrors((prev) => ({ ...prev, sessionId: err || '' }))
+                  }}
+                  placeholder="e.g. session-abc123"
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${bookingErrors.sessionId ? 'border-red-500' : ''}`} />
+                <FormFieldHint error={bookingErrors.sessionId} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>

@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { validateRequired, validateTextArea, validateEmail, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function PartnerCommunicationPage() {
     const router = useRouter()
@@ -30,6 +32,7 @@ export default function PartnerCommunicationPage() {
     const [composeBody, setComposeBody] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [sendingMessage, setSendingMessage] = useState(false)
+    const [composeErrors, setComposeErrors] = useState<Record<string, string>>({})
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -142,7 +145,17 @@ export default function PartnerCommunicationPage() {
     }
 
     const handleComposeMessage = async () => {
-        if (!composeSubject.trim() || !composeBody.trim()) return
+        const newErrors: Record<string, string> = {}
+        const subErr = validateRequired(composeSubject, 'Subject')
+        if (subErr) newErrors.composeSubject = subErr
+        const bodyErr = validateTextArea(composeBody, 'Message', 1, 5000)
+        if (bodyErr) newErrors.composeBody = bodyErr
+        if (composeRecipient) {
+            const recErr = validateEmail(composeRecipient)
+            if (recErr) newErrors.composeRecipient = recErr
+        }
+        setComposeErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
 
         setSendingMessage(true)
         try {
@@ -297,31 +310,48 @@ export default function PartnerCommunicationPage() {
                                     <input
                                         type="text"
                                         value={composeRecipient}
-                                        onChange={(e) => setComposeRecipient(e.target.value)}
+                                        onChange={(e) => {
+                                            setComposeRecipient(e.target.value)
+                                            if (e.target.value) {
+                                                const err = validateEmail(e.target.value)
+                                                setComposeErrors(prev => { const n = { ...prev }; if (err) n.composeRecipient = err; else delete n.composeRecipient; return n })
+                                            }
+                                        }}
                                         placeholder="Recipient email or name..."
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${composeErrors.composeRecipient ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={composeErrors.composeRecipient} />
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-gray-700 mb-1 block">Subject</label>
                                     <input
                                         type="text"
                                         value={composeSubject}
-                                        onChange={(e) => setComposeSubject(e.target.value)}
+                                        onChange={(e) => {
+                                            setComposeSubject(e.target.value)
+                                            const err = validateRequired(e.target.value, 'Subject')
+                                            setComposeErrors(prev => { const n = { ...prev }; if (err) n.composeSubject = err; else delete n.composeSubject; return n })
+                                        }}
                                         placeholder="Message subject..."
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${composeErrors.composeSubject ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.subject} error={composeErrors.composeSubject} />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-gray-700 mb-1 block">Message</label>
                                 <textarea
                                     value={composeBody}
-                                    onChange={(e) => setComposeBody(e.target.value)}
+                                    onChange={(e) => {
+                                        setComposeBody(e.target.value)
+                                        const err = validateTextArea(e.target.value, 'Message', 1, 5000)
+                                        setComposeErrors(prev => { const n = { ...prev }; if (err) n.composeBody = err; else delete n.composeBody; return n })
+                                    }}
                                     placeholder="Type your message..."
                                     rows={4}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${composeErrors.composeBody ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.message} error={composeErrors.composeBody} />
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button

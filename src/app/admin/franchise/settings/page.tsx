@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FranchiseOwnerService, FranchiseSettings } from '@/services/franchiseOwnerService'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
+import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateAddress, validateZipCode, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface Toast {
     type: 'success' | 'error'
@@ -118,51 +120,49 @@ export default function FranchiseSettingsPage() {
             ...prev,
             [field]: value
         }))
-        // Clear validation error for this field when user types
-        if (field in validationErrors) {
+        // Real-time validation for text fields
+        if (typeof value === 'string') {
+            let error: string | null = null
+            if (field === 'franchiseName') error = validateName(value, 'Franchise name')
+            else if (field === 'ownerName') error = validateName(value, 'Owner name')
+            else if (field === 'ownerEmail') error = validateEmail(value)
+            else if (field === 'ownerPhone') error = validatePhone(value, false)
+            else if (field === 'businessPhone') error = validatePhone(value, false)
+            else if (field === 'address' && value) error = validateAddress(value)
+            else if (field === 'city' && value) error = validateName(value, 'City')
+            else if (field === 'state' && value) error = validateName(value, 'State')
+            else if (field === 'zipCode' && value) error = validateZipCode(value, false)
             setValidationErrors(prev => {
-                const next = { ...prev }
-                delete next[field as keyof ValidationErrors]
+                const next = { ...prev } as any
+                if (error) next[field] = error; else delete next[field]
                 return next
             })
         }
     }
 
-    const validateSettings = (): boolean => {
-        const errors: ValidationErrors = {}
-        if (!settings.franchiseName.trim()) {
-            errors.franchiseName = 'Franchise name is required'
-        }
-        if (!settings.ownerEmail.trim()) {
-            errors.ownerEmail = 'Owner email is required'
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(settings.ownerEmail)) {
-            errors.ownerEmail = 'Please enter a valid email address'
-        }
+    const validateSettingsForm = (): boolean => {
+        const errors: any = {}
+        const fnErr = validateName(settings.franchiseName, 'Franchise name'); if (fnErr) errors.franchiseName = fnErr
+        const emErr = validateEmail(settings.ownerEmail); if (emErr) errors.ownerEmail = emErr
+        if (settings.ownerName) { const onErr = validateName(settings.ownerName, 'Owner name'); if (onErr) errors.ownerName = onErr }
+        if (settings.ownerPhone) { const opErr = validatePhone(settings.ownerPhone, false); if (opErr) errors.ownerPhone = opErr }
+        if (settings.businessPhone) { const bpErr = validatePhone(settings.businessPhone, false); if (bpErr) errors.businessPhone = bpErr }
+        if (settings.zipCode) { const zpErr = validateZipCode(settings.zipCode, false); if (zpErr) errors.zipCode = zpErr }
         setValidationErrors(errors)
         return Object.keys(errors).length === 0
     }
 
-    const validatePassword = (): boolean => {
-        const errors: ValidationErrors = {}
-        if (!currentPassword) {
-            errors.currentPassword = 'Current password is required'
-        }
-        if (!newPassword) {
-            errors.newPassword = 'New password is required'
-        } else if (newPassword.length < 8) {
-            errors.newPassword = 'Password must be at least 8 characters'
-        }
-        if (!confirmPassword) {
-            errors.confirmPassword = 'Please confirm your new password'
-        } else if (newPassword !== confirmPassword) {
-            errors.confirmPassword = 'Passwords do not match'
-        }
+    const validatePasswordForm = (): boolean => {
+        const errors: any = {}
+        if (!currentPassword) errors.currentPassword = 'Current password is required'
+        const npErr = validatePassword(newPassword); if (npErr) errors.newPassword = npErr
+        const cpErr = validateConfirmPassword(newPassword, confirmPassword); if (cpErr) errors.confirmPassword = cpErr
         setValidationErrors(errors)
         return Object.keys(errors).length === 0
     }
 
     const handleSaveSettings = async () => {
-        if (!validateSettings()) return
+        if (!validateSettingsForm()) return
 
         setIsSaving(true)
         try {
@@ -178,7 +178,7 @@ export default function FranchiseSettingsPage() {
     }
 
     const handleChangePassword = async () => {
-        if (!validatePassword()) return
+        if (!validatePasswordForm()) return
 
         setIsChangingPassword(true)
         try {
@@ -299,15 +299,11 @@ export default function FranchiseSettingsPage() {
                                     <Input
                                         value={settings.franchiseName}
                                         onChange={(e) => handleInputChange('franchiseName', e.target.value)}
+                                        onKeyDown={filterNameInput}
                                         placeholder="Enter franchise name"
                                         className={validationErrors.franchiseName ? 'border-red-500' : ''}
                                     />
-                                    {validationErrors.franchiseName && (
-                                        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            {validationErrors.franchiseName}
-                                        </p>
-                                    )}
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={validationErrors.franchiseName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Franchise Code</label>
@@ -325,8 +321,11 @@ export default function FranchiseSettingsPage() {
                                     <Input
                                         value={settings.ownerName}
                                         onChange={(e) => handleInputChange('ownerName', e.target.value)}
+                                        onKeyDown={filterNameInput}
                                         placeholder="Enter owner name"
+                                        className={(validationErrors as any).ownerName ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={(validationErrors as any).ownerName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -339,12 +338,7 @@ export default function FranchiseSettingsPage() {
                                         placeholder="Enter owner email"
                                         className={validationErrors.ownerEmail ? 'border-red-500' : ''}
                                     />
-                                    {validationErrors.ownerEmail && (
-                                        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                            <AlertCircle className="w-3 h-3" />
-                                            {validationErrors.ownerEmail}
-                                        </p>
-                                    )}
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={validationErrors.ownerEmail} />
                                 </div>
                             </div>
 
@@ -355,8 +349,11 @@ export default function FranchiseSettingsPage() {
                                         type="tel"
                                         value={settings.ownerPhone}
                                         onChange={(e) => handleInputChange('ownerPhone', e.target.value)}
+                                        onKeyDown={filterPhoneInput}
                                         placeholder="Enter owner phone"
+                                        className={(validationErrors as any).ownerPhone ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={(validationErrors as any).ownerPhone} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Business Phone</label>
@@ -364,8 +361,11 @@ export default function FranchiseSettingsPage() {
                                         type="tel"
                                         value={settings.businessPhone}
                                         onChange={(e) => handleInputChange('businessPhone', e.target.value)}
+                                        onKeyDown={filterPhoneInput}
                                         placeholder="Enter business phone"
+                                        className={(validationErrors as any).businessPhone ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={(validationErrors as any).businessPhone} />
                                 </div>
                             </div>
                         </CardContent>
@@ -558,12 +558,7 @@ export default function FranchiseSettingsPage() {
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
-                                {validationErrors.currentPassword && (
-                                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {validationErrors.currentPassword}
-                                    </p>
-                                )}
+                                <FormFieldHint error={validationErrors.currentPassword} />
                             </div>
 
                             <div>
@@ -584,12 +579,7 @@ export default function FranchiseSettingsPage() {
                                     placeholder="Enter new password (min 8 characters)"
                                     className={validationErrors.newPassword ? 'border-red-500' : ''}
                                 />
-                                {validationErrors.newPassword && (
-                                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {validationErrors.newPassword}
-                                    </p>
-                                )}
+                                <FormFieldHint hint={FORMAT_HINTS.password} error={validationErrors.newPassword} />
                             </div>
 
                             <div>
@@ -610,12 +600,7 @@ export default function FranchiseSettingsPage() {
                                     placeholder="Confirm new password"
                                     className={validationErrors.confirmPassword ? 'border-red-500' : ''}
                                 />
-                                {validationErrors.confirmPassword && (
-                                    <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        {validationErrors.confirmPassword}
-                                    </p>
-                                )}
+                                <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={validationErrors.confirmPassword} />
                             </div>
 
                             <button id="admin-franchise-settings-btn-4"

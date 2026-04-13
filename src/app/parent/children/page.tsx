@@ -14,6 +14,8 @@ import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
+import { validateName, validateDateOfBirth, validateSelect, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 const ParentChildrenPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -23,6 +25,7 @@ const ParentChildrenPage = () => {
     const [showEditModal, setShowEditModal] = useState(false)
     const [editingChild, setEditingChild] = useState<any>(null)
     const [formSubmitting, setFormSubmitting] = useState(false)
+    const [childFormErrors, setChildFormErrors] = useState<Record<string, string>>({})
     // AI Insights state per child
     const [aiInsightsOpen, setAiInsightsOpen] = useState<Record<string, boolean>>({})
     const [aiReportLoading, setAiReportLoading] = useState<Record<string, boolean>>({})
@@ -62,17 +65,33 @@ const ParentChildrenPage = () => {
         }
     }
 
+    const validateChildForm = (formData: FormData): Record<string, string> => {
+        const errors: Record<string, string> = {}
+        const firstName = formData.get('firstName') as string
+        const lastName = formData.get('lastName') as string
+        const dateOfBirth = formData.get('dateOfBirth') as string
+        const gender = formData.get('gender') as string
+        const fnErr = validateName(firstName, 'First name'); if (fnErr) errors.firstName = fnErr
+        const lnErr = validateName(lastName, 'Last name'); if (lnErr) errors.lastName = lnErr
+        const dobErr = validateDateOfBirth(dateOfBirth); if (dobErr) errors.dateOfBirth = dobErr
+        const gErr = validateSelect(gender, 'Gender'); if (gErr) errors.gender = gErr
+        return errors
+    }
+
     const handleAddChild = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
+        const fd = new FormData(e.currentTarget)
+        const errors = validateChildForm(fd)
+        if (Object.keys(errors).length > 0) { setChildFormErrors(errors); return }
+        setChildFormErrors({})
         setFormSubmitting(true)
-        const formData = new FormData(e.currentTarget)
         const data = {
-            firstName: formData.get('firstName') as string,
-            lastName: formData.get('lastName') as string,
-            dateOfBirth: formData.get('dateOfBirth') as string,
-            gender: formData.get('gender') as string,
+            firstName: fd.get('firstName') as string,
+            lastName: fd.get('lastName') as string,
+            dateOfBirth: fd.get('dateOfBirth') as string,
+            gender: fd.get('gender') as string,
             medicalInfo: {
-                allergies: (formData.get('allergies') as string)
+                allergies: (fd.get('allergies') as string)
                     .split(',')
                     .map((a) => a.trim())
                     .filter(Boolean),
@@ -93,15 +112,18 @@ const ParentChildrenPage = () => {
     const handleEditChild = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         if (!editingChild) return
+        const fd = new FormData(e.currentTarget)
+        const errors = validateChildForm(fd)
+        if (Object.keys(errors).length > 0) { setChildFormErrors(errors); return }
+        setChildFormErrors({})
         setFormSubmitting(true)
-        const formData = new FormData(e.currentTarget)
         const data = {
-            firstName: formData.get('firstName') as string,
-            lastName: formData.get('lastName') as string,
-            dateOfBirth: formData.get('dateOfBirth') as string,
-            gender: formData.get('gender') as string,
+            firstName: fd.get('firstName') as string,
+            lastName: fd.get('lastName') as string,
+            dateOfBirth: fd.get('dateOfBirth') as string,
+            gender: fd.get('gender') as string,
             medicalInfo: {
-                allergies: (formData.get('allergies') as string)
+                allergies: (fd.get('allergies') as string)
                     .split(',')
                     .map((a) => a.trim())
                     .filter(Boolean),
@@ -260,9 +282,12 @@ const ParentChildrenPage = () => {
                         name="firstName"
                         required
                         defaultValue={defaults?.firstName || ''}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onKeyDown={filterNameInput}
+                        onChange={() => { if (childFormErrors.firstName) setChildFormErrors(prev => { const n = {...prev}; delete n.firstName; return n }) }}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${childFormErrors.firstName ? 'border-red-500' : 'border-gray-300'}`}
                         placeholder="First name"
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.firstName} error={childFormErrors.firstName} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
@@ -271,9 +296,12 @@ const ParentChildrenPage = () => {
                         name="lastName"
                         required
                         defaultValue={defaults?.lastName || ''}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onKeyDown={filterNameInput}
+                        onChange={() => { if (childFormErrors.lastName) setChildFormErrors(prev => { const n = {...prev}; delete n.lastName; return n }) }}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${childFormErrors.lastName ? 'border-red-500' : 'border-gray-300'}`}
                         placeholder="Last name"
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.lastName} error={childFormErrors.lastName} />
                 </div>
             </div>
             <div>
@@ -283,8 +311,10 @@ const ParentChildrenPage = () => {
                     name="dateOfBirth"
                     required
                     defaultValue={defaults?.dateOfBirth || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={() => { if (childFormErrors.dateOfBirth) setChildFormErrors(prev => { const n = {...prev}; delete n.dateOfBirth; return n }) }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${childFormErrors.dateOfBirth ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={childFormErrors.dateOfBirth} />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -292,13 +322,15 @@ const ParentChildrenPage = () => {
                     name="gender"
                     required
                     defaultValue={defaults?.gender || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={() => { if (childFormErrors.gender) setChildFormErrors(prev => { const n = {...prev}; delete n.gender; return n }) }}
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${childFormErrors.gender ? 'border-red-500' : 'border-gray-300'}`}
                 >
                     <option value="" disabled>Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
                 </select>
+                <FormFieldHint hint={FORMAT_HINTS.gender} error={childFormErrors.gender} />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Medical Info - Allergies</label>
@@ -309,6 +341,7 @@ const ParentChildrenPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Comma-separated allergies (e.g. peanuts, dust, pollen)"
                 />
+                <FormFieldHint hint="Comma-separated list of allergies (optional)" />
             </div>
             <div className="flex justify-end gap-3 pt-2">
                 <Button
@@ -318,6 +351,7 @@ const ParentChildrenPage = () => {
                         setShowAddModal(false)
                         setShowEditModal(false)
                         setEditingChild(null)
+                        setChildFormErrors({})
                     }}
                 >
                     Cancel

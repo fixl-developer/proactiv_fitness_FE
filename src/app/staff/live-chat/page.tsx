@@ -9,6 +9,8 @@ import {
     Plus, Search, Filter, RefreshCw, Phone, Video, MoreVertical,
     Smile, Paperclip, ArrowLeft, X, UserPlus, MessageSquare, Headphones
 } from 'lucide-react'
+import { validateName, validateEmail, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface ChatSession {
     id: string
@@ -48,6 +50,7 @@ export default function LiveChat() {
     const [newChatForm, setNewChatForm] = useState({ customerName: '', customerEmail: '', initialMessage: '' })
     const [refreshing, setRefreshing] = useState(false)
     const [showMobileChat, setShowMobileChat] = useState(false)
+    const [chatFormErrors, setChatFormErrors] = useState<Record<string, string>>({})
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const scrollToBottom = () => {
@@ -142,7 +145,15 @@ export default function LiveChat() {
     }
 
     const handleNewChat = async () => {
-        if (!newChatForm.customerName.trim()) return
+        const newErrors: Record<string, string> = {}
+        const nameErr = validateName(newChatForm.customerName, 'Customer Name')
+        if (nameErr) newErrors.customerName = nameErr
+        if (newChatForm.customerEmail) {
+            const emailErr = validateEmail(newChatForm.customerEmail)
+            if (emailErr) newErrors.customerEmail = emailErr
+        }
+        setChatFormErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
         try {
             // Try to create a new chat session via the service
             const data = await supportStaffService.createChatSession?.({
@@ -666,20 +677,33 @@ export default function LiveChat() {
                                 <input
                                     type="text"
                                     value={newChatForm.customerName}
-                                    onChange={(e) => setNewChatForm(prev => ({ ...prev, customerName: e.target.value }))}
+                                    onKeyDown={filterNameInput}
+                                    onChange={(e) => {
+                                        setNewChatForm(prev => ({ ...prev, customerName: e.target.value }))
+                                        const err = validateName(e.target.value, 'Customer Name')
+                                        setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerName = err; else delete n.customerName; return n })
+                                    }}
                                     placeholder="Enter customer name"
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${chatFormErrors.customerName ? 'border-red-500' : 'border-gray-200'}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.name} error={chatFormErrors.customerName} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Customer Email</label>
                                 <input
                                     type="email"
                                     value={newChatForm.customerEmail}
-                                    onChange={(e) => setNewChatForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                                    onChange={(e) => {
+                                        setNewChatForm(prev => ({ ...prev, customerEmail: e.target.value }))
+                                        if (e.target.value) {
+                                            const err = validateEmail(e.target.value)
+                                            setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerEmail = err; else delete n.customerEmail; return n })
+                                        }
+                                    }}
                                     placeholder="customer@example.com"
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${chatFormErrors.customerEmail ? 'border-red-500' : 'border-gray-200'}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.email} error={chatFormErrors.customerEmail} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Initial Message</label>
@@ -690,6 +714,7 @@ export default function LiveChat() {
                                     rows={3}
                                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.message} />
                             </div>
                         </div>
                         <div className="flex gap-3 p-5 border-t border-gray-100">

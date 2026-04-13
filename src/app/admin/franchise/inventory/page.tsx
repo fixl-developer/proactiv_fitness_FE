@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
+import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface InventoryItem {
     id: string
@@ -64,6 +66,7 @@ export default function InventoryManagementPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     const fetchInventory = useCallback(async () => {
         try {
@@ -132,9 +135,24 @@ export default function InventoryManagementPage() {
 
     const handleFormChange = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'name') error = validateRequired(value, 'Name')
+        else if (field === 'category') error = validateRequired(value, 'Category')
+        else if (field === 'quantity') error = validateNumber(value, 'Quantity', 0)
+        else if (field === 'minStock') error = validateNumber(value, 'Min stock', 0)
+        else if (field === 'maxStock') error = validateNumber(value, 'Max stock', 0)
+        else if (field === 'unitCost') error = validateNumber(value, 'Unit cost', 0)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const handleSave = async () => {
+        const errs: Record<string, string> = {}
+        const nmErr = validateRequired(String(formData.name), 'Name'); if (nmErr) errs.name = nmErr
+        const ctErr = validateRequired(String(formData.category), 'Category'); if (ctErr) errs.category = ctErr
+        const qtErr = validateNumber(String(formData.quantity), 'Quantity', 0); if (qtErr) errs.quantity = qtErr
+        const ucErr = validateNumber(String(formData.unitCost), 'Unit cost', 0); if (ucErr) errs.unitCost = ucErr
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             const payload = {
@@ -626,42 +644,52 @@ export default function InventoryManagementPage() {
                         ) : (
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                                     <Input
                                         value={formData.name}
                                         onChange={e => handleFormChange('name', e.target.value)}
                                         placeholder="Item name"
+                                        className={fieldErrors.name ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint error={fieldErrors.name} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                                     <Input
                                         value={formData.category}
                                         onChange={e => handleFormChange('category', e.target.value)}
                                         placeholder="e.g. Equipment, Supplies, Safety, Apparel"
+                                        className={fieldErrors.category ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint error={fieldErrors.category} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
                                         <Input
                                             type="number"
                                             value={formData.quantity}
                                             onChange={e => handleFormChange('quantity', e.target.value)}
+                                            onKeyDown={filterNumberInput}
                                             placeholder="0"
                                             min="0"
+                                            className={fieldErrors.quantity ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.quantity} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost ($)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost ($) *</label>
                                         <Input
                                             type="number"
                                             value={formData.unitCost}
                                             onChange={e => handleFormChange('unitCost', e.target.value)}
+                                            onKeyDown={filterNumberInput}
                                             placeholder="0.00"
                                             min="0"
                                             step="0.01"
+                                            className={fieldErrors.unitCost ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.unitCost} />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -671,9 +699,12 @@ export default function InventoryManagementPage() {
                                             type="number"
                                             value={formData.minStock}
                                             onChange={e => handleFormChange('minStock', e.target.value)}
+                                            onKeyDown={filterNumberInput}
                                             placeholder="0"
                                             min="0"
+                                            className={fieldErrors.minStock ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.minStock} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
@@ -681,9 +712,12 @@ export default function InventoryManagementPage() {
                                             type="number"
                                             value={formData.maxStock}
                                             onChange={e => handleFormChange('maxStock', e.target.value)}
+                                            onKeyDown={filterNumberInput}
                                             placeholder="0"
                                             min="0"
+                                            className={fieldErrors.maxStock ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.maxStock} />
                                     </div>
                                 </div>
                                 <div>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService, SupportTicket } from '@/services/supportStaffService'
 import { Plus, Search, Ticket, AlertCircle, Clock, CheckCircle, X, ChevronDown } from 'lucide-react'
+import { validateRequired, validateEmail, validateTextArea, validateName, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function SupportTickets() {
     const router = useRouter()
@@ -28,6 +30,7 @@ export default function SupportTickets() {
         customerEmail: '',
     })
     const [submitting, setSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     // Ticket detail modal state
     const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
@@ -91,6 +94,17 @@ export default function SupportTickets() {
 
     const handleCreateTicket = async (e: React.FormEvent) => {
         e.preventDefault()
+        const newErrors: Record<string, string> = {}
+        const subErr = validateRequired(newTicketForm.subject, 'Subject')
+        if (subErr) newErrors.subject = subErr
+        const descErr = validateTextArea(newTicketForm.description, 'Description', 5, 5000)
+        if (descErr) newErrors.description = descErr
+        const custErr = validateName(newTicketForm.customer, 'Customer Name')
+        if (custErr) newErrors.customer = custErr
+        const emailErr = validateEmail(newTicketForm.customerEmail)
+        if (emailErr) newErrors.customerEmail = emailErr
+        setFormErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
         setSubmitting(true)
         try {
             await supportStaffService.createTicket({
@@ -415,10 +429,15 @@ export default function SupportTickets() {
                                     type="text"
                                     required
                                     value={newTicketForm.subject}
-                                    onChange={(e) => setNewTicketForm({ ...newTicketForm, subject: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => {
+                                        setNewTicketForm({ ...newTicketForm, subject: e.target.value })
+                                        const err = validateRequired(e.target.value, 'Subject')
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.subject = err; else delete n.subject; return n })
+                                    }}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.subject ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Ticket subject"
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.subject} error={formErrors.subject} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -426,10 +445,15 @@ export default function SupportTickets() {
                                     required
                                     rows={4}
                                     value={newTicketForm.description}
-                                    onChange={(e) => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    onChange={(e) => {
+                                        setNewTicketForm({ ...newTicketForm, description: e.target.value })
+                                        const err = validateTextArea(e.target.value, 'Description', 5, 5000)
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.description = err; else delete n.description; return n })
+                                    }}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Describe the issue..."
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.description} error={formErrors.description} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
@@ -460,10 +484,16 @@ export default function SupportTickets() {
                                     type="text"
                                     required
                                     value={newTicketForm.customer}
-                                    onChange={(e) => setNewTicketForm({ ...newTicketForm, customer: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onKeyDown={filterNameInput}
+                                    onChange={(e) => {
+                                        setNewTicketForm({ ...newTicketForm, customer: e.target.value })
+                                        const err = validateName(e.target.value, 'Customer Name')
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.customer = err; else delete n.customer; return n })
+                                    }}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.customer ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Customer full name"
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.name} error={formErrors.customer} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Customer Email</label>
@@ -471,10 +501,15 @@ export default function SupportTickets() {
                                     type="email"
                                     required
                                     value={newTicketForm.customerEmail}
-                                    onChange={(e) => setNewTicketForm({ ...newTicketForm, customerEmail: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => {
+                                        setNewTicketForm({ ...newTicketForm, customerEmail: e.target.value })
+                                        const err = validateEmail(e.target.value)
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.customerEmail = err; else delete n.customerEmail; return n })
+                                    }}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.customerEmail ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="customer@example.com"
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.email} error={formErrors.customerEmail} />
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                 <button

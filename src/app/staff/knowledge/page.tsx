@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService } from '@/services/supportStaffService'
 import { FileText, CheckCircle, Edit3, Star, Plus, Search, AlertCircle, Eye, ThumbsUp, Trash2, X } from 'lucide-react'
+import { validateRequired, validateTextArea, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface Article {
     id: string
@@ -52,6 +54,19 @@ export default function KnowledgeBase() {
     const [editingArticle, setEditingArticle] = useState<Article | null>(null)
     const [formData, setFormData] = useState<ArticleForm>(emptyForm)
     const [submitting, setSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+    const validateArticleForm = (): boolean => {
+        const newErrors: Record<string, string> = {}
+        const titleErr = validateRequired(formData.title, 'Title')
+        if (titleErr) newErrors.title = titleErr
+        const contentErr = validateTextArea(formData.content, 'Content', 10, 50000)
+        if (contentErr) newErrors.content = contentErr
+        const catErr = validateRequired(formData.category, 'Category')
+        if (catErr) newErrors.category = catErr
+        setFormErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
 
     const loadArticles = useCallback(async () => {
         setLoading(true)
@@ -115,6 +130,7 @@ export default function KnowledgeBase() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!validateArticleForm()) return
         setSubmitting(true)
         try {
             await supportStaffService.createKnowledgeBaseArticle({
@@ -137,6 +153,7 @@ export default function KnowledgeBase() {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!editingArticle) return
+        if (!validateArticleForm()) return
         setSubmitting(true)
         try {
             const articleId = editingArticle._id || editingArticle.id
@@ -379,10 +396,15 @@ export default function KnowledgeBase() {
                                     type="text"
                                     required
                                     value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, title: e.target.value })
+                                        const err = validateRequired(e.target.value, 'Title')
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.title = err; else delete n.title; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Article title"
                                 />
+                                <FormFieldHint hint="Enter a descriptive title" error={formErrors.title} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Content</label>
@@ -390,10 +412,15 @@ export default function KnowledgeBase() {
                                     required
                                     rows={8}
                                     value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, content: e.target.value })
+                                        const err = validateTextArea(e.target.value, 'Content', 10, 50000)
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.content = err; else delete n.content; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y ${formErrors.content ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Write your article content here..."
                                 />
+                                <FormFieldHint hint="Minimum 10 characters" error={formErrors.content} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -481,10 +508,15 @@ export default function KnowledgeBase() {
                                     type="text"
                                     required
                                     value={formData.title}
-                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, title: e.target.value })
+                                        const err = validateRequired(e.target.value, 'Title')
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.title = err; else delete n.title; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Article title"
                                 />
+                                <FormFieldHint hint="Enter a descriptive title" error={formErrors.title} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Content</label>
@@ -492,10 +524,15 @@ export default function KnowledgeBase() {
                                     required
                                     rows={8}
                                     value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, content: e.target.value })
+                                        const err = validateTextArea(e.target.value, 'Content', 10, 50000)
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.content = err; else delete n.content; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y ${formErrors.content ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Write your article content here..."
                                 />
+                                <FormFieldHint hint="Minimum 10 characters" error={formErrors.content} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

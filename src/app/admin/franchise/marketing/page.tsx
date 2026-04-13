@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
+import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 type CampaignType = 'SEASONAL' | 'REFERRAL' | 'B2B' | 'SOCIAL'
 type CampaignStatus = 'ACTIVE' | 'SCHEDULED' | 'COMPLETED'
@@ -66,6 +68,7 @@ export default function MarketingPromotionsPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     const fetchCampaigns = useCallback(async () => {
         try {
@@ -139,9 +142,22 @@ export default function MarketingPromotionsPage() {
 
     const handleFormChange = (field: keyof CampaignFormData, value: string | number) => {
         setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'name') error = validateRequired(String(value), 'Campaign name')
+        else if (field === 'discount') error = validateNumber(String(value), 'Discount', 0, 100)
+        else if (field === 'budget') error = validateNumber(String(value), 'Budget', 0)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const handleSave = async () => {
+        const errs: Record<string, string> = {}
+        const nmErr = validateRequired(formData.name, 'Campaign name'); if (nmErr) errs.name = nmErr
+        const dsErr = validateNumber(String(formData.discount), 'Discount', 0, 100); if (dsErr) errs.discount = dsErr
+        const bgErr = validateNumber(String(formData.budget), 'Budget', 0); if (bgErr) errs.budget = bgErr
+        if (!formData.startDate) errs.startDate = 'Start date is required'
+        if (!formData.endDate) errs.endDate = 'End date is required'
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             setError(null)
@@ -536,12 +552,14 @@ export default function MarketingPromotionsPage() {
                             ) : (
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name *</label>
                                         <Input
                                             value={formData.name}
                                             onChange={(e) => handleFormChange('name', e.target.value)}
                                             placeholder="Enter campaign name"
+                                            className={fieldErrors.name ? 'border-red-500' : ''}
                                         />
+                                        <FormFieldHint error={fieldErrors.name} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -589,23 +607,29 @@ export default function MarketingPromotionsPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%) *</label>
                                             <Input
                                                 type="number"
                                                 min={0}
                                                 max={100}
                                                 value={formData.discount}
                                                 onChange={(e) => handleFormChange('discount', Number(e.target.value))}
+                                                onKeyDown={filterNumberInput}
+                                                className={fieldErrors.discount ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint="0-100%" error={fieldErrors.discount} />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($) *</label>
                                             <Input
                                                 type="number"
                                                 min={0}
                                                 value={formData.budget}
                                                 onChange={(e) => handleFormChange('budget', Number(e.target.value))}
+                                                onKeyDown={filterNumberInput}
+                                                className={fieldErrors.budget ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.budget} />
                                         </div>
                                     </div>
                                 </div>

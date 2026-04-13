@@ -9,6 +9,13 @@ import {
     registerStep1Schema,
     type RegisterStep1Data,
 } from '@/lib/validations/auth';
+import {
+    validateEmail,
+    validatePassword,
+    validateConfirmPassword,
+    FORMAT_HINTS,
+} from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 interface RegisterStep1Props {
     onComplete: (data: RegisterStep1Data) => void;
@@ -18,18 +25,62 @@ interface RegisterStep1Props {
 export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
     } = useForm<RegisterStep1Data>({
         resolver: zodResolver(registerStep1Schema),
         defaultValues: initialData,
     });
 
+    const passwordValue = watch('password');
+
+    const validateField = (field: string, value: string) => {
+        let error: string | null = null;
+        switch (field) {
+            case 'email':
+                error = validateEmail(value);
+                break;
+            case 'password':
+                error = validatePassword(value);
+                break;
+            case 'confirmPassword':
+                error = validateConfirmPassword(passwordValue || '', value);
+                break;
+        }
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            if (error) {
+                next[field] = error;
+            } else {
+                delete next[field];
+            }
+            return next;
+        });
+    };
+
+    const handleFormSubmit = (data: RegisterStep1Data) => {
+        const errs: Record<string, string> = {};
+        const emailErr = validateEmail(data.email);
+        if (emailErr) errs.email = emailErr;
+        const passErr = validatePassword(data.password);
+        if (passErr) errs.password = passErr;
+        const confirmErr = validateConfirmPassword(data.password, data.confirmPassword);
+        if (confirmErr) errs.confirmPassword = confirmErr;
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            return;
+        }
+        onComplete(data);
+    };
+
     return (
-        <form id="form-components-auth-RegisterStep1" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep1" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Account Details</h2>
                 <p className="text-gray-600 mt-2">
@@ -46,14 +97,19 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type="email"
-                        {...register('email')}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        {...register('email', {
+                            onChange: (e) => validateField('email', e.target.value),
+                        })}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                            errors.email || fieldErrors.email ? 'border-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="your.email@example.com"
                     />
                 </div>
                 {errors.email && (
                     <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
                 )}
+                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
             </div>
 
             {/* Password */}
@@ -65,8 +121,12 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type={showPassword ? 'text' : 'password'}
-                        {...register('password')}
-                        className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        {...register('password', {
+                            onChange: (e) => validateField('password', e.target.value),
+                        })}
+                        className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                            errors.password || fieldErrors.password ? 'border-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="••••••••"
                     />
                     <button id="auth-register-step1-btn"
@@ -84,9 +144,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                 {errors.password && (
                     <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
                 )}
-                <p className="mt-2 text-xs text-gray-500">
-                    Must contain uppercase, lowercase, number and special character
-                </p>
+                <FormFieldHint hint={FORMAT_HINTS.password} error={fieldErrors.password} />
             </div>
 
             {/* Confirm Password */}
@@ -98,8 +156,12 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                         type={showConfirmPassword ? 'text' : 'password'}
-                        {...register('confirmPassword')}
-                        className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        {...register('confirmPassword', {
+                            onChange: (e) => validateField('confirmPassword', e.target.value),
+                        })}
+                        className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                            errors.confirmPassword || fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="••••••••"
                     />
                     <button id="auth-register-step1-btn-2"
@@ -119,6 +181,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         {errors.confirmPassword.message}
                     </p>
                 )}
+                <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={fieldErrors.confirmPassword} />
             </div>
 
             {/* Submit Button */}

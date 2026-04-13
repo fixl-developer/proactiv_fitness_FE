@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
+import { validateName, validateEmail, validatePhone, validateAddress, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function LocationEmergencyContactsPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -26,6 +28,7 @@ export default function LocationEmergencyContactsPage() {
         email: '', address: '', isAuthorizedPickup: false, medicalInfo: ''
     })
     const [isSaving, setIsSaving] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     const fetchEmergencyContacts = useCallback(async () => {
         try {
@@ -69,7 +72,26 @@ export default function LocationEmergencyContactsPage() {
         setShowModal(true)
     }
 
+    const handleContactFormChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'contactName') error = validateName(String(value), 'Contact name')
+        else if (field === 'primaryPhone') error = validatePhone(String(value))
+        else if (field === 'alternatePhone' && value) error = validatePhone(String(value), false)
+        else if (field === 'email' && value) error = validateEmail(String(value))
+        else if (field === 'address' && value) error = validateAddress(String(value))
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+    }
+
     const handleSave = async () => {
+        const errs: Record<string, string> = {}
+        const cnErr = validateName(formData.contactName, 'Contact name'); if (cnErr) errs.contactName = cnErr
+        const ppErr = validatePhone(formData.primaryPhone); if (ppErr) errs.primaryPhone = ppErr
+        if (formData.alternatePhone) { const e = validatePhone(formData.alternatePhone, false); if (e) errs.alternatePhone = e }
+        if (formData.email) { const e = validateEmail(formData.email); if (e) errs.email = e }
+        if (formData.address) { const e = validateAddress(formData.address); if (e) errs.address = e }
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             if (editingContact) {
@@ -307,28 +329,34 @@ export default function LocationEmergencyContactsPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                <Input value={formData.contactName} onChange={(e) => setFormData({ ...formData, contactName: e.target.value })} placeholder="Full name" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name *</label>
+                                <Input value={formData.contactName} onChange={(e) => handleContactFormChange('contactName', e.target.value)} onKeyDown={filterNameInput} placeholder="Full name" className={fieldErrors.contactName ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.contactName} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
                                 <Input value={formData.relationship} onChange={(e) => setFormData({ ...formData, relationship: e.target.value })} placeholder="e.g., Father, Mother, Guardian" />
+                                <FormFieldHint hint={FORMAT_HINTS.relationship} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Primary Phone</label>
-                                <Input type="tel" value={formData.primaryPhone} onChange={(e) => setFormData({ ...formData, primaryPhone: e.target.value })} placeholder="Phone number" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Primary Phone *</label>
+                                <Input type="tel" value={formData.primaryPhone} onChange={(e) => handleContactFormChange('primaryPhone', e.target.value)} onKeyDown={filterPhoneInput} placeholder="Phone number" className={fieldErrors.primaryPhone ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.primaryPhone} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Alternate Phone</label>
-                                <Input type="tel" value={formData.alternatePhone} onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })} placeholder="Optional" />
+                                <Input type="tel" value={formData.alternatePhone} onChange={(e) => handleContactFormChange('alternatePhone', e.target.value)} onKeyDown={filterPhoneInput} placeholder="Optional" className={fieldErrors.alternatePhone ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.alternatePhone} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Email address" />
+                                <Input type="email" value={formData.email} onChange={(e) => handleContactFormChange('email', e.target.value)} placeholder="Email address" className={fieldErrors.email ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Full address" />
+                                <Input value={formData.address} onChange={(e) => handleContactFormChange('address', e.target.value)} placeholder="Full address" className={fieldErrors.address ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Medical Info</label>

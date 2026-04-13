@@ -3,11 +3,22 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, User, Phone, Mail, Heart } from 'lucide-react';
+import { useState } from 'react';
 
 import {
     registerStep5Schema,
     type RegisterStep5Data,
 } from '@/lib/validations/auth';
+import {
+    validateName,
+    validatePhone,
+    validateEmail,
+    validateRequired,
+    filterNameInput,
+    filterPhoneInput,
+    FORMAT_HINTS,
+} from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 interface RegisterStep5Props {
     onComplete: (data: RegisterStep5Data) => void;
@@ -20,6 +31,8 @@ export function RegisterStep5({
     onBack,
     initialData,
 }: RegisterStep5Props) {
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const {
         register,
         control,
@@ -61,8 +74,61 @@ export function RegisterStep5({
         onComplete({ guardians: [] });
     };
 
+    const validateField = (index: number, field: string, value: string) => {
+        const key = `guardians.${index}.${field}`;
+        let error: string | null = null;
+        switch (field) {
+            case 'firstName':
+                error = validateName(value, 'First name');
+                break;
+            case 'lastName':
+                error = validateName(value, 'Last name');
+                break;
+            case 'phone':
+                error = validatePhone(value);
+                break;
+            case 'email':
+                error = validateEmail(value);
+                break;
+            case 'relationship':
+                error = validateRequired(value, 'Relationship');
+                break;
+        }
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            if (error) {
+                next[key] = error;
+            } else {
+                delete next[key];
+            }
+            return next;
+        });
+    };
+
+    const handleFormSubmit = (data: RegisterStep5Data) => {
+        const errs: Record<string, string> = {};
+        data.guardians.forEach((guardian, index) => {
+            const fnErr = validateName(guardian.firstName, 'First name');
+            if (fnErr) errs[`guardians.${index}.firstName`] = fnErr;
+            const lnErr = validateName(guardian.lastName, 'Last name');
+            if (lnErr) errs[`guardians.${index}.lastName`] = lnErr;
+            const relErr = validateRequired(guardian.relationship, 'Relationship');
+            if (relErr) errs[`guardians.${index}.relationship`] = relErr;
+            const phErr = validatePhone(guardian.phone);
+            if (phErr) errs[`guardians.${index}.phone`] = phErr;
+            const emErr = validateEmail(guardian.email);
+            if (emErr) errs[`guardians.${index}.email`] = emErr;
+        });
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            return;
+        }
+        onComplete(data);
+    };
+
     return (
-        <form id="form-components-auth-RegisterStep5" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep5" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
                     Guardian & Emergency Contacts
@@ -111,8 +177,13 @@ export function RegisterStep5({
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        {...register(`guardians.${index}.firstName`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`guardians.${index}.firstName`, {
+                                            onChange: (e) => validateField(index, 'firstName', e.target.value),
+                                        })}
+                                        onKeyDown={filterNameInput}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.guardians?.[index]?.firstName || fieldErrors[`guardians.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="First name"
                                     />
                                 </div>
@@ -121,6 +192,7 @@ export function RegisterStep5({
                                         {errors.guardians[index]?.firstName?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors[`guardians.${index}.firstName`]} />
                             </div>
 
                             <div>
@@ -131,8 +203,13 @@ export function RegisterStep5({
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        {...register(`guardians.${index}.lastName`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`guardians.${index}.lastName`, {
+                                            onChange: (e) => validateField(index, 'lastName', e.target.value),
+                                        })}
+                                        onKeyDown={filterNameInput}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.guardians?.[index]?.lastName || fieldErrors[`guardians.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="Last name"
                                     />
                                 </div>
@@ -141,6 +218,7 @@ export function RegisterStep5({
                                         {errors.guardians[index]?.lastName?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors[`guardians.${index}.lastName`]} />
                             </div>
                         </div>
 
@@ -152,8 +230,12 @@ export function RegisterStep5({
                             <div className="relative">
                                 <Heart className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <select id="select-components-auth-RegisterStep5-1"
-                                    {...register(`guardians.${index}.relationship`)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
+                                    {...register(`guardians.${index}.relationship`, {
+                                        onChange: (e) => validateField(index, 'relationship', e.target.value),
+                                    })}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                                        errors.guardians?.[index]?.relationship || fieldErrors[`guardians.${index}.relationship`] ? 'border-red-500' : 'border-gray-300'
+                                    }`}
                                 >
                                     <option value="">Select relationship</option>
                                     <option value="parent">Parent</option>
@@ -168,6 +250,7 @@ export function RegisterStep5({
                                     {errors.guardians[index]?.relationship?.message}
                                 </p>
                             )}
+                            <FormFieldHint hint={FORMAT_HINTS.relationship} error={fieldErrors[`guardians.${index}.relationship`]} />
                         </div>
 
                         {/* Phone & Email */}
@@ -180,8 +263,13 @@ export function RegisterStep5({
                                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="tel"
-                                        {...register(`guardians.${index}.phone`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`guardians.${index}.phone`, {
+                                            onChange: (e) => validateField(index, 'phone', e.target.value),
+                                        })}
+                                        onKeyDown={filterPhoneInput}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.guardians?.[index]?.phone || fieldErrors[`guardians.${index}.phone`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="+1234567890"
                                     />
                                 </div>
@@ -190,6 +278,7 @@ export function RegisterStep5({
                                         {errors.guardians[index]?.phone?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors[`guardians.${index}.phone`]} />
                             </div>
 
                             <div>
@@ -200,8 +289,12 @@ export function RegisterStep5({
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="email"
-                                        {...register(`guardians.${index}.email`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`guardians.${index}.email`, {
+                                            onChange: (e) => validateField(index, 'email', e.target.value),
+                                        })}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.guardians?.[index]?.email || fieldErrors[`guardians.${index}.email`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="email@example.com"
                                     />
                                 </div>
@@ -210,6 +303,7 @@ export function RegisterStep5({
                                         {errors.guardians[index]?.email?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors[`guardians.${index}.email`]} />
                             </div>
                         </div>
 

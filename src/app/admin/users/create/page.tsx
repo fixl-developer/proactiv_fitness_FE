@@ -11,6 +11,8 @@ import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PARTNER_TYPE_OPTIONS } from '@/config/partnerTypeConfig'
+import { validateName, validateEmail, validatePhone, validatePassword as validatePasswordShared, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ---------------------------------------------------------------------------
 // RBAC Hierarchy – defines which roles each admin role is allowed to create
@@ -320,16 +322,19 @@ export default function CreateUserPage() {
   const validateForm = (): boolean => {
     const errors: FieldErrors = {}
 
-    if (!formData.firstName.trim()) errors.firstName = 'First name is required'
-    if (!formData.lastName.trim()) errors.lastName = 'Last name is required'
-    if (!formData.email.trim()) errors.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Invalid email format'
+    const fnErr = validateName(formData.firstName, 'First name')
+    if (fnErr) errors.firstName = fnErr
+    const lnErr = validateName(formData.lastName, 'Last name')
+    if (lnErr) errors.lastName = lnErr
+    const emErr = validateEmail(formData.email)
+    if (emErr) errors.email = emErr
 
-    if (!formData.password.trim()) {
-      errors.password = 'Password is required'
-    } else {
-      const pwError = validatePassword(formData.password)
-      if (pwError) errors.password = pwError
+    const pwError = validatePasswordShared(formData.password)
+    if (pwError) errors.password = pwError
+
+    if (formData.phone) {
+      const phErr = validatePhone(formData.phone, false)
+      if (phErr) errors.phone = phErr
     }
 
     if (!formData.role) errors.role = 'Role is required'
@@ -575,20 +580,18 @@ export default function CreateUserPage() {
                   type="text"
                   required
                   value={formData.firstName}
+                  onKeyDown={filterNameInput}
                   onChange={(e) => {
                     setFormData({ ...formData, firstName: e.target.value })
-                    if (fieldErrors.firstName) setFieldErrors(prev => ({ ...prev, firstName: '' }))
+                    const err = validateName(e.target.value, 'First name')
+                    setFieldErrors(prev => ({ ...prev, firstName: err || '' }))
                   }}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                     fieldErrors.firstName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
                   }`}
                   placeholder="Enter first name"
                 />
-                {fieldErrors.firstName && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {fieldErrors.firstName}
-                  </p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
@@ -598,20 +601,18 @@ export default function CreateUserPage() {
                   type="text"
                   required
                   value={formData.lastName}
+                  onKeyDown={filterNameInput}
                   onChange={(e) => {
                     setFormData({ ...formData, lastName: e.target.value })
-                    if (fieldErrors.lastName) setFieldErrors(prev => ({ ...prev, lastName: '' }))
+                    const err = validateName(e.target.value, 'Last name')
+                    setFieldErrors(prev => ({ ...prev, lastName: err || '' }))
                   }}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                     fieldErrors.lastName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
                   }`}
                   placeholder="Enter last name"
                 />
-                {fieldErrors.lastName && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {fieldErrors.lastName}
-                  </p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -624,18 +625,15 @@ export default function CreateUserPage() {
                   value={formData.email}
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value })
-                    if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' }))
+                    const err = validateEmail(e.target.value)
+                    setFieldErrors(prev => ({ ...prev, email: err || '' }))
                   }}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                     fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
                   }`}
                   placeholder="user@example.com"
                 />
-                {fieldErrors.email && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {fieldErrors.email}
-                  </p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -645,15 +643,22 @@ export default function CreateUserPage() {
                 <input id="input-tel-admin-users-create"
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                  onKeyDown={filterPhoneInput}
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value })
+                    if (e.target.value) {
+                      const err = validatePhone(e.target.value, false)
+                      setFieldErrors(prev => ({ ...prev, phone: err || '' }))
+                    } else {
+                      setFieldErrors(prev => ({ ...prev, phone: '' }))
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
+                    fieldErrors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                  }`}
                   placeholder="+852 1234 5678"
                 />
-                {fieldErrors.phone && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {fieldErrors.phone}
-                  </p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
               </div>
 
               {/* Password */}
@@ -668,7 +673,8 @@ export default function CreateUserPage() {
                     value={formData.password}
                     onChange={(e) => {
                       setFormData({ ...formData, password: e.target.value })
-                      if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: '' }))
+                      const err = validatePasswordShared(e.target.value)
+                      setFieldErrors(prev => ({ ...prev, password: err || '' }))
                     }}
                     className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors ${
                       fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
@@ -709,11 +715,7 @@ export default function CreateUserPage() {
                     })}
                   </div>
                 )}
-                {fieldErrors.password && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {fieldErrors.password}
-                  </p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.password} error={fieldErrors.password} />
               </div>
             </div>
           </CardContent>

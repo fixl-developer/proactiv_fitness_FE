@@ -4,11 +4,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, FileText, Shield, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 
 import {
     registerStep6Schema,
     type RegisterStep6Data,
 } from '@/lib/validations/auth';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 interface RegisterStep6Props {
     onComplete: (data: RegisterStep6Data) => void;
@@ -23,6 +25,8 @@ export function RegisterStep6({
     initialData,
     isLoading,
 }: RegisterStep6Props) {
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const {
         register,
         handleSubmit,
@@ -32,8 +36,40 @@ export function RegisterStep6({
         defaultValues: initialData,
     });
 
+    const validateCheckbox = (field: string, checked: boolean) => {
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            if (!checked) {
+                if (field === 'acceptTerms') {
+                    next[field] = 'You must accept the Terms and Conditions to continue';
+                } else if (field === 'acceptPrivacy') {
+                    next[field] = 'You must accept the Privacy Policy to continue';
+                }
+            } else {
+                delete next[field];
+            }
+            return next;
+        });
+    };
+
+    const handleFormSubmit = (data: RegisterStep6Data) => {
+        const errs: Record<string, string> = {};
+        if (!data.acceptTerms) {
+            errs.acceptTerms = 'You must accept the Terms and Conditions to continue';
+        }
+        if (!data.acceptPrivacy) {
+            errs.acceptPrivacy = 'You must accept the Privacy Policy to continue';
+        }
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            return;
+        }
+        onComplete(data);
+    };
+
     return (
-        <form id="form-components-auth-RegisterStep6" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep6" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="text-center mb-6">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900">Almost Done!</h2>
@@ -44,11 +80,15 @@ export function RegisterStep6({
 
             {/* Terms & Conditions */}
             <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className={`p-4 bg-gray-50 rounded-lg border ${
+                    errors.acceptTerms || fieldErrors.acceptTerms ? 'border-red-500' : 'border-gray-200'
+                }`}>
                     <div className="flex items-start">
                         <input
                             type="checkbox"
-                            {...register('acceptTerms')}
+                            {...register('acceptTerms', {
+                                onChange: (e) => validateCheckbox('acceptTerms', e.target.checked),
+                            })}
                             className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary mt-1"
                         />
                         <div className="ml-3">
@@ -73,13 +113,20 @@ export function RegisterStep6({
                             {errors.acceptTerms.message}
                         </p>
                     )}
+                    <div className="ml-8">
+                        <FormFieldHint error={fieldErrors.acceptTerms} />
+                    </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className={`p-4 bg-gray-50 rounded-lg border ${
+                    errors.acceptPrivacy || fieldErrors.acceptPrivacy ? 'border-red-500' : 'border-gray-200'
+                }`}>
                     <div className="flex items-start">
                         <input
                             type="checkbox"
-                            {...register('acceptPrivacy')}
+                            {...register('acceptPrivacy', {
+                                onChange: (e) => validateCheckbox('acceptPrivacy', e.target.checked),
+                            })}
                             className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary mt-1"
                         />
                         <div className="ml-3">
@@ -104,6 +151,9 @@ export function RegisterStep6({
                             {errors.acceptPrivacy.message}
                         </p>
                     )}
+                    <div className="ml-8">
+                        <FormFieldHint error={fieldErrors.acceptPrivacy} />
+                    </div>
                 </div>
 
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
