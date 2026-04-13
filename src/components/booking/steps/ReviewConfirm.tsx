@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Calendar, Clock, MapPin, User, Mail, Phone, Dumbbell, AlertCircle } from 'lucide-react';
+import { apiClient } from '@/services/api/client';
 
 interface ReviewConfirmProps {
     bookingData: {
@@ -94,15 +95,8 @@ export default function ReviewConfirm({ bookingData, onConfirm }: ReviewConfirmP
                 parentPhone: bookingData.parentPhone
             };
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/bookings/assessment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
+            // Use apiClient which auto-attaches auth token
+            const result = await apiClient.post('/bookings/assessment', payload);
 
             if (result.success) {
                 // Call the parent callback to show success
@@ -110,9 +104,16 @@ export default function ReviewConfirm({ bookingData, onConfirm }: ReviewConfirmP
             } else {
                 setError(result.message || 'Failed to book assessment. Please try again.');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error submitting booking:', err);
-            setError('Network error. Please check your connection and try again.');
+            if (err.response?.status === 401) {
+                setError('Please login to book an assessment. Redirecting to login...');
+                setTimeout(() => {
+                    window.location.href = `/login?redirectTo=${encodeURIComponent('/book-assessment')}`;
+                }, 2000);
+            } else {
+                setError(err.response?.data?.message || 'Network error. Please check your connection and try again.');
+            }
         } finally {
             setIsSubmitting(false);
         }

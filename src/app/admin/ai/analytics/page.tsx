@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 // Fallback data when API is unavailable
 const FALLBACK_METRICS = {
@@ -95,6 +96,7 @@ const AIAnalyticsPage = () => {
         } catch (err: any) {
             console.error('Failed to load AI analytics:', err)
             setError('Failed to load analytics data. Showing cached data.')
+            toast.error('Failed to load AI analytics data')
         } finally {
             setIsLoading(false)
         }

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface AuthorizedGuardian {
     studentId: string;
@@ -64,46 +62,46 @@ export interface CrisisMode {
 class SafetyService {
     // Guardian Management
     async addAuthorizedGuardian(data: AuthorizedGuardian) {
-        const response = await axios.post(`${API_URL}/safety/guardians`, data);
-        return response.data;
+        const response = await apiClient.post(`/safety/guardians`, data);
+        return response;
     }
 
     async getAuthorizedGuardians(studentId: string) {
-        const response = await axios.get(`${API_URL}/safety/guardians/${studentId}`);
-        return response.data;
+        const response = await apiClient.get(`/safety/guardians/${studentId}`);
+        return response;
     }
 
     async verifyGuardian(studentId: string, guardianId: string, verificationData: any) {
-        const response = await axios.post(`${API_URL}/safety/guardians/verify`, {
+        const response = await apiClient.post(`/safety/guardians/verify`, {
             studentId,
             guardianId,
             ...verificationData,
         });
-        return response.data;
+        return response;
     }
 
     // Pickup Management
     async logPickup(data: PickupLog) {
-        const response = await axios.post(`${API_URL}/safety/pickups`, data);
-        return response.data;
+        const response = await apiClient.post(`/safety/pickups`, data);
+        return response;
     }
 
     async getPickupHistory(studentId: string, limit: number = 50) {
-        const response = await axios.get(`${API_URL}/safety/pickups/${studentId}`, {
+        const response = await apiClient.get(`/safety/pickups/${studentId}`, {
             params: { limit },
         });
-        return response.data;
+        return response;
     }
 
     // Incident Management
     async reportIncident(data: Incident) {
-        const response = await axios.post(`${API_URL}/safety/incidents`, data);
-        return response.data;
+        const response = await apiClient.post(`/safety/incidents`, data);
+        return response;
     }
 
     async getIncident(incidentId: string) {
-        const response = await axios.get(`${API_URL}/safety/incidents/${incidentId}`);
-        return response.data;
+        const response = await apiClient.get(`/safety/incidents/${incidentId}`);
+        return response;
     }
 
     async listIncidents(filters: {
@@ -117,34 +115,34 @@ class SafetyService {
         page?: number;
         limit?: number;
     }) {
-        const response = await axios.get(`${API_URL}/safety/incidents`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/safety/incidents`, { params: filters });
+        return response;
     }
 
     async updateIncident(incidentId: string, updates: Partial<Incident>) {
-        const response = await axios.put(`${API_URL}/safety/incidents/${incidentId}`, updates);
-        return response.data;
+        const response = await apiClient.put(`/safety/incidents/${incidentId}`, updates);
+        return response;
     }
 
     // Crisis Management
     async activateCrisisMode(data: CrisisMode) {
-        const response = await axios.post(`${API_URL}/safety/crisis`, data);
-        return response.data;
+        const response = await apiClient.post(`/safety/crisis`, data);
+        return response;
     }
 
     async deactivateCrisisMode(crisisId: string) {
-        const response = await axios.put(`${API_URL}/safety/crisis/${crisisId}/deactivate`);
-        return response.data;
+        const response = await apiClient.put(`/safety/crisis/${crisisId}/deactivate`);
+        return response;
     }
 
     async getActiveCrisis(locationId: string) {
-        const response = await axios.get(`${API_URL}/safety/crisis/active/${locationId}`);
-        return response.data;
+        const response = await apiClient.get(`/safety/crisis/active/${locationId}`);
+        return response;
     }
 
     async addCrisisUpdate(crisisId: string, update: string) {
-        const response = await axios.post(`${API_URL}/safety/crisis/${crisisId}/update`, { update });
-        return response.data;
+        const response = await apiClient.post(`/safety/crisis/${crisisId}/update`, { update });
+        return response;
     }
 }
 

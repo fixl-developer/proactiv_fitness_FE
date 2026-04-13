@@ -12,6 +12,8 @@ import BookingService from '@/services/modules/booking.service'
 import { apiClient } from '@/services/api/client'
 import { validateName, validateSelect, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 
 export default function BookingsPage() {
     const [bookings, setBookings] = useState<any[]>([])
@@ -29,7 +31,6 @@ export default function BookingsPage() {
     const [bookingForm, setBookingForm] = useState({
         program: '',
         classType: '',
-        childName: '',
         date: '',
         timeSlot: '',
         location: '',
@@ -48,21 +49,57 @@ export default function BookingsPage() {
     const router = useRouter()
     const bookingService = new BookingService()
 
+    // Transform raw booking from DB to display format
+    const transformBooking = (b: any) => {
+        // If booking already has className field, return as-is
+        if (b.className) return b
+
+        // Parse specialRequests to extract stored data
+        const specialData: Record<string, string> = {}
+        ;(b.specialRequests || []).forEach((r: string) => {
+            const [key, ...valParts] = r.split(':')
+            if (key) specialData[key] = valParts.join(':')
+        })
+
+        return {
+            ...b,
+            id: b._id || b.bookingId || b.id,
+            bookingId: b.bookingId || b._id,
+            className: specialData.className || specialData.program || (b.bookingType === 'assessment' ? 'Assessment Booking' : 'Class Booking'),
+            classDate: b.sessionDate ? new Date(b.sessionDate).toISOString().split('T')[0] : '',
+            classTime: b.sessionTime?.startTime || specialData.timeSlot || '',
+            locationName: specialData.location || '',
+            status: b.status || 'confirmed',
+            paymentStatus: b.payment?.status || 'pending',
+            amount: b.payment?.amount || 0,
+            notes: specialData.notes || '',
+            coachName: '',
+            childName: specialData.childName || '',
+        }
+    }
+
     const loadBookings = useCallback(async () => {
         setError(null)
         try {
             let bookingsList: any[] = []
             try {
-                const response = await bookingService.getBookings({})
-                bookingsList = response?.data?.bookings || []
-            } catch (serviceErr) {
-                console.warn('BookingService failed, falling back to apiClient:', serviceErr)
+                // Try my-bookings endpoint first (returns only user's bookings)
+                const myBookingsResponse = await apiClient.get<any>('/bookings/my-bookings')
+                bookingsList = (myBookingsResponse?.data || []).map(transformBooking)
+            } catch (myBookingsErr) {
+                console.warn('my-bookings failed, trying alternatives:', myBookingsErr)
                 try {
-                    const fallback = await apiClient.get<any>('/bookings')
-                    bookingsList = fallback?.data?.bookings || fallback?.bookings || []
-                } catch (fallbackErr) {
-                    console.error('Fallback apiClient also failed:', fallbackErr)
-                    throw fallbackErr
+                    const response = await bookingService.getBookings({})
+                    bookingsList = (response?.data?.bookings || []).map(transformBooking)
+                } catch (serviceErr) {
+                    console.warn('BookingService failed, falling back to apiClient:', serviceErr)
+                    try {
+                        const fallback = await apiClient.get<any>('/bookings')
+                        bookingsList = (fallback?.data?.bookings || fallback?.bookings || []).map(transformBooking)
+                    } catch (fallbackErr) {
+                        console.error('Fallback apiClient also failed:', fallbackErr)
+                        throw fallbackErr
+                    }
                 }
             }
             setBookings(Array.isArray(bookingsList) ? bookingsList : [])
@@ -117,9 +154,10 @@ export default function BookingsPage() {
             ))
             setCancelModal(null)
             setCancelReason('')
+            toast.success('Booking cancelled successfully')
         } catch (err) {
             console.error('Error cancelling booking:', err)
-            alert('Failed to cancel booking. Please try again.')
+            toast.error('Failed to cancel booking. Please try again.')
         } finally {
             setCancellingId(null)
         }
@@ -132,7 +170,6 @@ export default function BookingsPage() {
         const tsErr = validateSelect(bookingForm.timeSlot, 'Time slot'); if (tsErr) errors.timeSlot = tsErr
         const locErr = validateSelect(bookingForm.location, 'Location'); if (locErr) errors.location = locErr
         if (!bookingForm.date) errors.date = 'Date is required'
-        if (bookingForm.childName) { const cn = validateName(bookingForm.childName, 'Child name'); if (cn) errors.childName = cn }
         if (bookingForm.notes) { const ne = validateTextArea(bookingForm.notes, 'Notes', 0, 500); if (ne) errors.notes = ne }
         if (Object.keys(errors).length > 0) { setBookingErrors(errors); return }
         setBookingErrors({})
@@ -142,7 +179,6 @@ export default function BookingsPage() {
             const payload = {
                 program: bookingForm.program,
                 classType: bookingForm.classType,
-                childName: bookingForm.childName,
                 date: bookingForm.date,
                 timeSlot: bookingForm.timeSlot,
                 location: bookingForm.location,
@@ -159,7 +195,7 @@ export default function BookingsPage() {
             setTimeout(() => {
                 setShowBookingModal(false)
                 setBookingSuccess(false)
-                setBookingForm({ program: '', classType: '', childName: '', date: '', timeSlot: '', location: '', notes: '' })
+                setBookingForm({ program: '', classType: '', date: '', timeSlot: '', location: '', notes: '' })
             }, 2000)
         } catch (err) {
             console.error('Error creating booking:', err)
@@ -180,7 +216,7 @@ export default function BookingsPage() {
             setTimeout(() => {
                 setShowBookingModal(false)
                 setBookingSuccess(false)
-                setBookingForm({ program: '', classType: '', childName: '', date: '', timeSlot: '', location: '', notes: '' })
+                setBookingForm({ program: '', classType: '', date: '', timeSlot: '', location: '', notes: '' })
             }, 2000)
         } finally {
             setBookingSubmitting(false)
@@ -554,13 +590,13 @@ export default function BookingsPage() {
                                                 {(Array.isArray(aiPredictResult.predictions) ? aiPredictResult.predictions : [aiPredictResult.predictions]).map((pred: any, i: number) => (
                                                     <li key={i} className="flex items-center gap-1">
                                                         <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
-                                                        {typeof pred === 'string' ? pred : pred.time || pred.slot || JSON.stringify(pred)}
+                                                        {typeof pred === 'string' ? pred : pred.time || pred.slot || formatAIResponse(pred)}
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : (
                                             <p className="text-xs text-indigo-700">
-                                                {aiPredictResult.recommendation || aiPredictResult.message || JSON.stringify(aiPredictResult)}
+                                                {aiPredictResult.recommendation || aiPredictResult.message || formatAIResponse(aiPredictResult)}
                                             </p>
                                         )}
                                     </div>
@@ -607,14 +643,14 @@ export default function BookingsPage() {
                                                 {(Array.isArray(aiCoachResult.coaches || aiCoachResult.matches) ? (aiCoachResult.coaches || aiCoachResult.matches) : [aiCoachResult.coaches || aiCoachResult.matches]).map((coach: any, i: number) => (
                                                     <li key={i} className="flex items-center gap-1">
                                                         <Star className="w-3 h-3 text-yellow-500 flex-shrink-0" />
-                                                        {typeof coach === 'string' ? coach : coach.name || coach.coachName || JSON.stringify(coach)}
+                                                        {typeof coach === 'string' ? coach : coach.name || coach.coachName || formatAIResponse(coach)}
                                                         {coach.matchScore && <span className="text-purple-500 ml-1">({coach.matchScore}% match)</span>}
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : (
                                             <p className="text-xs text-purple-700">
-                                                {aiCoachResult.recommendation || aiCoachResult.message || JSON.stringify(aiCoachResult)}
+                                                {aiCoachResult.recommendation || aiCoachResult.message || formatAIResponse(aiCoachResult)}
                                             </p>
                                         )}
                                     </div>
@@ -651,7 +687,7 @@ export default function BookingsPage() {
                                 <div className="flex items-center justify-between p-6 border-b">
                                     <div>
                                         <h2 className="text-xl font-bold text-gray-900">New Booking</h2>
-                                        <p className="text-sm text-gray-500 mt-1">Book a class for your child</p>
+                                        <p className="text-sm text-gray-500 mt-1">Book a class for yourself</p>
                                     </div>
                                     <button onClick={() => setShowBookingModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                                         <X className="w-5 h-5 text-gray-500" />
@@ -689,21 +725,6 @@ export default function BookingsPage() {
                                             <option value="Private">Private Session</option>
                                             <option value="Group">Group Class</option>
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Child Name</label>
-                                        <input
-                                            type="text"
-                                            value={bookingForm.childName}
-                                            onChange={e => {
-                                                setBookingForm(prev => ({ ...prev, childName: e.target.value }))
-                                                if (e.target.value) { const err = validateName(e.target.value, 'Child name'); setBookingErrors(prev => { const n = {...prev}; if (err) n.childName = err; else delete n.childName; return n }) }
-                                            }}
-                                            onKeyDown={filterNameInput}
-                                            placeholder="Child's name"
-                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${bookingErrors.childName ? 'border-red-500' : 'border-gray-300'}`}
-                                        />
-                                        <FormFieldHint hint={FORMAT_HINTS.name} error={bookingErrors.childName} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>

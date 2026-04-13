@@ -14,8 +14,10 @@ import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { validateName, validateDateOfBirth, validateSelect, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 const ParentChildrenPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -100,10 +102,11 @@ const ParentChildrenPage = () => {
         try {
             await apiClient.post('/parent/children', data)
             setShowAddModal(false)
+            toast.success('Child added successfully!')
             await loadChildren()
         } catch (err) {
             console.error('Error adding child:', err)
-            alert('Failed to add child. Please try again.')
+            toast.error('Failed to add child. Please try again.')
         } finally {
             setFormSubmitting(false)
         }
@@ -133,10 +136,11 @@ const ParentChildrenPage = () => {
             await apiClient.put(`/parent/children/${editingChild.id}`, data)
             setShowEditModal(false)
             setEditingChild(null)
+            toast.success('Child updated successfully!')
             await loadChildren()
         } catch (err) {
             console.error('Error updating child:', err)
-            alert('Failed to update child. Please try again.')
+            toast.error('Failed to update child. Please try again.')
         } finally {
             setFormSubmitting(false)
         }
@@ -801,13 +805,13 @@ const ParentChildrenPage = () => {
                                                                         {(Array.isArray(aiChallengesResult[childId].challenges) ? aiChallengesResult[childId].challenges : [aiChallengesResult[childId].challenges]).map((challenge: any, i: number) => (
                                                                             <li key={i} className="flex items-start gap-1">
                                                                                 <Trophy className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                                                <span>{typeof challenge === 'string' ? challenge : challenge.title || challenge.name || JSON.stringify(challenge)}</span>
+                                                                                <span>{typeof challenge === 'string' ? challenge : challenge.title || challenge.name || challenge.description || formatAIResponse(challenge)}</span>
                                                                             </li>
                                                                         ))}
                                                                     </ul>
                                                                 ) : (
                                                                     <p className="text-xs text-amber-800">
-                                                                        {aiChallengesResult[childId].message || JSON.stringify(aiChallengesResult[childId])}
+                                                                        {aiChallengesResult[childId].message || formatAIResponse(aiChallengesResult[childId])}
                                                                     </p>
                                                                 )}
                                                             </div>

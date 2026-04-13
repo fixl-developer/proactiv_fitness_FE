@@ -375,7 +375,7 @@ class RuleService {
      */
     async getRuleById(ruleId: string): Promise<Rule> {
         const response = await apiClient.get(`${this.baseUrl}/${ruleId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -383,7 +383,7 @@ class RuleService {
      */
     async createRule(data: CreateRuleDto): Promise<Rule> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -391,7 +391,7 @@ class RuleService {
      */
     async updateRule(ruleId: string, data: UpdateRuleDto): Promise<Rule> {
         const response = await apiClient.put(`${this.baseUrl}/${ruleId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -406,7 +406,7 @@ class RuleService {
      */
     async toggleRuleStatus(ruleId: string, status: RuleStatus): Promise<Rule> {
         const response = await apiClient.patch(`${this.baseUrl}/${ruleId}/status`, { status });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -417,7 +417,7 @@ class RuleService {
             ruleType,
             context
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -425,7 +425,7 @@ class RuleService {
      */
     async getRuleStatistics(ruleId: string): Promise<Rule['statistics']> {
         const response = await apiClient.get(`${this.baseUrl}/${ruleId}/statistics`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -487,7 +487,7 @@ class PolicyService {
      */
     async getPolicyById(policyId: string): Promise<Policy> {
         const response = await apiClient.get(`${this.baseUrl}/${policyId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -495,7 +495,7 @@ class PolicyService {
      */
     async createPolicy(data: CreatePolicyDto): Promise<Policy> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -503,7 +503,7 @@ class PolicyService {
      */
     async updatePolicy(policyId: string, data: UpdatePolicyDto): Promise<Policy> {
         const response = await apiClient.put(`${this.baseUrl}/${policyId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -518,7 +518,7 @@ class PolicyService {
      */
     async evaluatePolicy(policyId: string, context: RuleContext): Promise<PolicyEvaluationResult> {
         const response = await apiClient.post(`${this.baseUrl}/${policyId}/evaluate`, context);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -526,7 +526,7 @@ class PolicyService {
      */
     async getPolicyStatistics(policyId: string): Promise<Policy['statistics']> {
         const response = await apiClient.get(`${this.baseUrl}/${policyId}/statistics`);
-        return response.data.data;
+        return response.data;
     }
 }
 
@@ -568,7 +568,7 @@ class RuleTemplateService {
      */
     async getRuleTemplateById(templateId: string): Promise<RuleTemplate> {
         const response = await apiClient.get(`${this.baseUrl}/${templateId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -576,7 +576,7 @@ class RuleTemplateService {
      */
     async createRuleTemplate(data: Partial<RuleTemplate>): Promise<RuleTemplate> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -587,7 +587,7 @@ class RuleTemplateService {
         data: { name: string;[key: string]: any }
     ): Promise<Rule> {
         const response = await apiClient.post(`${this.baseUrl}/${templateId}/create-rule`, data);
-        return response.data.data;
+        return response.data;
     }
 }
 

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface VirtualSession {
     sessionId?: string;
@@ -33,13 +31,13 @@ export interface VirtualSession {
 
 class VirtualTrainingService {
     async createSession(data: VirtualSession) {
-        const response = await axios.post(`${API_URL}/virtual-training`, data);
-        return response.data;
+        const response = await apiClient.post(`/virtual-training`, data);
+        return response;
     }
 
     async getSession(sessionId: string) {
-        const response = await axios.get(`${API_URL}/virtual-training/${sessionId}`);
-        return response.data;
+        const response = await apiClient.get(`/virtual-training/${sessionId}`);
+        return response;
     }
 
     async listSessions(filters: {
@@ -49,54 +47,54 @@ class VirtualTrainingService {
         sessionType?: string;
         status?: string;
     }) {
-        const response = await axios.get(`${API_URL}/virtual-training`, {
+        const response = await apiClient.get(`/virtual-training`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async enrollStudent(sessionId: string, studentId: string) {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/enroll`, {
+        const response = await apiClient.post(`/virtual-training/${sessionId}/enroll`, {
             studentId,
         });
-        return response.data;
+        return response;
     }
 
     async startSession(sessionId: string) {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/start`);
-        return response.data;
+        const response = await apiClient.post(`/virtual-training/${sessionId}/start`);
+        return response;
     }
 
     async endSession(sessionId: string) {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/end`);
-        return response.data;
+        const response = await apiClient.post(`/virtual-training/${sessionId}/end`);
+        return response;
     }
 
     async recordAttendance(sessionId: string, studentId: string, action: 'join' | 'leave') {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/attendance`, {
+        const response = await apiClient.post(`/virtual-training/${sessionId}/attendance`, {
             studentId,
             action,
         });
-        return response.data;
+        return response;
     }
 
     async addFeedback(sessionId: string, studentId: string, rating: number, comment?: string) {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/feedback`, {
+        const response = await apiClient.post(`/virtual-training/${sessionId}/feedback`, {
             studentId,
             rating,
             comment,
         });
-        return response.data;
+        return response;
     }
 
     async getRecording(sessionId: string) {
-        const response = await axios.get(`${API_URL}/virtual-training/${sessionId}/recording`);
-        return response.data;
+        const response = await apiClient.get(`/virtual-training/${sessionId}/recording`);
+        return response;
     }
 
     async incrementRecordingViews(sessionId: string) {
-        const response = await axios.post(`${API_URL}/virtual-training/${sessionId}/recording/view`);
-        return response.data;
+        const response = await apiClient.post(`/virtual-training/${sessionId}/recording/view`);
+        return response;
     }
 }
 

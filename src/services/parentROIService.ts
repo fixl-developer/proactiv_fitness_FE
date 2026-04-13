@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface ParentROIReport {
     studentId: string;
@@ -54,41 +52,41 @@ export interface ParentROIReport {
 
 class ParentROIService {
     async generateReport(data: Omit<ParentROIReport, 'overallROIScore' | 'generatedAt'>) {
-        const response = await axios.post(`${API_URL}/parent-roi`, data);
-        return response.data;
+        const response = await apiClient.post(`/parent-roi`, data);
+        return response;
     }
 
     async getReport(studentId: string, reportType: 'monthly' | 'quarterly' | 'annual') {
-        const response = await axios.get(`${API_URL}/parent-roi/${studentId}`, {
+        const response = await apiClient.get(`/parent-roi/${studentId}`, {
             params: { type: reportType },
         });
-        return response.data;
+        return response;
     }
 
     async listReports(studentId: string) {
-        const response = await axios.get(`${API_URL}/parent-roi/${studentId}/all`);
-        return response.data;
+        const response = await apiClient.get(`/parent-roi/${studentId}/all`);
+        return response;
     }
 
     async emailReport(reportId: string, parentEmail: string) {
-        const response = await axios.post(`${API_URL}/parent-roi/${reportId}/email`, {
+        const response = await apiClient.post(`/parent-roi/${reportId}/email`, {
             email: parentEmail,
         });
-        return response.data;
+        return response;
     }
 
     async downloadReportPDF(reportId: string) {
-        const response = await axios.get(`${API_URL}/parent-roi/${reportId}/download`, {
+        const response = await apiClient.get(`/parent-roi/${reportId}/download`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 
     async getROITrends(studentId: string, months: number = 6) {
-        const response = await axios.get(`${API_URL}/parent-roi/${studentId}/trends`, {
+        const response = await apiClient.get(`/parent-roi/${studentId}/trends`, {
             params: { months },
         });
-        return response.data;
+        return response;
     }
 }
 

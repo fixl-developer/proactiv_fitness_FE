@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Clock, MapPin, Users, Calendar, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Class } from '@/types/booking';
 
 interface ClassCardProps {
@@ -9,15 +10,33 @@ interface ClassCardProps {
 }
 
 export function ClassCard({ classItem }: ClassCardProps) {
+    const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const availabilityPercentage =
         (classItem.capacity.booked / classItem.capacity.total) * 100;
     const isAlmostFull = availabilityPercentage >= 80;
     const isFull = classItem.capacity.available === 0;
 
+    const handleBookClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!isAuthenticated) {
+            router.push(`/login?redirectTo=${encodeURIComponent(`/classes/${classItem.id}/book`)}`);
+            return;
+        }
+
+        router.push(`/classes/${classItem.id}/book`);
+    };
+
+    const handleCardClick = () => {
+        router.push(`/classes/${classItem.id}/book`);
+    };
+
     return (
-        <Link id="booking-class-card-nav"
-            href={`/classes/${classItem.id}`}
-            className="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group"
+        <div
+            onClick={handleCardClick}
+            className="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden group cursor-pointer"
         >
             {/* Image */}
             <div className="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
@@ -114,11 +133,15 @@ export function ClassCard({ classItem }: ClassCardProps) {
                         <p className="text-xs text-gray-500">per class</p>
                     </div>
 
-                    <button id="booking-class-card-btn" className="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors">
+                    <button
+                        id="booking-class-card-btn"
+                        onClick={handleBookClick}
+                        className="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                    >
                         {isFull ? 'Join Waitlist' : 'Book Now'}
                     </button>
                 </div>
             </div>
-        </Link>
+        </div>
     );
 }

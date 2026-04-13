@@ -57,10 +57,18 @@ function LoginContent() {
         }
     }, [searchParams]);
 
-    // Post-login redirect based on role
+    // Post-login redirect based on role (or redirectTo param)
     useEffect(() => {
         if (isAuthenticated && justLoggedIn.current) {
             justLoggedIn.current = false;
+
+            // Check for redirectTo parameter first
+            const redirectTo = searchParams.get('redirectTo');
+            if (redirectTo) {
+                router.push(redirectTo);
+                return;
+            }
+
             const userRole = role?.toUpperCase();
             console.log('[LOGIN] Role from auth:', role, '| Uppercase:', userRole);
 
@@ -83,7 +91,7 @@ function LoginContent() {
                 router.push('/');
             }
         }
-    }, [isAuthenticated, router, role]);
+    }, [isAuthenticated, router, role, searchParams]);
 
     useEffect(() => {
         if (error) setFormErrors({ general: error });

@@ -9,6 +9,7 @@ import {
     MapPin, FileText, Briefcase, Phone, HelpCircle, BarChart3,
     Database, RefreshCw, Loader2, CheckCircle, AlertTriangle
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
 
 const cmsModules = [
@@ -162,9 +163,10 @@ export default function AdminCMSPage() {
             setSeedResult(null)
             const result = await CMSAdminService.seedDefaultData()
             setSeedResult(result)
+            toast.success('Default data seeded successfully')
         } catch (error) {
             console.error('Seed failed:', error)
-            alert('Failed to seed data. Please check if the backend is running.')
+            toast.error('Failed to seed data. Please check if the backend is running.')
         } finally {
             setSeeding(false)
         }
@@ -177,9 +179,10 @@ export default function AdminCMSPage() {
             setShowResetConfirm(false)
             const result = await CMSAdminService.resetAndSeedData()
             setSeedResult({ seeded: result.seeded, skipped: result.skipped })
+            toast.success('Data reset and re-seeded successfully')
         } catch (error) {
             console.error('Reset failed:', error)
-            alert('Failed to reset and seed data.')
+            toast.error('Failed to reset and seed data.')
         } finally {
             setResetting(false)
         }

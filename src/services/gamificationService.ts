@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface GamificationProfile {
     studentId: string;
@@ -50,21 +48,21 @@ export interface GamificationProfile {
 
 class GamificationService {
     async getProfile(studentId: string) {
-        const response = await axios.get(`${API_URL}/gamification/${studentId}`);
-        return response.data;
+        const response = await apiClient.get(`/gamification/${studentId}`);
+        return response;
     }
 
     async addPoints(studentId: string, category: 'attendance' | 'behavior' | 'skills' | 'engagement', points: number) {
-        const response = await axios.post(`${API_URL}/gamification/${studentId}/points`, {
+        const response = await apiClient.post(`/gamification/${studentId}/points`, {
             category,
             points,
         });
-        return response.data;
+        return response;
     }
 
     async updateStreak(studentId: string, type: 'attendance' | 'behavior' | 'engagement') {
-        const response = await axios.post(`${API_URL}/gamification/${studentId}/streak`, { type });
-        return response.data;
+        const response = await apiClient.post(`/gamification/${studentId}/streak`, { type });
+        return response;
     }
 
     async addAchievement(studentId: string, achievement: {
@@ -73,33 +71,33 @@ class GamificationService {
         rarity: 'common' | 'rare' | 'epic' | 'legendary';
         points: number;
     }) {
-        const response = await axios.post(`${API_URL}/gamification/${studentId}/achievements`, achievement);
-        return response.data;
+        const response = await apiClient.post(`/gamification/${studentId}/achievements`, achievement);
+        return response;
     }
 
     async addBadge(studentId: string, badge: {
         name: string;
         imageUrl: string;
     }) {
-        const response = await axios.post(`${API_URL}/gamification/${studentId}/badges`, badge);
-        return response.data;
+        const response = await apiClient.post(`/gamification/${studentId}/badges`, badge);
+        return response;
     }
 
     async getLeaderboard(tenantId: string, period: 'daily' | 'weekly' | 'monthly' | 'allTime', limit: number = 10) {
-        const response = await axios.get(`${API_URL}/gamification/leaderboard`, {
+        const response = await apiClient.get(`/gamification/leaderboard`, {
             params: { tenantId, period, limit },
         });
-        return response.data;
+        return response;
     }
 
     async redeemReward(studentId: string, rewardId: string) {
-        const response = await axios.post(`${API_URL}/gamification/${studentId}/rewards/${rewardId}/redeem`);
-        return response.data;
+        const response = await apiClient.post(`/gamification/${studentId}/rewards/${rewardId}/redeem`);
+        return response;
     }
 
     async getAvailableRewards(studentId: string) {
-        const response = await axios.get(`${API_URL}/gamification/${studentId}/rewards/available`);
-        return response.data;
+        const response = await apiClient.get(`/gamification/${studentId}/rewards/available`);
+        return response;
     }
 }
 

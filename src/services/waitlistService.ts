@@ -27,7 +27,7 @@ class WaitlistService {
         try {
             const endpoint = locationId ? `/waitlist/location/${locationId}` : '/waitlist'
             const response = await apiClient.get(endpoint)
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching waitlist entries:', error)
             // Return mock data for development

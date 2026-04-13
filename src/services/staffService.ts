@@ -373,7 +373,7 @@ class StaffService {
      */
     async getStaffById(staffId: string): Promise<Staff> {
         const response = await apiClient.get(`${this.baseUrl}/${staffId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -381,7 +381,7 @@ class StaffService {
      */
     async createStaff(data: CreateStaffDto): Promise<Staff> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -389,7 +389,7 @@ class StaffService {
      */
     async updateStaff(staffId: string, data: Partial<Staff>): Promise<Staff> {
         const response = await apiClient.put(`${this.baseUrl}/${staffId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -404,7 +404,7 @@ class StaffService {
      */
     async updateStaffStatus(staffId: string, status: StaffStatus): Promise<Staff> {
         const response = await apiClient.patch(`${this.baseUrl}/${staffId}/status`, { status });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -412,7 +412,7 @@ class StaffService {
      */
     async addCertification(staffId: string, certification: Partial<Certification>): Promise<Staff> {
         const response = await apiClient.post(`${this.baseUrl}/${staffId}/certifications`, certification);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -420,7 +420,7 @@ class StaffService {
      */
     async updateCertification(staffId: string, certificationId: string, data: Partial<Certification>): Promise<Staff> {
         const response = await apiClient.put(`${this.baseUrl}/${staffId}/certifications/${certificationId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -428,7 +428,7 @@ class StaffService {
      */
     async addBackgroundCheck(staffId: string, check: Partial<BackgroundCheck>): Promise<Staff> {
         const response = await apiClient.post(`${this.baseUrl}/${staffId}/background-checks`, check);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -436,7 +436,7 @@ class StaffService {
      */
     async updateAvailability(staffId: string, availability: AvailabilitySlot[]): Promise<Staff> {
         const response = await apiClient.put(`${this.baseUrl}/${staffId}/availability`, { weeklyAvailability: availability });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -444,7 +444,7 @@ class StaffService {
      */
     async createTimeOffRequest(data: CreateTimeOffDto): Promise<TimeOffRequest> {
         const response = await apiClient.post(`${this.baseUrl}/time-off`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -452,7 +452,7 @@ class StaffService {
      */
     async approveTimeOff(requestId: string): Promise<TimeOffRequest> {
         const response = await apiClient.post(`${this.baseUrl}/time-off/${requestId}/approve`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -460,7 +460,7 @@ class StaffService {
      */
     async rejectTimeOff(requestId: string, reason: string): Promise<TimeOffRequest> {
         const response = await apiClient.post(`${this.baseUrl}/time-off/${requestId}/reject`, { reason });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -484,7 +484,7 @@ class StaffService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/schedules?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -492,7 +492,7 @@ class StaffService {
      */
     async createSchedule(data: CreateScheduleDto): Promise<StaffSchedule> {
         const response = await apiClient.post(`${this.baseUrl}/schedules`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -500,7 +500,7 @@ class StaffService {
      */
     async updateSchedule(scheduleId: string, data: Partial<StaffSchedule>): Promise<StaffSchedule> {
         const response = await apiClient.put(`${this.baseUrl}/schedules/${scheduleId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -516,7 +516,7 @@ class StaffService {
     async getStaffStatistics(businessUnitId?: string): Promise<StaffStatistics> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/statistics${params}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -528,7 +528,7 @@ class StaffService {
             date,
             timeSlot
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -536,7 +536,7 @@ class StaffService {
      */
     async addPerformanceMetrics(staffId: string, metrics: PerformanceMetrics): Promise<Staff> {
         const response = await apiClient.post(`${this.baseUrl}/${staffId}/performance`, metrics);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -544,7 +544,7 @@ class StaffService {
      */
     async getExpiringCertifications(days: number = 30): Promise<{ staff: Staff; certification: Certification }[]> {
         const response = await apiClient.get(`${this.baseUrl}/certifications/expiring?days=${days}`);
-        return response.data.data;
+        return response.data;
     }
 }
 

@@ -208,7 +208,7 @@ export default function NutritionPage() {
     // Recipe detail modal
     const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
 
-    const childId = user?.id || ''
+    const studentId = user?.id || ''
 
     // ── Data loading ────────────────────────────────────────────────────
 
@@ -242,13 +242,13 @@ export default function NutritionPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [childId])
+    }, [studentId])
 
     const handleGenerateMealPlan = async () => {
         setGenerating(true)
         try {
             const payload = {
-                childId,
+                studentId,
                 duration: 7,
                 activityLevel: 'moderate',
                 dietaryRestrictions: [],
@@ -312,8 +312,7 @@ export default function NutritionPage() {
         setLogSaving(true)
 
         const mealData = {
-            childId,
-            studentId: childId,
+            studentId,
             mealType: logForm.mealType,
             mealName: logForm.mealName,
             foodItems: [{ name: logForm.mealName }],

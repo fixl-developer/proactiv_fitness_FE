@@ -51,7 +51,7 @@ export default function ImageUploader({
             formData.append('folder', folder)
 
             const response = await apiClient.post<any>(
-                '/api/v1/admin/cms/media/upload-image',
+                '/admin/cms/media/upload-image',
                 formData,
                 {
                     headers: { 'Content-Type': 'multipart/form-data' },
@@ -59,8 +59,8 @@ export default function ImageUploader({
                 }
             )
 
-            if (response.data?.data?.url) {
-                onChange(response.data.data.url)
+            if (response.data?.url) {
+                onChange(response.data.url)
                 setUploadSuccess(true)
                 setTimeout(() => setUploadSuccess(false), 3000)
             } else {

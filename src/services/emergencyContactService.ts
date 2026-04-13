@@ -28,7 +28,7 @@ class EmergencyContactService {
         try {
             const endpoint = locationId ? `/emergency-contacts/location/${locationId}` : '/emergency-contacts'
             const response = await apiClient.get(endpoint)
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching emergency contacts:', error)
             // Return mock data for development

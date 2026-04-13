@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface SemanticSearchResult {
     id: string;
@@ -20,15 +18,15 @@ export interface SearchQuery {
 
 class SemanticSearchService {
     async search(data: SearchQuery): Promise<SemanticSearchResult[]> {
-        const response = await axios.post(`${API_URL}/semantic-search/search`, data);
-        return response.data;
+        const response = await apiClient.post(`/semantic-search/search`, data);
+        return response;
     }
 
     async similarDocuments(documentId: string, limit?: number): Promise<SemanticSearchResult[]> {
-        const response = await axios.get(`${API_URL}/semantic-search/similar/${documentId}`, {
+        const response = await apiClient.get(`/semantic-search/similar/${documentId}`, {
             params: { limit }
         });
-        return response.data;
+        return response;
     }
 
     async askQuestion(question: string, context?: string): Promise<{
@@ -36,11 +34,11 @@ class SemanticSearchService {
         sources: SemanticSearchResult[];
         confidence: number;
     }> {
-        const response = await axios.post(`${API_URL}/semantic-search/ask`, {
+        const response = await apiClient.post(`/semantic-search/ask`, {
             question,
             context
         });
-        return response.data;
+        return response;
     }
 
     async indexDocument(data: {
@@ -49,8 +47,8 @@ class SemanticSearchService {
         content: string;
         metadata?: Record<string, any>;
     }): Promise<{ success: boolean }> {
-        const response = await axios.post(`${API_URL}/semantic-search/index`, data);
-        return response.data;
+        const response = await apiClient.post(`/semantic-search/index`, data);
+        return response;
     }
 }
 

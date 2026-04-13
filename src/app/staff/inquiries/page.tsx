@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { validateTextArea, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 const STATUS_OPTIONS = ['new', 'in-progress', 'resolved', 'closed'] as const
 const TYPE_OPTIONS = ['general', 'billing', 'technical', 'complaint', 'suggestion'] as const
@@ -124,9 +125,10 @@ export default function CustomerInquiries() {
             setRespondModal(null)
             setResponseMessage('')
             setIsInternal(false)
+            toast.success('Response sent successfully')
             loadInquiries()
         } catch {
-            setError('Failed to send response. Please try again.')
+            toast.error('Failed to send response. Please try again.')
         } finally {
             setSubmitting(false)
         }
@@ -139,9 +141,10 @@ export default function CustomerInquiries() {
             await supportStaffService.updateInquiry(statusModal.id, { status: newStatus as CustomerInquiry['status'] })
             setStatusModal(null)
             setNewStatus('')
+            toast.success('Status updated successfully')
             loadInquiries()
         } catch {
-            setError('Failed to update status. Please try again.')
+            toast.error('Failed to update status. Please try again.')
         } finally {
             setSubmitting(false)
         }
@@ -150,12 +153,12 @@ export default function CustomerInquiries() {
     if (!isAuthenticated) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-gray-900">Customer Inquiries</h1>
+                        <h1 className="text-2xl md:text-4xl font-bold text-gray-900">Customer Inquiries</h1>
                         <p className="text-gray-500 mt-1">Manage and respond to customer inquiries</p>
                     </div>
                     <button

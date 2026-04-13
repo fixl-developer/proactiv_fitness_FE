@@ -17,11 +17,21 @@ import { bookingApi } from '@/lib/api/booking';
 import { toast } from 'sonner';
 import type { Class } from '@/types/booking';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ClassDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const { isAuthenticated } = useAuth();
     const classId = params.id as string;
+
+    const handleBookClick = () => {
+        if (!isAuthenticated) {
+            router.push(`/login?redirectTo=${encodeURIComponent(`/classes/${classId}/book`)}`);
+            return;
+        }
+        router.push(`/classes/${classId}/book`);
+    };
 
     const [classData, setClassData] = useState<Class | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -318,12 +328,13 @@ export default function ClassDetailPage() {
 
                             {/* CTA Buttons */}
                             <div className="space-y-3">
-                                <Link id="booking-classes-id-nav"
-                                    href={`/classes/${classId}/book`}
+                                <button
+                                    id="booking-classes-id-book-btn"
+                                    onClick={handleBookClick}
                                     className="block w-full bg-primary text-white py-4 rounded-lg font-semibold text-center hover:bg-primary/90 transition-colors"
                                 >
                                     {isFull ? 'Join Waitlist' : 'Book This Class'}
-                                </Link>
+                                </button>
 
                                 <Link id="booking-classes-id-nav-classes"
                                     href="/classes"

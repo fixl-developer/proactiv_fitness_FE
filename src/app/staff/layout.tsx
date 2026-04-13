@@ -48,10 +48,19 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const pathname = usePathname()
     const [user, setUser] = useState<any>(null)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [mobileOpen, setMobileOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
 
     useEffect(() => {
         const userData = localStorage.getItem('user')
@@ -85,9 +94,16 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-cyan-50/30 to-sky-50/50">
-            {/* Sidebar - Fixed */}
+            {/* Mobile Overlay */}
+            {mobileOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 md:hidden"
+                    onClick={() => setMobileOpen(false)}
+                />
+            )}
+            {/* Sidebar - Fixed, hidden on mobile unless toggled */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
                 style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
@@ -118,7 +134,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                                 <div key={item.name} className="relative">
                                     <button
                                         id="staff-layout-nav"
-                                        onClick={() => router.push(item.href)}
+                                        onClick={() => { router.push(item.href); setMobileOpen(false) }}
                                         onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
                                         onMouseLeave={() => setHoveredItem(null)}
                                         className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
@@ -204,20 +220,20 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: isMobile ? 0 : `${sidebarWidth}px` }}>
                 {/* Header - Fixed */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
-                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                    style={{ left: isMobile ? 0 : `${sidebarWidth}px`, right: 0 }}
                 >
                     <div className="flex items-center justify-between px-6 py-4">
                         <div className="flex items-center space-x-4">
                             <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                onClick={() => isMobile ? setMobileOpen(!mobileOpen) : setSidebarCollapsed(!sidebarCollapsed)}
                                 className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                title={isMobile ? 'Toggle menu' : sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                             >
                                 <Menu className="w-5 h-5 text-gray-600" />
                             </button>
@@ -238,7 +254,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-6 min-h-screen">
+                <main className="pt-20 p-4 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

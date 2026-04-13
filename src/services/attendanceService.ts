@@ -153,7 +153,7 @@ class AttendanceService {
      */
     async getAttendanceById(attendanceId: string): Promise<StaffAttendance> {
         const response = await apiClient.get(`${this.baseUrl}/${attendanceId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -161,7 +161,7 @@ class AttendanceService {
      */
     async checkIn(data: CheckInDto): Promise<StaffAttendance> {
         const response = await apiClient.post(`${this.baseUrl}/check-in`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -169,7 +169,7 @@ class AttendanceService {
      */
     async checkOut(data: CheckOutDto): Promise<StaffAttendance> {
         const response = await apiClient.post(`${this.baseUrl}/check-out`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -177,7 +177,7 @@ class AttendanceService {
      */
     async startBreak(data: BreakDto): Promise<StaffAttendance> {
         const response = await apiClient.post(`${this.baseUrl}/break/start`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -185,7 +185,7 @@ class AttendanceService {
      */
     async endBreak(attendanceId: string): Promise<StaffAttendance> {
         const response = await apiClient.post(`${this.baseUrl}/break/end`, { attendanceId });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -193,7 +193,7 @@ class AttendanceService {
      */
     async updateAttendance(attendanceId: string, data: Partial<StaffAttendance>): Promise<StaffAttendance> {
         const response = await apiClient.put(`${this.baseUrl}/${attendanceId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -212,7 +212,7 @@ class AttendanceService {
             date,
             reason
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -261,7 +261,7 @@ class AttendanceService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -272,7 +272,7 @@ class AttendanceService {
         period: string
     ): Promise<AttendanceReport> {
         const response = await apiClient.get(`${this.baseUrl}/report/${staffId}?period=${period}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -332,7 +332,7 @@ class AttendanceService {
      */
     async verifyAttendance(attendanceId: string, verifiedBy: string): Promise<StaffAttendance> {
         const response = await apiClient.post(`${this.baseUrl}/${attendanceId}/verify`, { verifiedBy });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -340,7 +340,7 @@ class AttendanceService {
      */
     async addManagerNotes(attendanceId: string, notes: string): Promise<StaffAttendance> {
         const response = await apiClient.patch(`${this.baseUrl}/${attendanceId}/notes`, { managerNotes: notes });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -348,7 +348,7 @@ class AttendanceService {
      */
     async getCurrentStatus(staffId: string): Promise<{ checkedIn: boolean; attendance?: StaffAttendance }> {
         const response = await apiClient.get(`${this.baseUrl}/status/${staffId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -359,7 +359,7 @@ class AttendanceService {
             staffIds,
             locationId
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -377,7 +377,7 @@ class AttendanceService {
         overtimeHours: number;
     }> {
         const response = await apiClient.get(`${this.baseUrl}/summary/${staffId}?month=${month}`);
-        return response.data.data;
+        return response.data;
     }
 }
 

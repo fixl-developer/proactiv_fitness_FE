@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Certification {
     studentId: string;
@@ -22,45 +20,45 @@ export interface Certification {
 
 class CertificationsService {
     async issueCertification(data: Certification) {
-        const response = await axios.post(`${API_URL}/certifications`, data);
-        return response.data;
+        const response = await apiClient.post(`/certifications`, data);
+        return response;
     }
 
     async getCertification(certificationId: string) {
-        const response = await axios.get(`${API_URL}/certifications/${certificationId}`);
-        return response.data;
+        const response = await apiClient.get(`/certifications/${certificationId}`);
+        return response;
     }
 
     async verifyCertification(verificationCode: string) {
-        const response = await axios.get(`${API_URL}/certifications/verify/${verificationCode}`);
-        return response.data;
+        const response = await apiClient.get(`/certifications/verify/${verificationCode}`);
+        return response;
     }
 
     async listCertifications(studentId: string) {
-        const response = await axios.get(`${API_URL}/certifications/student/${studentId}`);
-        return response.data;
+        const response = await apiClient.get(`/certifications/student/${studentId}`);
+        return response;
     }
 
     async revokeCertification(certificationId: string) {
-        const response = await axios.put(`${API_URL}/certifications/${certificationId}/revoke`);
-        return response.data;
+        const response = await apiClient.put(`/certifications/${certificationId}/revoke`);
+        return response;
     }
 
     async renewCertification(certificationId: string) {
-        const response = await axios.put(`${API_URL}/certifications/${certificationId}/renew`);
-        return response.data;
+        const response = await apiClient.put(`/certifications/${certificationId}/renew`);
+        return response;
     }
 
     async downloadCertificate(certificationId: string) {
-        const response = await axios.get(`${API_URL}/certifications/${certificationId}/download`, {
+        const response = await apiClient.get(`/certifications/${certificationId}/download`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 
     async getBadge(certificationId: string) {
-        const response = await axios.get(`${API_URL}/certifications/${certificationId}/badge`);
-        return response.data;
+        const response = await apiClient.get(`/certifications/${certificationId}/badge`);
+        return response;
     }
 }
 

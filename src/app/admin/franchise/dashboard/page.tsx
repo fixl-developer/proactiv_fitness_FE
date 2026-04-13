@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { revenueIntelligenceService, smartSchedulerService } from '@/services/advancedAIServices'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -542,7 +543,7 @@ export default function FranchiseOwnerDashboard() {
                                         <TrendingUp className="w-4 h-4 text-green-600" />
                                         <span className="text-xs font-semibold text-green-700 uppercase">Retention Action</span>
                                     </div>
-                                    <p className="text-sm font-medium text-gray-900">{typeof action === 'string' ? action : action.title || action.action || JSON.stringify(action)}</p>
+                                    <p className="text-sm font-medium text-gray-900">{typeof action === 'string' ? action : action.title || action.action || action.description || formatAIResponse(action)}</p>
                                 </div>
                             ))}
                         </div>
@@ -648,7 +649,7 @@ export default function FranchiseOwnerDashboard() {
                                     <div key={`comm-${i}`} className="flex items-start gap-3 p-3 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-lg border border-indigo-200">
                                         <Brain className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.subject || item.title || item.optimizedMessage || item.message || JSON.stringify(item).slice(0, 120)}</p>
+                                            <p className="text-sm font-medium text-gray-900">{item.subject || item.title || item.optimizedMessage || item.message || formatAIResponse(item, 120)}</p>
                                             {(item.content || item.description || item.body) && <p className="text-xs text-gray-600 mt-1">{(item.content || item.description || item.body || '').slice(0, 200)}</p>}
                                             {item.channel && <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{item.channel}</span>}
                                             {item.reasoning && <p className="text-xs text-gray-400 mt-1 italic">{item.reasoning}</p>}

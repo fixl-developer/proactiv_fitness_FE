@@ -1,21 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Shield, Activity, Database, AlertTriangle, User, Clock,
-    Search, Filter, Download, RefreshCw, Eye, Calendar
+    Search, Filter, Download, RefreshCw, Eye, Calendar, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { responsiveClasses } from '@/lib/responsiveClasses'
+import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 const AuditLogsPage = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('all')
     const [dateRange, setDateRange] = useState('7days')
+    const [loading, setLoading] = useState(true)
+    const [auditLogsData, setAuditLogsData] = useState<any[]>([])
+
+    const loadAuditLogs = useCallback(async () => {
+        setLoading(true)
+        try {
+            const params: Record<string, string> = {}
+            if (selectedCategory !== 'all') params.action = selectedCategory.toUpperCase()
+            if (searchTerm) params.search = searchTerm
+            const response = await apiClient.get<any>('/audit/logs', { params })
+            const logs = response?.data || response || []
+            setAuditLogsData(Array.isArray(logs) ? logs : [])
+        } catch (error) {
+            console.error('Failed to load audit logs:', error)
+            setAuditLogsData([])
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedCategory, searchTerm])
+
+    useEffect(() => {
+        loadAuditLogs()
+    }, [loadAuditLogs])
 
     // Audit categories
     const auditCategories = [

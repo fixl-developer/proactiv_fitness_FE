@@ -176,12 +176,33 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
     const [userName, setUserName] = useState('Admin User')
     const [userEmail, setUserEmail] = useState('admin@proactiv.com')
+    const [isMobile, setIsMobile] = useState(false)
 
-    const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
+    const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED)
+
+    // Detect mobile
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024)
+            if (window.innerWidth < 1024) {
+                setSidebarCollapsed(false)
+                setMobileMenuOpen(false)
+            }
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Close mobile menu on navigation
+    useEffect(() => {
+        setMobileMenuOpen(false)
+    }, [pathname])
 
     // Load user data from localStorage
     useEffect(() => {
@@ -241,10 +262,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-            {/* Sidebar - Fixed Position */}
+            {/* Mobile Overlay */}
+            {isMobile && mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Sidebar - Fixed Position / Mobile Drawer */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
-                style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${
+                    isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : ''
+                }`}
+                style={{ width: isMobile ? '280px' : `${sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
                 <div className="p-4 border-b border-gray-200/50">
@@ -439,36 +470,36 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: isMobile ? 0 : `${sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED}px` }}>
                 {/* Header - Fixed Position */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
-                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                    className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
+                    style={{ left: isMobile ? 0 : `${sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED}px`, right: 0 }}
                 >
-                    <div className="flex items-center justify-between px-6 py-4">
-                        <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
+                        <div className="flex items-center space-x-3 md:space-x-4">
                             <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                onClick={() => isMobile ? setMobileMenuOpen(!mobileMenuOpen) : setSidebarCollapsed(!sidebarCollapsed)}
                                 className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                                title={isMobile ? 'Toggle menu' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
                             >
                                 <Menu className="w-5 h-5 text-gray-600" />
                             </button>
                             <div>
-                                <h1 className="text-xl font-semibold text-gray-900">
+                                <h1 className="text-lg md:text-xl font-semibold text-gray-900">
                                     Admin Dashboard
                                 </h1>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">
                                     Welcome back, {userName}!
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2 md:space-x-3">
                             <NotificationBell />
-                            <Button id="admin-layout-btn-7" variant="outline" size="sm">
+                            <Button id="admin-layout-btn-7" variant="outline" size="sm" className="hidden sm:flex">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </Button>
@@ -477,7 +508,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-6 min-h-screen">
+                <main className="pt-16 md:pt-20 p-3 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

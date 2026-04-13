@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 // Parent Engagement Types
 export interface ProgressVideo {
@@ -112,23 +110,23 @@ export interface CommunicationPreference {
 class ParentEngagementService {
     // Progress Videos
     async getProgressVideos(childId: string, period?: string): Promise<ProgressVideo[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/videos`, {
+        const response = await apiClient.get(`/parent-engagement/videos`, {
             params: { childId, period }
         });
-        return response.data;
+        return response;
     }
 
     async generateProgressVideo(childId: string, period: string): Promise<ProgressVideo> {
-        const response = await axios.post(`${API_URL}/parent-engagement/videos/generate`, {
+        const response = await apiClient.post(`/parent-engagement/videos/generate`, {
             childId,
             period
         });
-        return response.data;
+        return response;
     }
 
     async sendVideoToParents(videoId: string): Promise<{ success: boolean; message: string }> {
-        const response = await axios.post(`${API_URL}/parent-engagement/videos/${videoId}/send`);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/videos/${videoId}/send`);
+        return response;
     }
 
     // Photo Sharing
@@ -138,33 +136,33 @@ class ParentEngagementService {
         photoUrls: string[];
         parentIds: string[];
     }): Promise<PhotoShare> {
-        const response = await axios.post(`${API_URL}/parent-engagement/photos/share`, data);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/photos/share`, data);
+        return response;
     }
 
     async getSharedPhotos(childId: string): Promise<PhotoShare[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/photos`, {
+        const response = await apiClient.get(`/parent-engagement/photos`, {
             params: { childId }
         });
-        return response.data;
+        return response;
     }
 
     // Milestones
     async getMilestones(childId: string): Promise<Milestone[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/milestones`, {
+        const response = await apiClient.get(`/parent-engagement/milestones`, {
             params: { childId }
         });
-        return response.data;
+        return response;
     }
 
     async createMilestone(data: Partial<Milestone>): Promise<Milestone> {
-        const response = await axios.post(`${API_URL}/parent-engagement/milestones`, data);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/milestones`, data);
+        return response;
     }
 
     async celebrateMilestone(id: string): Promise<{ success: boolean; message: string }> {
-        const response = await axios.post(`${API_URL}/parent-engagement/milestones/${id}/celebrate`);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/milestones/${id}/celebrate`);
+        return response;
     }
 
     // Parent Education
@@ -173,24 +171,24 @@ class ParentEngagementService {
         contentType?: string;
         targetAgeGroup?: string;
     }): Promise<ParentEducation[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/education`, {
+        const response = await apiClient.get(`/parent-engagement/education`, {
             params: filters
         });
-        return response.data;
+        return response;
     }
 
     async getEducationById(id: string): Promise<ParentEducation> {
-        const response = await axios.get(`${API_URL}/parent-engagement/education/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/parent-engagement/education/${id}`);
+        return response;
     }
 
     async trackEducationView(id: string): Promise<void> {
-        await axios.post(`${API_URL}/parent-engagement/education/${id}/view`);
+        await apiClient.post(`/parent-engagement/education/${id}/view`);
     }
 
     async likeEducationContent(id: string): Promise<ParentEducation> {
-        const response = await axios.post(`${API_URL}/parent-engagement/education/${id}/like`);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/education/${id}/like`);
+        return response;
     }
 
     // Parent Workshops
@@ -199,57 +197,57 @@ class ParentEngagementService {
         status?: string;
         locationId?: string;
     }): Promise<ParentWorkshop[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/workshops`, {
+        const response = await apiClient.get(`/parent-engagement/workshops`, {
             params: filters
         });
-        return response.data;
+        return response;
     }
 
     async registerForWorkshop(workshopId: string, parentId: string): Promise<{
         success: boolean;
         message: string;
     }> {
-        const response = await axios.post(
-            `${API_URL}/parent-engagement/workshops/${workshopId}/register`,
+        const response = await apiClient.post(
+            `/parent-engagement/workshops/${workshopId}/register`,
             { parentId }
         );
-        return response.data;
+        return response;
     }
 
     async cancelWorkshopRegistration(workshopId: string, parentId: string): Promise<void> {
-        await axios.post(`${API_URL}/parent-engagement/workshops/${workshopId}/cancel`, {
+        await apiClient.post(`/parent-engagement/workshops/${workshopId}/cancel`, {
             parentId
         });
     }
 
     // Feedback
     async submitFeedback(data: Partial<ParentFeedback>): Promise<ParentFeedback> {
-        const response = await axios.post(`${API_URL}/parent-engagement/feedback`, data);
-        return response.data;
+        const response = await apiClient.post(`/parent-engagement/feedback`, data);
+        return response;
     }
 
     async getFeedback(parentId: string): Promise<ParentFeedback[]> {
-        const response = await axios.get(`${API_URL}/parent-engagement/feedback`, {
+        const response = await apiClient.get(`/parent-engagement/feedback`, {
             params: { parentId }
         });
-        return response.data;
+        return response;
     }
 
     // Communication Preferences
     async getPreferences(parentId: string): Promise<CommunicationPreference> {
-        const response = await axios.get(`${API_URL}/parent-engagement/preferences/${parentId}`);
-        return response.data;
+        const response = await apiClient.get(`/parent-engagement/preferences/${parentId}`);
+        return response;
     }
 
     async updatePreferences(
         parentId: string,
         data: Partial<CommunicationPreference>
     ): Promise<CommunicationPreference> {
-        const response = await axios.put(
-            `${API_URL}/parent-engagement/preferences/${parentId}`,
+        const response = await apiClient.put(
+            `/parent-engagement/preferences/${parentId}`,
             data
         );
-        return response.data;
+        return response;
     }
 }
 

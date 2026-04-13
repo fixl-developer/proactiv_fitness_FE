@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Partner {
     partnerId?: string;
@@ -22,45 +20,45 @@ export interface Partner {
 
 class PartnersService {
     async createPartner(data: Partner) {
-        const response = await axios.post(`${API_URL}/partners`, data);
-        return response.data;
+        const response = await apiClient.post(`/partners`, data);
+        return response;
     }
 
     async getPartner(partnerId: string) {
-        const response = await axios.get(`${API_URL}/partners/${partnerId}`);
-        return response.data;
+        const response = await apiClient.get(`/partners/${partnerId}`);
+        return response;
     }
 
     async listPartners(tenantId: string, type?: string) {
-        const response = await axios.get(`${API_URL}/partners`, {
+        const response = await apiClient.get(`/partners`, {
             params: { tenantId, type },
         });
-        return response.data;
+        return response;
     }
 
     async updatePartner(partnerId: string, updates: Partial<Partner>) {
-        const response = await axios.put(`${API_URL}/partners/${partnerId}`, updates);
-        return response.data;
+        const response = await apiClient.put(`/partners/${partnerId}`, updates);
+        return response;
     }
 
     async bulkImportStudents(partnerId: string, studentIds: string[]) {
-        const response = await axios.post(`${API_URL}/partners/${partnerId}/students/bulk`, {
+        const response = await apiClient.post(`/partners/${partnerId}/students/bulk`, {
             studentIds,
         });
-        return response.data;
+        return response;
     }
 
     async getPerformanceMetrics(partnerId: string) {
-        const response = await axios.get(`${API_URL}/partners/${partnerId}/metrics`);
-        return response.data;
+        const response = await apiClient.get(`/partners/${partnerId}/metrics`);
+        return response;
     }
 
     async generateReport(partnerId: string, startDate: string, endDate: string) {
-        const response = await axios.get(`${API_URL}/partners/${partnerId}/report`, {
+        const response = await apiClient.get(`/partners/${partnerId}/report`, {
             params: { startDate, endDate },
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import StepIndicator from './StepIndicator';
 import SelectProgram from './steps/SelectProgram';
@@ -9,6 +9,7 @@ import SelectLocation from './steps/SelectLocation';
 import SelectDateTime from './steps/SelectDateTime';
 import ParentDetails from './steps/ParentDetails';
 import ReviewConfirm from './steps/ReviewConfirm';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BookingFlowProps {
     onComplete: (data: any) => void;
@@ -16,6 +17,7 @@ interface BookingFlowProps {
 }
 
 export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
+    const { user, isAuthenticated } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [bookingData, setBookingData] = useState({
         program: '',
@@ -29,6 +31,17 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
         parentEmail: '',
         parentPhone: ''
     });
+
+    // Auto-fill parent details from logged-in user
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            setBookingData(prev => ({
+                ...prev,
+                parentName: prev.parentName || user.name || '',
+                parentEmail: prev.parentEmail || user.email || '',
+            }));
+        }
+    }, [isAuthenticated, user]);
 
     const totalSteps = 6;
     const stepTitles = [

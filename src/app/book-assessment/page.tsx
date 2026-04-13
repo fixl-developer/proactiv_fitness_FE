@@ -38,7 +38,7 @@ function BookAssessmentContent() {
     const handleBookAssessment = (assessmentId: string) => {
         // Check authentication when user tries to book
         if (!isAuthenticated) {
-            router.push('/login')
+            router.push(`/login?redirectTo=${encodeURIComponent('/book-assessment')}`)
             return
         }
 

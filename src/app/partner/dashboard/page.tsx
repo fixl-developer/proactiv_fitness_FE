@@ -20,6 +20,7 @@ import {
 import { apiClient } from '@/services/api/client'
 import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { revenueIntelligenceService, globalIntelligenceService } from '@/services/advancedAIServices'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -920,14 +921,14 @@ function PartnerAIExtended() {
                 <button onClick={() => callAI('marketing', () => apiClient.post('/ai-content-engine/generate-social-post', { topic: 'partner promotions' }))} disabled={loading === 'marketing'} className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium text-indigo-700 w-full">
                     {loading === 'marketing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Generate Partner Marketing
                 </button>
-                {results.marketing && <div className="p-3 bg-indigo-50 rounded-lg text-xs"><p className="font-medium text-indigo-700 mb-1">Generated Content:</p><p>{results.marketing?.content || results.marketing?.post || results.marketing?.message || JSON.stringify(results.marketing).slice(0, 200)}</p></div>}
+                {results.marketing && <div className="p-3 bg-indigo-50 rounded-lg text-xs"><p className="font-medium text-indigo-700 mb-1">Generated Content:</p><p>{results.marketing?.content || results.marketing?.post || results.marketing?.message || formatAIResponse(results.marketing, 200)}</p></div>}
             </div>
             <div className="space-y-3">
                 <h4 className="font-semibold text-sm flex items-center gap-2"><Send className="w-4 h-4 text-rose-600" /> AI Communication</h4>
                 <button onClick={() => callAI('campaign', () => apiClient.post('/ai-communication/predict-campaign', { type: 'partner-referral' }))} disabled={loading === 'campaign'} className="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 w-full">
                     {loading === 'campaign' ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />} Predict Campaign Performance
                 </button>
-                {results.campaign && <div className="p-3 bg-rose-50 rounded-lg text-xs"><p className="font-medium text-rose-700 mb-1">Prediction:</p><p>{results.campaign?.predictedOpenRate ? `Open: ${results.campaign.predictedOpenRate}, Click: ${results.campaign.predictedClickRate}` : results.campaign?.message || JSON.stringify(results.campaign).slice(0, 150)}</p></div>}
+                {results.campaign && <div className="p-3 bg-rose-50 rounded-lg text-xs"><p className="font-medium text-rose-700 mb-1">Prediction:</p><p>{results.campaign?.predictedOpenRate ? `Open: ${results.campaign.predictedOpenRate}, Click: ${results.campaign.predictedClickRate}` : results.campaign?.message || formatAIResponse(results.campaign, 150)}</p></div>}
             </div>
         </div>
     )

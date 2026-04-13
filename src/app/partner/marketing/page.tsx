@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { contentEngineService } from '@/services/advancedAIServices'
@@ -301,7 +302,7 @@ export default function PartnerMarketingPage() {
                                         <Sparkles className="w-4 h-4 text-indigo-600" />
                                         <span className="text-xs font-semibold text-indigo-700 uppercase">AI Social Post</span>
                                     </div>
-                                    <p className="text-sm text-gray-800">{aiContent.social.content || aiContent.social.body || aiContent.social.post || JSON.stringify(aiContent.social).slice(0, 200)}</p>
+                                    <p className="text-sm text-gray-800">{aiContent.social.content || aiContent.social.body || aiContent.social.post || formatAIResponse(aiContent.social, 200)}</p>
                                     {aiContent.social.hashtags && (
                                         <div className="flex flex-wrap gap-1 mt-2">
                                             {(Array.isArray(aiContent.social.hashtags) ? aiContent.social.hashtags : []).map((tag: string, i: number) => (

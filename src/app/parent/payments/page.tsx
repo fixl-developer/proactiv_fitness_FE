@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 const ParentPaymentsPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -46,8 +47,9 @@ const ParentPaymentsPage = () => {
             setIsLoading(true)
             setError(null)
 
-            const response = await apiClient.get(`/parent/payments?status=${selectedFilter}`)
-            const { stats, payments: paymentsList } = response.data
+            const response = await apiClient.get<any>(`/parent/payments?status=${selectedFilter}`)
+            const paymentData = response?.data || response
+            const { stats, payments: paymentsList } = paymentData
 
             setPaymentStats({
                 totalSpent: stats?.totalSpent || 0,
@@ -108,10 +110,10 @@ const ParentPaymentsPage = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Payments & Billing</h1>
-                    <p className="text-gray-600 mt-2">Manage your payments and view transaction history</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Payments & Billing</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-2">Manage your payments and view transaction history</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button id="parent-payments-refresh-btn" variant="outline" size="sm" onClick={() => loadPayments()}>
@@ -197,10 +199,10 @@ const ParentPaymentsPage = () => {
             {/* Payment History */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Payment History</CardTitle>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <CardTitle className="text-base md:text-lg">Payment History</CardTitle>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
+                            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
                                 {[
                                     { key: 'all', label: 'All' },
                                     { key: 'completed', label: 'Completed' },

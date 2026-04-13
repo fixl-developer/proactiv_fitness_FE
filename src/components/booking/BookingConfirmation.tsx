@@ -1,6 +1,8 @@
 'use client';
 
 import { CheckCircle, Calendar, MapPin, Clock, Mail, Phone, ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 interface BookingConfirmationProps {
     bookingData: any;
@@ -8,6 +10,9 @@ interface BookingConfirmationProps {
 }
 
 export default function BookingConfirmation({ bookingData, onBackToStart }: BookingConfirmationProps) {
+    const { role } = useAuth();
+    const dashboardUrl = role?.toUpperCase() === 'PARENT' ? '/parent/bookings' : '/user/bookings';
+
     const programNames: { [key: string]: string } = {
         'gymnastics': 'Gymnastics',
         'multi-sports': 'Multi-Sports',
@@ -208,6 +213,14 @@ export default function BookingConfirmation({ bookingData, onBackToStart }: Book
                         <ArrowLeft className="w-4 h-4" />
                         Book Another Assessment
                     </button>
+
+                    <Link
+                        href={dashboardUrl}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all"
+                    >
+                        <CheckCircle className="w-4 h-4" />
+                        View My Bookings
+                    </Link>
 
                     <button id="booking-booking-confirmation-btn-add-to-calendar" className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
                         Add to Calendar

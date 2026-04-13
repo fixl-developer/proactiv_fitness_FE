@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 // Observability Types
 export interface Log {
@@ -104,21 +102,21 @@ class ObservabilityService {
         endDate?: Date;
         limit?: number;
     }): Promise<Log[]> {
-        const response = await axios.get(`${API_URL}/observability/logs`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/observability/logs`, { params: filters });
+        return response;
     }
 
     async createLog(data: Partial<Log>): Promise<Log> {
-        const response = await axios.post(`${API_URL}/observability/logs`, data);
-        return response.data;
+        const response = await apiClient.post(`/observability/logs`, data);
+        return response;
     }
 
     async searchLogs(query: string, filters?: any): Promise<Log[]> {
-        const response = await axios.post(`${API_URL}/observability/logs/search`, {
+        const response = await apiClient.post(`/observability/logs/search`, {
             query,
             ...filters
         });
-        return response.data;
+        return response;
     }
 
     // Tracing
@@ -130,18 +128,18 @@ class ObservabilityService {
         endDate?: Date;
         limit?: number;
     }): Promise<Trace[]> {
-        const response = await axios.get(`${API_URL}/observability/traces`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/observability/traces`, { params: filters });
+        return response;
     }
 
     async getTraceById(traceId: string): Promise<Trace> {
-        const response = await axios.get(`${API_URL}/observability/traces/${traceId}`);
-        return response.data;
+        const response = await apiClient.get(`/observability/traces/${traceId}`);
+        return response;
     }
 
     async createTrace(data: Partial<Trace>): Promise<Trace> {
-        const response = await axios.post(`${API_URL}/observability/traces`, data);
-        return response.data;
+        const response = await apiClient.post(`/observability/traces`, data);
+        return response;
     }
 
     // Metrics
@@ -151,20 +149,20 @@ class ObservabilityService {
         startDate?: Date;
         endDate?: Date;
     }): Promise<Metric[]> {
-        const response = await axios.get(`${API_URL}/observability/metrics`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/observability/metrics`, { params: filters });
+        return response;
     }
 
     async recordMetric(data: Partial<Metric>): Promise<Metric> {
-        const response = await axios.post(`${API_URL}/observability/metrics`, data);
-        return response.data;
+        const response = await apiClient.post(`/observability/metrics`, data);
+        return response;
     }
 
     async getMetricStats(name: string, period: string = '1h'): Promise<MetricStats> {
-        const response = await axios.get(`${API_URL}/observability/metrics/${name}/stats`, {
+        const response = await apiClient.get(`/observability/metrics/${name}/stats`, {
             params: { period }
         });
-        return response.data;
+        return response;
     }
 
     // Alerts
@@ -174,28 +172,28 @@ class ObservabilityService {
         startDate?: Date;
         endDate?: Date;
     }): Promise<Alert[]> {
-        const response = await axios.get(`${API_URL}/observability/alerts`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/observability/alerts`, { params: filters });
+        return response;
     }
 
     async createAlert(data: Partial<Alert>): Promise<Alert> {
-        const response = await axios.post(`${API_URL}/observability/alerts`, data);
-        return response.data;
+        const response = await apiClient.post(`/observability/alerts`, data);
+        return response;
     }
 
     async acknowledgeAlert(id: string, userId: string): Promise<Alert> {
-        const response = await axios.post(`${API_URL}/observability/alerts/${id}/acknowledge`, {
+        const response = await apiClient.post(`/observability/alerts/${id}/acknowledge`, {
             userId
         });
-        return response.data;
+        return response;
     }
 
     async resolveAlert(id: string, userId: string, resolution?: string): Promise<Alert> {
-        const response = await axios.post(`${API_URL}/observability/alerts/${id}/resolve`, {
+        const response = await apiClient.post(`/observability/alerts/${id}/resolve`, {
             userId,
             resolution
         });
-        return response.data;
+        return response;
     }
 
     // Security Events
@@ -207,29 +205,29 @@ class ObservabilityService {
         endDate?: Date;
         limit?: number;
     }): Promise<SecurityEvent[]> {
-        const response = await axios.get(`${API_URL}/observability/security-events`, {
+        const response = await apiClient.get(`/observability/security-events`, {
             params: filters
         });
-        return response.data;
+        return response;
     }
 
     async createSecurityEvent(data: Partial<SecurityEvent>): Promise<SecurityEvent> {
-        const response = await axios.post(`${API_URL}/observability/security-events`, data);
-        return response.data;
+        const response = await apiClient.post(`/observability/security-events`, data);
+        return response;
     }
 
     // Service Health
     async getServiceHealth(service?: string): Promise<ServiceHealth | ServiceHealth[]> {
         const url = service
-            ? `${API_URL}/observability/health/${service}`
-            : `${API_URL}/observability/health`;
-        const response = await axios.get(url);
-        return response.data;
+            ? `/observability/health/${service}`
+            : `/observability/health`;
+        const response = await apiClient.get(url);
+        return response;
     }
 
     async checkServiceHealth(service: string): Promise<ServiceHealth> {
-        const response = await axios.post(`${API_URL}/observability/health/${service}/check`);
-        return response.data;
+        const response = await apiClient.post(`/observability/health/${service}/check`);
+        return response;
     }
 
     // Rate Limiting
@@ -238,8 +236,8 @@ class ObservabilityService {
         remaining: number;
         resetAt: Date;
     }> {
-        const response = await axios.get(`${API_URL}/observability/rate-limit/${type}/${identifier}`);
-        return response.data;
+        const response = await apiClient.get(`/observability/rate-limit/${type}/${identifier}`);
+        return response;
     }
 }
 

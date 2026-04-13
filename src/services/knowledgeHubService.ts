@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Document {
     documentId?: string;
@@ -20,20 +18,20 @@ export interface Document {
 
 class KnowledgeHubService {
     async createDocument(data: Document) {
-        const response = await axios.post(`${API_URL}/knowledge-hub/documents`, data);
-        return response.data;
+        const response = await apiClient.post(`/knowledge-hub/documents`, data);
+        return response;
     }
 
     async getDocument(documentId: string) {
-        const response = await axios.get(`${API_URL}/knowledge-hub/documents/${documentId}`);
-        return response.data;
+        const response = await apiClient.get(`/knowledge-hub/documents/${documentId}`);
+        return response;
     }
 
     async searchDocuments(query: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/knowledge-hub/search`, {
+        const response = await apiClient.get(`/knowledge-hub/search`, {
             params: { query, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async listDocuments(filters: {
@@ -42,32 +40,32 @@ class KnowledgeHubService {
         category?: string;
         status?: string;
     }) {
-        const response = await axios.get(`${API_URL}/knowledge-hub/documents`, {
+        const response = await apiClient.get(`/knowledge-hub/documents`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async updateDocument(documentId: string, updates: Partial<Document>) {
-        const response = await axios.put(`${API_URL}/knowledge-hub/documents/${documentId}`, updates);
-        return response.data;
+        const response = await apiClient.put(`/knowledge-hub/documents/${documentId}`, updates);
+        return response;
     }
 
     async approveDocument(documentId: string) {
-        const response = await axios.post(`${API_URL}/knowledge-hub/documents/${documentId}/approve`);
-        return response.data;
+        const response = await apiClient.post(`/knowledge-hub/documents/${documentId}/approve`);
+        return response;
     }
 
     async incrementViewCount(documentId: string) {
-        const response = await axios.post(`${API_URL}/knowledge-hub/documents/${documentId}/view`);
-        return response.data;
+        const response = await apiClient.post(`/knowledge-hub/documents/${documentId}/view`);
+        return response;
     }
 
     async downloadDocument(documentId: string) {
-        const response = await axios.get(`${API_URL}/knowledge-hub/documents/${documentId}/download`, {
+        const response = await apiClient.get(`/knowledge-hub/documents/${documentId}/download`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 }
 

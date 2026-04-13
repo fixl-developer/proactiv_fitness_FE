@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Skill {
     skillId: string;
@@ -62,58 +60,58 @@ export interface AthletePassport {
 
 class AthletePassportService {
     async getPassport(studentId: string) {
-        const response = await axios.get(`${API_URL}/athlete-passport/${studentId}`);
-        return response.data;
+        const response = await apiClient.get(`/athlete-passport/${studentId}`);
+        return response;
     }
 
     async createPassport(studentId: string, tenantId: string) {
-        const response = await axios.post(`${API_URL}/athlete-passport`, {
+        const response = await apiClient.post(`/athlete-passport`, {
             studentId,
             tenantId,
         });
-        return response.data;
+        return response;
     }
 
     async addSkill(studentId: string, skill: Omit<Skill, 'skillId'>) {
-        const response = await axios.post(`${API_URL}/athlete-passport/${studentId}/skills`, skill);
-        return response.data;
+        const response = await apiClient.post(`/athlete-passport/${studentId}/skills`, skill);
+        return response;
     }
 
     async addMilestone(studentId: string, milestone: Omit<Milestone, 'milestoneId'>) {
-        const response = await axios.post(`${API_URL}/athlete-passport/${studentId}/milestones`, milestone);
-        return response.data;
+        const response = await apiClient.post(`/athlete-passport/${studentId}/milestones`, milestone);
+        return response;
     }
 
     async updateAttendance(studentId: string, attended: boolean) {
-        const response = await axios.put(`${API_URL}/athlete-passport/${studentId}/attendance`, {
+        const response = await apiClient.put(`/athlete-passport/${studentId}/attendance`, {
             attended,
         });
-        return response.data;
+        return response;
     }
 
     async addBenchmark(studentId: string, benchmark: Omit<PerformanceBenchmark, 'benchmarkId'>) {
-        const response = await axios.post(`${API_URL}/athlete-passport/${studentId}/benchmarks`, benchmark);
-        return response.data;
+        const response = await apiClient.post(`/athlete-passport/${studentId}/benchmarks`, benchmark);
+        return response;
     }
 
     async addBehavioralTracking(studentId: string, data: {
         rating: number;
         notes?: string;
     }) {
-        const response = await axios.post(`${API_URL}/athlete-passport/${studentId}/behavior`, data);
-        return response.data;
+        const response = await apiClient.post(`/athlete-passport/${studentId}/behavior`, data);
+        return response;
     }
 
     async exportPassport(studentId: string) {
-        const response = await axios.get(`${API_URL}/athlete-passport/${studentId}/export`);
-        return response.data;
+        const response = await apiClient.get(`/athlete-passport/${studentId}/export`);
+        return response;
     }
 
     async downloadPassportPDF(studentId: string) {
-        const response = await axios.get(`${API_URL}/athlete-passport/${studentId}/export/pdf`, {
+        const response = await apiClient.get(`/athlete-passport/${studentId}/export/pdf`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 }
 

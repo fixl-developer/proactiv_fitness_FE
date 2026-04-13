@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface WearableDevice {
     deviceId?: string;
@@ -33,30 +31,30 @@ export interface HealthMetric {
 
 class WearablesService {
     async connectDevice(data: WearableDevice) {
-        const response = await axios.post(`${API_URL}/wearables/devices`, data);
-        return response.data;
+        const response = await apiClient.post(`/wearables/devices`, data);
+        return response;
     }
 
     async listDevices(studentId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/wearables/devices`, {
+        const response = await apiClient.get(`/wearables/devices`, {
             params: { studentId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async disconnectDevice(deviceId: string) {
-        const response = await axios.delete(`${API_URL}/wearables/devices/${deviceId}`);
-        return response.data;
+        const response = await apiClient.delete(`/wearables/devices/${deviceId}`);
+        return response;
     }
 
     async syncDevice(deviceId: string) {
-        const response = await axios.post(`${API_URL}/wearables/devices/${deviceId}/sync`);
-        return response.data;
+        const response = await apiClient.post(`/wearables/devices/${deviceId}/sync`);
+        return response;
     }
 
     async recordMetric(data: HealthMetric) {
-        const response = await axios.post(`${API_URL}/wearables/metrics`, data);
-        return response.data;
+        const response = await apiClient.post(`/wearables/metrics`, data);
+        return response;
     }
 
     async getMetrics(filters: {
@@ -67,33 +65,33 @@ class WearablesService {
         endDate?: string;
         limit?: number;
     }) {
-        const response = await axios.get(`${API_URL}/wearables/metrics`, {
+        const response = await apiClient.get(`/wearables/metrics`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async getAggregatedMetrics(studentId: string, tenantId: string, metricType: string, period: 'day' | 'week' | 'month') {
-        const response = await axios.get(`${API_URL}/wearables/metrics/aggregated`, {
+        const response = await apiClient.get(`/wearables/metrics/aggregated`, {
             params: { studentId, tenantId, metricType, period },
         });
-        return response.data;
+        return response;
     }
 
     async getRecoveryScore(studentId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/wearables/recovery-score`, {
+        const response = await apiClient.get(`/wearables/recovery-score`, {
             params: { studentId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async checkGeofence(studentId: string, latitude: number, longitude: number) {
-        const response = await axios.post(`${API_URL}/wearables/geofence/check`, {
+        const response = await apiClient.post(`/wearables/geofence/check`, {
             studentId,
             latitude,
             longitude,
         });
-        return response.data;
+        return response;
     }
 }
 

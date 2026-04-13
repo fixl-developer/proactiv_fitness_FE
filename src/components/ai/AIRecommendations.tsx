@@ -15,6 +15,7 @@ import {
 } from 'react-icons/fi'
 import { formatDateShort } from '@/utils/dateUtils'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 interface Recommendation {
     id: string
@@ -93,6 +94,7 @@ const AIRecommendations = ({
             }
         } catch (error) {
             console.error('Error generating recommendations:', error)
+            toast.error('Could not load AI recommendations. Showing defaults.')
             // Graceful fallback
             setRecommendations(getDefaultRecommendations({ childAge, experienceLevel, location }))
         } finally {

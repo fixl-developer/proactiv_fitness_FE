@@ -22,6 +22,7 @@ import {
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import aiCoachService from '@/services/aiCoachService'
 
 // ==================== MOCK DATA ====================
@@ -712,7 +713,7 @@ const CoachStudentsPage = () => {
                                                             {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).map((rec: string, i: number) => (
                                                                 <li key={i} className="text-xs text-purple-700 flex items-start gap-1.5">
                                                                     <Target className="w-3 h-3 mt-0.5 flex-shrink-0 text-purple-500" />
-                                                                    {typeof rec === 'string' ? rec : rec?.message || rec?.description || JSON.stringify(rec)}
+                                                                    {typeof rec === 'string' ? rec : rec?.message || rec?.description || rec?.title || formatAIResponse(rec)}
                                                                 </li>
                                                             ))}
                                                         </ul>

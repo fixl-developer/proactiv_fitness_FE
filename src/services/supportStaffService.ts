@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/api'
+import { apiClient } from '@/services/api/client'
 
 // Support Staff Dashboard Types
 export interface SupportDashboard {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Save, Plus, Trash2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
 
 export default function ContactInfoPage() {
@@ -38,10 +39,10 @@ export default function ContactInfoPage() {
         try {
             setSaving(true)
             await CMSAdminService.contactInfo.upsert(formData)
-            alert('Contact info saved successfully!')
+            toast.success('Contact info saved successfully!')
         } catch (error) {
             console.error('Save failed:', error)
-            alert('Failed to save')
+            toast.error('Failed to save contact info')
         } finally {
             setSaving(false)
         }

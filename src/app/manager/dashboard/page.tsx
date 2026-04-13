@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { smartSchedulerService, revenueIntelligenceService } from '@/services/advancedAIServices'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 
 const ManagerDashboard = () => {
     const { isAuthenticated } = useAuth()
@@ -27,6 +28,10 @@ const ManagerDashboard = () => {
     const [selectedTimeRange, setSelectedTimeRange] = useState<'today' | 'week' | 'month'>('today')
     const [aiData, setAiData] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [scheduleInsights, setScheduleInsights] = useState<any>(null)
+    const [scheduleLoading, setScheduleLoading] = useState(false)
+    const [aiToolLoading, setAiToolLoading] = useState<string | null>(null)
+    const [aiToolResults, setAiToolResults] = useState<Record<string, any>>({})
 
     const loadAiInsights = async () => {
         setAiLoading(true)
@@ -37,39 +42,97 @@ const ManagerDashboard = () => {
         finally { setAiLoading(false) }
     }
 
-    useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
-        setTimeout(() => setIsLoading(false), 1000)
-        loadAiInsights()
-    }, [isAuthenticated, router])
+    const loadScheduleInsights = async () => {
+        setScheduleLoading(true)
+        try {
+            const res = await smartSchedulerService.predictAttendance({ locationId: assignedLocation.id })
+            setScheduleInsights(res)
+        } catch { setScheduleInsights(null) }
+        finally { setScheduleLoading(false) }
+    }
 
-    // Manager's assigned location (single location only)
-    const assignedLocation = {
+    const runAITool = async (key: string, fn: () => Promise<any>) => {
+        setAiToolLoading(key)
+        try {
+            const res = await fn()
+            setAiToolResults(prev => ({ ...prev, [key]: { data: res?.data || res } }))
+        } catch {
+            setAiToolResults(prev => ({ ...prev, [key]: { data: { message: 'AI service temporarily unavailable. Please try again.' } } }))
+        } finally { setAiToolLoading(null) }
+    }
+
+    const [assignedLocation, setAssignedLocation] = useState({
         id: 'cyberport',
         name: 'ProGym Cyberport',
         address: 'Shop 3-4, G/F, The Arcade, 100 Cyberport Road',
         manager: 'Lisa Zhang',
         phone: '+852 2234 5678',
         operatingHours: '9:00 AM - 9:00 PM'
-    }
+    })
 
-    // Location-scoped KPIs (ONLY this location)
-    const locationStats = {
-        activeStudents: 280,
-        todaysClasses: 12,
-        attendanceRate: 87.5,
-        pendingAssessments: 8,
-        conversionRate: 72.5,
-        underfilledClasses: 3,
-        coachAvailability: 5, // out of 6 coaches
-        totalCoaches: 6,
-        todayRevenue: 1800,
+    const [locationStats, setLocationStats] = useState({
+        activeStudents: 0,
+        todaysClasses: 0,
+        attendanceRate: 0,
+        pendingAssessments: 0,
+        conversionRate: 0,
+        underfilledClasses: 0,
+        coachAvailability: 0,
+        totalCoaches: 0,
+        todayRevenue: 0,
         weeklyTarget: 12000,
         monthlyTarget: 48000
+    })
+
+    const loadDashboardData = async () => {
+        try {
+            const response = await apiClient.get('/manager/dashboard')
+            if (response.success && response.data) {
+                const d = response.data
+                if (d.location) setAssignedLocation(prev => ({ ...prev, ...d.location }))
+                setLocationStats(prev => ({
+                    ...prev,
+                    activeStudents: d.activeStudents ?? prev.activeStudents,
+                    todaysClasses: d.todaysClasses ?? prev.todaysClasses,
+                    attendanceRate: d.attendanceRate ?? prev.attendanceRate,
+                    pendingAssessments: d.pendingAssessments ?? prev.pendingAssessments,
+                    conversionRate: d.conversionRate ?? prev.conversionRate,
+                    underfilledClasses: d.underfilledClasses ?? prev.underfilledClasses,
+                    coachAvailability: d.coachAvailability ?? prev.coachAvailability,
+                    totalCoaches: d.totalCoaches ?? prev.totalCoaches,
+                    todayRevenue: d.todayRevenue ?? prev.todayRevenue,
+                }))
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data:', error)
+            // Use fallback defaults
+            setLocationStats({
+                activeStudents: 280,
+                todaysClasses: 12,
+                attendanceRate: 87.5,
+                pendingAssessments: 8,
+                conversionRate: 72.5,
+                underfilledClasses: 3,
+                coachAvailability: 5,
+                totalCoaches: 6,
+                todayRevenue: 1800,
+                weeklyTarget: 12000,
+                monthlyTarget: 48000
+            })
+        } finally {
+            setIsLoading(false)
+        }
     }
+
+    useEffect(() => {
+        if (!isAuthenticated && !localStorage.getItem('token')) {
+            router.push('/login')
+            return
+        }
+        loadDashboardData()
+        loadAiInsights()
+        loadScheduleInsights()
+    }, [isAuthenticated, router])
 
     // Today's Action Panel - Auto-generated tasks
     const todaysActions = [
@@ -234,7 +297,11 @@ const ManagerDashboard = () => {
                         <span className="text-xs sm:text-sm font-medium text-green-700">Live Data</span>
                     </div>
 
-                    <Button id="manager-dashboard-refresh-btn" variant="outline" size="sm" onClick={() => setRefreshing(true)} disabled={refreshing}>
+                    <Button id="manager-dashboard-refresh-btn" variant="outline" size="sm" onClick={async () => {
+                        setRefreshing(true)
+                        await loadDashboardData()
+                        setRefreshing(false)
+                    }} disabled={refreshing}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
@@ -546,13 +613,14 @@ const ManagerDashboard = () => {
                 </Card>
             </div>
 
-            {/* AI Insights */}
-            <div className="mt-6">
+            {/* AI Insights & Tools */}
+            <div className="mt-6 space-y-6">
+                {/* Revenue Intelligence Insights */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Brain className="w-5 h-5 text-purple-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">AI Insights</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">AI Revenue Insights</h3>
                             <span className="bg-purple-100 text-purple-700 text-xs font-medium px-2 py-0.5 rounded-full">AI Powered</span>
                         </div>
                         <button onClick={loadAiInsights} disabled={aiLoading} className="text-gray-400 hover:text-gray-600">
@@ -563,7 +631,7 @@ const ManagerDashboard = () => {
                         {aiLoading ? (
                             <div className="flex items-center justify-center py-6 gap-2">
                                 <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-                                <p className="text-sm text-gray-500">Analyzing data with AI...</p>
+                                <p className="text-sm text-gray-500">Analyzing revenue data with AI...</p>
                             </div>
                         ) : aiData ? (
                             <div className="space-y-3">
@@ -571,9 +639,10 @@ const ManagerDashboard = () => {
                                     <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                                         <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || JSON.stringify(item).slice(0, 100)}</p>
+                                            <p className="text-sm font-medium text-gray-900">{item.title || item.recommendation || item.name || item.suggestion || formatAIResponse(item, 150)}</p>
                                             {item.description && <p className="text-xs text-gray-600 mt-0.5">{item.description}</p>}
-                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
+                                            {item.impact && <p className="text-xs text-green-600 mt-0.5">Impact: {item.impact}</p>}
+                                            {item.priority && <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${item.priority === 'high' ? 'bg-red-100 text-red-700' : item.priority === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{item.priority}</span>}
                                         </div>
                                     </div>
                                 ))}
@@ -581,9 +650,180 @@ const ManagerDashboard = () => {
                         ) : (
                             <div className="text-center py-6">
                                 <Brain className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500">Click refresh to generate AI insights</p>
+                                <p className="text-sm text-gray-500">Click refresh to generate AI revenue insights</p>
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Smart Schedule Predictions */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI Schedule Optimizer</h3>
+                            <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full">Smart</span>
+                        </div>
+                        <button onClick={loadScheduleInsights} disabled={scheduleLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${scheduleLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {scheduleLoading ? (
+                            <div className="flex items-center justify-center py-6 gap-2">
+                                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                <p className="text-sm text-gray-500">Predicting attendance patterns...</p>
+                            </div>
+                        ) : scheduleInsights ? (
+                            <div className="space-y-3">
+                                {scheduleInsights.predictions ? (
+                                    (Array.isArray(scheduleInsights.predictions) ? scheduleInsights.predictions : [scheduleInsights.predictions]).slice(0, 4).map((pred: any, i: number) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                                            <div className="flex items-center gap-3">
+                                                <Calendar className="w-4 h-4 text-blue-600" />
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{pred.className || pred.timeSlot || pred.day || formatAIResponse(pred, 60)}</p>
+                                                    {pred.predictedAttendance && <p className="text-xs text-gray-600">Predicted: {pred.predictedAttendance} students</p>}
+                                                </div>
+                                            </div>
+                                            {pred.confidence && (
+                                                <span className="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                                                    {typeof pred.confidence === 'number' && pred.confidence <= 1 ? `${Math.round(pred.confidence * 100)}%` : pred.confidence} confidence
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                        <p className="text-sm text-gray-700">{formatAIResponse(scheduleInsights, 200)}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">Click refresh to get AI schedule predictions</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* AI Tools Hub */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-amber-600" />
+                            <h3 className="text-lg font-semibold text-gray-900">AI & Automation Hub</h3>
+                            <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full">Tools</span>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Content Engine */}
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-sm flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-600" /> AI Content Engine
+                                </h4>
+                                <button
+                                    onClick={() => runAITool('promo', () => apiClient.post('/ai-content-engine/generate-social-post', { topic: `${assignedLocation.name} promotions` }))}
+                                    disabled={aiToolLoading === 'promo'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium text-indigo-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'promo' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    Generate Location Promo
+                                </button>
+                                <button
+                                    onClick={() => runAITool('email', () => apiClient.post('/ai-content-engine/generate-email', { type: 'follow-up', audience: 'parents' }))}
+                                    disabled={aiToolLoading === 'email'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium text-indigo-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'email' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+                                    Generate Parent Email
+                                </button>
+                                {aiToolResults.promo && (
+                                    <div className="p-3 bg-indigo-50 rounded-lg text-xs">
+                                        <p className="font-medium text-indigo-700 mb-1">Generated Promo:</p>
+                                        <p className="text-gray-700">{aiToolResults.promo.data?.content || aiToolResults.promo.data?.post || aiToolResults.promo.data?.title || formatAIResponse(aiToolResults.promo.data, 200)}</p>
+                                    </div>
+                                )}
+                                {aiToolResults.email && (
+                                    <div className="p-3 bg-indigo-50 rounded-lg text-xs">
+                                        <p className="font-medium text-indigo-700 mb-1">Generated Email:</p>
+                                        <p className="text-gray-700">{aiToolResults.email.data?.content || aiToolResults.email.data?.subject || formatAIResponse(aiToolResults.email.data, 200)}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Workflow Orchestrator */}
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-sm flex items-center gap-2">
+                                    <Target className="w-4 h-4 text-amber-600" /> Workflow Automation
+                                </h4>
+                                <button
+                                    onClick={() => runAITool('workflow', () => apiClient.post('/workflow-orchestrator/schedule-report', { type: 'daily', recipients: ['manager'] }))}
+                                    disabled={aiToolLoading === 'workflow'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-medium text-amber-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'workflow' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Target className="w-3 h-3" />}
+                                    Schedule Daily Report
+                                </button>
+                                <button
+                                    onClick={() => runAITool('wfHealth', () => apiClient.get('/workflow-orchestrator/health/default'))}
+                                    disabled={aiToolLoading === 'wfHealth'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-medium text-amber-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'wfHealth' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                    Check Workflow Health
+                                </button>
+                                {aiToolResults.workflow && (
+                                    <div className="p-3 bg-amber-50 rounded-lg text-xs">
+                                        <p className="font-medium text-amber-700 mb-1">Report Scheduled:</p>
+                                        <p className="text-gray-700">{aiToolResults.workflow.data?.message || aiToolResults.workflow.data?.status || formatAIResponse(aiToolResults.workflow.data, 150)}</p>
+                                    </div>
+                                )}
+                                {aiToolResults.wfHealth && (
+                                    <div className="p-3 bg-amber-50 rounded-lg text-xs">
+                                        <p className="font-medium text-amber-700 mb-1">Workflow Health:</p>
+                                        <p className="text-gray-700">{aiToolResults.wfHealth.data?.status || aiToolResults.wfHealth.data?.message || formatAIResponse(aiToolResults.wfHealth.data, 150)}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* AI Communication */}
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-sm flex items-center gap-2">
+                                    <Bell className="w-4 h-4 text-rose-600" /> AI Communication
+                                </h4>
+                                <button
+                                    onClick={() => runAITool('timing', () => apiClient.post('/ai-communication/best-time/general', { audience: 'parents', channel: 'sms' }))}
+                                    disabled={aiToolLoading === 'timing'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'timing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Calendar className="w-3 h-3" />}
+                                    Best Time to Contact
+                                </button>
+                                <button
+                                    onClick={() => runAITool('optimize', () => apiClient.post('/ai-communication/optimize-message', { message: 'Reminder: Your child class is tomorrow at 4 PM', channels: ['sms', 'email'] }))}
+                                    disabled={aiToolLoading === 'optimize'}
+                                    className="flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 w-full transition-colors"
+                                >
+                                    {aiToolLoading === 'optimize' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                    Optimize Message
+                                </button>
+                                {aiToolResults.timing && (
+                                    <div className="p-3 bg-rose-50 rounded-lg text-xs">
+                                        <p className="font-medium text-rose-700 mb-1">Best Contact Time:</p>
+                                        <p className="text-gray-700">{aiToolResults.timing.data?.bestTime || aiToolResults.timing.data?.recommendation || formatAIResponse(aiToolResults.timing.data, 150)}</p>
+                                    </div>
+                                )}
+                                {aiToolResults.optimize && (
+                                    <div className="p-3 bg-rose-50 rounded-lg text-xs">
+                                        <p className="font-medium text-rose-700 mb-1">Optimized Message:</p>
+                                        <p className="text-gray-700">{aiToolResults.optimize.data?.optimizedMessage || aiToolResults.optimize.data?.message || formatAIResponse(aiToolResults.optimize.data, 200)}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -124,7 +124,7 @@ class FinancialLedgerService {
      */
     async getLedgerEntryById(entryId: string): Promise<LedgerEntry> {
         const response = await apiClient.get(`${this.baseUrl}/entries/${entryId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -132,7 +132,7 @@ class FinancialLedgerService {
      */
     async createLedgerEntry(data: CreateLedgerEntryDto): Promise<LedgerEntry> {
         const response = await apiClient.post(`${this.baseUrl}/entries`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -140,7 +140,7 @@ class FinancialLedgerService {
      */
     async updateLedgerEntry(entryId: string, data: Partial<LedgerEntry>): Promise<LedgerEntry> {
         const response = await apiClient.put(`${this.baseUrl}/entries/${entryId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -155,7 +155,7 @@ class FinancialLedgerService {
      */
     async reconcileLedgerEntry(entryId: string): Promise<LedgerEntry> {
         const response = await apiClient.post(`${this.baseUrl}/entries/${entryId}/reconcile`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -163,7 +163,7 @@ class FinancialLedgerService {
      */
     async markDiscrepancy(entryId: string, notes: string): Promise<LedgerEntry> {
         const response = await apiClient.post(`${this.baseUrl}/entries/${entryId}/discrepancy`, { notes });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -171,7 +171,7 @@ class FinancialLedgerService {
      */
     async resolveDiscrepancy(entryId: string, resolution: string): Promise<LedgerEntry> {
         const response = await apiClient.post(`${this.baseUrl}/entries/${entryId}/resolve`, { resolution });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -189,7 +189,7 @@ class FinancialLedgerService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/summary?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -207,7 +207,7 @@ class FinancialLedgerService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/reports/revenue?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**

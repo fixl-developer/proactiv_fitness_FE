@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 
 interface SupportTicket {
     id: string
@@ -210,7 +211,7 @@ export default function SupportTicketsPage() {
                     <Button id="btn-action-admin-support-tickets" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadTickets() }}>
                         <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <Button id={`btn-set-show-create-modal-admin-support-tickets-${i}`} size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
+                    <Button id="btn-set-show-create-modal-admin-support-tickets-create" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
                         <Plus className="w-4 h-4 mr-2" /> Create Ticket
                     </Button>
                 </motion.div>
@@ -429,31 +430,31 @@ function SupportAIHub({ tickets }: { tickets: SupportTicket[] }) {
                         {results.classify && (
                             <div className="p-3 bg-blue-50 rounded-lg text-xs">
                                 <p className="font-medium text-blue-700 mb-1">Classification:</p>
-                                <p>{results.classify.data?.category || results.classify.data?.classification || results.classify.data?.message || JSON.stringify(results.classify.data).slice(0, 150)}</p>
+                                <p>{results.classify.data?.category || results.classify.data?.classification || results.classify.data?.message || formatAIResponse(results.classify.data, 150)}</p>
                             </div>
                         )}
                         {results.sentiment && (
                             <div className="p-3 bg-green-50 rounded-lg text-xs">
                                 <p className="font-medium text-green-700 mb-1">Sentiment Analysis:</p>
-                                <p>{results.sentiment.data?.sentiment || results.sentiment.data?.score || results.sentiment.data?.message || JSON.stringify(results.sentiment.data).slice(0, 150)}</p>
+                                <p>{results.sentiment.data?.sentiment || results.sentiment.data?.score || results.sentiment.data?.message || formatAIResponse(results.sentiment.data, 150)}</p>
                             </div>
                         )}
                         {results.autoResolve && (
                             <div className="p-3 bg-amber-50 rounded-lg text-xs">
                                 <p className="font-medium text-amber-700 mb-1">Auto-Resolve:</p>
-                                <p>{results.autoResolve.data?.resolution || results.autoResolve.data?.resolved ? 'Resolved!' : results.autoResolve.data?.message || JSON.stringify(results.autoResolve.data).slice(0, 150)}</p>
+                                <p>{results.autoResolve.data?.resolution || results.autoResolve.data?.resolved ? 'Resolved!' : results.autoResolve.data?.message || formatAIResponse(results.autoResolve.data, 150)}</p>
                             </div>
                         )}
                         {results.suggest && (
                             <div className="p-3 bg-purple-50 rounded-lg text-xs">
                                 <p className="font-medium text-purple-700 mb-1">Suggested Response:</p>
-                                <p>{results.suggest.data?.suggestion || results.suggest.data?.response || results.suggest.data?.message || JSON.stringify(results.suggest.data).slice(0, 150)}</p>
+                                <p>{results.suggest.data?.suggestion || results.suggest.data?.response || results.suggest.data?.message || formatAIResponse(results.suggest.data, 150)}</p>
                             </div>
                         )}
                         {results.optimize && (
                             <div className="p-3 bg-rose-50 rounded-lg text-xs col-span-2">
                                 <p className="font-medium text-rose-700 mb-1">Optimized Message:</p>
-                                <p>{results.optimize.data?.optimizedMessage || results.optimize.data?.email || results.optimize.data?.message || JSON.stringify(results.optimize.data).slice(0, 200)}</p>
+                                <p>{results.optimize.data?.optimizedMessage || results.optimize.data?.email || results.optimize.data?.message || formatAIResponse(results.optimize.data, 200)}</p>
                             </div>
                         )}
                     </div>

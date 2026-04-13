@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface FamilySchedule {
     familyId: string;
@@ -19,36 +17,36 @@ export interface FamilySchedule {
 
 class FamilySchedulerService {
     async optimizeSchedule(familyId: string, tenantId: string, children: string[]) {
-        const response = await axios.post(`${API_URL}/family-scheduler/optimize`, {
+        const response = await apiClient.post(`/family-scheduler/optimize`, {
             familyId,
             tenantId,
             children,
         });
-        return response.data;
+        return response;
     }
 
     async getSchedule(familyId: string) {
-        const response = await axios.get(`${API_URL}/family-scheduler/${familyId}`);
-        return response.data;
+        const response = await apiClient.get(`/family-scheduler/${familyId}`);
+        return response;
     }
 
     async selectOption(familyId: string, optionId: string) {
-        const response = await axios.post(`${API_URL}/family-scheduler/${familyId}/select`, {
+        const response = await apiClient.post(`/family-scheduler/${familyId}/select`, {
             optionId,
         });
-        return response.data;
+        return response;
     }
 
     async findCarpoolMatches(familyId: string, locationId: string) {
-        const response = await axios.get(`${API_URL}/family-scheduler/${familyId}/carpool`, {
+        const response = await apiClient.get(`/family-scheduler/${familyId}/carpool`, {
             params: { locationId },
         });
-        return response.data;
+        return response;
     }
 
     async calculateSiblingDiscount(familyId: string) {
-        const response = await axios.get(`${API_URL}/family-scheduler/${familyId}/discount`);
-        return response.data;
+        const response = await apiClient.get(`/family-scheduler/${familyId}/discount`);
+        return response;
     }
 }
 

@@ -42,7 +42,7 @@ class BudgetService {
             const response = await apiClient.get('/budget/summary', {
                 params: { period, regionId }
             })
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching budget summary:', error)
             // Return mock data for development
@@ -61,7 +61,7 @@ class BudgetService {
             const response = await apiClient.get('/budget/items', {
                 params: { period, regionId }
             })
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching budget items:', error)
             // Return mock data for development
@@ -81,7 +81,7 @@ class BudgetService {
             const response = await apiClient.get('/budget/locations', {
                 params: { period, regionId }
             })
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching location budgets:', error)
             // Return mock data for development
@@ -99,7 +99,7 @@ class BudgetService {
             const response = await apiClient.get('/budget/alerts', {
                 params: { period, regionId }
             })
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching budget alerts:', error)
             // Return mock data for development
@@ -114,7 +114,7 @@ class BudgetService {
     async createBudgetItem(budgetItem: Partial<BudgetItem>): Promise<BudgetItem> {
         try {
             const response = await apiClient.post('/budget/items', budgetItem)
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error creating budget item:', error)
             throw error
@@ -124,7 +124,7 @@ class BudgetService {
     async updateBudgetItem(itemId: string, updates: Partial<BudgetItem>): Promise<BudgetItem> {
         try {
             const response = await apiClient.put(`/budget/items/${itemId}`, updates)
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error updating budget item:', error)
             throw error
@@ -165,7 +165,7 @@ class BudgetService {
     async getBudgetHistory(itemId: string): Promise<any[]> {
         try {
             const response = await apiClient.get(`/budget/items/${itemId}/history`)
-            return response.data.data || response.data
+            return response.data || response.data
         } catch (error) {
             console.error('Error fetching budget history:', error)
             return []

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Product {
     productId?: string;
@@ -50,13 +48,13 @@ export interface Order {
 
 class MarketplaceService {
     async createProduct(data: Product) {
-        const response = await axios.post(`${API_URL}/marketplace/products`, data);
-        return response.data;
+        const response = await apiClient.post(`/marketplace/products`, data);
+        return response;
     }
 
     async getProduct(productId: string) {
-        const response = await axios.get(`${API_URL}/marketplace/products/${productId}`);
-        return response.data;
+        const response = await apiClient.get(`/marketplace/products/${productId}`);
+        return response;
     }
 
     async listProducts(filters: {
@@ -66,56 +64,56 @@ class MarketplaceService {
         minPrice?: number;
         maxPrice?: number;
     }) {
-        const response = await axios.get(`${API_URL}/marketplace/products`, {
+        const response = await apiClient.get(`/marketplace/products`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async updateProduct(productId: string, updates: Partial<Product>) {
-        const response = await axios.put(`${API_URL}/marketplace/products/${productId}`, updates);
-        return response.data;
+        const response = await apiClient.put(`/marketplace/products/${productId}`, updates);
+        return response;
     }
 
     async updateInventory(productId: string, quantity: number) {
-        const response = await axios.put(`${API_URL}/marketplace/products/${productId}/inventory`, {
+        const response = await apiClient.put(`/marketplace/products/${productId}/inventory`, {
             quantity,
         });
-        return response.data;
+        return response;
     }
 
     async addReview(productId: string, userId: string, rating: number, comment: string) {
-        const response = await axios.post(`${API_URL}/marketplace/products/${productId}/reviews`, {
+        const response = await apiClient.post(`/marketplace/products/${productId}/reviews`, {
             userId,
             rating,
             comment,
         });
-        return response.data;
+        return response;
     }
 
     async createOrder(data: Order) {
-        const response = await axios.post(`${API_URL}/marketplace/orders`, data);
-        return response.data;
+        const response = await apiClient.post(`/marketplace/orders`, data);
+        return response;
     }
 
     async getOrder(orderId: string) {
-        const response = await axios.get(`${API_URL}/marketplace/orders/${orderId}`);
-        return response.data;
+        const response = await apiClient.get(`/marketplace/orders/${orderId}`);
+        return response;
     }
 
     async listOrders(customerId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/marketplace/orders`, {
+        const response = await apiClient.get(`/marketplace/orders`, {
             params: { customerId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async updateOrderStatus(orderId: string, status: string, trackingNumber?: string) {
-        const response = await axios.put(`${API_URL}/marketplace/orders/${orderId}/status`, {
+        const response = await apiClient.put(`/marketplace/orders/${orderId}/status`, {
             status,
             trackingNumber,
         });
-        return response.data;
+        return response;
     }
 }
 

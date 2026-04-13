@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { globalIntelligenceService, revenueIntelligenceService } from '@/services/advancedAIServices'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -510,7 +511,7 @@ export default function AdminDashboard() {
                             {generatedContent && (
                                 <div className="p-3 bg-indigo-50 rounded-lg text-xs text-gray-700">
                                     <p className="font-medium text-indigo-700 mb-1">{generatedContent.type === 'social' ? 'Social Post' : 'Email'} Generated:</p>
-                                    <p>{generatedContent.data?.content || generatedContent.data?.subject || generatedContent.data?.post || JSON.stringify(generatedContent.data).slice(0, 200)}</p>
+                                    <p>{generatedContent.data?.content || generatedContent.data?.subject || generatedContent.data?.post || formatAIResponse(generatedContent.data, 200)}</p>
                                 </div>
                             )}
                         </div>
@@ -554,7 +555,7 @@ export default function AdminDashboard() {
                             {workflowResult && (
                                 <div className="p-3 bg-amber-50 rounded-lg text-xs text-gray-700">
                                     <p className="font-medium text-amber-700 mb-1">{workflowResult.type === 'schedule' ? 'Report Scheduled' : 'Workflow Health'}:</p>
-                                    <p>{workflowResult.data?.message || workflowResult.data?.status || JSON.stringify(workflowResult.data).slice(0, 200)}</p>
+                                    <p>{workflowResult.data?.message || workflowResult.data?.status || formatAIResponse(workflowResult.data, 200)}</p>
                                 </div>
                             )}
                         </div>

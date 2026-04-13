@@ -18,6 +18,7 @@ import {
     Filter
 } from 'lucide-react';
 import { smartSchedulerService } from '@/services/advancedAIServices';
+import { toast } from 'sonner';
 
 interface TimeSlot {
     id: string;
@@ -75,9 +76,10 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
             // Call Smart Scheduler AI to get optimized schedule
             const locationId = filters.location || 'default';
             const result = await smartSchedulerService.optimizeSchedule({ locationId });
+            const resultData = result?.data;
 
-            if (result?.data?.optimizedSchedule && Array.isArray(result.data.optimizedSchedule)) {
-                const slots = result.data.optimizedSchedule.map((slot: any, idx: number) => ({
+            if (resultData?.optimizedSchedule && Array.isArray(resultData.optimizedSchedule)) {
+                const slots = resultData.optimizedSchedule.map((slot: any, idx: number) => ({
                     id: slot.id || `slot_${idx}`,
                     date: slot.date || new Date(Date.now() + (idx + 1) * 86400000).toISOString().split('T')[0],
                     time: slot.time || `${10 + idx * 2}:00 AM`,
@@ -103,6 +105,7 @@ const SmartScheduling = ({ onSlotSelect, className = '' }: SmartSchedulingProps)
             }
         } catch (error) {
             console.error('Error loading slots:', error);
+            toast.error('Could not load schedule. Showing default slots.');
             setAvailableSlots(getDefaultSlots(filters));
         } finally {
             setIsLoading(false);

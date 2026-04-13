@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface DataExport {
     exportId?: string;
@@ -21,13 +19,13 @@ export interface DataExport {
 
 class DataExportService {
     async requestExport(data: Omit<DataExport, 'exportId' | 'status' | 'progress'>) {
-        const response = await axios.post(`${API_URL}/data-export`, data);
-        return response.data;
+        const response = await apiClient.post(`/data-export`, data);
+        return response;
     }
 
     async getExport(exportId: string) {
-        const response = await axios.get(`${API_URL}/data-export/${exportId}`);
-        return response.data;
+        const response = await apiClient.get(`/data-export/${exportId}`);
+        return response;
     }
 
     async listExports(filters: {
@@ -35,27 +33,27 @@ class DataExportService {
         requestedBy?: string;
         status?: string;
     }) {
-        const response = await axios.get(`${API_URL}/data-export`, {
+        const response = await apiClient.get(`/data-export`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async downloadExport(exportId: string) {
-        const response = await axios.get(`${API_URL}/data-export/${exportId}/download`, {
+        const response = await apiClient.get(`/data-export/${exportId}/download`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 
     async cancelExport(exportId: string) {
-        const response = await axios.post(`${API_URL}/data-export/${exportId}/cancel`);
-        return response.data;
+        const response = await apiClient.post(`/data-export/${exportId}/cancel`);
+        return response;
     }
 
     async getExportProgress(exportId: string) {
-        const response = await axios.get(`${API_URL}/data-export/${exportId}/progress`);
-        return response.data;
+        const response = await apiClient.get(`/data-export/${exportId}/progress`);
+        return response;
     }
 }
 

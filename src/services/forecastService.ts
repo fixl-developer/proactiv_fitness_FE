@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Forecast {
     forecastId?: string;
@@ -22,43 +20,43 @@ export interface Forecast {
 
 class ForecastService {
     async createForecast(data: Forecast) {
-        const response = await axios.post(`${API_URL}/forecast`, data);
-        return response.data;
+        const response = await apiClient.post(`/forecast`, data);
+        return response;
     }
 
     async getForecast(forecastId: string) {
-        const response = await axios.get(`${API_URL}/forecast/${forecastId}`);
-        return response.data;
+        const response = await apiClient.get(`/forecast/${forecastId}`);
+        return response;
     }
 
     async runScenarioAnalysis(tenantId: string, period: any, scenarios: any[]) {
-        const response = await axios.post(`${API_URL}/forecast/analyze`, {
+        const response = await apiClient.post(`/forecast/analyze`, {
             tenantId,
             period,
             scenarios,
         });
-        return response.data;
+        return response;
     }
 
     async getRevenueForecast(tenantId: string, locationId: string, months: number) {
-        const response = await axios.get(`${API_URL}/forecast/revenue`, {
+        const response = await apiClient.get(`/forecast/revenue`, {
             params: { tenantId, locationId, months },
         });
-        return response.data;
+        return response;
     }
 
     async getCapacityForecast(locationId: string, weeks: number) {
-        const response = await axios.get(`${API_URL}/forecast/capacity`, {
+        const response = await apiClient.get(`/forecast/capacity`, {
             params: { locationId, weeks },
         });
-        return response.data;
+        return response;
     }
 
     async getDemandPrediction(tenantId: string, programId: string) {
-        const response = await axios.get(`${API_URL}/forecast/demand`, {
+        const response = await apiClient.get(`/forecast/demand`, {
             params: { tenantId, programId },
         });
-        return response.data;
+        return response;
     }
 }
 

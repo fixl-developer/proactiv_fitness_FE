@@ -243,7 +243,7 @@ class EventBusService {
      */
     async publishEvent(data: PublishEventDto): Promise<Event> {
         const response = await apiClient.post(`${this.baseUrl}/events/publish`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -275,7 +275,7 @@ class EventBusService {
      */
     async getEventById(eventId: string): Promise<Event> {
         const response = await apiClient.get(`${this.baseUrl}/events/${eventId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -283,7 +283,7 @@ class EventBusService {
      */
     async retryEvent(eventId: string): Promise<Event> {
         const response = await apiClient.post(`${this.baseUrl}/events/${eventId}/retry`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -301,7 +301,7 @@ class EventBusService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -325,7 +325,7 @@ class EventBusService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/subscriptions?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -333,7 +333,7 @@ class EventBusService {
      */
     async getSubscriptionById(subscriptionId: string): Promise<EventSubscription> {
         const response = await apiClient.get(`${this.baseUrl}/subscriptions/${subscriptionId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -341,7 +341,7 @@ class EventBusService {
      */
     async createSubscription(data: CreateSubscriptionDto): Promise<EventSubscription> {
         const response = await apiClient.post(`${this.baseUrl}/subscriptions`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -349,7 +349,7 @@ class EventBusService {
      */
     async updateSubscription(subscriptionId: string, data: Partial<EventSubscription>): Promise<EventSubscription> {
         const response = await apiClient.put(`${this.baseUrl}/subscriptions/${subscriptionId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -364,7 +364,7 @@ class EventBusService {
      */
     async activateSubscription(subscriptionId: string): Promise<EventSubscription> {
         const response = await apiClient.post(`${this.baseUrl}/subscriptions/${subscriptionId}/activate`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -372,7 +372,7 @@ class EventBusService {
      */
     async deactivateSubscription(subscriptionId: string): Promise<EventSubscription> {
         const response = await apiClient.post(`${this.baseUrl}/subscriptions/${subscriptionId}/deactivate`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -380,7 +380,7 @@ class EventBusService {
      */
     async testSubscription(subscriptionId: string, testPayload: any): Promise<{ success: boolean; response: any }> {
         const response = await apiClient.post(`${this.baseUrl}/subscriptions/${subscriptionId}/test`, { testPayload });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -396,7 +396,7 @@ class EventBusService {
      */
     async reprocessDeadLetterEvent(eventId: string): Promise<Event> {
         const response = await apiClient.post(`${this.baseUrl}/events/${eventId}/reprocess`);
-        return response.data.data;
+        return response.data;
     }
 }
 

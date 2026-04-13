@@ -14,13 +14,13 @@ export const bookingApi = {
         >('/classes', {
             params: { ...filters, page, limit },
         });
-        return response.data.data;
+        return response.data;
     },
 
     // Get class by ID
     getClassById: async (id: string): Promise<Class> => {
         const response = await apiClient.get<ApiResponse<Class>>(`/classes/${id}`);
-        return response.data.data;
+        return response.data;
     },
 
     // Get available time slots
@@ -33,7 +33,7 @@ export const bookingApi = {
         >('/classes/time-slots', {
             params: { locationId, date },
         });
-        return response.data.data;
+        return response.data;
     },
 
     // Get week schedule
@@ -46,7 +46,7 @@ export const bookingApi = {
         >('/classes/week-schedule', {
             params: { locationId, startDate },
         });
-        return response.data.data;
+        return response.data;
     },
 
     // Book a class
@@ -61,7 +61,7 @@ export const bookingApi = {
             '/bookings',
             data
         );
-        return response.data.data;
+        return response.data;
     },
 
     // Get my bookings
@@ -75,7 +75,7 @@ export const bookingApi = {
         >('/bookings/my-bookings', {
             params: { status, page, limit },
         });
-        return response.data.data;
+        return response.data;
     },
 
     // Get booking by ID
@@ -83,7 +83,7 @@ export const bookingApi = {
         const response = await apiClient.get<ApiResponse<Booking>>(
             `/bookings/${id}`
         );
-        return response.data.data;
+        return response.data;
     },
 
     // Cancel booking
@@ -92,7 +92,7 @@ export const bookingApi = {
             `/bookings/${id}/cancel`,
             { reason }
         );
-        return response.data.data;
+        return response.data;
     },
 
     // Join waitlist
@@ -101,7 +101,7 @@ export const bookingApi = {
             '/bookings/waitlist',
             { classId, studentId }
         );
-        return response.data.data;
+        return response.data;
     },
 
     // Leave waitlist
@@ -109,7 +109,7 @@ export const bookingApi = {
         const response = await apiClient.delete<ApiResponse<any>>(
             `/bookings/waitlist/${classId}/${studentId}`
         );
-        return response.data.data;
+        return response.data;
     },
 
     // Check availability
@@ -125,12 +125,12 @@ export const bookingApi = {
                 waitlistCount: number;
             }>
         >(`/classes/${classId}/availability`);
-        return response.data.data;
+        return response.data;
     },
 
     // Get available packages
     getPackages: async (): Promise<any[]> => {
         const response = await apiClient.get<ApiResponse<any[]>>('/packages');
-        return response.data.data;
+        return response.data;
     },
 };

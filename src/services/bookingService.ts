@@ -422,7 +422,7 @@ class BookingService {
      */
     async searchAvailability(searchCriteria: BookingSearch): Promise<BookingAvailability[]> {
         const response = await apiClient.post(`${this.baseUrl}/search`, searchCriteria);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -430,7 +430,7 @@ class BookingService {
      */
     async validateBooking(bookingRequest: BookingRequest): Promise<BookingValidation> {
         const response = await apiClient.post(`${this.baseUrl}/validate`, bookingRequest);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -465,7 +465,7 @@ class BookingService {
      */
     async getBookingById(bookingId: string): Promise<Booking> {
         const response = await apiClient.get(`${this.baseUrl}/${bookingId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -473,7 +473,7 @@ class BookingService {
      */
     async createBooking(bookingRequest: BookingRequest): Promise<BookingConfirmation> {
         const response = await apiClient.post(this.baseUrl, bookingRequest);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -481,7 +481,7 @@ class BookingService {
      */
     async updateBooking(bookingId: string, data: Partial<Booking>): Promise<Booking> {
         const response = await apiClient.put(`${this.baseUrl}/${bookingId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -496,7 +496,7 @@ class BookingService {
             reason,
             reasonDetails
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -513,7 +513,7 @@ class BookingService {
             reason,
             reasonDetails
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -521,7 +521,7 @@ class BookingService {
      */
     async acceptWaitlistOffer(bookingId: string): Promise<Booking> {
         const response = await apiClient.patch(`${this.baseUrl}/${bookingId}/waitlist/accept`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -529,7 +529,7 @@ class BookingService {
      */
     async declineWaitlistOffer(bookingId: string, reason?: string): Promise<Booking> {
         const response = await apiClient.patch(`${this.baseUrl}/${bookingId}/waitlist/decline`, { reason });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -537,7 +537,7 @@ class BookingService {
      */
     async addParticipant(bookingId: string, participant: { childId: string; skillLevel?: string }): Promise<Booking> {
         const response = await apiClient.post(`${this.baseUrl}/${bookingId}/participants`, participant);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -545,7 +545,7 @@ class BookingService {
      */
     async removeParticipant(bookingId: string, childId: string): Promise<Booking> {
         const response = await apiClient.delete(`${this.baseUrl}/${bookingId}/participants/${childId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -560,7 +560,7 @@ class BookingService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -608,7 +608,7 @@ class BookingService {
      */
     async createBulkBookings(bulkRequest: BulkBookingRequest): Promise<BulkBookingResult> {
         const response = await apiClient.post(`${this.baseUrl}/bulk`, bulkRequest);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -616,7 +616,7 @@ class BookingService {
      */
     async getMakeupCredits(familyId: string): Promise<MakeupCredit[]> {
         const response = await apiClient.get(`${this.baseUrl}/makeup-credits?familyId=${familyId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -624,7 +624,7 @@ class BookingService {
      */
     async useMakeupCredit(creditId: string, bookingId: string): Promise<Booking> {
         const response = await apiClient.post(`${this.baseUrl}/makeup-credits/${creditId}/use`, { bookingId });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -632,7 +632,7 @@ class BookingService {
      */
     async checkEligibility(childId: string, programId: string): Promise<{ eligible: boolean; reasons: string[] }> {
         const response = await apiClient.get(`${this.baseUrl}/eligibility?childId=${childId}&programId=${programId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -640,7 +640,7 @@ class BookingService {
      */
     async getBookingConfirmation(bookingId: string): Promise<BookingConfirmation> {
         const response = await apiClient.get(`${this.baseUrl}/${bookingId}/confirmation`);
-        return response.data.data;
+        return response.data;
     }
 
     /**

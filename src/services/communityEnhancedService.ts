@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface DiscussionGroup {
     _id: string;
@@ -64,61 +62,61 @@ export interface Testimonial {
 
 class CommunityEnhancedService {
     async getGroups(): Promise<DiscussionGroup[]> {
-        const response = await axios.get(`${API_URL}/community/groups`);
-        return response.data;
+        const response = await apiClient.get(`/community/groups`);
+        return response;
     }
 
     async createGroup(data: Partial<DiscussionGroup>): Promise<DiscussionGroup> {
-        const response = await axios.post(`${API_URL}/community/groups`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/groups`, data);
+        return response;
     }
 
     async joinGroup(groupId: string): Promise<void> {
-        await axios.post(`${API_URL}/community/groups/${groupId}/join`);
+        await apiClient.post(`/community/groups/${groupId}/join`);
     }
 
     async getDiscussions(groupId: string): Promise<Discussion[]> {
-        const response = await axios.get(`${API_URL}/community/groups/${groupId}/discussions`);
-        return response.data;
+        const response = await apiClient.get(`/community/groups/${groupId}/discussions`);
+        return response;
     }
 
     async createDiscussion(groupId: string, data: Partial<Discussion>): Promise<Discussion> {
-        const response = await axios.post(`${API_URL}/community/groups/${groupId}/discussions`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/groups/${groupId}/discussions`, data);
+        return response;
     }
 
     async getEvents(filters?: any): Promise<CommunityEvent[]> {
-        const response = await axios.get(`${API_URL}/community/events`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/community/events`, { params: filters });
+        return response;
     }
 
     async createEvent(data: Partial<CommunityEvent>): Promise<CommunityEvent> {
-        const response = await axios.post(`${API_URL}/community/events`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/events`, data);
+        return response;
     }
 
     async registerForEvent(eventId: string): Promise<void> {
-        await axios.post(`${API_URL}/community/events/${eventId}/register`);
+        await apiClient.post(`/community/events/${eventId}/register`);
     }
 
     async getVolunteers(): Promise<Volunteer[]> {
-        const response = await axios.get(`${API_URL}/community/volunteers`);
-        return response.data;
+        const response = await apiClient.get(`/community/volunteers`);
+        return response;
     }
 
     async registerVolunteer(data: Partial<Volunteer>): Promise<Volunteer> {
-        const response = await axios.post(`${API_URL}/community/volunteers`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/volunteers`, data);
+        return response;
     }
 
     async getTestimonials(filters?: any): Promise<Testimonial[]> {
-        const response = await axios.get(`${API_URL}/community/testimonials`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/community/testimonials`, { params: filters });
+        return response;
     }
 
     async submitTestimonial(data: Partial<Testimonial>): Promise<Testimonial> {
-        const response = await axios.post(`${API_URL}/community/testimonials`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/testimonials`, data);
+        return response;
     }
 }
 
