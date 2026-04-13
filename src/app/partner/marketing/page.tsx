@@ -17,6 +17,8 @@ import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { contentEngineService } from '@/services/advancedAIServices'
 import { apiClient } from '@/services/api/client'
+import { validateRequired, validateTextArea, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function PartnerMarketingPage() {
     const router = useRouter()
@@ -41,6 +43,7 @@ export default function PartnerMarketingPage() {
 
     const [aiContent, setAiContent] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     const loadAiMarketing = async () => {
         setAiLoading(true)
@@ -145,7 +148,15 @@ export default function PartnerMarketingPage() {
 
     const handleCreateCampaign = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!createForm.name.trim()) return
+        const newErrors: Record<string, string> = {}
+        const nameErr = validateRequired(createForm.name, 'Campaign Name')
+        if (nameErr) newErrors.name = nameErr
+        if (createForm.budget && validateNumber(createForm.budget, 'Budget', 0)) {
+            const budgetErr = validateNumber(createForm.budget, 'Budget', 0)
+            if (budgetErr) newErrors.budget = budgetErr
+        }
+        setFormErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
 
         setCreateSubmitting(true)
         try {
@@ -570,10 +581,15 @@ export default function PartnerMarketingPage() {
                                     type="text"
                                     required
                                     value={createForm.name}
-                                    onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                                    onChange={e => {
+                                        setCreateForm(prev => ({ ...prev, name: e.target.value }))
+                                        const err = validateRequired(e.target.value, 'Campaign Name')
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
+                                    }}
                                     placeholder="e.g., Summer Fitness Promo"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint="Enter campaign name" error={formErrors.name} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -642,10 +658,18 @@ export default function PartnerMarketingPage() {
                                         type="number"
                                         min="0"
                                         value={createForm.budget}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, budget: e.target.value }))}
+                                        onKeyDown={filterNumberInput}
+                                        onChange={e => {
+                                            setCreateForm(prev => ({ ...prev, budget: e.target.value }))
+                                            if (e.target.value) {
+                                                const err = validateNumber(e.target.value, 'Budget', 0)
+                                                setFormErrors(prev => { const n = { ...prev }; if (err) n.budget = err; else delete n.budget; return n })
+                                            }
+                                        }}
                                         placeholder="0.00"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.budget ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.amount} error={formErrors.budget} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>

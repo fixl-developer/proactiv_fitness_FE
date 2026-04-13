@@ -16,6 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { validateName, validateRequired, validateSelect, filterNameInput, filterAlphanumericInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface Country {
   id: string
@@ -45,6 +47,10 @@ export default function RegionsPage() {
   const [editingCountry, setEditingCountry] = useState<Country | null>(null)
   const [countryForm, setCountryForm] = useState({ name: '', code: '', status: 'active' })
   const [savingCountry, setSavingCountry] = useState(false)
+
+  // Validation errors
+  const [countryErrors, setCountryErrors] = useState<Record<string, string>>({})
+  const [regionErrors, setRegionErrors] = useState<Record<string, string>>({})
 
   // Region form
   const [showRegionForm, setShowRegionForm] = useState(false)
@@ -86,11 +92,23 @@ export default function RegionsPage() {
       setEditingCountry(null)
       setCountryForm({ name: '', code: '', status: 'active' })
     }
+    setCountryErrors({})
     setShowCountryForm(true)
+  }
+
+  const validateCountryForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(countryForm.name, 'Country name')
+    if (nameErr) errs.name = nameErr
+    const codeErr = validateRequired(countryForm.code, 'Country code')
+    if (codeErr) errs.code = codeErr
+    setCountryErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleCountrySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateCountryForm()) return
     setSavingCountry(true)
     try {
       if (editingCountry) {
@@ -120,11 +138,23 @@ export default function RegionsPage() {
       setEditingRegion(null)
       setRegionForm({ name: '', countryId: countries[0]?.id || '' })
     }
+    setRegionErrors({})
     setShowRegionForm(true)
+  }
+
+  const validateRegionForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(regionForm.name, 'Region name')
+    if (nameErr) errs.name = nameErr
+    const countryErr = validateSelect(regionForm.countryId, 'Country')
+    if (countryErr) errs.countryId = countryErr
+    setRegionErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleRegionSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateRegionForm()) return
     setSavingRegion(true)
     try {
       if (editingRegion) {
@@ -408,23 +438,35 @@ export default function RegionsPage() {
               <input id="admin-business-config-regions-country-name-input"
                 type="text"
                 value={countryForm.name}
-                onChange={(e) => setCountryForm({ ...countryForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setCountryForm({ ...countryForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Country name')
+                  setCountryErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${countryErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. United Kingdom"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={countryErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Country Code</label>
               <input id="admin-business-config-regions-country-code-input"
                 type="text"
                 value={countryForm.code}
-                onChange={(e) => setCountryForm({ ...countryForm, code: e.target.value.toUpperCase() })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterAlphanumericInput}
+                onChange={(e) => {
+                  setCountryForm({ ...countryForm, code: e.target.value.toUpperCase() })
+                  const err = validateRequired(e.target.value, 'Country code')
+                  setCountryErrors((prev) => ({ ...prev, code: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${countryErrors.code ? 'border-red-500' : ''}`}
                 placeholder="e.g. UK"
                 maxLength={3}
                 required
               />
+              <FormFieldHint hint="2 or 3 letter country code (e.g. US, UK)" error={countryErrors.code} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
@@ -465,21 +507,32 @@ export default function RegionsPage() {
               <input id="admin-business-config-regions-region-name-input"
                 type="text"
                 value={regionForm.name}
-                onChange={(e) => setRegionForm({ ...regionForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setRegionForm({ ...regionForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Region name')
+                  setRegionErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${regionErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Southeast Asia"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={regionErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Country</label>
               {countries.length === 0 ? (
                 <p className="text-sm text-gray-500">No countries available. Please create a country first.</p>
               ) : (
+                <>
                 <select id="select-admin-business-config-regions-18"
                   value={regionForm.countryId}
-                  onChange={(e) => setRegionForm({ ...regionForm, countryId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  onChange={(e) => {
+                    setRegionForm({ ...regionForm, countryId: e.target.value })
+                    const err = validateSelect(e.target.value, 'Country')
+                    setRegionErrors((prev) => ({ ...prev, countryId: err || '' }))
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${regionErrors.countryId ? 'border-red-500' : ''}`}
                   required
                 >
                   <option value="">Select a country</option>
@@ -489,6 +542,8 @@ export default function RegionsPage() {
                     </option>
                   ))}
                 </select>
+                <FormFieldHint error={regionErrors.countryId} />
+                </>
               )}
             </div>
             <DialogFooter>

@@ -10,6 +10,8 @@ import { AlertCircle, Search, Users, UserCheck, UserX, DollarSign, Plus, Downloa
 import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { Badge } from '@/components/ui/badge'
 import { revenueIntelligenceService } from '@/services/advancedAIServices'
+import { validateName, validateEmail, validatePhone, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 const emptyForm = { name: '', email: '', phone: '', enrolledPrograms: '', status: 'active' }
 
@@ -29,6 +31,21 @@ export default function Students() {
     const [submitting, setSubmitting] = useState(false)
     const [aiChurn, setAiChurn] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+    const validateStudentForm = (): boolean => {
+        const newErrors: Record<string, string> = {}
+        const nameErr = validateName(editForm.name, 'Name')
+        if (nameErr) newErrors.name = nameErr
+        const emailErr = validateEmail(editForm.email)
+        if (emailErr) newErrors.email = emailErr
+        if (editForm.phone) {
+            const phoneErr = validatePhone(editForm.phone, false)
+            if (phoneErr) newErrors.phone = phoneErr
+        }
+        setFormErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
 
     const partnerId = user?.id || ''
 
@@ -111,10 +128,7 @@ export default function Students() {
     }
 
     const handleEditSave = async () => {
-        if (!editForm.name || !editForm.email) {
-            alert('Name and Email are required.')
-            return
-        }
+        if (!validateStudentForm()) return
         try {
             setSubmitting(true)
             const updated = await PartnerPortalService.updatePartnerStudent(partnerId, selectedStudent.id, editForm)
@@ -130,10 +144,7 @@ export default function Students() {
     }
 
     const handleAddStudent = async () => {
-        if (!editForm.name || !editForm.email) {
-            alert('Name and Email are required.')
-            return
-        }
+        if (!validateStudentForm()) return
         try {
             setSubmitting(true)
             const newStudent = await PartnerPortalService.createPartnerStudent(partnerId, editForm)
@@ -181,20 +192,31 @@ export default function Students() {
                     <input
                         type="text"
                         value={editForm.name}
-                        onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                        onKeyDown={filterNameInput}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, name: e.target.value }))
+                            const err = validateName(e.target.value, 'Name')
+                            setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
+                        }}
                         placeholder={`${config.memberLabelSingular} name`}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.name} error={formErrors.name} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
                     <input
                         type="email"
                         value={editForm.email}
-                        onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, email: e.target.value }))
+                            const err = validateEmail(e.target.value)
+                            setFormErrors(prev => { const n = { ...prev }; if (err) n.email = err; else delete n.email; return n })
+                        }}
                         placeholder="student@example.com"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.email} error={formErrors.email} />
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -203,10 +225,18 @@ export default function Students() {
                     <input
                         type="tel"
                         value={editForm.phone}
-                        onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                        onKeyDown={filterPhoneInput}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, phone: e.target.value }))
+                            if (e.target.value) {
+                                const err = validatePhone(e.target.value, false)
+                                setFormErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
+                            }
+                        }}
                         placeholder="+91 98765 43210"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint={FORMAT_HINTS.phone} error={formErrors.phone} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Enrolled Programs</label>
@@ -214,6 +244,7 @@ export default function Students() {
                         type="number"
                         min="0"
                         value={editForm.enrolledPrograms}
+                        onKeyDown={filterNumberInput}
                         onChange={e => setEditForm(prev => ({ ...prev, enrolledPrograms: e.target.value }))}
                         placeholder="0"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

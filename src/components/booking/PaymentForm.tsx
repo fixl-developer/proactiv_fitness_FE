@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FiCreditCard, FiLock, FiAlertCircle } from 'react-icons/fi'
 import { PaymentMethod } from '@/services/paymentService'
+import { validateCardNumber, validateCVV, validateName, filterCardNumberInput, filterNumberInput, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface PaymentFormProps {
     amount: number
@@ -33,6 +35,7 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
     const [selectedMethodId, setSelectedMethodId] = useState(savedMethods.find(m => m.isDefault)?._id || '')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     // New card form state
     const [cardNumber, setCardNumber] = useState('')
@@ -73,18 +76,18 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
 
         try {
             if (useNewCard) {
-                // Validate new card
-                if (!cardNumber || !expiryMonth || !expiryYear || !cvv || !cardholderName) {
-                    throw new Error('Please fill in all card details')
+                // Validate new card using shared validators
+                const errors: Record<string, string> = {}
+                const cnErr = validateCardNumber(cardNumber); if (cnErr) errors.cardNumber = cnErr
+                const cvvErr = validateCVV(cvv); if (cvvErr) errors.cvv = cvvErr
+                const nameErr = validateName(cardholderName, 'Cardholder name'); if (nameErr) errors.cardholderName = nameErr
+                if (!expiryMonth) errors.expiryMonth = 'Month is required'
+                if (!expiryYear) errors.expiryYear = 'Year is required'
+                if (Object.keys(errors).length > 0) {
+                    setFieldErrors(errors)
+                    throw new Error('Please fix the validation errors')
                 }
-
-                if (cardNumber.replace(/\s/g, '').length !== 16) {
-                    throw new Error('Invalid card number')
-                }
-
-                if (cvv.length < 3 || cvv.length > 4) {
-                    throw new Error('Invalid CVV')
-                }
+                setFieldErrors({})
 
                 await onSubmit({
                     cardNumber: cardNumber.replace(/\s/g, ''),
@@ -218,13 +221,19 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
                             <input
                                 type="text"
                                 value={cardNumber}
-                                onChange={handleCardNumberChange}
+                                onChange={(e) => {
+                                    handleCardNumberChange(e)
+                                    const err = validateCardNumber(e.target.value)
+                                    setFieldErrors(prev => { const n = {...prev}; if (err) n.cardNumber = err; else delete n.cardNumber; return n })
+                                }}
+                                onKeyDown={filterCardNumberInput}
                                 placeholder="1234 5678 9012 3456"
-                                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-4 py-3 pl-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${fieldErrors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
                                 required
                             />
                             <FiCreditCard className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                         </div>
+                        <FormFieldHint hint={FORMAT_HINTS.cardNumber} error={fieldErrors.cardNumber} />
                     </div>
 
                     {/* Cardholder Name */}
@@ -235,11 +244,17 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
                         <input
                             type="text"
                             value={cardholderName}
-                            onChange={(e) => setCardholderName(e.target.value)}
+                            onChange={(e) => {
+                                setCardholderName(e.target.value)
+                                const err = validateName(e.target.value, 'Cardholder name')
+                                setFieldErrors(prev => { const n = {...prev}; if (err) n.cardholderName = err; else delete n.cardholderName; return n })
+                            }}
+                            onKeyDown={filterNameInput}
                             placeholder="John Doe"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${fieldErrors.cardholderName ? 'border-red-500' : 'border-gray-300'}`}
                             required
                         />
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.cardholderName} />
                     </div>
 
                     {/* Expiry & CVV */}
@@ -289,13 +304,19 @@ export default function PaymentForm({ amount, currency, onSubmit, savedMethods =
                                 value={cvv}
                                 onChange={(e) => {
                                     const value = e.target.value.replace(/\D/g, '')
-                                    if (value.length <= 4) setCvv(value)
+                                    if (value.length <= 4) {
+                                        setCvv(value)
+                                        const err = validateCVV(value)
+                                        setFieldErrors(prev => { const n = {...prev}; if (err) n.cvv = err; else delete n.cvv; return n })
+                                    }
                                 }}
+                                onKeyDown={filterNumberInput}
                                 placeholder="123"
                                 maxLength={4}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${fieldErrors.cvv ? 'border-red-500' : 'border-gray-300'}`}
                                 required
                             />
+                            <FormFieldHint hint={FORMAT_HINTS.cvv} error={fieldErrors.cvv} />
                         </div>
                     </div>
 

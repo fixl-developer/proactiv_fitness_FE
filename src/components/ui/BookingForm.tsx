@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FiUser, FiMail, FiPhone, FiCalendar, FiMapPin, FiClock, FiCheck, FiX } from 'react-icons/fi'
+import { validateName, validateEmail, validatePhone, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface BookingFormProps {
     type: 'trial' | 'assessment' | 'camp' | 'party'
@@ -131,52 +133,59 @@ const BookingForm = ({
             [name]: type === 'checkbox' ? checked : value
         }))
 
-        // Clear error when user starts typing
-        if (errors[name]) {
+        // Real-time validation
+        if (type !== 'checkbox' && value) {
+            const err = validateField(name, value)
+            if (err) {
+                setErrors(prev => ({ ...prev, [name]: err }))
+            } else if (errors[name]) {
+                setErrors(prev => ({ ...prev, [name]: '' }))
+            }
+        } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }))
+        }
+    }
+
+    const validateField = (name: string, value: string): string | null => {
+        switch (name) {
+            case 'parentName': return validateName(value, 'Parent name')
+            case 'childName': return validateName(value, "Child's name")
+            case 'email': return validateEmail(value)
+            case 'phone': return validatePhone(value)
+            case 'emergencyContact': return validateName(value, 'Emergency contact')
+            case 'emergencyPhone': return validatePhone(value)
+            default: return null
         }
     }
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {}
 
-        // Common validations
-        if (!formData.parentName.trim()) newErrors.parentName = 'Parent name is required'
-        if (!formData.childName.trim()) newErrors.childName = 'Child name is required'
-        if (!formData.childAge) newErrors.childAge = 'Child age is required'
-        if (!formData.email.trim()) newErrors.email = 'Email is required'
-        if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
+        // Common validations using shared validators
+        const pnErr = validateName(formData.parentName, 'Parent name'); if (pnErr) newErrors.parentName = pnErr
+        const cnErr = validateName(formData.childName, "Child's name"); if (cnErr) newErrors.childName = cnErr
+        const caErr = validateSelect(formData.childAge, "Child's age"); if (caErr) newErrors.childAge = caErr
+        const emErr = validateEmail(formData.email); if (emErr) newErrors.email = emErr
+        const phErr = validatePhone(formData.phone); if (phErr) newErrors.phone = phErr
 
         // Type-specific validations
         if (type === 'trial' || type === 'assessment') {
-            if (!formData.program) newErrors.program = 'Program selection is required'
-            if (!formData.location) newErrors.location = 'Location selection is required'
+            const prErr = validateSelect(formData.program, 'Program'); if (prErr) newErrors.program = prErr
+            const loErr = validateSelect(formData.location, 'Location'); if (loErr) newErrors.location = loErr
             if (!formData.preferredDate) newErrors.preferredDate = 'Preferred date is required'
-            if (!formData.preferredTime) newErrors.preferredTime = 'Preferred time is required'
+            const ptErr = validateSelect(formData.preferredTime, 'Time'); if (ptErr) newErrors.preferredTime = ptErr
         }
 
         if (type === 'camp') {
-            if (!formData.emergencyContact.trim()) newErrors.emergencyContact = 'Emergency contact is required'
-            if (!formData.emergencyPhone.trim()) newErrors.emergencyPhone = 'Emergency phone is required'
+            const ecErr = validateName(formData.emergencyContact, 'Emergency contact'); if (ecErr) newErrors.emergencyContact = ecErr
+            const epErr = validatePhone(formData.emergencyPhone); if (epErr) newErrors.emergencyPhone = epErr
         }
 
         if (type === 'party') {
             if (!formData.partyDate) newErrors.partyDate = 'Party date is required'
-            if (!formData.partyTime) newErrors.partyTime = 'Party time is required'
-            if (!formData.guestCount) newErrors.guestCount = 'Guest count is required'
-            if (!formData.partyTheme) newErrors.partyTheme = 'Party theme is required'
-        }
-
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (formData.email && !emailRegex.test(formData.email)) {
-            newErrors.email = 'Please enter a valid email address'
-        }
-
-        // Phone validation
-        const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,}$/
-        if (formData.phone && !phoneRegex.test(formData.phone)) {
-            newErrors.phone = 'Please enter a valid phone number'
+            const ptErr = validateSelect(formData.partyTime, 'Party time'); if (ptErr) newErrors.partyTime = ptErr
+            const gcErr = validateSelect(formData.guestCount, 'Guest count'); if (gcErr) newErrors.guestCount = gcErr
+            const thErr = validateSelect(formData.partyTheme, 'Party theme'); if (thErr) newErrors.partyTheme = thErr
         }
 
         setErrors(newErrors)
@@ -286,14 +295,13 @@ const BookingForm = ({
                                 name="parentName"
                                 value={formData.parentName}
                                 onChange={handleInputChange}
+                                onKeyDown={filterNameInput}
                                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.parentName ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 placeholder="Your full name"
                             />
                         </div>
-                        {errors.parentName && (
-                            <p className="text-red-500 text-sm mt-1">{errors.parentName}</p>
-                        )}
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={errors.parentName} />
                     </div>
 
                     <div>
@@ -307,14 +315,13 @@ const BookingForm = ({
                                 name="childName"
                                 value={formData.childName}
                                 onChange={handleInputChange}
+                                onKeyDown={filterNameInput}
                                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.childName ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 placeholder="Child's full name"
                             />
                         </div>
-                        {errors.childName && (
-                            <p className="text-red-500 text-sm mt-1">{errors.childName}</p>
-                        )}
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={errors.childName} />
                     </div>
                 </div>
 
@@ -336,9 +343,7 @@ const BookingForm = ({
                                 <option key={age} value={age}>{age} years old</option>
                             ))}
                         </select>
-                        {errors.childAge && (
-                            <p className="text-red-500 text-sm mt-1">{errors.childAge}</p>
-                        )}
+                        <FormFieldHint hint={FORMAT_HINTS.age} error={errors.childAge} />
                     </div>
 
                     <div>
@@ -357,9 +362,7 @@ const BookingForm = ({
                                 placeholder="your.email@example.com"
                             />
                         </div>
-                        {errors.email && (
-                            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                        )}
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                     </div>
                 </div>
 
@@ -374,14 +377,13 @@ const BookingForm = ({
                             name="phone"
                             value={formData.phone}
                             onChange={handleInputChange}
+                            onKeyDown={filterPhoneInput}
                             className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'
                                 }`}
                             placeholder="+852 1234 5678"
                         />
                     </div>
-                    {errors.phone && (
-                        <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-                    )}
+                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                 </div>
 
                 {/* Type-specific fields */}
@@ -406,9 +408,7 @@ const BookingForm = ({
                                         </option>
                                     ))}
                                 </select>
-                                {errors.program && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.program}</p>
-                                )}
+                                <FormFieldHint error={errors.program} />
                             </div>
 
                             <div>
@@ -432,9 +432,7 @@ const BookingForm = ({
                                         ))}
                                     </select>
                                 </div>
-                                {errors.location && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.location}</p>
-                                )}
+                                <FormFieldHint error={errors.location} />
                             </div>
                         </div>
 
@@ -455,9 +453,7 @@ const BookingForm = ({
                                             }`}
                                     />
                                 </div>
-                                {errors.preferredDate && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.preferredDate}</p>
-                                )}
+                                <FormFieldHint error={errors.preferredDate} />
                             </div>
 
                             <div>
@@ -479,9 +475,7 @@ const BookingForm = ({
                                         ))}
                                     </select>
                                 </div>
-                                {errors.preferredTime && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.preferredTime}</p>
-                                )}
+                                <FormFieldHint error={errors.preferredTime} />
                             </div>
                         </div>
                     </>
@@ -499,13 +493,12 @@ const BookingForm = ({
                                 name="emergencyContact"
                                 value={formData.emergencyContact}
                                 onChange={handleInputChange}
+                                onKeyDown={filterNameInput}
                                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.emergencyContact ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 placeholder="Emergency contact name"
                             />
-                            {errors.emergencyContact && (
-                                <p className="text-red-500 text-sm mt-1">{errors.emergencyContact}</p>
-                            )}
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.emergencyContact} />
                         </div>
 
                         <div>
@@ -517,13 +510,12 @@ const BookingForm = ({
                                 name="emergencyPhone"
                                 value={formData.emergencyPhone}
                                 onChange={handleInputChange}
+                                onKeyDown={filterPhoneInput}
                                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.emergencyPhone ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 placeholder="+852 1234 5678"
                             />
-                            {errors.emergencyPhone && (
-                                <p className="text-red-500 text-sm mt-1">{errors.emergencyPhone}</p>
-                            )}
+                            <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.emergencyPhone} />
                         </div>
                     </div>
                 )}
@@ -545,9 +537,7 @@ const BookingForm = ({
                                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.partyDate ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                 />
-                                {errors.partyDate && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.partyDate}</p>
-                                )}
+                                <FormFieldHint error={errors.partyDate} />
                             </div>
 
                             <div>
@@ -566,9 +556,7 @@ const BookingForm = ({
                                         <option key={time} value={time}>{time}</option>
                                     ))}
                                 </select>
-                                {errors.partyTime && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.partyTime}</p>
-                                )}
+                                <FormFieldHint error={errors.partyTime} />
                             </div>
 
                             <div>
@@ -587,9 +575,7 @@ const BookingForm = ({
                                         <option key={count} value={count}>{count} guests</option>
                                     ))}
                                 </select>
-                                {errors.guestCount && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.guestCount}</p>
-                                )}
+                                <FormFieldHint error={errors.guestCount} />
                             </div>
                         </div>
 
@@ -609,9 +595,7 @@ const BookingForm = ({
                                     <option key={theme} value={theme}>{theme}</option>
                                 ))}
                             </select>
-                            {errors.partyTheme && (
-                                <p className="text-red-500 text-sm mt-1">{errors.partyTheme}</p>
-                            )}
+                            <FormFieldHint error={errors.partyTheme} />
                         </div>
 
                         <div>

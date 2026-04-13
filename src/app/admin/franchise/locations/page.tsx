@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FranchiseOwnerService, FranchiseLocation } from '@/services/franchiseOwnerService'
+import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -151,19 +153,43 @@ export default function FranchiseLocationsPage() {
         setFormError(null)
     }
 
+    // ── Field errors ────────────────────────────────────────────────────────
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
     // ── Form field handler ───────────────────────────────────────────────────
 
     const handleFormChange = (field: keyof LocationFormData, value: string | number) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
+        const v = String(value)
+        let error: string | null = null
+        if (field === 'name') error = validateName(v, 'Name')
+        else if (field === 'address') error = validateAddress(v)
+        else if (field === 'city') error = validateName(v, 'City')
+        else if (field === 'state') error = validateName(v, 'State')
+        else if (field === 'zipCode') error = validateZipCode(v, false)
+        else if (field === 'phone') error = validatePhone(v, false)
+        else if (field === 'email') error = validateEmail(v)
+        else if (field === 'capacity' && v) error = validateNumber(v, 'Capacity', 0, 50000)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+    }
+
+    const validateLocationForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nmErr = validateName(formData.name, 'Name'); if (nmErr) errs.name = nmErr
+        const adErr = validateAddress(formData.address); if (adErr) errs.address = adErr
+        if (formData.city) { const e = validateName(formData.city, 'City'); if (e) errs.city = e }
+        if (formData.state) { const e = validateName(formData.state, 'State'); if (e) errs.state = e }
+        if (formData.zipCode) { const e = validateZipCode(formData.zipCode, false); if (e) errs.zipCode = e }
+        if (formData.phone) { const e = validatePhone(formData.phone, false); if (e) errs.phone = e }
+        if (formData.email) { const e = validateEmail(formData.email); if (e) errs.email = e }
+        setFieldErrors(errs)
+        return Object.keys(errs).length === 0
     }
 
     // ── CRUD handlers ────────────────────────────────────────────────────────
 
     const handleCreate = async () => {
-        if (!formData.name.trim() || !formData.address.trim()) {
-            setFormError('Name and address are required.')
-            return
-        }
+        if (!validateLocationForm()) return
         setSubmitting(true)
         setFormError(null)
         try {
@@ -179,10 +205,7 @@ export default function FranchiseLocationsPage() {
 
     const handleUpdate = async () => {
         if (!selectedLocation) return
-        if (!formData.name.trim() || !formData.address.trim()) {
-            setFormError('Name and address are required.')
-            return
-        }
+        if (!validateLocationForm()) return
         setSubmitting(true)
         setFormError(null)
         try {
@@ -651,8 +674,11 @@ export default function FranchiseLocationsPage() {
                                             <Input
                                                 value={formData.name}
                                                 onChange={(e) => handleFormChange('name', e.target.value)}
+                                                onKeyDown={filterNameInput}
                                                 placeholder="Location name"
+                                                className={fieldErrors.name ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.name} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
@@ -660,7 +686,9 @@ export default function FranchiseLocationsPage() {
                                                 value={formData.address}
                                                 onChange={(e) => handleFormChange('address', e.target.value)}
                                                 placeholder="Street address"
+                                                className={fieldErrors.address ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
@@ -668,16 +696,22 @@ export default function FranchiseLocationsPage() {
                                                 <Input
                                                     value={formData.city}
                                                     onChange={(e) => handleFormChange('city', e.target.value)}
+                                                    onKeyDown={filterNameInput}
                                                     placeholder="City"
+                                                    className={fieldErrors.city ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.city} error={fieldErrors.city} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                                                 <Input
                                                     value={formData.state}
                                                     onChange={(e) => handleFormChange('state', e.target.value)}
+                                                    onKeyDown={filterNameInput}
                                                     placeholder="State"
+                                                    className={fieldErrors.state ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.state} error={fieldErrors.state} />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -687,7 +721,9 @@ export default function FranchiseLocationsPage() {
                                                     value={formData.zipCode}
                                                     onChange={(e) => handleFormChange('zipCode', e.target.value)}
                                                     placeholder="Zip code"
+                                                    className={fieldErrors.zipCode ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.zipCode} error={fieldErrors.zipCode} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
@@ -695,7 +731,9 @@ export default function FranchiseLocationsPage() {
                                                     type="number"
                                                     value={formData.capacity || ''}
                                                     onChange={(e) => handleFormChange('capacity', parseInt(e.target.value) || 0)}
+                                                    onKeyDown={filterNumberInput}
                                                     placeholder="Max capacity"
+                                                    className={fieldErrors.capacity ? 'border-red-500' : ''}
                                                 />
                                             </div>
                                         </div>
@@ -705,8 +743,11 @@ export default function FranchiseLocationsPage() {
                                                 <Input
                                                     value={formData.phone}
                                                     onChange={(e) => handleFormChange('phone', e.target.value)}
+                                                    onKeyDown={filterPhoneInput}
                                                     placeholder="Phone number"
+                                                    className={fieldErrors.phone ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -715,7 +756,9 @@ export default function FranchiseLocationsPage() {
                                                     value={formData.email}
                                                     onChange={(e) => handleFormChange('email', e.target.value)}
                                                     placeholder="Email address"
+                                                    className={fieldErrors.email ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
                                             </div>
                                         </div>
                                     </div>

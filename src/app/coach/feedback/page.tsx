@@ -16,6 +16,8 @@ import { coachService } from '@/services/modules/coach.service'
 import aiCoachService from '@/services/aiCoachService'
 import { videoAnalysisService } from '@/services/advancedAIServices'
 import type { CoachStudent, CoachFeedback } from '@/services/modules/coach.service'
+import { validateTextArea, validateSelect, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // Mock fallback data
 const mockStudents: Pick<CoachStudent, 'id' | 'name' | 'level'>[] = [
@@ -79,6 +81,7 @@ const CoachFeedbackPage = () => {
     const [aiLoading, setAiLoading] = useState(false)
     const [aiSuggestions, setAiSuggestions] = useState<any>(null)
     const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false)
+    const [errors, setErrors] = useState<Record<string, string>>({})
 
     const coachId = user?.id || ''
 
@@ -161,8 +164,14 @@ const CoachFeedbackPage = () => {
     }, [isAuthenticated, loadStudents, loadFeedback])
 
     const handleSendFeedback = async () => {
-        if (!selectedStudent || !feedbackText.trim()) {
-            showNotification('error', 'Please select a student and write feedback.')
+        const newErrors: Record<string, string> = {}
+        const studentErr = validateSelect(selectedStudent || '', 'Student')
+        if (studentErr) newErrors.student = studentErr
+        const textErr = validateTextArea(feedbackText, 'Feedback Message', 5, 2000)
+        if (textErr) newErrors.feedbackText = textErr
+        setErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) {
+            showNotification('error', 'Please fix validation errors before sending.')
             return
         }
 
@@ -403,9 +412,14 @@ const CoachFeedbackPage = () => {
                                 <Textarea
                                     placeholder="Write your feedback here... (e.g., areas of improvement, strengths, encouragement)"
                                     value={feedbackText}
-                                    onChange={(e) => setFeedbackText(e.target.value)}
-                                    className="min-h-24"
+                                    onChange={(e) => {
+                                        setFeedbackText(e.target.value)
+                                        const err = validateTextArea(e.target.value, 'Feedback Message', 5, 2000)
+                                        setErrors(prev => { const n = { ...prev }; if (err) n.feedbackText = err; else delete n.feedbackText; return n })
+                                    }}
+                                    className={`min-h-24 ${errors.feedbackText ? 'border-red-500' : ''}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.message} error={errors.feedbackText} />
                             </div>
 
                             {/* Send Button */}

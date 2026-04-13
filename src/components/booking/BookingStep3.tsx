@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { filterCardNumberInput, filterNumberInput, filterNameInput, FORMAT_HINTS } from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 const paymentSchema = z.object({
     paymentMethod: z.enum(['card', 'cash', 'bank_transfer']),
@@ -143,9 +145,11 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                             <input
                                 type="text"
                                 {...register('cardNumber')}
+                                onKeyDown={filterCardNumberInput}
                                 placeholder="1234 5678 9012 3456"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
                             />
+                            <FormFieldHint hint={FORMAT_HINTS.cardNumber} error={errors.cardNumber?.message} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -157,8 +161,9 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                     type="text"
                                     {...register('cardExpiry')}
                                     placeholder="MM/YY"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardExpiry ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.cardExpiry} error={errors.cardExpiry?.message} />
                             </div>
 
                             <div>
@@ -168,9 +173,11 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                 <input
                                     type="text"
                                     {...register('cardCvv')}
+                                    onKeyDown={filterNumberInput}
                                     placeholder="123"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardCvv ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.cvv} error={errors.cardCvv?.message} />
                             </div>
                         </div>
 
@@ -181,9 +188,11 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                             <input
                                 type="text"
                                 {...register('cardName')}
+                                onKeyDown={filterNameInput}
                                 placeholder="John Doe"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardName ? 'border-red-500' : 'border-gray-300'}`}
                             />
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.cardName?.message} />
                         </div>
                     </div>
                 )}

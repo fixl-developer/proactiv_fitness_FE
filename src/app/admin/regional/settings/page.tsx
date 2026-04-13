@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalSettings } from '@/services/regionalAdminService'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
+import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateUrl, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function RegionalSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -23,6 +25,8 @@ export default function RegionalSettingsPage() {
     const [webhookResult, setWebhookResult] = useState<string | null>(null)
     const [passwordData, setPasswordData] = useState({ current: '', newPass: '', confirm: '' })
     const [passwordSuccess, setPasswordSuccess] = useState(false)
+    const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
+    const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
 
     const originalSettingsRef = useRef<string>('')
 
@@ -80,9 +84,31 @@ export default function RegionalSettingsPage() {
             ...prev,
             [field]: value
         }))
+        // Real-time validation for text fields
+        if (typeof value === 'string') {
+            let error: string | null = null
+            if (field === 'regionName') error = validateName(value, 'Region name')
+            else if (field === 'regionManager') error = validateName(value, 'Manager name')
+            else if (field === 'managerEmail') error = validateEmail(value)
+            else if (field === 'managerPhone') error = validatePhone(value, false)
+            else if (field === 'webhookUrl' && value) error = validateUrl(value)
+            setSettingsErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+        }
+        if (typeof value === 'number' || (typeof value === 'string' && ['maxLocations', 'maxStaff', 'maxStudents'].includes(field))) {
+            const error = validateNumber(String(value), field === 'maxLocations' ? 'Max locations' : field === 'maxStaff' ? 'Max staff' : 'Max students', 1)
+            setSettingsErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+        }
     }
 
     const handleSaveSettings = async () => {
+        const newErrors: Record<string, string> = {}
+        const rnErr = validateName(settings.regionName, 'Region name'); if (rnErr) newErrors.regionName = rnErr
+        const rmErr = validateName(settings.regionManager, 'Manager name'); if (rmErr) newErrors.regionManager = rmErr
+        const emErr = validateEmail(settings.managerEmail); if (emErr) newErrors.managerEmail = emErr
+        const phErr = validatePhone(settings.managerPhone, false); if (phErr) newErrors.managerPhone = phErr
+        setSettingsErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
+
         setIsSaving(true)
         try {
             setError(null)
@@ -162,8 +188,11 @@ export default function RegionalSettingsPage() {
                                     <Input
                                         value={settings.regionName}
                                         onChange={(e) => handleInputChange('regionName', e.target.value)}
+                                        onKeyDown={filterNameInput}
                                         placeholder="Enter region name"
+                                        className={settingsErrors.regionName ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={settingsErrors.regionName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Region Code</label>
@@ -182,8 +211,11 @@ export default function RegionalSettingsPage() {
                                     <Input
                                         value={settings.regionManager}
                                         onChange={(e) => handleInputChange('regionManager', e.target.value)}
+                                        onKeyDown={filterNameInput}
                                         placeholder="Enter manager name"
+                                        className={settingsErrors.regionManager ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={settingsErrors.regionManager} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Manager Email</label>
@@ -192,7 +224,9 @@ export default function RegionalSettingsPage() {
                                         value={settings.managerEmail}
                                         onChange={(e) => handleInputChange('managerEmail', e.target.value)}
                                         placeholder="Enter manager email"
+                                        className={settingsErrors.managerEmail ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={settingsErrors.managerEmail} />
                                 </div>
                             </div>
 
@@ -203,8 +237,11 @@ export default function RegionalSettingsPage() {
                                         type="tel"
                                         value={settings.managerPhone}
                                         onChange={(e) => handleInputChange('managerPhone', e.target.value)}
+                                        onKeyDown={filterPhoneInput}
                                         placeholder="Enter manager phone"
+                                        className={settingsErrors.managerPhone ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={settingsErrors.managerPhone} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
@@ -262,7 +299,10 @@ export default function RegionalSettingsPage() {
                                         type="number"
                                         value={settings.maxLocations}
                                         onChange={(e) => handleInputChange('maxLocations', parseInt(e.target.value))}
+                                        onKeyDown={filterNumberInput}
+                                        className={settingsErrors.maxLocations ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint="Numbers only" error={settingsErrors.maxLocations} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Max Staff</label>
@@ -270,7 +310,10 @@ export default function RegionalSettingsPage() {
                                         type="number"
                                         value={settings.maxStaff}
                                         onChange={(e) => handleInputChange('maxStaff', parseInt(e.target.value))}
+                                        onKeyDown={filterNumberInput}
+                                        className={settingsErrors.maxStaff ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint="Numbers only" error={settingsErrors.maxStaff} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Max Students</label>
@@ -278,7 +321,10 @@ export default function RegionalSettingsPage() {
                                         type="number"
                                         value={settings.maxStudents}
                                         onChange={(e) => handleInputChange('maxStudents', parseInt(e.target.value))}
+                                        onKeyDown={filterNumberInput}
+                                        className={settingsErrors.maxStudents ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint="Numbers only" error={settingsErrors.maxStudents} />
                                 </div>
                             </div>
                         </CardContent>
@@ -379,7 +425,10 @@ export default function RegionalSettingsPage() {
                                 <div className="relative">
                                     <Input
                                         type={showPassword ? 'text' : 'password'}
+                                        value={passwordData.current}
+                                        onChange={(e) => { setPasswordData(prev => ({ ...prev, current: e.target.value })); setPasswordErrors(prev => { const n = { ...prev }; delete n.current; return n }) }}
                                         placeholder="Enter current password"
+                                        className={passwordErrors.current ? 'border-red-500' : ''}
                                     />
                                     <button id="admin-regional-settings-btn-2"
                                         onClick={() => setShowPassword(!showPassword)}
@@ -388,29 +437,51 @@ export default function RegionalSettingsPage() {
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
                                 </div>
+                                <FormFieldHint error={passwordErrors.current} />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
                                 <Input
                                     type="password"
+                                    value={passwordData.newPass}
+                                    onChange={(e) => {
+                                        setPasswordData(prev => ({ ...prev, newPass: e.target.value }))
+                                        const err = validatePassword(e.target.value)
+                                        setPasswordErrors(prev => { const n = { ...prev }; if (err) n.newPass = err; else delete n.newPass; return n })
+                                    }}
                                     placeholder="Enter new password"
+                                    className={passwordErrors.newPass ? 'border-red-500' : ''}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.password} error={passwordErrors.newPass} />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
                                 <Input
                                     type="password"
+                                    value={passwordData.confirm}
+                                    onChange={(e) => {
+                                        setPasswordData(prev => ({ ...prev, confirm: e.target.value }))
+                                        const err = validateConfirmPassword(passwordData.newPass, e.target.value)
+                                        setPasswordErrors(prev => { const n = { ...prev }; if (err) n.confirm = err; else delete n.confirm; return n })
+                                    }}
                                     placeholder="Confirm new password"
+                                    className={passwordErrors.confirm ? 'border-red-500' : ''}
                                 />
+                                <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={passwordErrors.confirm} />
                             </div>
 
                             <button id="admin-regional-settings-btn-3" onClick={() => {
-                                if (!passwordData.newPass || !passwordData.confirm) { alert('Please fill all password fields'); return }
-                                if (passwordData.newPass !== passwordData.confirm) { alert('Passwords do not match'); return }
+                                const errs: Record<string, string> = {}
+                                if (!passwordData.current) errs.current = 'Current password is required'
+                                const npErr = validatePassword(passwordData.newPass); if (npErr) errs.newPass = npErr
+                                const cpErr = validateConfirmPassword(passwordData.newPass, passwordData.confirm); if (cpErr) errs.confirm = cpErr
+                                setPasswordErrors(errs)
+                                if (Object.keys(errs).length > 0) return
                                 setPasswordSuccess(true)
                                 setPasswordData({ current: '', newPass: '', confirm: '' })
+                                setPasswordErrors({})
                                 setTimeout(() => setPasswordSuccess(false), 3000)
                             }} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                 Update Password

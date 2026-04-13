@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalLocation, PaginatedResponse } from '@/services/regionalAdminService'
+import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ─── Form Data Type ──────────────────────────────────────────────────
 interface LocationFormData {
@@ -50,15 +52,44 @@ function LocationFormModal({
     title: string
 }) {
     const [form, setForm] = useState<LocationFormData>(initialData)
+    const [errors, setErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         setForm(initialData)
+        setErrors({})
     }, [initialData])
 
     if (!open) return null
 
     const handleChange = (field: keyof LocationFormData, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'name') error = validateName(value, 'Name')
+        else if (field === 'address') error = validateAddress(value, 'Address')
+        else if (field === 'city') error = validateName(value, 'City')
+        else if (field === 'state') error = validateName(value, 'State')
+        else if (field === 'zipCode') error = validateZipCode(value)
+        else if (field === 'phone') error = validatePhone(value)
+        else if (field === 'email') error = validateEmail(value)
+        else if (field === 'capacity' && value) error = validateNumber(value, 'Capacity', 1, 10000)
+        setErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+    }
+
+    const handleFormSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        const newErrors: Record<string, string> = {}
+        const v = (fn: (v: string, l?: string) => string | null, val: string, key: string, label?: string) => { const e = fn(val, label); if (e) newErrors[key] = e }
+        v(validateName, form.name, 'name', 'Name')
+        v(validateAddress, form.address, 'address', 'Address')
+        v(validateName, form.city, 'city', 'City')
+        v(validateName, form.state, 'state', 'State')
+        v(validateZipCode, form.zipCode, 'zipCode')
+        v(validatePhone, form.phone, 'phone')
+        v(validateEmail, form.email, 'email')
+        if (form.capacity) { const ce = validateNumber(form.capacity, 'Capacity', 1, 10000); if (ce) newErrors.capacity = ce }
+        setErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
+        onSubmit(form)
     }
 
     return (
@@ -71,16 +102,14 @@ function LocationFormModal({
                     </button>
                 </div>
                 <form
-                    onSubmit={e => {
-                        e.preventDefault()
-                        onSubmit(form)
-                    }}
+                    onSubmit={handleFormSubmit}
                     className="p-6 space-y-4"
                 >
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2 sm:col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                            <Input value={form.name} onChange={e => handleChange('name', e.target.value)} required placeholder="Location name" />
+                            <Input value={form.name} onChange={e => handleChange('name', e.target.value)} onKeyDown={filterNameInput} required placeholder="Location name" className={errors.name ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.name} />
                         </div>
                         <div className="col-span-2 sm:col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
@@ -89,36 +118,43 @@ function LocationFormModal({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
-                        <Input value={form.address} onChange={e => handleChange('address', e.target.value)} required placeholder="123 Main St" />
+                        <Input value={form.address} onChange={e => handleChange('address', e.target.value)} required placeholder="123 Main St" className={errors.address ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.address} error={errors.address} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                            <Input value={form.city} onChange={e => handleChange('city', e.target.value)} required placeholder="Boston" />
+                            <Input value={form.city} onChange={e => handleChange('city', e.target.value)} onKeyDown={filterNameInput} required placeholder="Boston" className={errors.city ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.city} error={errors.city} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
-                            <Input value={form.state} onChange={e => handleChange('state', e.target.value)} required placeholder="MA" />
+                            <Input value={form.state} onChange={e => handleChange('state', e.target.value)} onKeyDown={filterNameInput} required placeholder="MA" className={errors.state ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.state} error={errors.state} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
-                            <Input value={form.zipCode} onChange={e => handleChange('zipCode', e.target.value)} required placeholder="02101" />
+                            <Input value={form.zipCode} onChange={e => handleChange('zipCode', e.target.value)} required placeholder="02101" className={errors.zipCode ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.zipCode} error={errors.zipCode} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                            <Input type="number" value={form.capacity} onChange={e => handleChange('capacity', e.target.value)} placeholder="500" />
+                            <Input type="number" value={form.capacity} onChange={e => handleChange('capacity', e.target.value)} onKeyDown={filterNumberInput} placeholder="500" className={errors.capacity ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.capacity} error={errors.capacity} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                            <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} required placeholder="(555) 123-4567" />
+                            <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} onKeyDown={filterPhoneInput} required placeholder="(555) 123-4567" className={errors.phone ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                            <Input type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} required placeholder="location@example.com" />
+                            <Input type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} required placeholder="location@example.com" className={errors.email ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t">

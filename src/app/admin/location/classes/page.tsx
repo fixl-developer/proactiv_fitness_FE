@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService, LocationClass } from '@/services/locationManagerService'
 import { smartSchedulerService } from '@/services/advancedAIServices'
+import { validateRequired, validateNumber, validateName, filterNameInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function LocationClassesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -23,6 +25,7 @@ export default function LocationClassesPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [aiSchedule, setAiSchedule] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     const loadAiOptimization = async () => {
         setAiLoading(true)
@@ -77,7 +80,22 @@ export default function LocationClassesPage() {
         setShowModal(true)
     }
 
+    const handleClassFormChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'name') error = validateRequired(String(value), 'Class name')
+        else if (field === 'coach') error = validateName(String(value), 'Coach')
+        else if (field === 'capacity') error = validateNumber(String(value), 'Capacity', 1, 500)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+    }
+
     const handleSave = async () => {
+        const errs: Record<string, string> = {}
+        const nmErr = validateRequired(formData.name, 'Class name'); if (nmErr) errs.name = nmErr
+        if (formData.coach) { const cErr = validateName(formData.coach, 'Coach'); if (cErr) errs.coach = cErr }
+        const cpErr = validateNumber(String(formData.capacity), 'Capacity', 1, 500); if (cpErr) errs.capacity = cpErr
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             if (editingClass) {
@@ -340,8 +358,9 @@ export default function LocationClassesPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
-                                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Enter class name" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Class Name *</label>
+                                <Input value={formData.name} onChange={(e) => handleClassFormChange('name', e.target.value)} placeholder="Enter class name" className={fieldErrors.name ? 'border-red-500' : ''} />
+                                <FormFieldHint error={fieldErrors.name} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
@@ -355,15 +374,17 @@ export default function LocationClassesPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Coach</label>
-                                <Input value={formData.coach} onChange={(e) => setFormData({ ...formData, coach: e.target.value })} placeholder="Coach name" />
+                                <Input value={formData.coach} onChange={(e) => handleClassFormChange('coach', e.target.value)} onKeyDown={filterNameInput} placeholder="Coach name" className={fieldErrors.coach ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.coach} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
                                 <Input value={formData.schedule} onChange={(e) => setFormData({ ...formData, schedule: e.target.value })} placeholder="e.g., Mon, Wed, Fri - 9:00 AM" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                                <Input type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity *</label>
+                                <Input type="number" value={formData.capacity} onChange={(e) => handleClassFormChange('capacity', parseInt(e.target.value) || 0)} onKeyDown={filterNumberInput} className={fieldErrors.capacity ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.capacity} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>

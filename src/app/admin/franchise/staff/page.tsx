@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { FranchiseOwnerService, FranchiseStaff } from '@/services/franchiseOwnerService'
+import { validateName, validateEmail, validatePhone, validatePassword, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ------- Types -------
 interface StaffFormData {
@@ -170,17 +172,29 @@ export default function FranchiseStaffPage() {
         setModalError(null)
     }
 
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
     const handleFormChange = (field: keyof StaffFormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'firstName') error = validateName(value, 'First name')
+        else if (field === 'lastName') error = validateName(value, 'Last name')
+        else if (field === 'email') error = validateEmail(value)
+        else if (field === 'phone') error = validatePhone(value, false)
+        else if (field === 'password' && (value || modalMode === 'add')) error = validatePassword(value)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const validateForm = (): string | null => {
-        if (!formData.firstName.trim()) return 'First name is required'
-        if (!formData.lastName.trim()) return 'Last name is required'
-        if (!formData.email.trim()) return 'Email is required'
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Invalid email format'
-        if (modalMode === 'add' && !formData.password) return 'Password is required for new staff'
-        if (formData.password && formData.password.length < 8) return 'Password must be at least 8 characters'
+        const errs: Record<string, string> = {}
+        const fnErr = validateName(formData.firstName, 'First name'); if (fnErr) errs.firstName = fnErr
+        const lnErr = validateName(formData.lastName, 'Last name'); if (lnErr) errs.lastName = lnErr
+        const emErr = validateEmail(formData.email); if (emErr) errs.email = emErr
+        const phErr = validatePhone(formData.phone, false); if (phErr) errs.phone = phErr
+        if (modalMode === 'add') { const pwErr = validatePassword(formData.password); if (pwErr) errs.password = pwErr }
+        else if (formData.password) { const pwErr = validatePassword(formData.password); if (pwErr) errs.password = pwErr }
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return Object.values(errs)[0]
         return null
     }
 
@@ -680,7 +694,10 @@ export default function FranchiseStaffPage() {
                                                     placeholder="e.g. Jane"
                                                     value={formData.firstName}
                                                     onChange={(e) => handleFormChange('firstName', e.target.value)}
+                                                    onKeyDown={filterNameInput}
+                                                    className={fieldErrors.firstName ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
@@ -688,7 +705,10 @@ export default function FranchiseStaffPage() {
                                                     placeholder="e.g. Doe"
                                                     value={formData.lastName}
                                                     onChange={(e) => handleFormChange('lastName', e.target.value)}
+                                                    onKeyDown={filterNameInput}
+                                                    className={fieldErrors.lastName ? 'border-red-500' : ''}
                                                 />
+                                                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
                                             </div>
                                         </div>
                                         <div>
@@ -698,7 +718,9 @@ export default function FranchiseStaffPage() {
                                                 placeholder="e.g. jane@franchise.com"
                                                 value={formData.email}
                                                 onChange={(e) => handleFormChange('email', e.target.value)}
+                                                className={fieldErrors.email ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
@@ -707,7 +729,10 @@ export default function FranchiseStaffPage() {
                                                 placeholder="e.g. +1 (212) 555-0100"
                                                 value={formData.phone}
                                                 onChange={(e) => handleFormChange('phone', e.target.value)}
+                                                onKeyDown={filterPhoneInput}
+                                                className={fieldErrors.phone ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
@@ -739,7 +764,9 @@ export default function FranchiseStaffPage() {
                                                 placeholder={modalMode === 'edit' ? '********' : 'Enter password (min 8 chars)'}
                                                 value={formData.password}
                                                 onChange={(e) => handleFormChange('password', e.target.value)}
+                                                className={fieldErrors.password ? 'border-red-500' : ''}
                                             />
+                                            <FormFieldHint hint={FORMAT_HINTS.password} error={fieldErrors.password} />
                                         </div>
                                     </div>
                                     <div className="p-6 border-t border-gray-200 flex gap-3">

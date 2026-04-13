@@ -13,6 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { validateName, validateEmail, validatePhone, validateUrl, validateAddress, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function PartnerSettingsPage() {
     const router = useRouter()
@@ -24,6 +26,7 @@ export default function PartnerSettingsPage() {
     const [settings, setSettings] = useState<any>({})
     const [saving, setSaving] = useState(false)
     const [saveSuccess, setSaveSuccess] = useState(false)
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const originalSettingsRef = useRef<string>('')
 
     useEffect(() => {
@@ -63,7 +66,36 @@ export default function PartnerSettingsPage() {
 
     useTrackUnsavedChanges('partner-settings', 'Partner Settings', isDirty, saveForLogout)
 
+    const validateProfileSettings = (): boolean => {
+        const newErrors: Record<string, string> = {}
+        if (activeTab === 'profile') {
+            const orgErr = validateName(settings.profile?.organizationName || '', 'Organization Name')
+            if (orgErr) newErrors.organizationName = orgErr
+            const contactErr = validateName(settings.profile?.contactPerson || '', 'Contact Person')
+            if (contactErr) newErrors.contactPerson = contactErr
+            const emailErr = validateEmail(settings.profile?.email || '')
+            if (emailErr) newErrors.profileEmail = emailErr
+            const phoneErr = validatePhone(settings.profile?.phone || '', false)
+            if (phoneErr) newErrors.profilePhone = phoneErr
+            const urlErr = validateUrl(settings.profile?.website || '', false)
+            if (urlErr) newErrors.website = urlErr
+            const addrErr = validateAddress(settings.profile?.address || '', 'Address')
+            if (settings.profile?.address && addrErr) newErrors.address = addrErr
+        }
+        if (activeTab === 'billing') {
+            const billingEmailErr = validateEmail(settings.billing?.billingEmail || '')
+            if (settings.billing?.billingEmail && billingEmailErr) newErrors.billingEmail = billingEmailErr
+        }
+        if (activeTab === 'api') {
+            const webhookErr = validateUrl(settings.api?.webhookUrl || '', false)
+            if (webhookErr) newErrors.webhookUrl = webhookErr
+        }
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
     const handleSaveSettings = async () => {
+        if (!validateProfileSettings()) return
         try {
             setSaving(true)
             setError(null)
@@ -165,48 +197,87 @@ export default function PartnerSettingsPage() {
                                     <Input
                                         type="text"
                                         value={settings.profile?.organizationName || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'organizationName', e.target.value)}
+                                        onKeyDown={filterNameInput}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'organizationName', e.target.value)
+                                            const err = validateName(e.target.value, 'Organization Name')
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.organizationName = err; else delete n.organizationName; return n })
+                                        }}
+                                        className={errors.organizationName ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={errors.organizationName} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
                                     <Input
                                         type="text"
                                         value={settings.profile?.contactPerson || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'contactPerson', e.target.value)}
+                                        onKeyDown={filterNameInput}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'contactPerson', e.target.value)
+                                            const err = validateName(e.target.value, 'Contact Person')
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.contactPerson = err; else delete n.contactPerson; return n })
+                                        }}
+                                        className={errors.contactPerson ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.name} error={errors.contactPerson} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                                     <Input
                                         type="email"
                                         value={settings.profile?.email || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'email', e.target.value)}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'email', e.target.value)
+                                            const err = validateEmail(e.target.value)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.profileEmail = err; else delete n.profileEmail; return n })
+                                        }}
+                                        className={errors.profileEmail ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={errors.profileEmail} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                                     <Input
                                         type="tel"
                                         value={settings.profile?.phone || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'phone', e.target.value)}
+                                        onKeyDown={filterPhoneInput}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'phone', e.target.value)
+                                            const err = validatePhone(e.target.value, false)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.profilePhone = err; else delete n.profilePhone; return n })
+                                        }}
+                                        className={errors.profilePhone ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.profilePhone} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
                                     <Input
                                         type="url"
                                         value={settings.profile?.website || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'website', e.target.value)}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'website', e.target.value)
+                                            const err = validateUrl(e.target.value, false)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.website = err; else delete n.website; return n })
+                                        }}
+                                        className={errors.website ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.url} error={errors.website} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                                     <Input
                                         type="text"
                                         value={settings.profile?.address || ''}
-                                        onChange={(e) => updateSettingsField('profile', 'address', e.target.value)}
+                                        onChange={(e) => {
+                                            updateSettingsField('profile', 'address', e.target.value)
+                                            const err = validateAddress(e.target.value, 'Address')
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.address = err; else delete n.address; return n })
+                                        }}
+                                        className={errors.address ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.address} error={errors.address} />
                                 </div>
                             </div>
                             <div className="flex justify-end">
@@ -246,8 +317,14 @@ export default function PartnerSettingsPage() {
                                     <Input
                                         type="email"
                                         value={settings.billing?.billingEmail || ''}
-                                        onChange={(e) => updateSettingsField('billing', 'billingEmail', e.target.value)}
+                                        onChange={(e) => {
+                                            updateSettingsField('billing', 'billingEmail', e.target.value)
+                                            const err = validateEmail(e.target.value)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.billingEmail = err; else delete n.billingEmail; return n })
+                                        }}
+                                        className={errors.billingEmail ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.email} error={errors.billingEmail} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
@@ -328,8 +405,14 @@ export default function PartnerSettingsPage() {
                                     <Input
                                         type="url"
                                         value={settings.api?.webhookUrl || ''}
-                                        onChange={(e) => updateSettingsField('api', 'webhookUrl', e.target.value)}
+                                        onChange={(e) => {
+                                            updateSettingsField('api', 'webhookUrl', e.target.value)
+                                            const err = validateUrl(e.target.value, false)
+                                            setErrors(prev => { const n = { ...prev }; if (err) n.webhookUrl = err; else delete n.webhookUrl; return n })
+                                        }}
+                                        className={errors.webhookUrl ? 'border-red-500' : ''}
                                     />
+                                    <FormFieldHint hint={FORMAT_HINTS.url} error={errors.webhookUrl} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Environment</label>

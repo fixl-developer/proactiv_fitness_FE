@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Calendar, User, Mail, Phone, MapPin, Users, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 const bookTrialSchema = z.object({
     parentName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -94,15 +96,12 @@ export default function BookTrialPage() {
                                                 <input
                                                     type="text"
                                                     {...register('parentName')}
-                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                    onKeyDown={filterNameInput}
+                                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${errors.parentName ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="John Doe"
                                                 />
                                             </div>
-                                            {errors.parentName && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.parentName.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.parentName?.message} />
                                         </div>
 
                                         <div>
@@ -114,15 +113,11 @@ export default function BookTrialPage() {
                                                 <input
                                                     type="email"
                                                     {...register('email')}
-                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="john@example.com"
                                                 />
                                             </div>
-                                            {errors.email && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.email.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email?.message} />
                                         </div>
 
                                         <div className="md:col-span-2">
@@ -134,15 +129,12 @@ export default function BookTrialPage() {
                                                 <input
                                                     type="tel"
                                                     {...register('phone')}
-                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                    onKeyDown={filterPhoneInput}
+                                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="+1234567890"
                                                 />
                                             </div>
-                                            {errors.phone && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.phone.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone?.message} />
                                         </div>
                                     </div>
                                 </div>
@@ -162,15 +154,12 @@ export default function BookTrialPage() {
                                                 <input
                                                     type="text"
                                                     {...register('childName')}
-                                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                    onKeyDown={filterNameInput}
+                                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${errors.childName ? 'border-red-500' : 'border-gray-300'}`}
                                                     placeholder="Child's name"
                                                 />
                                             </div>
-                                            {errors.childName && (
-                                                <p className="mt-1 text-sm text-red-600">
-                                                    {errors.childName.message}
-                                                </p>
-                                            )}
+                                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.childName?.message} />
                                         </div>
 
                                         <div>

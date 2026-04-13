@@ -16,6 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { validateName, validateRequired, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface Term {
   id: string
@@ -69,6 +71,10 @@ export default function TermsHolidaysPage() {
   const [termForm, setTermForm] = useState({ name: '', startDate: '', endDate: '' })
   const [savingTerm, setSavingTerm] = useState(false)
 
+  // Validation errors
+  const [termErrors, setTermErrors] = useState<Record<string, string>>({})
+  const [holidayErrors, setHolidayErrors] = useState<Record<string, string>>({})
+
   // Holiday form
   const [showHolidayForm, setShowHolidayForm] = useState(false)
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null)
@@ -113,11 +119,28 @@ export default function TermsHolidaysPage() {
       setEditingTerm(null)
       setTermForm({ name: '', startDate: '', endDate: '' })
     }
+    setTermErrors({})
     setShowTermForm(true)
+  }
+
+  const validateTermForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(termForm.name, 'Term name')
+    if (nameErr) errs.name = nameErr
+    const startErr = validateRequired(termForm.startDate, 'Start date')
+    if (startErr) errs.startDate = startErr
+    const endErr = validateRequired(termForm.endDate, 'End date')
+    if (endErr) errs.endDate = endErr
+    if (termForm.startDate && termForm.endDate && new Date(termForm.startDate) >= new Date(termForm.endDate)) {
+      errs.endDate = 'End date must be after start date'
+    }
+    setTermErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleTermSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateTermForm()) return
     setSavingTerm(true)
     try {
       if (editingTerm) {
@@ -150,11 +173,23 @@ export default function TermsHolidaysPage() {
       setEditingHoliday(null)
       setHolidayForm({ name: '', date: '', type: 'Public Holiday' })
     }
+    setHolidayErrors({})
     setShowHolidayForm(true)
+  }
+
+  const validateHolidayForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(holidayForm.name, 'Holiday name')
+    if (nameErr) errs.name = nameErr
+    const dateErr = validateRequired(holidayForm.date, 'Date')
+    if (dateErr) errs.date = dateErr
+    setHolidayErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleHolidaySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateHolidayForm()) return
     setSavingHoliday(true)
     try {
       if (editingHoliday) {
@@ -414,31 +449,47 @@ export default function TermsHolidaysPage() {
               <input id="admin-business-config-terms-term-name-input"
                 type="text"
                 value={termForm.name}
-                onChange={(e) => setTermForm({ ...termForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setTermForm({ ...termForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Term name')
+                  setTermErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Spring Term 2025"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={termErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Start Date</label>
               <input id="admin-business-config-terms-start-date-input"
                 type="date"
                 value={termForm.startDate}
-                onChange={(e) => setTermForm({ ...termForm, startDate: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => {
+                  setTermForm({ ...termForm, startDate: e.target.value })
+                  const err = validateRequired(e.target.value, 'Start date')
+                  setTermErrors((prev) => ({ ...prev, startDate: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.startDate ? 'border-red-500' : ''}`}
                 required
               />
+              <FormFieldHint error={termErrors.startDate} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">End Date</label>
               <input id="admin-business-config-terms-end-date-input"
                 type="date"
                 value={termForm.endDate}
-                onChange={(e) => setTermForm({ ...termForm, endDate: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => {
+                  setTermForm({ ...termForm, endDate: e.target.value })
+                  const err = validateRequired(e.target.value, 'End date')
+                  setTermErrors((prev) => ({ ...prev, endDate: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.endDate ? 'border-red-500' : ''}`}
                 required
               />
+              <FormFieldHint error={termErrors.endDate} />
             </div>
             <DialogFooter>
               <Button id="btn-set-show-term-form-admin-business-config-terms" type="button" variant="outline" onClick={() => setShowTermForm(false)}>
@@ -468,21 +519,32 @@ export default function TermsHolidaysPage() {
               <input id="admin-business-config-terms-holiday-name-input"
                 type="text"
                 value={holidayForm.name}
-                onChange={(e) => setHolidayForm({ ...holidayForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setHolidayForm({ ...holidayForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Holiday name')
+                  setHolidayErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${holidayErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Chinese New Year"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={holidayErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Date</label>
               <input id="admin-business-config-terms-holiday-date-input"
                 type="date"
                 value={holidayForm.date}
-                onChange={(e) => setHolidayForm({ ...holidayForm, date: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => {
+                  setHolidayForm({ ...holidayForm, date: e.target.value })
+                  const err = validateRequired(e.target.value, 'Date')
+                  setHolidayErrors((prev) => ({ ...prev, date: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${holidayErrors.date ? 'border-red-500' : ''}`}
                 required
               />
+              <FormFieldHint error={holidayErrors.date} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Type</label>

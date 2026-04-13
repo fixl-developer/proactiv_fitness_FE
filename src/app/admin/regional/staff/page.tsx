@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalStaff, RegionalLocation } from '@/services/regionalAdminService'
+import { validateName, validateEmail, validatePhone, validatePassword, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 const ROLES = ['COACH', 'LOCATION_MANAGER', 'SUPPORT_STAFF', 'FRANCHISE_OWNER'] as const
 const ROLE_LABELS: Record<string, string> = {
@@ -42,6 +44,7 @@ function StaffFormModal({
         locationId: '',
         password: '',
     })
+    const [errors, setErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (initial) {
@@ -58,14 +61,37 @@ function StaffFormModal({
         } else {
             setForm({ firstName: '', lastName: '', email: '', phone: '', role: 'COACH', locationId: '', password: '' })
         }
+        setErrors({})
     }, [initial, open])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+        const { name, value } = e.target
+        setForm(prev => ({ ...prev, [name]: value }))
+        // Real-time validation
+        let error: string | null = null
+        if (name === 'firstName') error = validateName(value, 'First name')
+        else if (name === 'lastName') error = validateName(value, 'Last name')
+        else if (name === 'email') error = validateEmail(value)
+        else if (name === 'phone') error = validatePhone(value, false)
+        else if (name === 'password' && (value || !initial)) error = validatePassword(value)
+        setErrors(prev => {
+            const next = { ...prev }
+            if (error) next[name] = error; else delete next[name]
+            return next
+        })
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+        const newErrors: Record<string, string> = {}
+        const fnErr = validateName(form.firstName, 'First name'); if (fnErr) newErrors.firstName = fnErr
+        const lnErr = validateName(form.lastName, 'Last name'); if (lnErr) newErrors.lastName = lnErr
+        const emErr = validateEmail(form.email); if (emErr) newErrors.email = emErr
+        const phErr = validatePhone(form.phone, false); if (phErr) newErrors.phone = phErr
+        if (!initial) { const pwErr = validatePassword(form.password); if (pwErr) newErrors.password = pwErr }
+        else if (form.password) { const pwErr = validatePassword(form.password); if (pwErr) newErrors.password = pwErr }
+        setErrors(newErrors)
+        if (Object.keys(newErrors).length > 0) return
         const payload: any = { ...form }
         if (!payload.password) delete payload.password
         if (!payload.locationId) delete payload.locationId
@@ -95,20 +121,24 @@ function StaffFormModal({
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                            <Input name="firstName" value={form.firstName} onChange={handleChange} required placeholder="First name" />
+                            <Input name="firstName" value={form.firstName} onChange={handleChange} onKeyDown={filterNameInput} required placeholder="First name" className={errors.firstName ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                            <Input name="lastName" value={form.lastName} onChange={handleChange} required placeholder="Last name" />
+                            <Input name="lastName" value={form.lastName} onChange={handleChange} onKeyDown={filterNameInput} required placeholder="Last name" className={errors.lastName ? 'border-red-500' : ''} />
+                            <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                        <Input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="email@example.com" />
+                        <Input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="email@example.com" className={errors.email ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <Input name="phone" value={form.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" />
+                        <Input name="phone" value={form.phone} onChange={handleChange} onKeyDown={filterPhoneInput} placeholder="+1 (555) 000-0000" className={errors.phone ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
@@ -140,7 +170,7 @@ function StaffFormModal({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Password {initial ? '(leave blank to keep current)' : ''}
+                            Password {initial ? '(leave blank to keep current)' : '*'}
                         </label>
                         <Input
                             name="password"
@@ -148,8 +178,10 @@ function StaffFormModal({
                             value={form.password}
                             onChange={handleChange}
                             placeholder={initial ? '********' : 'Enter password'}
+                            className={errors.password ? 'border-red-500' : ''}
                             {...(!initial ? { required: true } : {})}
                         />
+                        <FormFieldHint hint={FORMAT_HINTS.password} error={errors.password} />
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t">
                         <button id="admin-regional-staff-btn-cancel"

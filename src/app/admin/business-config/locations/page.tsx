@@ -16,6 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { validateName, validateAddress, validateSelect, validateNumber, filterNameInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface Room {
   id: string
@@ -54,6 +56,10 @@ export default function LocationsRoomsPage() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [locationForm, setLocationForm] = useState({ name: '', address: '', businessUnitId: '', status: 'active' })
   const [savingLocation, setSavingLocation] = useState(false)
+
+  // Validation errors
+  const [locationErrors, setLocationErrors] = useState<Record<string, string>>({})
+  const [roomErrors, setRoomErrors] = useState<Record<string, string>>({})
 
   // Room form
   const [showRoomForm, setShowRoomForm] = useState(false)
@@ -116,11 +122,25 @@ export default function LocationsRoomsPage() {
       setEditingLocation(null)
       setLocationForm({ name: '', address: '', businessUnitId: businessUnits[0]?.id || '', status: 'active' })
     }
+    setLocationErrors({})
     setShowLocationForm(true)
+  }
+
+  const validateLocationForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(locationForm.name, 'Location name')
+    if (nameErr) errs.name = nameErr
+    const addrErr = validateAddress(locationForm.address)
+    if (addrErr) errs.address = addrErr
+    const buErr = validateSelect(locationForm.businessUnitId, 'Business unit')
+    if (buErr) errs.businessUnitId = buErr
+    setLocationErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleLocationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateLocationForm()) return
     setSavingLocation(true)
     try {
       if (editingLocation) {
@@ -159,11 +179,25 @@ export default function LocationsRoomsPage() {
         capacity: 20,
       })
     }
+    setRoomErrors({})
     setShowRoomForm(true)
+  }
+
+  const validateRoomForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(roomForm.name, 'Room name')
+    if (nameErr) errs.name = nameErr
+    const locErr = validateSelect(roomForm.locationId, 'Location')
+    if (locErr) errs.locationId = locErr
+    const capErr = validateNumber(String(roomForm.capacity), 'Capacity', 1, 10000)
+    if (capErr) errs.capacity = capErr
+    setRoomErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleRoomSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateRoomForm()) return
     setSavingRoom(true)
     try {
       if (editingRoom) {
@@ -438,32 +472,48 @@ export default function LocationsRoomsPage() {
               <input id="admin-business-config-locations-name-input"
                 type="text"
                 value={locationForm.name}
-                onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setLocationForm({ ...locationForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Location name')
+                  setLocationErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${locationErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Cyberport Studio"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={locationErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Address</label>
               <input id="admin-business-config-locations-address-input"
                 type="text"
                 value={locationForm.address}
-                onChange={(e) => setLocationForm({ ...locationForm, address: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => {
+                  setLocationForm({ ...locationForm, address: e.target.value })
+                  const err = validateAddress(e.target.value)
+                  setLocationErrors((prev) => ({ ...prev, address: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${locationErrors.address ? 'border-red-500' : ''}`}
                 placeholder="e.g. 100 Cyberport Road, Hong Kong"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.address} error={locationErrors.address} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Business Unit</label>
               {businessUnits.length === 0 ? (
                 <p className="text-sm text-gray-500">No business units available.</p>
               ) : (
+                <>
                 <select id="select-admin-business-config-locations-16"
                   value={locationForm.businessUnitId}
-                  onChange={(e) => setLocationForm({ ...locationForm, businessUnitId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  onChange={(e) => {
+                    setLocationForm({ ...locationForm, businessUnitId: e.target.value })
+                    const err = validateSelect(e.target.value, 'Business unit')
+                    setLocationErrors((prev) => ({ ...prev, businessUnitId: err || '' }))
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${locationErrors.businessUnitId ? 'border-red-500' : ''}`}
                 >
                   <option value="">Select a business unit</option>
                   {businessUnits.map((bu) => (
@@ -472,6 +522,8 @@ export default function LocationsRoomsPage() {
                     </option>
                   ))}
                 </select>
+                <FormFieldHint error={locationErrors.businessUnitId} />
+                </>
               )}
             </div>
             <div>
@@ -513,21 +565,32 @@ export default function LocationsRoomsPage() {
               <input id="admin-business-config-locations-room-name-input"
                 type="text"
                 value={roomForm.name}
-                onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setRoomForm({ ...roomForm, name: e.target.value })
+                  const err = validateName(e.target.value, 'Room name')
+                  setRoomErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${roomErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Studio A"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={roomErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Location</label>
               {locations.length === 0 ? (
                 <p className="text-sm text-gray-500">No locations available. Please create a location first.</p>
               ) : (
+                <>
                 <select id="select-admin-business-config-locations-18"
                   value={roomForm.locationId}
-                  onChange={(e) => setRoomForm({ ...roomForm, locationId: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                  onChange={(e) => {
+                    setRoomForm({ ...roomForm, locationId: e.target.value })
+                    const err = validateSelect(e.target.value, 'Location')
+                    setRoomErrors((prev) => ({ ...prev, locationId: err || '' }))
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${roomErrors.locationId ? 'border-red-500' : ''}`}
                   required
                 >
                   <option value="">Select a location</option>
@@ -537,6 +600,8 @@ export default function LocationsRoomsPage() {
                     </option>
                   ))}
                 </select>
+                <FormFieldHint error={roomErrors.locationId} />
+                </>
               )}
             </div>
             <div>
@@ -558,11 +623,17 @@ export default function LocationsRoomsPage() {
               <input id="input-number-admin-business-config-locations"
                 type="number"
                 value={roomForm.capacity}
-                onChange={(e) => setRoomForm({ ...roomForm, capacity: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNumberInput}
+                onChange={(e) => {
+                  setRoomForm({ ...roomForm, capacity: parseInt(e.target.value) || 0 })
+                  const err = validateNumber(e.target.value, 'Capacity', 1, 10000)
+                  setRoomErrors((prev) => ({ ...prev, capacity: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${roomErrors.capacity ? 'border-red-500' : ''}`}
                 min={1}
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.capacity} error={roomErrors.capacity} />
             </div>
             <DialogFooter>
               <Button id="btn-set-show-room-form-admin-business-config-locations" type="button" variant="outline" onClick={() => setShowRoomForm(false)}>

@@ -16,6 +16,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { validateName, validateUrl, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface PaymentGateway {
   id: string
@@ -44,6 +46,9 @@ export default function PaymentGatewaysPage() {
     status: 'active' as 'active' | 'inactive',
   })
   const [saving, setSaving] = useState(false)
+
+  // Validation errors
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -95,11 +100,27 @@ export default function PaymentGatewaysPage() {
         status: 'active',
       })
     }
+    setFormErrors({})
     setShowForm(true)
+  }
+
+  const validateGatewayForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const nameErr = validateName(formData.name, 'Gateway name')
+    if (nameErr) errs.name = nameErr
+    const provErr = validateSelect(formData.provider, 'Provider')
+    if (provErr) errs.provider = provErr
+    if (formData.webhookUrl) {
+      const urlErr = validateUrl(formData.webhookUrl, false)
+      if (urlErr) errs.webhookUrl = urlErr
+    }
+    setFormErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateGatewayForm()) return
     setSaving(true)
     try {
       const payload = { ...formData }
@@ -388,11 +409,17 @@ export default function PaymentGatewaysPage() {
               <input id="input-text-admin-business-config-payments"
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onKeyDown={filterNameInput}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value })
+                  const err = validateName(e.target.value, 'Gateway name')
+                  setFormErrors((prev) => ({ ...prev, name: err || '' }))
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${formErrors.name ? 'border-red-500' : ''}`}
                 placeholder="e.g. Primary Stripe"
                 required
               />
+              <FormFieldHint hint={FORMAT_HINTS.name} error={formErrors.name} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Provider</label>
@@ -413,10 +440,19 @@ export default function PaymentGatewaysPage() {
               <input id="input-url-admin-business-config-payments"
                 type="url"
                 value={formData.webhookUrl}
-                onChange={(e) => setFormData({ ...formData, webhookUrl: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                onChange={(e) => {
+                  setFormData({ ...formData, webhookUrl: e.target.value })
+                  if (e.target.value) {
+                    const err = validateUrl(e.target.value, false)
+                    setFormErrors((prev) => ({ ...prev, webhookUrl: err || '' }))
+                  } else {
+                    setFormErrors((prev) => ({ ...prev, webhookUrl: '' }))
+                  }
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${formErrors.webhookUrl ? 'border-red-500' : ''}`}
                 placeholder="https://example.com/webhook"
               />
+              <FormFieldHint hint={FORMAT_HINTS.url} error={formErrors.webhookUrl} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>

@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { LocationManagerService } from '@/services/locationManagerService'
 import { apiClient } from '@/services/api/client'
+import { validateName, validateEmail, validatePhone, validatePassword, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 const ALLOWED_ROLES = ['COACH'] as const
 const ROLE_LABELS: Record<string, string> = {
@@ -97,12 +99,12 @@ function StaffFormModal({
 
     const validate = (): boolean => {
         const errors: Record<string, string> = {}
-        if (!form.firstName.trim()) errors.firstName = 'First name is required'
-        if (!form.lastName.trim()) errors.lastName = 'Last name is required'
-        if (!form.email.trim()) errors.email = 'Email is required'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Invalid email format'
-        if (!initial && !form.password) errors.password = 'Password is required for new staff'
-        else if (form.password && form.password.length < 8) errors.password = 'Password must be at least 8 characters'
+        const fnErr = validateName(form.firstName, 'First name'); if (fnErr) errors.firstName = fnErr
+        const lnErr = validateName(form.lastName, 'Last name'); if (lnErr) errors.lastName = lnErr
+        const emErr = validateEmail(form.email); if (emErr) errors.email = emErr
+        const phErr = validatePhone(form.phone, false); if (phErr) errors.phone = phErr
+        if (!initial) { const pwErr = validatePassword(form.password); if (pwErr) errors.password = pwErr }
+        else if (form.password) { const pwErr = validatePassword(form.password); if (pwErr) errors.password = pwErr }
         setValidationErrors(errors)
         return Object.keys(errors).length === 0
     }
@@ -124,9 +126,13 @@ function StaffFormModal({
 
     const handleChange = (field: keyof StaffFormData, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }))
-        if (validationErrors[field]) {
-            setValidationErrors(prev => { const n = { ...prev }; delete n[field]; return n })
-        }
+        let error: string | null = null
+        if (field === 'firstName') error = validateName(value, 'First name')
+        else if (field === 'lastName') error = validateName(value, 'Last name')
+        else if (field === 'email') error = validateEmail(value)
+        else if (field === 'phone') error = validatePhone(value, false)
+        else if (field === 'password' && (value || !initial)) error = validatePassword(value)
+        setValidationErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     if (!open) return null
@@ -158,20 +164,22 @@ function StaffFormModal({
                             <Input
                                 value={form.firstName}
                                 onChange={(e) => handleChange('firstName', e.target.value)}
+                                onKeyDown={filterNameInput}
                                 placeholder="First name"
-                                className={validationErrors.firstName ? 'border-red-300' : ''}
+                                className={validationErrors.firstName ? 'border-red-500' : ''}
                             />
-                            {validationErrors.firstName && <p className="text-xs text-red-500 mt-1">{validationErrors.firstName}</p>}
+                            <FormFieldHint hint={FORMAT_HINTS.firstName} error={validationErrors.firstName} />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                             <Input
                                 value={form.lastName}
                                 onChange={(e) => handleChange('lastName', e.target.value)}
+                                onKeyDown={filterNameInput}
                                 placeholder="Last name"
-                                className={validationErrors.lastName ? 'border-red-300' : ''}
+                                className={validationErrors.lastName ? 'border-red-500' : ''}
                             />
-                            {validationErrors.lastName && <p className="text-xs text-red-500 mt-1">{validationErrors.lastName}</p>}
+                            <FormFieldHint hint={FORMAT_HINTS.lastName} error={validationErrors.lastName} />
                         </div>
                     </div>
 
@@ -182,9 +190,9 @@ function StaffFormModal({
                             value={form.email}
                             onChange={(e) => handleChange('email', e.target.value)}
                             placeholder="email@example.com"
-                            className={validationErrors.email ? 'border-red-300' : ''}
+                            className={validationErrors.email ? 'border-red-500' : ''}
                         />
-                        {validationErrors.email && <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>}
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={validationErrors.email} />
                     </div>
 
                     <div>
@@ -193,8 +201,11 @@ function StaffFormModal({
                             type="tel"
                             value={form.phone}
                             onChange={(e) => handleChange('phone', e.target.value)}
+                            onKeyDown={filterPhoneInput}
                             placeholder="+1 (555) 000-0000"
+                            className={validationErrors.phone ? 'border-red-500' : ''}
                         />
+                        <FormFieldHint hint={FORMAT_HINTS.phone} error={validationErrors.phone} />
                     </div>
 
                     <div>
@@ -232,9 +243,9 @@ function StaffFormModal({
                             value={form.password}
                             onChange={(e) => handleChange('password', e.target.value)}
                             placeholder={initial ? '********' : 'Enter password (min 8 chars)'}
-                            className={validationErrors.password ? 'border-red-300' : ''}
+                            className={validationErrors.password ? 'border-red-500' : ''}
                         />
-                        {validationErrors.password && <p className="text-xs text-red-500 mt-1">{validationErrors.password}</p>}
+                        <FormFieldHint hint={FORMAT_HINTS.password} error={validationErrors.password} />
                     </div>
 
                     <div className="flex gap-3 pt-4 border-t">

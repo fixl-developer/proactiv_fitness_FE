@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
+import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 export default function LocationFacilitiesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -23,6 +25,7 @@ export default function LocationFacilitiesPage() {
     const [editingFacility, setEditingFacility] = useState<any>(null)
     const [formData, setFormData] = useState({ name: '', type: '', capacity: 20, status: 'OPERATIONAL', condition: 'GOOD' })
     const [isSaving, setIsSaving] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
     const fetchFacilities = useCallback(async () => {
         try {
@@ -63,7 +66,21 @@ export default function LocationFacilitiesPage() {
         setShowModal(true)
     }
 
+    const handleFacilityFormChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+        let error: string | null = null
+        if (field === 'name') error = validateRequired(String(value), 'Facility name')
+        else if (field === 'type') error = validateRequired(String(value), 'Type')
+        else if (field === 'capacity') error = validateNumber(String(value), 'Capacity', 1, 10000)
+        setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
+    }
+
     const handleSave = async () => {
+        const errs: Record<string, string> = {}
+        const nmErr = validateRequired(formData.name, 'Facility name'); if (nmErr) errs.name = nmErr
+        const cpErr = validateNumber(String(formData.capacity), 'Capacity', 1, 10000); if (cpErr) errs.capacity = cpErr
+        setFieldErrors(errs)
+        if (Object.keys(errs).length > 0) return
         try {
             setIsSaving(true)
             if (editingFacility) {
@@ -290,16 +307,19 @@ export default function LocationFacilitiesPage() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Facility Name</label>
-                                <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Main Gym Floor" />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Facility Name *</label>
+                                <Input value={formData.name} onChange={(e) => handleFacilityFormChange('name', e.target.value)} placeholder="e.g., Main Gym Floor" className={fieldErrors.name ? 'border-red-500' : ''} />
+                                <FormFieldHint error={fieldErrors.name} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                                <Input value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} placeholder="e.g., Gymnasium" />
+                                <Input value={formData.type} onChange={(e) => handleFacilityFormChange('type', e.target.value)} placeholder="e.g., Gymnasium" className={fieldErrors.type ? 'border-red-500' : ''} />
+                                <FormFieldHint error={fieldErrors.type} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                                <Input type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity *</label>
+                                <Input type="number" value={formData.capacity} onChange={(e) => handleFacilityFormChange('capacity', parseInt(e.target.value) || 0)} onKeyDown={filterNumberInput} className={fieldErrors.capacity ? 'border-red-500' : ''} />
+                                <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.capacity} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>

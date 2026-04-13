@@ -21,6 +21,8 @@ import {
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
+import { validateRequired, validateNumber, validateSelect, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ────────────────────────────── types ──────────────────────────────
 
@@ -160,18 +162,25 @@ const emptyForm = (): ScheduleFormData => ({
     capacity: 0
 })
 
-const validateForm = (data: ScheduleFormData): FormErrors => {
+const validateScheduleForm = (data: ScheduleFormData): FormErrors => {
     const errors: FormErrors = {}
-    if (!data.className.trim()) errors.className = 'Class name is required'
-    if (!data.date) errors.date = 'Date is required'
-    if (!data.startTime) errors.startTime = 'Start time is required'
-    if (!data.endTime) errors.endTime = 'End time is required'
+    const cnErr = validateRequired(data.className, 'Class Name')
+    if (cnErr) errors.className = cnErr
+    const dtErr = validateRequired(data.date, 'Date')
+    if (dtErr) errors.date = dtErr
+    const stErr = validateRequired(data.startTime, 'Start Time')
+    if (stErr) errors.startTime = stErr
+    const etErr = validateRequired(data.endTime, 'End Time')
+    if (etErr) errors.endTime = etErr
     if (data.startTime && data.endTime && data.startTime >= data.endTime) {
         errors.endTime = 'End time must be after start time'
     }
-    if (!data.location.trim()) errors.location = 'Location is required'
-    if (!data.level) errors.level = 'Level is required'
-    if (!data.capacity || data.capacity <= 0) errors.capacity = 'Capacity must be greater than 0'
+    const locErr = validateRequired(data.location, 'Location')
+    if (locErr) errors.location = locErr
+    const lvlErr = validateSelect(data.level, 'Level')
+    if (lvlErr) errors.level = lvlErr
+    const capErr = validateNumber(String(data.capacity || ''), 'Capacity', 1, 500)
+    if (capErr) errors.capacity = capErr
     return errors
 }
 
@@ -314,7 +323,7 @@ const CoachSchedulePage = () => {
     // ──────────── CRUD ────────────
 
     const handleCreate = async () => {
-        const errors = validateForm(formData)
+        const errors = validateScheduleForm(formData)
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors)
             return
@@ -338,7 +347,7 @@ const CoachSchedulePage = () => {
 
     const handleUpdate = async () => {
         if (!editingSchedule) return
-        const errors = validateForm(formData)
+        const errors = validateScheduleForm(formData)
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors)
             return
@@ -391,9 +400,7 @@ const CoachSchedulePage = () => {
                     onChange={e => updateField('className', e.target.value)}
                     className={formErrors.className ? 'border-red-500' : ''}
                 />
-                {formErrors.className && (
-                    <p className="text-xs text-red-600">{formErrors.className}</p>
-                )}
+                <FormFieldHint hint="Enter the class name" error={formErrors.className} />
             </div>
 
             {/* Date */}
@@ -406,9 +413,7 @@ const CoachSchedulePage = () => {
                     onChange={e => updateField('date', e.target.value)}
                     className={formErrors.date ? 'border-red-500' : ''}
                 />
-                {formErrors.date && (
-                    <p className="text-xs text-red-600">{formErrors.date}</p>
-                )}
+                <FormFieldHint hint="Select a date for the class" error={formErrors.date} />
             </div>
 
             {/* Start / End time */}
@@ -422,9 +427,7 @@ const CoachSchedulePage = () => {
                         onChange={e => updateField('startTime', e.target.value)}
                         className={formErrors.startTime ? 'border-red-500' : ''}
                     />
-                    {formErrors.startTime && (
-                        <p className="text-xs text-red-600">{formErrors.startTime}</p>
-                    )}
+                    <FormFieldHint error={formErrors.startTime} />
                 </div>
                 <div className="space-y-1.5">
                     <Label htmlFor="endTime">End Time</Label>
@@ -435,9 +438,7 @@ const CoachSchedulePage = () => {
                         onChange={e => updateField('endTime', e.target.value)}
                         className={formErrors.endTime ? 'border-red-500' : ''}
                     />
-                    {formErrors.endTime && (
-                        <p className="text-xs text-red-600">{formErrors.endTime}</p>
-                    )}
+                    <FormFieldHint error={formErrors.endTime} />
                 </div>
             </div>
 
@@ -451,9 +452,7 @@ const CoachSchedulePage = () => {
                     onChange={e => updateField('location', e.target.value)}
                     className={formErrors.location ? 'border-red-500' : ''}
                 />
-                {formErrors.location && (
-                    <p className="text-xs text-red-600">{formErrors.location}</p>
-                )}
+                <FormFieldHint hint="Enter the class location" error={formErrors.location} />
             </div>
 
             {/* Level */}
@@ -469,9 +468,7 @@ const CoachSchedulePage = () => {
                         <SelectItem value="advanced">Advanced</SelectItem>
                     </SelectContent>
                 </Select>
-                {formErrors.level && (
-                    <p className="text-xs text-red-600">{formErrors.level}</p>
-                )}
+                <FormFieldHint error={formErrors.level} />
             </div>
 
             {/* Capacity */}
@@ -483,12 +480,11 @@ const CoachSchedulePage = () => {
                     min={1}
                     placeholder="e.g. 20"
                     value={formData.capacity || ''}
+                    onKeyDown={filterNumberInput}
                     onChange={e => updateField('capacity', parseInt(e.target.value) || 0)}
                     className={formErrors.capacity ? 'border-red-500' : ''}
                 />
-                {formErrors.capacity && (
-                    <p className="text-xs text-red-600">{formErrors.capacity}</p>
-                )}
+                <FormFieldHint hint={FORMAT_HINTS.capacity} error={formErrors.capacity} />
             </div>
         </div>
     )

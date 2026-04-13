@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Users, UserCheck, GraduationCap, Briefcase } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { validateName, validateEmail, validatePhone, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ── Fallback mock data ──────────────────────────────────────────────
 const MOCK_STAFF = [
@@ -52,6 +54,9 @@ export default function OperationsStaffPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Validation errors
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // Form
   const [form, setForm] = useState({
@@ -113,6 +118,7 @@ export default function OperationsStaffPage() {
   const openCreate = () => {
     setEditingStaff(null)
     setForm({ firstName: '', lastName: '', email: '', role: 'trainer', locationId: '', certifications: '', phone: '' })
+    setFormErrors({})
     setShowModal(true)
   }
 
@@ -127,14 +133,30 @@ export default function OperationsStaffPage() {
       certifications: (s.certifications ?? []).join(', '),
       phone: s.phone ?? '',
     })
+    setFormErrors({})
     setShowModal(true)
   }
 
-  const handleSubmit = async () => {
-    if (!form.firstName || !form.lastName || !form.email) {
-      toast.error('First name, last name and email are required')
-      return
+  const validateStaffForm = (): boolean => {
+    const errs: Record<string, string> = {}
+    const fnErr = validateName(form.firstName, 'First name')
+    if (fnErr) errs.firstName = fnErr
+    const lnErr = validateName(form.lastName, 'Last name')
+    if (lnErr) errs.lastName = lnErr
+    const emErr = validateEmail(form.email)
+    if (emErr) errs.email = emErr
+    if (form.phone) {
+      const phErr = validatePhone(form.phone, false)
+      if (phErr) errs.phone = phErr
     }
+    const roleErr = validateSelect(form.role, 'Role')
+    if (roleErr) errs.role = roleErr
+    setFormErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  const handleSubmit = async () => {
+    if (!validateStaffForm()) return
     setSubmitting(true)
     const payload = {
       firstName: form.firstName,
@@ -321,39 +343,81 @@ export default function OperationsStaffPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
-                  <input id="input-text-admin-operations-staff-firstname" type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff-firstname" type="text" value={form.firstName}
+                    onKeyDown={filterNameInput}
+                    onChange={(e) => {
+                      setForm({ ...form, firstName: e.target.value })
+                      const err = validateName(e.target.value, 'First name')
+                      setFormErrors((prev) => ({ ...prev, firstName: err || '' }))
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.firstName ? 'border-red-500' : ''}`} />
+                  <FormFieldHint hint={FORMAT_HINTS.firstName} error={formErrors.firstName} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
-                  <input id="input-text-admin-operations-staff" type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff" type="text" value={form.lastName}
+                    onKeyDown={filterNameInput}
+                    onChange={(e) => {
+                      setForm({ ...form, lastName: e.target.value })
+                      const err = validateName(e.target.value, 'Last name')
+                      setFormErrors((prev) => ({ ...prev, lastName: err || '' }))
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.lastName ? 'border-red-500' : ''}`} />
+                  <FormFieldHint hint={FORMAT_HINTS.lastName} error={formErrors.lastName} />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-                <input id="input-email-admin-operations-staff" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-email-admin-operations-staff" type="email" value={form.email}
+                  onChange={(e) => {
+                    setForm({ ...form, email: e.target.value })
+                    const err = validateEmail(e.target.value)
+                    setFormErrors((prev) => ({ ...prev, email: err || '' }))
+                  }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : ''}`} />
+                <FormFieldHint hint={FORMAT_HINTS.email} error={formErrors.email} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                <input id="input-text-admin-operations-staff" type="text" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-staff-phone" type="text" value={form.phone}
+                  onKeyDown={filterPhoneInput}
+                  onChange={(e) => {
+                    setForm({ ...form, phone: e.target.value })
+                    if (e.target.value) {
+                      const err = validatePhone(e.target.value, false)
+                      setFormErrors((prev) => ({ ...prev, phone: err || '' }))
+                    } else {
+                      setFormErrors((prev) => ({ ...prev, phone: '' }))
+                    }
+                  }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-500' : ''}`} />
+                <FormFieldHint hint={FORMAT_HINTS.phone} error={formErrors.phone} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-                  <select id="select-admin-operations-staff-15" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select id="select-admin-operations-staff-15" value={form.role}
+                    onChange={(e) => {
+                      setForm({ ...form, role: e.target.value })
+                      const err = validateSelect(e.target.value, 'Role')
+                      setFormErrors((prev) => ({ ...prev, role: err || '' }))
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.role ? 'border-red-500' : ''}`}>
                     <option value="trainer">Trainer</option>
                     <option value="manager">Manager</option>
                     <option value="receptionist">Receptionist</option>
                     <option value="admin">Admin</option>
                   </select>
+                  <FormFieldHint error={formErrors.role} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Location ID</label>
-                  <input id="input-text-admin-operations-staff" type="text" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} placeholder="e.g. loc-1" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input id="input-text-admin-operations-staff-location" type="text" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} placeholder="e.g. loc-1" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Certifications (comma-separated)</label>
-                <input id="input-text-admin-operations-staff" type="text" value={form.certifications} onChange={(e) => setForm({ ...form, certifications: e.target.value })} placeholder="CPT, Yoga, Pilates" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input id="input-text-admin-operations-staff-certs" type="text" value={form.certifications} onChange={(e) => setForm({ ...form, certifications: e.target.value })} placeholder="CPT, Yoga, Pilates" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

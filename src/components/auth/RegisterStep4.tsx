@@ -3,11 +3,20 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, User, Calendar, Users, School, Heart } from 'lucide-react';
+import { useState } from 'react';
 
 import {
     registerStep4Schema,
     type RegisterStep4Data,
 } from '@/lib/validations/auth';
+import {
+    validateName,
+    validateDateOfBirth,
+    validateSelect,
+    filterNameInput,
+    FORMAT_HINTS,
+} from '@/utils/validation';
+import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 interface RegisterStep4Props {
     onComplete: (data: RegisterStep4Data) => void;
@@ -20,6 +29,8 @@ export function RegisterStep4({
     onBack,
     initialData,
 }: RegisterStep4Props) {
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const {
         register,
         control,
@@ -61,8 +72,56 @@ export function RegisterStep4({
         onComplete({ students: [] });
     };
 
+    const validateField = (index: number, field: string, value: string) => {
+        const key = `students.${index}.${field}`;
+        let error: string | null = null;
+        switch (field) {
+            case 'firstName':
+                error = validateName(value, 'First name');
+                break;
+            case 'lastName':
+                error = validateName(value, 'Last name');
+                break;
+            case 'dateOfBirth':
+                error = validateDateOfBirth(value);
+                break;
+            case 'gender':
+                error = validateSelect(value, 'Gender');
+                break;
+        }
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            if (error) {
+                next[key] = error;
+            } else {
+                delete next[key];
+            }
+            return next;
+        });
+    };
+
+    const handleFormSubmit = (data: RegisterStep4Data) => {
+        const errs: Record<string, string> = {};
+        data.students.forEach((student, index) => {
+            const fnErr = validateName(student.firstName, 'First name');
+            if (fnErr) errs[`students.${index}.firstName`] = fnErr;
+            const lnErr = validateName(student.lastName, 'Last name');
+            if (lnErr) errs[`students.${index}.lastName`] = lnErr;
+            const dobErr = validateDateOfBirth(student.dateOfBirth);
+            if (dobErr) errs[`students.${index}.dateOfBirth`] = dobErr;
+            const gErr = validateSelect(student.gender, 'Gender');
+            if (gErr) errs[`students.${index}.gender`] = gErr;
+        });
+
+        if (Object.keys(errs).length > 0) {
+            setFieldErrors(errs);
+            return;
+        }
+        onComplete(data);
+    };
+
     return (
-        <form id="form-components-auth-RegisterStep4" onSubmit={handleSubmit(onComplete)} className="space-y-6">
+        <form id="form-components-auth-RegisterStep4" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Student Information</h2>
                 <p className="text-gray-600 mt-2">
@@ -109,8 +168,13 @@ export function RegisterStep4({
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        {...register(`students.${index}.firstName`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`students.${index}.firstName`, {
+                                            onChange: (e) => validateField(index, 'firstName', e.target.value),
+                                        })}
+                                        onKeyDown={filterNameInput}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.students?.[index]?.firstName || fieldErrors[`students.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="First name"
                                     />
                                 </div>
@@ -119,6 +183,7 @@ export function RegisterStep4({
                                         {errors.students[index]?.firstName?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors[`students.${index}.firstName`]} />
                             </div>
 
                             <div>
@@ -129,8 +194,13 @@ export function RegisterStep4({
                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        {...register(`students.${index}.lastName`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`students.${index}.lastName`, {
+                                            onChange: (e) => validateField(index, 'lastName', e.target.value),
+                                        })}
+                                        onKeyDown={filterNameInput}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.students?.[index]?.lastName || fieldErrors[`students.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                         placeholder="Last name"
                                     />
                                 </div>
@@ -139,6 +209,7 @@ export function RegisterStep4({
                                         {errors.students[index]?.lastName?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors[`students.${index}.lastName`]} />
                             </div>
                         </div>
 
@@ -152,8 +223,12 @@ export function RegisterStep4({
                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="date"
-                                        {...register(`students.${index}.dateOfBirth`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        {...register(`students.${index}.dateOfBirth`, {
+                                            onChange: (e) => validateField(index, 'dateOfBirth', e.target.value),
+                                        })}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                            errors.students?.[index]?.dateOfBirth || fieldErrors[`students.${index}.dateOfBirth`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                     />
                                 </div>
                                 {errors.students?.[index]?.dateOfBirth && (
@@ -161,6 +236,7 @@ export function RegisterStep4({
                                         {errors.students[index]?.dateOfBirth?.message}
                                     </p>
                                 )}
+                                <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors[`students.${index}.dateOfBirth`]} />
                             </div>
 
                             <div>
@@ -170,14 +246,19 @@ export function RegisterStep4({
                                 <div className="relative">
                                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <select id="select-components-auth-RegisterStep4-1"
-                                        {...register(`students.${index}.gender`)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
+                                        {...register(`students.${index}.gender`, {
+                                            onChange: (e) => validateField(index, 'gender', e.target.value),
+                                        })}
+                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                                            errors.students?.[index]?.gender || fieldErrors[`students.${index}.gender`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                     >
                                         <option value="male">Male</option>
                                         <option value="female">Female</option>
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
+                                <FormFieldHint hint={FORMAT_HINTS.gender} error={fieldErrors[`students.${index}.gender`]} />
                             </div>
                         </div>
 
@@ -195,6 +276,7 @@ export function RegisterStep4({
                                     placeholder="School name"
                                 />
                             </div>
+                            <FormFieldHint hint={FORMAT_HINTS.school} />
                         </div>
 
                         {/* Medical Conditions */}

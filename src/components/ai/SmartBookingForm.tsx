@@ -18,6 +18,8 @@ import {
 } from 'react-icons/fi'
 import AIRecommendations from './AIRecommendations'
 import { formatDateShort } from '@/utils/dateUtils'
+import { validateName, validateEmail, validatePhone, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface SmartBookingFormProps {
     type: 'trial' | 'assessment' | 'camp' | 'party'
@@ -154,6 +156,16 @@ const SmartBookingForm = ({
         }
     }
 
+    const validateSmartField = (name: string, value: string): string | null => {
+        switch (name) {
+            case 'parentName': return validateName(value, 'Parent name')
+            case 'childName': return validateName(value, "Child's name")
+            case 'email': return validateEmail(value)
+            case 'phone': return validatePhone(value)
+            default: return null
+        }
+    }
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target
         const checked = (e.target as HTMLInputElement).checked
@@ -163,8 +175,15 @@ const SmartBookingForm = ({
             [name]: type === 'checkbox' ? checked : value
         }))
 
-        // Clear error when user starts typing
-        if (errors[name]) {
+        // Real-time validation
+        if (type !== 'checkbox' && value) {
+            const err = validateSmartField(name, value)
+            if (err) {
+                setErrors(prev => ({ ...prev, [name]: err }))
+            } else if (errors[name]) {
+                setErrors(prev => ({ ...prev, [name]: '' }))
+            }
+        } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }))
         }
     }
@@ -188,6 +207,17 @@ const SmartBookingForm = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        // Validate all fields
+        const newErrors: Record<string, string> = {}
+        const pnErr = validateName(formData.parentName, 'Parent name'); if (pnErr) newErrors.parentName = pnErr
+        const cnErr = validateName(formData.childName, "Child's name"); if (cnErr) newErrors.childName = cnErr
+        const emErr = validateEmail(formData.email); if (emErr) newErrors.email = emErr
+        const phErr = validatePhone(formData.phone); if (phErr) newErrors.phone = phErr
+        const caErr = validateSelect(formData.childAge, "Child's age"); if (caErr) newErrors.childAge = caErr
+        const loErr = validateSelect(formData.location, 'Location'); if (loErr) newErrors.location = loErr
+        if (!formData.preferredDate) newErrors.preferredDate = 'Date is required'
+        if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
+        setErrors({})
         setIsSubmitting(true)
 
         try {
@@ -309,10 +339,12 @@ const SmartBookingForm = ({
                                     name="parentName"
                                     value={formData.parentName}
                                     onChange={handleInputChange}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                                    onKeyDown={filterNameInput}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.parentName ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Your full name"
                                 />
                             </div>
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.parentName} />
                         </div>
 
                         <div>
@@ -326,10 +358,12 @@ const SmartBookingForm = ({
                                     name="childName"
                                     value={formData.childName}
                                     onChange={handleInputChange}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                                    onKeyDown={filterNameInput}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.childName ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="Child's full name"
                                 />
                             </div>
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.childName} />
                         </div>
                     </div>
 
@@ -406,10 +440,11 @@ const SmartBookingForm = ({
                                     name="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="your.email@example.com"
                                 />
                             </div>
+                            <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
                         </div>
 
                         <div>
@@ -423,10 +458,12 @@ const SmartBookingForm = ({
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleInputChange}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                                    onKeyDown={filterPhoneInput}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
                                     placeholder="+852 1234 5678"
                                 />
                             </div>
+                            <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
                         </div>
                     </div>
 
