@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface ExitRequest {
     requestId?: string;
@@ -25,49 +23,49 @@ export interface ExitRequest {
 
 class ExitProtocolService {
     async createExitRequest(data: Omit<ExitRequest, 'requestId' | 'status'>) {
-        const response = await axios.post(`${API_URL}/exit-protocol`, data);
-        return response.data;
+        const response = await apiClient.post(`/exit-protocol`, data);
+        return response;
     }
 
     async getExitRequest(requestId: string) {
-        const response = await axios.get(`${API_URL}/exit-protocol/${requestId}`);
-        return response.data;
+        const response = await apiClient.get(`/exit-protocol/${requestId}`);
+        return response;
     }
 
     async approveRequest(requestId: string, notes?: string) {
-        const response = await axios.post(`${API_URL}/exit-protocol/${requestId}/approve`, {
+        const response = await apiClient.post(`/exit-protocol/${requestId}/approve`, {
             notes,
         });
-        return response.data;
+        return response;
     }
 
     async rejectRequest(requestId: string, reason: string) {
-        const response = await axios.post(`${API_URL}/exit-protocol/${requestId}/reject`, {
+        const response = await apiClient.post(`/exit-protocol/${requestId}/reject`, {
             reason,
         });
-        return response.data;
+        return response;
     }
 
     async executeDeletion(requestId: string) {
-        const response = await axios.post(`${API_URL}/exit-protocol/${requestId}/execute`);
-        return response.data;
+        const response = await apiClient.post(`/exit-protocol/${requestId}/execute`);
+        return response;
     }
 
     async getDeletionProgress(requestId: string) {
-        const response = await axios.get(`${API_URL}/exit-protocol/${requestId}/progress`);
-        return response.data;
+        const response = await apiClient.get(`/exit-protocol/${requestId}/progress`);
+        return response;
     }
 
     async downloadCertificate(requestId: string) {
-        const response = await axios.get(`${API_URL}/exit-protocol/${requestId}/certificate`, {
+        const response = await apiClient.get(`/exit-protocol/${requestId}/certificate`, {
             responseType: 'blob',
         });
-        return response.data;
+        return response;
     }
 
     async verifyCertificate(verificationCode: string) {
-        const response = await axios.get(`${API_URL}/exit-protocol/verify/${verificationCode}`);
-        return response.data;
+        const response = await apiClient.get(`/exit-protocol/verify/${verificationCode}`);
+        return response;
     }
 }
 

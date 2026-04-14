@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface PricingRule {
     ruleId?: string;
@@ -20,43 +18,43 @@ export interface PricingRule {
 
 class PricingService {
     async createPricingRule(data: PricingRule) {
-        const response = await axios.post(`${API_URL}/pricing/rules`, data);
-        return response.data;
+        const response = await apiClient.post(`/pricing/rules`, data);
+        return response;
     }
 
     async getPricingRule(ruleId: string) {
-        const response = await axios.get(`${API_URL}/pricing/rules/${ruleId}`);
-        return response.data;
+        const response = await apiClient.get(`/pricing/rules/${ruleId}`);
+        return response;
     }
 
     async listPricingRules(tenantId: string) {
-        const response = await axios.get(`${API_URL}/pricing/rules`, {
+        const response = await apiClient.get(`/pricing/rules`, {
             params: { tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async calculateDynamicPrice(basePrice: number, factors: any) {
-        const response = await axios.post(`${API_URL}/pricing/calculate`, {
+        const response = await apiClient.post(`/pricing/calculate`, {
             basePrice,
             factors,
         });
-        return response.data;
+        return response;
     }
 
     async getPriceForSession(sessionId: string, studentId: string) {
-        const response = await axios.get(`${API_URL}/pricing/session/${sessionId}`, {
+        const response = await apiClient.get(`/pricing/session/${sessionId}`, {
             params: { studentId },
         });
-        return response.data;
+        return response;
     }
 
     async applyEarlyBirdDiscount(sessionId: string, discountPercentage: number) {
-        const response = await axios.post(`${API_URL}/pricing/early-bird`, {
+        const response = await apiClient.post(`/pricing/early-bird`, {
             sessionId,
             discountPercentage,
         });
-        return response.data;
+        return response;
     }
 }
 

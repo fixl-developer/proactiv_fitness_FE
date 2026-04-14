@@ -17,6 +17,7 @@ import {
     FiAlertCircle
 } from 'react-icons/fi'
 import AIRecommendations from './AIRecommendations'
+import { toast } from 'sonner'
 import { formatDateShort } from '@/utils/dateUtils'
 import { validateName, validateEmail, validatePhone, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -139,7 +140,7 @@ const SmartBookingForm = ({
             })
 
             const scheduleData = res?.data
-            if (scheduleData?.optimizedSchedule && Array.isArray(scheduleData.optimizedSchedule)) {
+            if (scheduleData?.optimizedSchedule && Array.isArray(scheduleData?.optimizedSchedule)) {
                 setTimeSlotSuggestions(scheduleData.optimizedSchedule.slice(0, 3).map((s: any, idx: number) => ({
                     date: formData.preferredDate || s.date || new Date().toISOString().split('T')[0],
                     time: s.time || `${10 + idx * 2}:00 AM`,
@@ -231,8 +232,10 @@ const SmartBookingForm = ({
                 })
             }
             setIsSubmitted(true)
+            toast.success('Booking submitted successfully!')
         } catch (error) {
             console.error('Error submitting form:', error)
+            toast.error('Failed to submit booking. Please try again.')
         } finally {
             setIsSubmitting(false)
         }

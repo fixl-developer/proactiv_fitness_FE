@@ -45,8 +45,8 @@ class ProgramService {
      */
     async getAllPrograms(filters?: any): Promise<Program[]> {
         try {
-            const response = await apiClient.get('/admin/programs/catalog', { params: filters })
-            return response.data
+            const response = await apiClient.get<any>('/admin/programs/catalog', { params: filters })
+            return response?.data || response || []
         } catch (error) {
             console.error('Error fetching programs:', error)
             throw error
@@ -58,8 +58,8 @@ class ProgramService {
      */
     async getProgramById(programId: string): Promise<Program> {
         try {
-            const response = await apiClient.get(`/admin/programs/catalog/${programId}`)
-            return response.data
+            const response = await apiClient.get<any>(`/admin/programs/catalog/${programId}`)
+            return response?.data || response
         } catch (error) {
             console.error('Error fetching program:', error)
             throw error
@@ -71,8 +71,8 @@ class ProgramService {
      */
     async createProgram(programData: Omit<Program, 'id'>): Promise<Program> {
         try {
-            const response = await apiClient.post('/admin/programs/catalog', programData)
-            return response.data
+            const response = await apiClient.post<any>('/admin/programs/catalog', programData)
+            return response?.data || response
         } catch (error) {
             console.error('Error creating program:', error)
             throw error
@@ -84,8 +84,8 @@ class ProgramService {
      */
     async updateProgram(programId: string, programData: Partial<Program>): Promise<Program> {
         try {
-            const response = await apiClient.put(`/admin/programs/catalog/${programId}`, programData)
-            return response.data
+            const response = await apiClient.put<any>(`/admin/programs/catalog/${programId}`, programData)
+            return response?.data || response
         } catch (error) {
             console.error('Error updating program:', error)
             throw error
@@ -112,7 +112,7 @@ class ProgramService {
     async getAllSchedules(filters?: any): Promise<Schedule[]> {
         try {
             const response = await apiClient.get('/admin/programs/schedule', { params: filters })
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error fetching schedules:', error)
             throw error
@@ -125,7 +125,7 @@ class ProgramService {
     async getScheduleById(scheduleId: string): Promise<Schedule> {
         try {
             const response = await apiClient.get(`/admin/programs/schedule/${scheduleId}`)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error fetching schedule:', error)
             throw error
@@ -138,7 +138,7 @@ class ProgramService {
     async createSchedule(scheduleData: Omit<Schedule, 'id'>): Promise<Schedule> {
         try {
             const response = await apiClient.post('/admin/programs/schedule', scheduleData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error creating schedule:', error)
             throw error
@@ -151,7 +151,7 @@ class ProgramService {
     async updateSchedule(scheduleId: string, scheduleData: Partial<Schedule>): Promise<Schedule> {
         try {
             const response = await apiClient.put(`/admin/programs/schedule/${scheduleId}`, scheduleData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error updating schedule:', error)
             throw error
@@ -176,7 +176,7 @@ class ProgramService {
     async checkScheduleConflicts(scheduleData: Partial<Schedule>): Promise<any> {
         try {
             const response = await apiClient.post('/admin/programs/schedule/check-conflicts', scheduleData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error checking schedule conflicts:', error)
             throw error
@@ -191,7 +191,7 @@ class ProgramService {
     async getAllRules(type?: string): Promise<Rule[]> {
         try {
             const response = await apiClient.get('/admin/programs/rules', { params: { type } })
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error fetching rules:', error)
             throw error
@@ -204,7 +204,7 @@ class ProgramService {
     async getRuleById(ruleId: string): Promise<Rule> {
         try {
             const response = await apiClient.get(`/admin/programs/rules/${ruleId}`)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error fetching rule:', error)
             throw error
@@ -217,7 +217,7 @@ class ProgramService {
     async createRule(ruleData: Omit<Rule, 'id'>): Promise<Rule> {
         try {
             const response = await apiClient.post('/admin/programs/rules', ruleData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error creating rule:', error)
             throw error
@@ -230,7 +230,7 @@ class ProgramService {
     async updateRule(ruleId: string, ruleData: Partial<Rule>): Promise<Rule> {
         try {
             const response = await apiClient.put(`/admin/programs/rules/${ruleId}`, ruleData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error updating rule:', error)
             throw error
@@ -255,7 +255,7 @@ class ProgramService {
     async testRule(ruleId: string, testData: any): Promise<any> {
         try {
             const response = await apiClient.post(`/admin/programs/rules/${ruleId}/test`, testData)
-            return response.data
+            return response?.data || response
         } catch (error) {
             console.error('Error testing rule:', error)
             throw error

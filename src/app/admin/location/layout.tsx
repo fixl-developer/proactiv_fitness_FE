@@ -42,6 +42,8 @@ export default function LocationManagerLayout({ children }: { children: React.Re
     const [user, setUser] = useState<any>(null)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+    const [mobileOpen, setMobileOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
@@ -63,6 +65,18 @@ export default function LocationManagerLayout({ children }: { children: React.Re
         setUser(parsedUser)
     }, [router])
 
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024)
+            if (window.innerWidth < 1024) setMobileOpen(false)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    useEffect(() => { setMobileOpen(false) }, [pathname])
+
     if (!user) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -76,9 +90,14 @@ export default function LocationManagerLayout({ children }: { children: React.Re
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-amber-50/50">
+            {/* Mobile Overlay */}
+            {isMobile && mobileOpen && (
+                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
+            )}
+
             {/* Sidebar - Fixed */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${isMobile ? (mobileOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}
                 style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
@@ -195,32 +214,32 @@ export default function LocationManagerLayout({ children }: { children: React.Re
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: isMobile ? 0 : `${sidebarWidth}px` }}>
                 {/* Header - Fixed */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
-                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                    className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
+                    style={{ left: isMobile ? 0 : `${sidebarWidth}px`, right: 0 }}
                 >
-                    <div className="flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
                         <div className="flex items-center space-x-4">
                             <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                onClick={() => isMobile ? setMobileOpen(!mobileOpen) : setSidebarCollapsed(!sidebarCollapsed)}
                                 className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                                 title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                             >
                                 <Menu className="w-5 h-5 text-gray-600" />
                             </button>
                             <div>
-                                <h1 className="text-xl font-semibold text-gray-900">Location Dashboard</h1>
-                                <p className="text-sm text-gray-500">Welcome back, {userName.split(' ')[0]}!</p>
+                                <h1 className="text-lg md:text-xl font-semibold text-gray-900">Location Dashboard</h1>
+                                <p className="text-sm text-gray-500 hidden sm:block">Welcome back, {userName.split(' ')[0]}!</p>
                             </div>
                         </div>
 
                         <div className="flex items-center space-x-3">
                             <NotificationBell />
-                            <Button id="btn-admin-location-settings" variant="outline" size="sm" onClick={() => router.push('/admin/location/settings')}>
+                            <Button id="btn-admin-location-settings" variant="outline" size="sm" onClick={() => router.push('/admin/location/settings')} className="hidden sm:flex">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </Button>
@@ -229,7 +248,7 @@ export default function LocationManagerLayout({ children }: { children: React.Re
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-6 min-h-screen">
+                <main className="pt-16 md:pt-20 p-3 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

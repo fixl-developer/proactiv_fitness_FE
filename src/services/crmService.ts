@@ -473,22 +473,22 @@ class FamilyService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
-        return response.data;
+        return response?.data || response;
     }
 
     async getFamilyById(familyId: string): Promise<FamilyProfile> {
         const response = await apiClient.get(`${this.baseUrl}/${familyId}`);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async createFamily(data: CreateFamilyDto): Promise<FamilyProfile> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateFamily(familyId: string, data: Partial<FamilyProfile>): Promise<FamilyProfile> {
         const response = await apiClient.put(`${this.baseUrl}/${familyId}`, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async deleteFamily(familyId: string): Promise<void> {
@@ -497,23 +497,23 @@ class FamilyService {
 
     async addFamilyMember(familyId: string, member: Partial<FamilyMember>): Promise<FamilyProfile> {
         const response = await apiClient.post(`${this.baseUrl}/${familyId}/members`, member);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateFamilyStatus(familyId: string, status: FamilyStatus): Promise<FamilyProfile> {
         const response = await apiClient.patch(`${this.baseUrl}/${familyId}/status`, { status });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async addCommunicationLog(familyId: string, log: Partial<CommunicationLog>): Promise<FamilyProfile> {
         const response = await apiClient.post(`${this.baseUrl}/${familyId}/communications`, log);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async getFamilyStatistics(businessUnitId?: string): Promise<FamilyStatistics> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/statistics${params}`);
-        return response.data.data;
+        return response?.data || response;
     }
 }
 
@@ -542,22 +542,22 @@ class ChildService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
-        return response.data;
+        return response?.data || response;
     }
 
     async getChildById(childId: string): Promise<ChildProfile> {
         const response = await apiClient.get(`${this.baseUrl}/${childId}`);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async createChild(data: CreateChildDto): Promise<ChildProfile> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateChild(childId: string, data: Partial<ChildProfile>): Promise<ChildProfile> {
         const response = await apiClient.put(`${this.baseUrl}/${childId}`, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async deleteChild(childId: string): Promise<void> {
@@ -566,7 +566,7 @@ class ChildService {
 
     async addMedicalFlag(childId: string, flag: Partial<MedicalFlag>): Promise<ChildProfile> {
         const response = await apiClient.post(`${this.baseUrl}/${childId}/medical-flags`, flag);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async addBehavioralNote(
@@ -574,12 +574,12 @@ class ChildService {
         note: { note: string; category: 'positive' | 'concern' | 'neutral'; isPrivate?: boolean }
     ): Promise<ChildProfile> {
         const response = await apiClient.post(`${this.baseUrl}/${childId}/behavioral-notes`, note);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateSkillLevel(childId: string, skill: string, level: string): Promise<ChildProfile> {
         const response = await apiClient.patch(`${this.baseUrl}/${childId}/skill-level`, { skill, level });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async addAchievement(
@@ -593,7 +593,7 @@ class ChildService {
         }
     ): Promise<ChildProfile> {
         const response = await apiClient.post(`${this.baseUrl}/${childId}/achievements`, achievement);
-        return response.data.data;
+        return response?.data || response;
     }
 }
 
@@ -623,22 +623,22 @@ class InquiryService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
-        return response.data;
+        return response?.data || response;
     }
 
     async getInquiryById(inquiryId: string): Promise<Inquiry> {
         const response = await apiClient.get(`${this.baseUrl}/${inquiryId}`);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async createInquiry(data: CreateInquiryDto): Promise<Inquiry> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateInquiry(inquiryId: string, data: Partial<Inquiry>): Promise<Inquiry> {
         const response = await apiClient.put(`${this.baseUrl}/${inquiryId}`, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async deleteInquiry(inquiryId: string): Promise<void> {
@@ -647,28 +647,28 @@ class InquiryService {
 
     async updateInquiryStatus(inquiryId: string, status: InquiryStatus): Promise<Inquiry> {
         const response = await apiClient.patch(`${this.baseUrl}/${inquiryId}/status`, { status });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async assignInquiry(inquiryId: string, assignedTo: string): Promise<Inquiry> {
         const response = await apiClient.patch(`${this.baseUrl}/${inquiryId}/assign`, { assignedTo });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async convertInquiry(inquiryId: string, familyId: string): Promise<Inquiry> {
         const response = await apiClient.post(`${this.baseUrl}/${inquiryId}/convert`, { familyId });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async addFollowUpNote(inquiryId: string, note: string, nextFollowUp: Date): Promise<Inquiry> {
         const response = await apiClient.post(`${this.baseUrl}/${inquiryId}/follow-up`, { note, nextFollowUp });
-        return response.data.data;
+        return response?.data || response;
     }
 
     async getInquiryStatistics(businessUnitId?: string): Promise<InquiryStatistics> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/statistics${params}`);
-        return response.data.data;
+        return response?.data || response;
     }
 }
 
@@ -695,22 +695,22 @@ class LeadService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
-        return response.data;
+        return response?.data || response;
     }
 
     async getLeadById(leadId: string): Promise<Lead> {
         const response = await apiClient.get(`${this.baseUrl}/${leadId}`);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async createLead(data: CreateLeadDto): Promise<Lead> {
         const response = await apiClient.post(this.baseUrl, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async updateLead(leadId: string, data: Partial<Lead>): Promise<Lead> {
         const response = await apiClient.put(`${this.baseUrl}/${leadId}`, data);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async deleteLead(leadId: string): Promise<void> {
@@ -722,12 +722,12 @@ class LeadService {
         scoringFactor: { factor: string; points: number; reason: string }
     ): Promise<Lead> {
         const response = await apiClient.patch(`${this.baseUrl}/${leadId}/score`, scoringFactor);
-        return response.data.data;
+        return response?.data || response;
     }
 
     async assignLead(leadId: string, assignedTo: string): Promise<Lead> {
         const response = await apiClient.patch(`${this.baseUrl}/${leadId}/assign`, { assignedTo });
-        return response.data.data;
+        return response?.data || response;
     }
 }
 

@@ -171,7 +171,7 @@ class AuditService {
      */
     async getAuditLogById(logId: string): Promise<AuditLog> {
         const response = await apiClient.get(`${this.baseUrl}/logs/${logId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -179,7 +179,7 @@ class AuditService {
      */
     async createAuditLog(data: CreateAuditLogDto): Promise<AuditLog> {
         const response = await apiClient.post(`${this.baseUrl}/logs`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -234,7 +234,7 @@ class AuditService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -273,7 +273,7 @@ class AuditService {
             period,
             businessUnitId
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -285,7 +285,7 @@ class AuditService {
         if (businessUnitId) params.append('businessUnitId', businessUnitId);
 
         const response = await apiClient.get(`${this.baseUrl}/reports/compliance?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -296,7 +296,7 @@ class AuditService {
             startDate,
             endDate
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -323,7 +323,7 @@ class AuditService {
      */
     async getLogsWithLegalHold(): Promise<AuditLog[]> {
         const response = await apiClient.get(`${this.baseUrl}/logs/legal-hold`);
-        return response.data.data;
+        return response.data;
     }
 
     /**

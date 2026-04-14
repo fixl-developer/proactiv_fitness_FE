@@ -1,31 +1,17 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios'
 
-interface RetryConfig {
-    maxRetries: number
-    backoffMultiplier: number
-    initialDelayMs: number
-}
+// Unified API Client for entire application
+// All other client files re-export from here
 
-interface CircuitBreakerState {
-    failures: number
-    lastFailureTime: number
-    state: 'CLOSED' | 'OPEN' | 'HALF_OPEN'
-}
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
 class ApiClient {
     private client: AxiosInstance
-    private retryConfig: RetryConfig = {
-        maxRetries: 1,
-        backoffMultiplier: 2,
-        initialDelayMs: 500
-    }
-    private circuitBreakers: Map<string, CircuitBreakerState> = new Map()
-    private requestTimeout = 30000 // 30 seconds
 
-    constructor(baseURL: string = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1') {
+    constructor() {
         this.client = axios.create({
-            baseURL,
-            timeout: this.requestTimeout,
+            baseURL: BASE_URL,
+            timeout: 30000,
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -35,219 +21,92 @@ class ApiClient {
     }
 
     private setupInterceptors() {
-        // Request interceptor - add token
+        // Request interceptor - add auth token
         this.client.interceptors.request.use(
             (config) => {
-                const token = localStorage.getItem('token')
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`
+                if (typeof window !== 'undefined') {
+                    const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
+                    if (token && config.headers) {
+                        config.headers.Authorization = `Bearer ${token}`
+                    }
                 }
-
-                // Log request
-                console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`)
-
                 return config
             },
-            (error) => {
-                console.error('[API] Request error:', error)
-                return Promise.reject(error)
-            }
+            (error) => Promise.reject(error)
         )
 
-        // Response interceptor - handle token refresh
+        // Response interceptor - handle 401 token refresh
         this.client.interceptors.response.use(
-            (response) => {
-                console.log(`[API] Response ${response.status} from ${response.config.url}`)
-                return response
-            },
+            (response) => response,
             async (error: AxiosError) => {
                 const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
 
-                // Handle 401 - token expired
                 if (error.response?.status === 401 && !originalRequest._retry) {
                     originalRequest._retry = true
 
                     try {
-                        const refreshToken = localStorage.getItem('refreshToken')
-                        if (refreshToken) {
-                            const response = await axios.post(
-                                `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/refresh-token`,
-                                { refreshToken }
-                            )
+                        if (typeof window !== 'undefined') {
+                            const refreshToken = localStorage.getItem('refreshToken')
+                            if (refreshToken) {
+                                const response = await axios.post(
+                                    `${BASE_URL}/auth/refresh-token`,
+                                    { refreshToken }
+                                )
 
-                            const { accessToken } = response.data
-                            localStorage.setItem('token', accessToken)
+                                const newToken = response.data?.data?.accessToken || response.data?.accessToken
+                                if (newToken) {
+                                    localStorage.setItem('token', newToken)
+                                    localStorage.setItem('accessToken', newToken)
 
-                            // Retry original request
-                            if (originalRequest.headers) {
-                                originalRequest.headers.Authorization = `Bearer ${accessToken}`
+                                    if (originalRequest.headers) {
+                                        originalRequest.headers.Authorization = `Bearer ${newToken}`
+                                    }
+                                    return this.client(originalRequest)
+                                }
                             }
-                            return this.client(originalRequest)
                         }
                     } catch (refreshError) {
-                        console.error('[API] Token refresh failed:', refreshError)
-                        localStorage.removeItem('token')
-                        localStorage.removeItem('refreshToken')
-                        window.location.href = '/login'
+                        if (typeof window !== 'undefined') {
+                            localStorage.removeItem('token')
+                            localStorage.removeItem('accessToken')
+                            localStorage.removeItem('refreshToken')
+                            localStorage.removeItem('user')
+                            window.location.href = '/login'
+                        }
                     }
                 }
 
-                // Suppress non-critical errors
-                const status = error.response?.status
-                const url = error.config?.url || ''
-
-                // Suppress 404 errors (endpoint not available)
-                if (status === 404) {
-                    console.debug(`[API] Endpoint not found: ${url}`)
-                }
-                // Suppress 401 errors (handled by token refresh above)
-                else if (status === 401) {
-                    console.debug(`[API] Unauthorized - redirecting to login`)
-                }
-                // Suppress network errors during logout
-                else if (!error.response && url.includes('/auth/logout')) {
-                    console.debug(`[API] Logout completed (network error suppressed)`)
-                }
-                // Log other errors
-                else if (status) {
-                    console.error(`[API] Error ${status}:`, error.message)
-                } else {
-                    console.debug(`[API] Network error:`, error.message)
-                }
                 return Promise.reject(error)
             }
         )
     }
 
-    private getCircuitBreakerKey(url: string): string {
-        return url.split('?')[0] // Remove query params
+    // All methods return the response body: { success, data, message }
+    async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.get<T>(url, config)
+        return response.data
     }
 
-    private checkCircuitBreaker(_url: string): boolean {
-        // Circuit breaker disabled in development to avoid blocking
-        // endpoints after transient failures during development
-        return true
+    async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.post<T>(url, data, config)
+        return response.data
     }
 
-    private recordSuccess(url: string) {
-        const key = this.getCircuitBreakerKey(url)
-        const breaker = this.circuitBreakers.get(key)
-        if (breaker) {
-            breaker.failures = 0
-            breaker.state = 'CLOSED'
-        }
-    }
-
-    private recordFailure(url: string) {
-        const key = this.getCircuitBreakerKey(url)
-        const breaker = this.circuitBreakers.get(key)
-        if (breaker) {
-            breaker.failures++
-            breaker.lastFailureTime = Date.now()
-
-            if (breaker.failures >= 5) {
-                breaker.state = 'OPEN'
-            }
-        }
-    }
-
-    private async delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms))
-    }
-
-    async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        if (!this.checkCircuitBreaker(url)) {
-            throw new Error(`Circuit breaker OPEN for ${url}`)
-        }
-
-        let lastError: any
-
-        for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
-            try {
-                const response = await this.client.get<T>(url, config)
-                this.recordSuccess(url)
-                return response.data
-            } catch (error: any) {
-                lastError = error
-                const status = error?.response?.status
-                // Don't count auth errors (401/403) or client errors (4xx) in circuit breaker
-                if (!status || status >= 500) {
-                    this.recordFailure(url)
-                }
-                // Don't retry auth errors - fail immediately
-                if (status === 401 || status === 403) {
-                    throw error
-                }
-
-                if (attempt < this.retryConfig.maxRetries) {
-                    const delayMs = this.retryConfig.initialDelayMs *
-                        Math.pow(this.retryConfig.backoffMultiplier, attempt)
-                    console.log(`[API] Retry attempt ${attempt + 1} after ${delayMs}ms`)
-                    await this.delay(delayMs)
-                }
-            }
-        }
-
-        throw lastError
-    }
-
-    async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        if (!this.checkCircuitBreaker(url)) {
-            throw new Error(`Circuit breaker OPEN for ${url}`)
-        }
-
-        let lastError: any
-
-        for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
-            try {
-                const response = await this.client.post<T>(url, data, config)
-                this.recordSuccess(url)
-                return response.data
-            } catch (error) {
-                lastError = error
-                this.recordFailure(url)
-
-                if (attempt < this.retryConfig.maxRetries) {
-                    const delayMs = this.retryConfig.initialDelayMs *
-                        Math.pow(this.retryConfig.backoffMultiplier, attempt)
-                    await this.delay(delayMs)
-                }
-            }
-        }
-
-        throw lastError
-    }
-
-    async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        if (!this.checkCircuitBreaker(url)) {
-            throw new Error(`Circuit breaker OPEN for ${url}`)
-        }
-
+    async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
         const response = await this.client.put<T>(url, data, config)
-        this.recordSuccess(url)
         return response.data
     }
 
-    async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-        if (!this.checkCircuitBreaker(url)) {
-            throw new Error(`Circuit breaker OPEN for ${url}`)
-        }
-
-        const response = await this.client.delete<T>(url, config)
-        this.recordSuccess(url)
-        return response.data
-    }
-
-    async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-        if (!this.checkCircuitBreaker(url)) {
-            throw new Error(`Circuit breaker OPEN for ${url}`)
-        }
-
+    async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
         const response = await this.client.patch<T>(url, data, config)
-        this.recordSuccess(url)
+        return response.data
+    }
+
+    async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.client.delete<T>(url, config)
         return response.data
     }
 }
 
 export const apiClient = new ApiClient()
-export default ApiClient
+export default apiClient

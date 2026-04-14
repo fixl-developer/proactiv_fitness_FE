@@ -226,7 +226,7 @@ class ReportingService {
      */
     async getReportById(reportId: string): Promise<Report> {
         const response = await apiClient.get(`${this.baseUrl}/reports/${reportId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -234,7 +234,7 @@ class ReportingService {
      */
     async generateReport(data: CreateReportDto): Promise<Report> {
         const response = await apiClient.post(`${this.baseUrl}/reports/generate`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -260,7 +260,7 @@ class ReportingService {
     async getReportTemplates(type?: ReportType): Promise<ReportTemplate[]> {
         const params = type ? `?type=${type}` : '';
         const response = await apiClient.get(`${this.baseUrl}/templates${params}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -268,7 +268,7 @@ class ReportingService {
      */
     async getTemplateById(templateId: string): Promise<ReportTemplate> {
         const response = await apiClient.get(`${this.baseUrl}/templates/${templateId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -276,7 +276,7 @@ class ReportingService {
      */
     async createReportTemplate(data: Partial<ReportTemplate>): Promise<ReportTemplate> {
         const response = await apiClient.post(`${this.baseUrl}/templates`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -284,7 +284,7 @@ class ReportingService {
      */
     async updateReportTemplate(templateId: string, data: Partial<ReportTemplate>): Promise<ReportTemplate> {
         const response = await apiClient.put(`${this.baseUrl}/templates/${templateId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -300,7 +300,7 @@ class ReportingService {
     async getScheduledReports(businessUnitId?: string): Promise<ScheduledReport[]> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/scheduled${params}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -308,7 +308,7 @@ class ReportingService {
      */
     async createScheduledReport(data: CreateScheduledReportDto): Promise<ScheduledReport> {
         const response = await apiClient.post(`${this.baseUrl}/scheduled`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -316,7 +316,7 @@ class ReportingService {
      */
     async updateScheduledReport(scheduleId: string, data: Partial<ScheduledReport>): Promise<ScheduledReport> {
         const response = await apiClient.put(`${this.baseUrl}/scheduled/${scheduleId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -331,7 +331,7 @@ class ReportingService {
      */
     async runScheduledReport(scheduleId: string): Promise<Report> {
         const response = await apiClient.post(`${this.baseUrl}/scheduled/${scheduleId}/run`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -340,7 +340,7 @@ class ReportingService {
     async getDashboards(businessUnitId?: string): Promise<Dashboard[]> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/dashboards${params}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -348,7 +348,7 @@ class ReportingService {
      */
     async getDashboardById(dashboardId: string): Promise<Dashboard> {
         const response = await apiClient.get(`${this.baseUrl}/dashboards/${dashboardId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -356,7 +356,7 @@ class ReportingService {
      */
     async createDashboard(data: Partial<Dashboard>): Promise<Dashboard> {
         const response = await apiClient.post(`${this.baseUrl}/dashboards`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -364,7 +364,7 @@ class ReportingService {
      */
     async updateDashboard(dashboardId: string, data: Partial<Dashboard>): Promise<Dashboard> {
         const response = await apiClient.put(`${this.baseUrl}/dashboards/${dashboardId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -387,7 +387,7 @@ class ReportingService {
             period,
             filters
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -399,7 +399,7 @@ class ReportingService {
         if (businessUnitId) params.append('businessUnitId', businessUnitId);
 
         const response = await apiClient.get(`${this.baseUrl}/analytics/financial?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -411,7 +411,7 @@ class ReportingService {
         if (businessUnitId) params.append('businessUnitId', businessUnitId);
 
         const response = await apiClient.get(`${this.baseUrl}/analytics/enrollment?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -423,7 +423,7 @@ class ReportingService {
         if (businessUnitId) params.append('businessUnitId', businessUnitId);
 
         const response = await apiClient.get(`${this.baseUrl}/analytics/attendance?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -435,7 +435,7 @@ class ReportingService {
         if (businessUnitId) params.append('businessUnitId', businessUnitId);
 
         const response = await apiClient.get(`${this.baseUrl}/analytics/performance?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -467,7 +467,7 @@ class ReportingService {
     }> {
         const params = businessUnitId ? `?businessUnitId=${businessUnitId}` : '';
         const response = await apiClient.get(`${this.baseUrl}/kpi${params}`);
-        return response.data.data;
+        return response.data;
     }
 }
 

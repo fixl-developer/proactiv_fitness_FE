@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface MealPlan {
     studentId: string;
@@ -57,54 +55,54 @@ export interface NutritionLog {
 
 class NutritionService {
     async generateMealPlan(data: Omit<MealPlan, 'meals' | 'groceryList' | 'status'>) {
-        const response = await axios.post(`${API_URL}/nutrition/meal-plans`, data);
-        return response.data;
+        const response = await apiClient.post(`/nutrition/meal-plans`, data);
+        return response;
     }
 
     async getMealPlan(planId: string) {
-        const response = await axios.get(`${API_URL}/nutrition/meal-plans/${planId}`);
-        return response.data;
+        const response = await apiClient.get(`/nutrition/meal-plans/${planId}`);
+        return response;
     }
 
     async listMealPlans(studentId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/nutrition/meal-plans`, {
+        const response = await apiClient.get(`/nutrition/meal-plans`, {
             params: { studentId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async updateMealPlanStatus(planId: string, status: 'active' | 'completed' | 'paused') {
-        const response = await axios.put(`${API_URL}/nutrition/meal-plans/${planId}/status`, { status });
-        return response.data;
+        const response = await apiClient.put(`/nutrition/meal-plans/${planId}/status`, { status });
+        return response;
     }
 
     async logMeal(data: NutritionLog) {
-        const response = await axios.post(`${API_URL}/nutrition/logs`, data);
-        return response.data;
+        const response = await apiClient.post(`/nutrition/logs`, data);
+        return response;
     }
 
     async getNutritionLog(studentId: string, date: string) {
-        const response = await axios.get(`${API_URL}/nutrition/logs`, {
+        const response = await apiClient.get(`/nutrition/logs`, {
             params: { studentId, date },
         });
-        return response.data;
+        return response;
     }
 
     async getNutritionHistory(studentId: string, startDate: string, endDate: string) {
-        const response = await axios.get(`${API_URL}/nutrition/history`, {
+        const response = await apiClient.get(`/nutrition/history`, {
             params: { studentId, startDate, endDate },
         });
-        return response.data;
+        return response;
     }
 
     async updateWaterIntake(logId: string, waterIntake: number) {
-        const response = await axios.put(`${API_URL}/nutrition/logs/${logId}/water`, { waterIntake });
-        return response.data;
+        const response = await apiClient.put(`/nutrition/logs/${logId}/water`, { waterIntake });
+        return response;
     }
 
     async getGroceryList(planId: string) {
-        const response = await axios.get(`${API_URL}/nutrition/meal-plans/${planId}/grocery-list`);
-        return response.data;
+        const response = await apiClient.get(`/nutrition/meal-plans/${planId}/grocery-list`);
+        return response;
     }
 }
 

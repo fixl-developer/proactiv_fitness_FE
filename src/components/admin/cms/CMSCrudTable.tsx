@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Save } from 'lucide-react'
+import { toast } from 'sonner'
 import ImageUploader from './ImageUploader'
 
 interface FieldConfig {
@@ -46,14 +47,31 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         try {
             setLoading(true)
             const result = await service.getAll({ page, limit: 20, search })
-            if (result?.data) {
-                setItems(Array.isArray(result.data) ? result.data : result.data.data || [])
-                if (result.data.pagination) {
-                    setTotalPages(result.data.pagination.totalPages || 1)
+            // result is {success, data, message} from apiClient
+            // result.data can be an array or {data: [], pagination: {}}
+            const payload = result?.data
+            if (payload) {
+                if (Array.isArray(payload)) {
+                    setItems(payload)
+                } else if (Array.isArray(payload.data)) {
+                    setItems(payload.data)
+                    if (payload.pagination) {
+                        setTotalPages(payload.pagination.totalPages || 1)
+                    }
+                } else {
+                    setItems([])
+                }
+            } else {
+                // result itself might be an array (fallback)
+                if (Array.isArray(result)) {
+                    setItems(result)
+                } else {
+                    setItems([])
                 }
             }
         } catch (error) {
             console.error('Failed to load:', error)
+            toast.error('Failed to load data')
         } finally {
             setLoading(false)
         }
@@ -87,14 +105,16 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
             setSaving(true)
             if (editingItem) {
                 await service.update(editingItem.id || editingItem._id, formData)
+                toast.success('Item updated successfully')
             } else {
                 await service.create(formData)
+                toast.success('Item created successfully')
             }
             setShowModal(false)
             loadData()
         } catch (error) {
             console.error('Save failed:', error)
-            alert('Failed to save. Please check all required fields.')
+            toast.error('Failed to save. Please check all required fields.')
         } finally {
             setSaving(false)
         }
@@ -104,9 +124,11 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         try {
             await service.delete(id)
             setDeleteConfirm(null)
+            toast.success('Item deleted successfully')
             loadData()
         } catch (error) {
             console.error('Delete failed:', error)
+            toast.error('Failed to delete item')
         }
     }
 

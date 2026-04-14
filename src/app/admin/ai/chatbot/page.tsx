@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 interface ChatbotConfig {
     id: string
@@ -212,6 +213,7 @@ const ChatbotManagementPage = () => {
 
         } catch (err) {
             console.error('Failed to load chatbot data:', err)
+            toast.error('Failed to load chatbot data')
         } finally {
             setIsLoading(false)
         }

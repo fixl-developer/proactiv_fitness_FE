@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Inquiry {
     _id: string;
@@ -26,52 +24,52 @@ export interface Inquiry {
 
 class InquiriesService {
     async createInquiry(data: Partial<Inquiry>): Promise<Inquiry> {
-        const response = await axios.post(`${API_URL}/inquiries`, data);
-        return response.data;
+        const response = await apiClient.post(`/inquiries`, data);
+        return response;
     }
 
     async getInquiries(filters?: any): Promise<Inquiry[]> {
-        const response = await axios.get(`${API_URL}/inquiries`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/inquiries`, { params: filters });
+        return response;
     }
 
     async getInquiryById(id: string): Promise<Inquiry> {
-        const response = await axios.get(`${API_URL}/inquiries/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/inquiries/${id}`);
+        return response;
     }
 
     async updateInquiry(id: string, data: Partial<Inquiry>): Promise<Inquiry> {
-        const response = await axios.put(`${API_URL}/inquiries/${id}`, data);
-        return response.data;
+        const response = await apiClient.put(`/inquiries/${id}`, data);
+        return response;
     }
 
     async deleteInquiry(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/inquiries/${id}`);
+        await apiClient.delete(`/inquiries/${id}`);
     }
 
     async assignInquiry(id: string, userId: string): Promise<Inquiry> {
-        const response = await axios.post(`${API_URL}/inquiries/${id}/assign`, { userId });
-        return response.data;
+        const response = await apiClient.post(`/inquiries/${id}/assign`, { userId });
+        return response;
     }
 
     async updateStatus(id: string, status: string): Promise<Inquiry> {
-        const response = await axios.put(`${API_URL}/inquiries/${id}/status`, { status });
-        return response.data;
+        const response = await apiClient.put(`/inquiries/${id}/status`, { status });
+        return response;
     }
 
     async markAsConverted(id: string): Promise<Inquiry> {
-        const response = await axios.post(`${API_URL}/inquiries/${id}/convert`);
-        return response.data;
+        const response = await apiClient.post(`/inquiries/${id}/convert`);
+        return response;
     }
 
     async addNote(id: string, note: string): Promise<Inquiry> {
-        const response = await axios.post(`${API_URL}/inquiries/${id}/notes`, { note });
-        return response.data;
+        const response = await apiClient.post(`/inquiries/${id}/notes`, { note });
+        return response;
     }
 
     async getStats(): Promise<any> {
-        const response = await axios.get(`${API_URL}/inquiries/stats`);
-        return response.data;
+        const response = await apiClient.get(`/inquiries/stats`);
+        return response;
     }
 }
 

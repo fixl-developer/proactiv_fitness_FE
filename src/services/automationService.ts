@@ -367,7 +367,7 @@ class AutomationService {
      */
     async getWorkflowById(workflowId: string): Promise<Workflow> {
         const response = await apiClient.get(`${this.baseUrl}/workflows/${workflowId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -375,7 +375,7 @@ class AutomationService {
      */
     async createWorkflow(data: CreateWorkflowDto): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -383,7 +383,7 @@ class AutomationService {
      */
     async updateWorkflow(workflowId: string, data: Partial<Workflow>): Promise<Workflow> {
         const response = await apiClient.put(`${this.baseUrl}/workflows/${workflowId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -398,7 +398,7 @@ class AutomationService {
      */
     async activateWorkflow(workflowId: string): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/activate`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -406,7 +406,7 @@ class AutomationService {
      */
     async deactivateWorkflow(workflowId: string): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/deactivate`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -414,7 +414,7 @@ class AutomationService {
      */
     async pauseWorkflow(workflowId: string): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/pause`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -422,7 +422,7 @@ class AutomationService {
      */
     async resumeWorkflow(workflowId: string): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/resume`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -430,7 +430,7 @@ class AutomationService {
      */
     async executeWorkflow(data: ExecuteWorkflowDto): Promise<WorkflowExecution> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/execute`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -459,7 +459,7 @@ class AutomationService {
      */
     async getExecutionById(executionId: string): Promise<WorkflowExecution> {
         const response = await apiClient.get(`${this.baseUrl}/executions/${executionId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -467,7 +467,7 @@ class AutomationService {
      */
     async cancelExecution(executionId: string): Promise<WorkflowExecution> {
         const response = await apiClient.post(`${this.baseUrl}/executions/${executionId}/cancel`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -475,7 +475,7 @@ class AutomationService {
      */
     async retryExecution(executionId: string): Promise<WorkflowExecution> {
         const response = await apiClient.post(`${this.baseUrl}/executions/${executionId}/retry`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -490,7 +490,7 @@ class AutomationService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -498,7 +498,7 @@ class AutomationService {
      */
     async testWorkflow(workflowId: string, testData: any): Promise<{ success: boolean; result: any; error?: string }> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/test`, { testData });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -506,7 +506,7 @@ class AutomationService {
      */
     async validateWorkflow(workflowData: CreateWorkflowDto): Promise<{ valid: boolean; errors: string[] }> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/validate`, workflowData);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -514,7 +514,7 @@ class AutomationService {
      */
     async cloneWorkflow(workflowId: string, newName: string): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/workflows/${workflowId}/clone`, { newName });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -537,7 +537,7 @@ class AutomationService {
         const response = await apiClient.post(`${this.baseUrl}/workflows/import`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -546,7 +546,7 @@ class AutomationService {
     async getWorkflowTemplates(category?: string): Promise<any[]> {
         const params = category ? `?category=${category}` : '';
         const response = await apiClient.get(`${this.baseUrl}/templates${params}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -554,7 +554,7 @@ class AutomationService {
      */
     async createFromTemplate(templateId: string, customData: Record<string, any>): Promise<Workflow> {
         const response = await apiClient.post(`${this.baseUrl}/templates/${templateId}/create`, customData);
-        return response.data.data;
+        return response.data;
     }
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import {
     Users, Calendar, DollarSign, RefreshCw, Eye, Plus, MessageSquare,
     ArrowUp, User, BookOpen, CreditCard, Download, AlertTriangle, Bell,
@@ -93,7 +94,7 @@ const ParentDashboard = () => {
                 question: aiQuestion.trim()
             })
             const data = response?.data || response
-            setAiAnswer(data?.answer || data?.response || JSON.stringify(data))
+            setAiAnswer(data?.answer || data?.response || formatAIResponse(data))
         } catch (err) {
             console.error('Error asking AI:', err)
             setAiAnswer(null)
@@ -194,9 +195,9 @@ const ParentDashboard = () => {
     return (
         <div className="space-y-6">
             {/* Header with Parent Info */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">My Children's Progress</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Children's Progress</h1>
                     <div className="flex items-center gap-2 mt-2">
                         <User className="w-5 h-5 text-blue-600" />
                         <p className="text-gray-600">{parentName}</p>

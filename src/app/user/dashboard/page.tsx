@@ -272,10 +272,10 @@ export default function UserDashboardPage() {
     return (
         <div className="space-y-6">
             {/* Welcome Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Welcome back, {displayName}!</h1>
-                    <p className="text-gray-600 mt-2">Here&apos;s your fitness overview</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back, {displayName}!</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-2">Here&apos;s your fitness overview</p>
                 </div>
                 <Button id="user-dashboard-refresh-btn" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> Refresh

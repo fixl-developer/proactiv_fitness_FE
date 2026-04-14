@@ -46,7 +46,7 @@ export const emergencyContactsService = {
     async getLocationEmergencyContacts(locationId: string, filters?: any): Promise<EmergencyContact[]> {
         try {
             const response = await apiClient.get(`/emergency-contacts/location/${locationId}`, { params: filters });
-            return response.data.data;
+            return response.data;
         } catch (error) {
             console.error('Error fetching emergency contacts:', error);
             throw error;
@@ -57,7 +57,7 @@ export const emergencyContactsService = {
     async getStudentEmergencyContacts(studentId: string): Promise<EmergencyContact[]> {
         try {
             const response = await apiClient.get(`/emergency-contacts/student/${studentId}`);
-            return response.data.data;
+            return response.data;
         } catch (error) {
             console.error('Error fetching student emergency contacts:', error);
             throw error;
@@ -68,7 +68,7 @@ export const emergencyContactsService = {
     async createEmergencyContact(data: CreateEmergencyContactRequest): Promise<EmergencyContact> {
         try {
             const response = await apiClient.post('/emergency-contacts', data);
-            return response.data.data;
+            return response.data;
         } catch (error) {
             console.error('Error creating emergency contact:', error);
             throw error;
@@ -79,7 +79,7 @@ export const emergencyContactsService = {
     async updateEmergencyContact(contactId: string, data: UpdateEmergencyContactRequest): Promise<EmergencyContact> {
         try {
             const response = await apiClient.put(`/emergency-contacts/${contactId}`, data);
-            return response.data.data;
+            return response.data;
         } catch (error) {
             console.error('Error updating emergency contact:', error);
             throw error;
@@ -90,7 +90,7 @@ export const emergencyContactsService = {
     async verifyContact(contactId: string): Promise<EmergencyContact> {
         try {
             const response = await apiClient.put(`/emergency-contacts/${contactId}/verify`);
-            return response.data.data;
+            return response.data;
         } catch (error) {
             console.error('Error verifying contact:', error);
             throw error;

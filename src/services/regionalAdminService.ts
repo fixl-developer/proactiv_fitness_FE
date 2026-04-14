@@ -1,4 +1,4 @@
-import apiClient from '@/lib/apiClient'
+import { apiClient } from '@/services/api/client'
 
 // Types for Regional Admin Dashboard
 export interface RegionalLocation {

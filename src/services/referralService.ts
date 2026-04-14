@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Referral {
     referralId?: string;
@@ -21,49 +19,49 @@ export interface Referral {
 
 class ReferralService {
     async createReferral(referrerId: string, tenantId: string) {
-        const response = await axios.post(`${API_URL}/referral`, {
+        const response = await apiClient.post(`/referral`, {
             referrerId,
             tenantId,
         });
-        return response.data;
+        return response;
     }
 
     async getReferral(referralCode: string) {
-        const response = await axios.get(`${API_URL}/referral/${referralCode}`);
-        return response.data;
+        const response = await apiClient.get(`/referral/${referralCode}`);
+        return response;
     }
 
     async listReferrals(referrerId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/referral`, {
+        const response = await apiClient.get(`/referral`, {
             params: { referrerId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async convertReferral(referralCode: string, referredUserId: string) {
-        const response = await axios.post(`${API_URL}/referral/${referralCode}/convert`, {
+        const response = await apiClient.post(`/referral/${referralCode}/convert`, {
             referredUserId,
         });
-        return response.data;
+        return response;
     }
 
     async issueRewards(referralId: string) {
-        const response = await axios.post(`${API_URL}/referral/${referralId}/rewards`);
-        return response.data;
+        const response = await apiClient.post(`/referral/${referralId}/rewards`);
+        return response;
     }
 
     async getAnalytics(referrerId: string, tenantId: string) {
-        const response = await axios.get(`${API_URL}/referral/analytics`, {
+        const response = await apiClient.get(`/referral/analytics`, {
             params: { referrerId, tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async shareReferralLink(referralCode: string, platform: 'email' | 'sms' | 'social') {
-        const response = await axios.post(`${API_URL}/referral/${referralCode}/share`, {
+        const response = await apiClient.post(`/referral/${referralCode}/share`, {
             platform,
         });
-        return response.data;
+        return response;
     }
 }
 

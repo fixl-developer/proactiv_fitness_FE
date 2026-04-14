@@ -9,6 +9,7 @@ import {
     Sparkles, Loader2
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -49,6 +50,7 @@ const AIManagementPage = () => {
             })
         } catch (err) {
             console.error('Failed to load AI insights:', err)
+            toast.error('Failed to load AI insights')
         } finally {
             setAiLoading(false)
         }

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface JobPosting {
     _id: string;
@@ -37,59 +35,59 @@ export interface JobApplication {
 
 class CareersService {
     async createJob(data: Partial<JobPosting>): Promise<JobPosting> {
-        const response = await axios.post(`${API_URL}/careers/jobs`, data);
-        return response.data;
+        const response = await apiClient.post(`/careers/jobs`, data);
+        return response;
     }
 
     async getJobs(filters?: any): Promise<JobPosting[]> {
-        const response = await axios.get(`${API_URL}/careers/jobs`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/careers/jobs`, { params: filters });
+        return response;
     }
 
     async getJobById(id: string): Promise<JobPosting> {
-        const response = await axios.get(`${API_URL}/careers/jobs/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/careers/jobs/${id}`);
+        return response;
     }
 
     async updateJob(id: string, data: Partial<JobPosting>): Promise<JobPosting> {
-        const response = await axios.put(`${API_URL}/careers/jobs/${id}`, data);
-        return response.data;
+        const response = await apiClient.put(`/careers/jobs/${id}`, data);
+        return response;
     }
 
     async deleteJob(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/careers/jobs/${id}`);
+        await apiClient.delete(`/careers/jobs/${id}`);
     }
 
     async publishJob(id: string): Promise<JobPosting> {
-        const response = await axios.post(`${API_URL}/careers/jobs/${id}/publish`);
-        return response.data;
+        const response = await apiClient.post(`/careers/jobs/${id}/publish`);
+        return response;
     }
 
     async submitApplication(data: Partial<JobApplication>): Promise<JobApplication> {
-        const response = await axios.post(`${API_URL}/careers/applications`, data);
-        return response.data;
+        const response = await apiClient.post(`/careers/applications`, data);
+        return response;
     }
 
     async getApplications(jobId?: string): Promise<JobApplication[]> {
-        const response = await axios.get(`${API_URL}/careers/applications`, {
+        const response = await apiClient.get(`/careers/applications`, {
             params: { jobId }
         });
-        return response.data;
+        return response;
     }
 
     async updateApplicationStatus(id: string, status: string, notes?: string): Promise<JobApplication> {
-        const response = await axios.put(`${API_URL}/careers/applications/${id}/status`, {
+        const response = await apiClient.put(`/careers/applications/${id}/status`, {
             status,
             notes
         });
-        return response.data;
+        return response;
     }
 
     async scheduleInterview(id: string, date: Date): Promise<JobApplication> {
-        const response = await axios.post(`${API_URL}/careers/applications/${id}/interview`, {
+        const response = await apiClient.post(`/careers/applications/${id}/interview`, {
             date
         });
-        return response.data;
+        return response;
     }
 }
 

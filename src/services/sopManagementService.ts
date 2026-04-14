@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface SOP {
   _id: string;
@@ -53,68 +51,68 @@ export interface StaffAcknowledgment {
 
 class SOPManagementService {
   async getSOPs(filters?: any): Promise<SOP[]> {
-    const response = await axios.get(`${API_URL}/sop/documents`, { params: filters });
-    return response.data;
+    const response = await apiClient.get(`/sop/documents`, { params: filters });
+    return response;
   }
 
   async getSOPById(id: string): Promise<SOP> {
-    const response = await axios.get(`${API_URL}/sop/documents/${id}`);
-    return response.data;
+    const response = await apiClient.get(`/sop/documents/${id}`);
+    return response;
   }
 
   async createSOP(data: Partial<SOP>): Promise<SOP> {
-    const response = await axios.post(`${API_URL}/sop/documents`, data);
-    return response.data;
+    const response = await apiClient.post(`/sop/documents`, data);
+    return response;
   }
 
   async updateSOP(id: string, data: Partial<SOP>): Promise<SOP> {
-    const response = await axios.put(`${API_URL}/sop/documents/${id}`, data);
-    return response.data;
+    const response = await apiClient.put(`/sop/documents/${id}`, data);
+    return response;
   }
 
   async deleteSOP(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/sop/documents/${id}`);
+    await apiClient.delete(`/sop/documents/${id}`);
   }
 
   async approveSOP(id: string): Promise<SOP> {
-    const response = await axios.post(`${API_URL}/sop/documents/${id}/approve`);
-    return response.data;
+    const response = await apiClient.post(`/sop/documents/${id}/approve`);
+    return response;
   }
 
   async getVersions(sopId: string): Promise<SOPVersion[]> {
-    const response = await axios.get(`${API_URL}/sop/documents/${sopId}/versions`);
-    return response.data;
+    const response = await apiClient.get(`/sop/documents/${sopId}/versions`);
+    return response;
   }
 
   async searchSOPs(query: string): Promise<SOP[]> {
-    const response = await axios.get(`${API_URL}/sop/search`, { params: { query } });
-    return response.data;
+    const response = await apiClient.get(`/sop/search`, { params: { query } });
+    return response;
   }
 
   async getTrainingMaterials(filters?: any): Promise<TrainingMaterial[]> {
-    const response = await axios.get(`${API_URL}/sop/training`, { params: filters });
-    return response.data;
+    const response = await apiClient.get(`/sop/training`, { params: filters });
+    return response;
   }
 
   async createTrainingMaterial(data: Partial<TrainingMaterial>): Promise<TrainingMaterial> {
-    const response = await axios.post(`${API_URL}/sop/training`, data);
-    return response.data;
+    const response = await apiClient.post(`/sop/training`, data);
+    return response;
   }
 
   async trackView(id: string, type: 'sop' | 'training'): Promise<void> {
-    await axios.post(`${API_URL}/sop/${type}/${id}/view`);
+    await apiClient.post(`/sop/${type}/${id}/view`);
   }
 
   async acknowledgeSOPAsync(sopId: string, signature?: string): Promise<StaffAcknowledgment> {
-    const response = await axios.post(`${API_URL}/sop/documents/${sopId}/acknowledge`, {
+    const response = await apiClient.post(`/sop/documents/${sopId}/acknowledge`, {
       signature
     });
-    return response.data;
+    return response;
   }
 
   async getAcknowledgments(sopId: string): Promise<StaffAcknowledgment[]> {
-    const response = await axios.get(`${API_URL}/sop/documents/${sopId}/acknowledgments`);
-    return response.data;
+    const response = await apiClient.get(`/sop/documents/${sopId}/acknowledgments`);
+    return response;
   }
 }
 

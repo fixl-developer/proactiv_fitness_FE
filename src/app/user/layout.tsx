@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Settings, Menu, Utensils, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Settings, Menu, Utensils, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -18,6 +18,7 @@ const navigation = [
     { name: 'Progress', href: '/user/progress', icon: TrendingUp },
     { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
     { name: 'Achievements', href: '/user/achievements', icon: Award },
+    { name: 'Parent/Guardian', href: '/user/guardians', icon: Users },
     { name: 'Profile', href: '/user/profile', icon: User }
 ]
 
@@ -37,6 +38,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const router = useRouter()
     const { isAuthenticated, isLoading, user } = useAuth()
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
 
@@ -53,9 +55,17 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/50">
-            {/* Sidebar - Fixed */}
+            {/* Mobile overlay */}
+            {mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Sidebar - Fixed on desktop, slide-over on mobile */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
                 style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
@@ -86,7 +96,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                                 <div key={item.name} className="relative">
                                     <button
                                         id={`user-layout-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-btn`}
-                                        onClick={() => router.push(item.href)}
+                                        onClick={() => { router.push(item.href); setMobileMenuOpen(false) }}
                                         onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
                                         onMouseLeave={() => setHoveredItem(null)}
                                         className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
@@ -172,19 +182,29 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+            <div className="transition-all duration-300 ease-in-out lg:ml-0" style={{ marginLeft: 0 }}>
                 {/* Header - Fixed */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
-                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                    className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out right-0"
+                    style={{ left: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${sidebarWidth}px` : 0 }}
                 >
-                    <div className="flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center justify-between px-4 md:px-6 py-4">
                         <div className="flex items-center space-x-4">
                             <button
+                                onClick={() => {
+                                    setMobileMenuOpen(!mobileMenuOpen)
+                                    setSidebarCollapsed(!sidebarCollapsed)
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
+                                title="Toggle menu"
+                            >
+                                <Menu className="w-5 h-5 text-gray-600" />
+                            </button>
+                            <button
                                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors hidden lg:block"
                                 title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                             >
                                 <Menu className="w-5 h-5 text-gray-600" />
@@ -206,7 +226,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-6 min-h-screen">
+                <main className="pt-20 p-4 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

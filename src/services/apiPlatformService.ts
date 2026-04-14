@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface ApiKey {
     _id: string;
@@ -49,53 +47,53 @@ export interface Webhook {
 
 class ApiPlatformService {
     async createApiKey(data: Partial<ApiKey>): Promise<ApiKey> {
-        const response = await axios.post(`${API_URL}/api-platform/keys`, data);
+        const response = await apiClient.post(`/api-platform/keys`, data);
         return response.data;
     }
 
     async getApiKeys(): Promise<ApiKey[]> {
-        const response = await axios.get(`${API_URL}/api-platform/keys`);
+        const response = await apiClient.get(`/api-platform/keys`);
         return response.data;
     }
 
     async revokeApiKey(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/api-platform/keys/${id}`);
+        await apiClient.delete(`/api-platform/keys/${id}`);
     }
 
     async getEndpoints(category?: string): Promise<ApiEndpoint[]> {
-        const response = await axios.get(`${API_URL}/api-platform/endpoints`, {
+        const response = await apiClient.get(`/api-platform/endpoints`, {
             params: { category }
         });
         return response.data;
     }
 
     async getApiLogs(filters?: any): Promise<ApiLog[]> {
-        const response = await axios.get(`${API_URL}/api-platform/logs`, { params: filters });
+        const response = await apiClient.get(`/api-platform/logs`, { params: filters });
         return response.data;
     }
 
     async getApiUsage(period: string = '7d'): Promise<any> {
-        const response = await axios.get(`${API_URL}/api-platform/usage`, { params: { period } });
+        const response = await apiClient.get(`/api-platform/usage`, { params: { period } });
         return response.data;
     }
 
     async createWebhook(data: Partial<Webhook>): Promise<Webhook> {
-        const response = await axios.post(`${API_URL}/api-platform/webhooks`, data);
+        const response = await apiClient.post(`/api-platform/webhooks`, data);
         return response.data;
     }
 
     async getWebhooks(): Promise<Webhook[]> {
-        const response = await axios.get(`${API_URL}/api-platform/webhooks`);
+        const response = await apiClient.get(`/api-platform/webhooks`);
         return response.data;
     }
 
     async testWebhook(id: string): Promise<{ success: boolean; message: string }> {
-        const response = await axios.post(`${API_URL}/api-platform/webhooks/${id}/test`);
+        const response = await apiClient.post(`/api-platform/webhooks/${id}/test`);
         return response.data;
     }
 
     async deleteWebhook(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/api-platform/webhooks/${id}`);
+        await apiClient.delete(`/api-platform/webhooks/${id}`);
     }
 }
 

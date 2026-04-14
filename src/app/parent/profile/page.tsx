@@ -13,6 +13,7 @@ import { apiClient } from '@/services/api/client'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { validateName, validatePhone, validateAddress, validateDateOfBirth, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 interface UserProfile {
     id: string
@@ -182,6 +183,7 @@ const ProfilePage = () => {
             setProfile(editedProfile)
             setIsEditing(false)
             setSuccessMessage('Profile updated successfully!')
+            toast.success('Profile updated successfully!')
             setTimeout(() => setSuccessMessage(null), 5000)
         } catch (err) {
             console.error('Error saving profile:', err)
@@ -264,10 +266,10 @@ const ProfilePage = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-                    <p className="text-gray-600">Manage your account information and preferences</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Profile</h1>
+                    <p className="text-sm md:text-base text-gray-600">Manage your account information and preferences</p>
                 </div>
                 {!isEditing ? (
                     <Button id="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { smartSchedulerService, safetyMonitorService } from '@/services/advancedAIServices'
+import { formatAIResponse } from '@/utils/formatAIResponse'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -428,8 +429,8 @@ function LocationAIExtended() {
                 <button onClick={() => callAI('ltv', () => apiClient.get('/revenue-intelligence/ltv/location'))} disabled={loading === 'ltv'} className="flex items-center gap-2 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-medium text-green-700 w-full">
                     {loading === 'ltv' ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />} LTV Prediction
                 </button>
-                {results.churn && <div className="p-2 bg-green-50 rounded text-xs"><p className="font-medium text-green-700">Churn Risk:</p><p>{results.churn.data?.riskLevel || results.churn.data?.message || JSON.stringify(results.churn.data).slice(0, 100)}</p></div>}
-                {results.ltv && <div className="p-2 bg-green-50 rounded text-xs"><p className="font-medium text-green-700">LTV:</p><p>{results.ltv.data?.predictedLTV || results.ltv.data?.message || JSON.stringify(results.ltv.data).slice(0, 100)}</p></div>}
+                {results.churn && <div className="p-2 bg-green-50 rounded text-xs"><p className="font-medium text-green-700">Churn Risk:</p><p>{results.churn.data?.riskLevel || results.churn.data?.message || formatAIResponse(results.churn.data, 100)}</p></div>}
+                {results.ltv && <div className="p-2 bg-green-50 rounded text-xs"><p className="font-medium text-green-700">LTV:</p><p>{results.ltv.data?.predictedLTV || results.ltv.data?.message || formatAIResponse(results.ltv.data, 100)}</p></div>}
             </div>
             <div className="space-y-2">
                 <h4 className="font-semibold text-sm flex items-center gap-2"><Activity className="w-4 h-4 text-blue-600" /> AI Video Analysis</h4>
@@ -443,7 +444,7 @@ function LocationAIExtended() {
                 <button onClick={() => callAI('promo', () => apiClient.post('/ai-content-engine/generate-social-post', { topic: 'location events' }))} disabled={loading === 'promo'} className="flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-xs font-medium text-indigo-700 w-full">
                     {loading === 'promo' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Generate Local Promo
                 </button>
-                {results.promo && <div className="p-2 bg-indigo-50 rounded text-xs"><p className="font-medium text-indigo-700">Generated:</p><p>{results.promo.data?.content || results.promo.data?.post || results.promo.data?.message || JSON.stringify(results.promo.data).slice(0, 150)}</p></div>}
+                {results.promo && <div className="p-2 bg-indigo-50 rounded text-xs"><p className="font-medium text-indigo-700">Generated:</p><p>{results.promo.data?.content || results.promo.data?.post || results.promo.data?.message || formatAIResponse(results.promo.data, 150)}</p></div>}
             </div>
         </div>
     )

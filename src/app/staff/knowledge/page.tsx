@@ -7,6 +7,7 @@ import { supportStaffService } from '@/services/supportStaffService'
 import { FileText, CheckCircle, Edit3, Star, Plus, Search, AlertCircle, Eye, ThumbsUp, Trash2, X } from 'lucide-react'
 import { validateRequired, validateTextArea, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 interface Article {
     id: string
@@ -142,9 +143,10 @@ export default function KnowledgeBase() {
                 featured: formData.featured,
             } as any)
             closeModals()
+            toast.success('Article created successfully')
             await loadArticles()
         } catch {
-            setError('Failed to create article.')
+            toast.error('Failed to create article.')
         } finally {
             setSubmitting(false)
         }
@@ -166,9 +168,10 @@ export default function KnowledgeBase() {
                 featured: formData.featured,
             } as any)
             closeModals()
+            toast.success('Article updated successfully')
             await loadArticles()
         } catch {
-            setError('Failed to update article.')
+            toast.error('Failed to update article.')
         } finally {
             setSubmitting(false)
         }
@@ -179,9 +182,10 @@ export default function KnowledgeBase() {
         try {
             const articleId = article._id || article.id
             await supportStaffService.deleteKnowledgeBaseArticle(articleId)
+            toast.success('Article deleted successfully')
             await loadArticles()
         } catch {
-            setError('Failed to delete article.')
+            toast.error('Failed to delete article.')
         }
     }
 
@@ -201,7 +205,7 @@ export default function KnowledgeBase() {
     if (!isAuthenticated) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">

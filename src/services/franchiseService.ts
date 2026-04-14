@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface Franchise {
     franchiseId?: string;
@@ -37,49 +35,49 @@ export interface Franchise {
 
 class FranchiseService {
     async createFranchise(data: Franchise) {
-        const response = await axios.post(`${API_URL}/franchise`, data);
-        return response.data;
+        const response = await apiClient.post(`/franchise`, data);
+        return response;
     }
 
     async getFranchise(franchiseId: string) {
-        const response = await axios.get(`${API_URL}/franchise/${franchiseId}`);
-        return response.data;
+        const response = await apiClient.get(`/franchise/${franchiseId}`);
+        return response;
     }
 
     async listFranchises(tenantId: string) {
-        const response = await axios.get(`${API_URL}/franchise`, {
+        const response = await apiClient.get(`/franchise`, {
             params: { tenantId },
         });
-        return response.data;
+        return response;
     }
 
     async updateFranchise(franchiseId: string, updates: Partial<Franchise>) {
-        const response = await axios.put(`${API_URL}/franchise/${franchiseId}`, updates);
-        return response.data;
+        const response = await apiClient.put(`/franchise/${franchiseId}`, updates);
+        return response;
     }
 
     async calculateRoyalty(franchiseId: string, revenue: number) {
-        const response = await axios.post(`${API_URL}/franchise/${franchiseId}/calculate-royalty`, {
+        const response = await apiClient.post(`/franchise/${franchiseId}/calculate-royalty`, {
             revenue,
         });
-        return response.data;
+        return response;
     }
 
     async getPerformanceMetrics(franchiseId: string) {
-        const response = await axios.get(`${API_URL}/franchise/${franchiseId}/metrics`);
-        return response.data;
+        const response = await apiClient.get(`/franchise/${franchiseId}/metrics`);
+        return response;
     }
 
     async updateStatus(franchiseId: string, status: 'active' | 'suspended' | 'terminated') {
-        const response = await axios.put(`${API_URL}/franchise/${franchiseId}/status`, { status });
-        return response.data;
+        const response = await apiClient.put(`/franchise/${franchiseId}/status`, { status });
+        return response;
     }
 
     async getProfitLoss(franchiseId: string, startDate: string, endDate: string) {
-        const response = await axios.get(`${API_URL}/franchise/${franchiseId}/profit-loss`, {
+        const response = await apiClient.get(`/franchise/${franchiseId}/profit-loss`, {
             params: { startDate, endDate },
         });
-        return response.data;
+        return response;
     }
 }
 

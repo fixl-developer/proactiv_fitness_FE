@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import apiClient from '@/lib/apiClient'
+import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { validateName, validatePhone, validateDateOfBirth, validateTextArea, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -79,7 +80,7 @@ export default function ProfilePage() {
     const saveForLogout = useCallback(async () => {
         if (!isDirty || !profile) return
         try {
-            await apiClient.put('/user/profile/profile', profile)
+            await apiClient.put('/user/profile', profile)
             setOriginalProfile(profile)
             setIsEditing(false)
         } catch (err) {
@@ -93,7 +94,7 @@ export default function ProfilePage() {
         setIsLoading(true)
         setError(null)
         try {
-            const response = await apiClient.get('/user/profile/profile')
+            const response = await apiClient.get('/user/profile')
             const data = response?.data || response
             setProfile(data)
             setOriginalProfile(data)
@@ -139,19 +140,20 @@ export default function ProfilePage() {
         if (profile.emergencyContact?.phone) { const ep = validatePhone(profile.emergencyContact.phone, false); if (ep) errors.ecPhone = ep }
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors)
-            alert('Please fix the validation errors before saving.')
+            toast.error('Please fix the validation errors before saving.')
             return
         }
         setFieldErrors({})
         try {
             setIsSaving(true)
-            await apiClient.put('/user/profile/profile', profile)
+            await apiClient.put('/user/profile', profile)
             setOriginalProfile(profile)
             setIsEditing(false)
             setSaveSuccess(true)
+            toast.success('Profile saved successfully!')
         } catch (err: any) {
             console.error('Error saving profile:', err)
-            alert('Failed to save profile. Please try again.')
+            toast.error('Failed to save profile. Please try again.')
         } finally {
             setIsSaving(false)
         }
@@ -222,10 +224,10 @@ export default function ProfilePage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-                    <p className="text-gray-600 mt-2">Manage your personal information</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Profile</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-2">Manage your personal information</p>
                 </div>
                 {!isEditing ? (
                     <Button id="user-profile-edit-btn" onClick={() => setIsEditing(true)}>
@@ -263,7 +265,7 @@ export default function ProfilePage() {
             )}
 
             {/* Quick Navigation Buttons */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Button
                     id="user-profile-my-classes-btn"
                     variant="outline"

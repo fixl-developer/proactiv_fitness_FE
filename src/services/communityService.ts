@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface CommunityPost {
     postId?: string;
@@ -18,13 +16,13 @@ export interface CommunityPost {
 
 class CommunityService {
     async createPost(data: CommunityPost) {
-        const response = await axios.post(`${API_URL}/community/posts`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/posts`, data);
+        return response;
     }
 
     async getPost(postId: string) {
-        const response = await axios.get(`${API_URL}/community/posts/${postId}`);
-        return response.data;
+        const response = await apiClient.get(`/community/posts/${postId}`);
+        return response;
     }
 
     async listPosts(filters: {
@@ -34,46 +32,46 @@ class CommunityService {
         page?: number;
         limit?: number;
     }) {
-        const response = await axios.get(`${API_URL}/community/posts`, {
+        const response = await apiClient.get(`/community/posts`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async addReaction(postId: string, userId: string, type: 'like' | 'love' | 'celebrate' | 'support') {
-        const response = await axios.post(`${API_URL}/community/posts/${postId}/reactions`, {
+        const response = await apiClient.post(`/community/posts/${postId}/reactions`, {
             userId,
             type,
         });
-        return response.data;
+        return response;
     }
 
     async addComment(postId: string, userId: string, content: string) {
-        const response = await axios.post(`${API_URL}/community/posts/${postId}/comments`, {
+        const response = await apiClient.post(`/community/posts/${postId}/comments`, {
             userId,
             content,
         });
-        return response.data;
+        return response;
     }
 
     async createEvent(data: any) {
-        const response = await axios.post(`${API_URL}/community/events`, data);
-        return response.data;
+        const response = await apiClient.post(`/community/events`, data);
+        return response;
     }
 
     async listEvents(tenantId: string, locationId?: string) {
-        const response = await axios.get(`${API_URL}/community/events`, {
+        const response = await apiClient.get(`/community/events`, {
             params: { tenantId, locationId },
         });
-        return response.data;
+        return response;
     }
 
     async rsvpEvent(eventId: string, userId: string, status: 'attending' | 'not-attending' | 'maybe') {
-        const response = await axios.post(`${API_URL}/community/events/${eventId}/rsvp`, {
+        const response = await apiClient.post(`/community/events/${eventId}/rsvp`, {
             userId,
             status,
         });
-        return response.data;
+        return response;
     }
 }
 

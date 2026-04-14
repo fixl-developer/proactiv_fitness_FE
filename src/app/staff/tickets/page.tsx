@@ -7,6 +7,7 @@ import { supportStaffService, SupportTicket } from '@/services/supportStaffServi
 import { Plus, Search, Ticket, AlertCircle, Clock, CheckCircle, X, ChevronDown } from 'lucide-react'
 import { validateRequired, validateEmail, validateTextArea, validateName, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function SupportTickets() {
     const router = useRouter()
@@ -117,9 +118,10 @@ export default function SupportTickets() {
             })
             setShowNewTicketModal(false)
             setNewTicketForm({ subject: '', description: '', priority: 'medium', category: '', customer: '', customerEmail: '' })
+            toast.success('Ticket created successfully')
             loadTickets()
         } catch {
-            setError('Failed to create ticket. Please try again.')
+            toast.error('Failed to create ticket. Please try again.')
         } finally {
             setSubmitting(false)
         }
@@ -130,9 +132,10 @@ export default function SupportTickets() {
         try {
             await supportStaffService.updateTicket(ticketId, { status: newStatus })
             setStatusDropdownId(null)
+            toast.success('Ticket status updated')
             loadTickets()
         } catch {
-            setError('Failed to update ticket status.')
+            toast.error('Failed to update ticket status.')
         } finally {
             setUpdatingStatus(null)
         }
@@ -162,11 +165,11 @@ export default function SupportTickets() {
     if (!isAuthenticated) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900">Support Tickets</h1>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
+                    <h1 className="text-2xl md:text-4xl font-bold text-gray-900">Support Tickets</h1>
                     <button
                         id="staff-tickets-btn"
                         onClick={() => setShowNewTicketModal(true)}
@@ -235,8 +238,8 @@ export default function SupportTickets() {
                 </div>
 
                 {/* Search and Filters */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <div className="flex gap-4 mb-4">
+                <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
+                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <input
@@ -257,7 +260,7 @@ export default function SupportTickets() {
                         </button>
                     </div>
 
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
                         <select
                             id="select-staff-tickets-2"
                             value={filters.status}
@@ -310,7 +313,8 @@ export default function SupportTickets() {
                     </div>
                 ) : (
                     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                        <table className="w-full">
+                        <div className="overflow-x-auto">
+                        <table className="w-full min-w-[700px]">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th className="text-left py-3 px-6 font-semibold text-gray-700">ID</th>
@@ -375,6 +379,7 @@ export default function SupportTickets() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 )}
 

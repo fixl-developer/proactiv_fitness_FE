@@ -8,6 +8,7 @@ import {
     MoreHorizontal, Edit, Trash2, Plus, FileText, Mail, Phone
 } from 'lucide-react'
 import { paymentService } from '@/services/modules/payment.service'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,13 +41,28 @@ const AdminPaymentsPage = () => {
             ])
 
             if (statsRes) {
-                setPaymentStats(statsRes)
+                // paymentService returns {success, data: {...}} from apiClient
+                const statsData = statsRes?.data || statsRes
+                setPaymentStats(prev => ({
+                    ...prev,
+                    totalRevenue: statsData?.totalRevenue ?? prev.totalRevenue,
+                    monthlyRevenue: statsData?.monthlyRevenue ?? prev.monthlyRevenue,
+                    pendingPayments: statsData?.totalPending ?? statsData?.pendingPayments ?? prev.pendingPayments,
+                    completedPayments: statsData?.completedPayments ?? prev.completedPayments,
+                    pendingCount: statsData?.pendingCount ?? prev.pendingCount,
+                    failedCount: statsData?.totalFailed ?? statsData?.failedCount ?? prev.failedCount,
+                    averagePayment: statsData?.averagePayment ?? prev.averagePayment,
+                    growthRate: statsData?.growthRate ?? prev.growthRate,
+                }))
             }
 
             if (paymentsRes) {
-                setRecentPayments(paymentsRes.payments || paymentsRes.data || paymentsRes)
-                if (paymentsRes.paymentMethods) {
-                    setPaymentMethods(paymentsRes.paymentMethods)
+                // paymentService returns {success, data: {payments, total}} from apiClient
+                const payData = paymentsRes?.data || paymentsRes
+                const payments = payData?.payments || (Array.isArray(payData) ? payData : [])
+                setRecentPayments(payments)
+                if (payData?.paymentMethods) {
+                    setPaymentMethods(payData.paymentMethods)
                 }
             }
         } catch (error) {

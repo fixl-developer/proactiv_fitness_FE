@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, BarChart, Bar, Pie } from 'recharts';
 import { apiClient } from '@/services/api/client';
+import { toast } from 'sonner';
 
 interface AIMetrics {
     chatbotInteractions: number;
@@ -190,6 +191,7 @@ const AIAnalyticsDashboard = () => {
             ]);
         } catch (error) {
             console.error('Error loading analytics data:', error);
+            toast.error('Failed to load analytics data. Showing cached results.');
         } finally {
             setIsLoading(false);
         }

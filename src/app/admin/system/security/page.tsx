@@ -98,7 +98,7 @@ export default function SecurityCenterPage() {
                 allEvents.push({
                     id: e.id || e._id || `sec-${i}`,
                     type: e.type || e.eventType || e.action || 'Security Event',
-                    message: e.message || e.description || e.details || JSON.stringify(e),
+                    message: e.message || e.description || e.details || e.action || e.entityType || 'Security event',
                     time: formatTime(e.time || e.timestamp || e.createdAt || ''),
                     severity: e.severity || e.level || 'Info',
                     severityColor: getSeverityColor(e.severity || e.level || 'Info'),

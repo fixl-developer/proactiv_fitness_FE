@@ -29,8 +29,6 @@ import {
     MessageSquare,
     ChevronDown,
     ChevronRight,
-    PanelLeftClose,
-    PanelLeftOpen
 } from 'lucide-react'
 
 interface MenuItem {
@@ -221,7 +219,6 @@ const roleColors = {
 }
 
 const SIDEBAR_EXPANDED = 256
-const SIDEBAR_COLLAPSED = 72
 
 export default function DashboardLayout({ children, userRole, userName, userEmail }: DashboardLayoutProps) {
     const menuItems = roleMenuItems[userRole]
@@ -230,15 +227,32 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     useAuth()
     const router = useRouter()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-    const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login/staff' })
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
+    const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: userRole === 'parent' ? '/login' : '/login/staff' })
 
-    const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
+    const sidebarWidth = isMobile ? 0 : SIDEBAR_EXPANDED
+
+    // Detect mobile
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024)
+            if (window.innerWidth < 1024) {
+                setMobileMenuOpen(false)
+            }
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Close mobile menu on navigation
+    useEffect(() => {
+        setMobileMenuOpen(false)
+    }, [pathname])
 
     // Auto-expand menus based on current path
     useEffect(() => {
-        if (sidebarCollapsed) return
         menuItems.forEach(item => {
             if (item.submenu && pathname.startsWith(item.href)) {
                 setExpandedMenus(prev =>
@@ -246,14 +260,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 )
             }
         })
-    }, [pathname, sidebarCollapsed])
-
-    // Collapse submenus when sidebar collapses
-    useEffect(() => {
-        if (sidebarCollapsed) {
-            setExpandedMenus([])
-        }
-    }, [sidebarCollapsed])
+    }, [pathname])
 
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {
@@ -270,29 +277,33 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-            {/* Sidebar - Fixed Position */}
+            {/* Mobile Overlay */}
+            {isMobile && mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Sidebar - Fixed Position / Mobile Drawer */}
             <div
-                className="fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out"
-                style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${
+                    isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : ''
+                }`}
+                style={{ width: `${SIDEBAR_EXPANDED}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
                 <div className="p-4 border-b border-gray-200/50 flex-shrink-0">
-                    <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
+                    <div className="flex items-center space-x-3">
                         <div className={`w-10 h-10 bg-gradient-to-r ${colors.gradient} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
                             <Shield className="w-6 h-6 text-white" />
                         </div>
-                        {!sidebarCollapsed && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <h2 className="text-lg font-bold text-gray-900">ProActive Sports</h2>
-                                <p className={`text-sm ${colors.text} font-medium capitalize`}>
-                                    {userRole} Portal
-                                </p>
-                            </motion.div>
-                        )}
+                        <div>
+                            <h2 className="text-lg font-bold text-gray-900">ProActive Sports</h2>
+                            <p className={`text-sm ${colors.text} font-medium capitalize`}>
+                                {userRole} Portal
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -305,49 +316,28 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                     // Menu item with submenu
                                     <div className="relative group">
                                         <button id="dashboard-dashboard-layout-btn"
-                                            onClick={() => {
-                                                if (sidebarCollapsed) {
-                                                    setSidebarCollapsed(false)
-                                                    setTimeout(() => toggleSubmenu(item.href), 300)
-                                                } else {
-                                                    toggleSubmenu(item.href)
-                                                }
-                                            }}
-                                            onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
-                                            onMouseLeave={() => setHoveredItem(null)}
-                                            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
+                                            onClick={() => toggleSubmenu(item.href)}
+                                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                 ? `${colors.activeBg} ${colors.text}`
                                                 : 'text-gray-700 hover:text-gray-900'
                                                 }`}
                                         >
-                                            <div className={`flex items-center ${sidebarCollapsed ? '' : 'space-x-3'}`}>
+                                            <div className="flex items-center space-x-3">
                                                 <item.icon className={`w-5 h-5 flex-shrink-0 ${expandedMenus.includes(item.href) || pathname.startsWith(item.href)
                                                     ? colors.text
                                                     : 'text-gray-600'
                                                     }`} />
-                                                {!sidebarCollapsed && (
-                                                    <span className="font-medium text-sm">{item.label}</span>
-                                                )}
+                                                <span className="font-medium text-sm">{item.label}</span>
                                             </div>
-                                            {!sidebarCollapsed && (
-                                                expandedMenus.includes(item.href) ? (
-                                                    <ChevronDown className="w-4 h-4" />
-                                                ) : (
-                                                    <ChevronRight className="w-4 h-4" />
-                                                )
+                                            {expandedMenus.includes(item.href) ? (
+                                                <ChevronDown className="w-4 h-4" />
+                                            ) : (
+                                                <ChevronRight className="w-4 h-4" />
                                             )}
                                         </button>
 
-                                        {/* Tooltip for collapsed state */}
-                                        {sidebarCollapsed && hoveredItem === item.href && (
-                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
-                                                {item.label}
-                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
-                                            </div>
-                                        )}
-
                                         {/* Submenu - only when expanded */}
-                                        {!sidebarCollapsed && expandedMenus.includes(item.href) && (
+                                        {expandedMenus.includes(item.href) && (
                                             <motion.div
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: 'auto' }}
@@ -371,65 +361,29 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                     </div>
                                 ) : (
                                     // Regular menu item
-                                    <div className="relative group">
-                                        <Link id="dashboard-dashboard-layout-nav-2"
-                                            href={item.href}
-                                            onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
-                                            onMouseLeave={() => setHoveredItem(null)}
-                                            className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${isActiveLink(item.href)
-                                                ? `${colors.activeBg} ${colors.text}`
-                                                : `text-gray-700 ${colors.hoverBg} hover:text-gray-900`
-                                                }`}
-                                        >
-                                            <item.icon className={`w-5 h-5 flex-shrink-0 ${isActiveLink(item.href) ? colors.text : 'text-gray-600'}`} />
-                                            {!sidebarCollapsed && (
-                                                <span className="font-medium text-sm">{item.label}</span>
-                                            )}
-                                        </Link>
-
-                                        {/* Tooltip for collapsed state */}
-                                        {sidebarCollapsed && hoveredItem === item.href && (
-                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
-                                                {item.label}
-                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
-                                            </div>
-                                        )}
-                                    </div>
+                                    <Link id="dashboard-dashboard-layout-nav-2"
+                                        href={item.href}
+                                        className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${isActiveLink(item.href)
+                                            ? `${colors.activeBg} ${colors.text}`
+                                            : `text-gray-700 ${colors.hoverBg} hover:text-gray-900`
+                                            }`}
+                                    >
+                                        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActiveLink(item.href) ? colors.text : 'text-gray-600'}`} />
+                                        <span className="font-medium text-sm">{item.label}</span>
+                                    </Link>
                                 )}
                             </div>
                         ))}
                     </nav>
                 </div>
 
-                {/* Collapse Toggle */}
-                <div className="flex-shrink-0 px-2 py-2 border-t border-gray-200/50">
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    >
-                        {sidebarCollapsed ? (
-                            <PanelLeftOpen className="w-5 h-5" />
-                        ) : (
-                            <div className="flex items-center space-x-2 w-full justify-center">
-                                <PanelLeftClose className="w-5 h-5" />
-                                <span className="text-sm font-medium">Collapse</span>
-                            </div>
-                        )}
-                    </button>
-                </div>
+                {/* Spacer before footer */}
+                <div className="flex-shrink-0" />
 
                 {/* Sidebar Footer */}
                 <div className="flex-shrink-0 px-3 pt-3 pb-2 border-t border-gray-200/50 bg-white">
                     <div className="space-y-2">
                         {/* User Info */}
-                        {sidebarCollapsed ? (
-                            <div className="flex justify-center">
-                                <div className={`w-9 h-9 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
-                                    <User className="w-4 h-4 text-white" />
-                                </div>
-                            </div>
-                        ) : (
                             <div className={`p-3 rounded-lg bg-gradient-to-r ${colors.bg} border border-gray-200/50`}>
                                 <div className="flex items-center space-x-3">
                                     <div className={`w-8 h-8 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center flex-shrink-0`}>
@@ -445,7 +399,6 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                     </div>
                                 </div>
                             </div>
-                        )}
 
                         {/* Logout Button */}
                         <div className="flex justify-center">
@@ -453,10 +406,10 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                                 variant="outline"
                                 size="sm"
                                 onClick={handleLogoutClick}
-                                className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${sidebarCollapsed ? 'w-9 h-9 p-0' : 'flex-1'}`}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
                             >
-                                <LogOut className={`w-4 h-4 ${sidebarCollapsed ? '' : 'mr-2'}`} />
-                                {!sidebarCollapsed && 'Logout'}
+                                <LogOut className="w-4 h-4 mr-2" />
+                                Logout
                             </Button>
                         </div>
                     </div>
@@ -464,36 +417,38 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: `${sidebarWidth}px` }}>
+            <div className="transition-all duration-300 ease-in-out" style={{ marginLeft: isMobile ? 0 : `${SIDEBAR_EXPANDED}px` }}>
                 {/* Header - Fixed Position */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
-                    style={{ left: `${sidebarWidth}px`, right: 0 }}
+                    className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out"
+                    style={{ left: isMobile ? 0 : `${SIDEBAR_EXPANDED}px`, right: 0 }}
                 >
-                    <div className="flex items-center justify-between px-6 py-4">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                            >
-                                <Menu className="w-5 h-5 text-gray-600" />
-                            </button>
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
+                        <div className="flex items-center space-x-3 md:space-x-4">
+                            {/* Mobile hamburger menu */}
+                            {isMobile && (
+                                <button
+                                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    <Menu className="w-5 h-5 text-gray-600" />
+                                </button>
+                            )}
                             <div>
-                                <h1 className="text-xl font-semibold text-gray-900 capitalize">
+                                <h1 className="text-lg md:text-xl font-semibold text-gray-900 capitalize">
                                     {userRole} Dashboard
                                 </h1>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-xs md:text-sm text-gray-500 hidden sm:block">
                                     Welcome back, {userName || 'User'}!
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2 md:space-x-3">
                             <NotificationBell />
-                            <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm">
+                            <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm" className="hidden sm:flex">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </Button>
@@ -502,7 +457,7 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-6 min-h-screen">
+                <main className="pt-16 md:pt-20 p-3 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

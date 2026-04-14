@@ -131,7 +131,7 @@ export class HQAdminService {
             const response = await apiClient.get<PaginatedResponse<SystemUser>>(
                 `/admin/hq/users?${params.toString()}`
             )
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch users:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch users')
@@ -145,7 +145,7 @@ export class HQAdminService {
     static async getUser(userId: string): Promise<SystemUser> {
         try {
             const response = await apiClient.get<SystemUser>(`/admin/hq/users/${userId}`)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch user:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch user')
@@ -159,7 +159,7 @@ export class HQAdminService {
     static async createUser(userData: Partial<SystemUser>): Promise<SystemUser> {
         try {
             const response = await apiClient.post<SystemUser>('/admin/hq/users', userData)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to create user:', error)
             throw new Error(error.response?.data?.message || 'Failed to create user')
@@ -173,7 +173,7 @@ export class HQAdminService {
     static async updateUser(userId: string, userData: Partial<SystemUser>): Promise<SystemUser> {
         try {
             const response = await apiClient.put<SystemUser>(`/admin/hq/users/${userId}`, userData)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to update user:', error)
             throw new Error(error.response?.data?.message || 'Failed to update user')
@@ -213,7 +213,7 @@ export class HQAdminService {
             const response = await apiClient.get<PaginatedResponse<Location>>(
                 `/admin/hq/locations?${params.toString()}`
             )
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch locations:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch locations')
@@ -227,7 +227,7 @@ export class HQAdminService {
     static async getLocation(locationId: string): Promise<Location> {
         try {
             const response = await apiClient.get<Location>(`/admin/hq/locations/${locationId}`)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch location:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch location')
@@ -254,7 +254,7 @@ export class HQAdminService {
             const response = await apiClient.get<PaginatedResponse<Franchise>>(
                 `/admin/hq/franchises?${params.toString()}`
             )
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch franchises:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch franchises')
@@ -268,7 +268,7 @@ export class HQAdminService {
     static async getFranchise(franchiseId: string): Promise<Franchise> {
         try {
             const response = await apiClient.get<Franchise>(`/admin/hq/franchises/${franchiseId}`)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch franchise:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch franchise')
@@ -282,7 +282,7 @@ export class HQAdminService {
     static async getAnalytics(): Promise<AnalyticsData> {
         try {
             const response = await apiClient.get<AnalyticsData>('/admin/hq/analytics')
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch analytics:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch analytics')
@@ -295,8 +295,8 @@ export class HQAdminService {
      */
     static async getSettings(): Promise<SystemSettings> {
         try {
-            const response = await apiClient.get<SystemSettings>('/admin/hq/settings')
-            return response.data
+            const response = await apiClient.get<any>('/admin/hq/settings')
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch settings:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch settings')
@@ -309,8 +309,8 @@ export class HQAdminService {
      */
     static async updateSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
         try {
-            const response = await apiClient.put<SystemSettings>('/admin/hq/settings', settings)
-            return response.data
+            const response = await apiClient.put<any>('/admin/hq/settings', settings)
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to update settings:', error)
             throw new Error(error.response?.data?.message || 'Failed to update settings')
@@ -343,7 +343,7 @@ export class HQAdminService {
             const response = await apiClient.get<PaginatedResponse<AuditLog>>(
                 `/admin/hq/audit-logs?${params.toString()}`
             )
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch audit logs:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch audit logs')
@@ -357,7 +357,7 @@ export class HQAdminService {
     static async getDashboardOverview(): Promise<any> {
         try {
             const response = await apiClient.get('/admin/hq/dashboard')
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch dashboard overview:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch dashboard overview')
@@ -370,7 +370,7 @@ export class HQAdminService {
     static async getAPIKeys(): Promise<any[]> {
         try {
             const response = await apiClient.get<any[]>('/admin/hq/api-keys')
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch API keys:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch API keys')
@@ -383,7 +383,7 @@ export class HQAdminService {
     static async createAPIKey(data: { name: string; permissions?: string[] } | string): Promise<any> {
         try {
             const response = await apiClient.post<any>('/admin/hq/api-keys', data)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to create API key:', error)
             throw new Error(error.response?.data?.message || 'Failed to create API key')
@@ -408,7 +408,7 @@ export class HQAdminService {
     static async getSystemHealth(): Promise<any> {
         try {
             const response = await apiClient.get<any>('/admin/hq/health')
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch system health:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch system health')
@@ -421,7 +421,7 @@ export class HQAdminService {
     static async getNotifications(): Promise<any[]> {
         try {
             const response = await apiClient.get<any[]>('/admin/hq/notifications')
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch notifications:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch notifications')
@@ -434,7 +434,7 @@ export class HQAdminService {
     static async updateNotificationSettings(settings: any): Promise<any> {
         try {
             const response = await apiClient.put<any>('/admin/hq/notifications/settings', settings)
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to update notification settings:', error)
             throw new Error(error.response?.data?.message || 'Failed to update notification settings')
@@ -447,7 +447,7 @@ export class HQAdminService {
     static async getReports(params?: any): Promise<any[]> {
         try {
             const response = await apiClient.get<any[]>('/admin/hq/reports', { params })
-            return response.data
+            return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch reports:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch reports')

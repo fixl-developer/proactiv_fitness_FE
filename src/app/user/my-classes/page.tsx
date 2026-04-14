@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import UserClassesService from '@/services/modules/user-classes.service'
 import aiCoachService from '@/services/aiCoachService'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 // Safe eventData import - fallback to empty object if module is missing
 let eventData: Record<string, any> = {}
@@ -46,8 +47,6 @@ export default function MyClassesPage() {
     const [selectedEvent, setSelectedEvent] = useState<any>(null)
     const [selectedSession, setSelectedSession] = useState<any>(null)
     const [bookingNotes, setBookingNotes] = useState('')
-    const [bookingChildName, setBookingChildName] = useState('')
-    const [bookingChildAge, setBookingChildAge] = useState('')
     const [submittingBooking, setSubmittingBooking] = useState(false)
     const [bookingSuccess, setBookingSuccess] = useState(false)
     const [aiRecommendations, setAiRecommendations] = useState<any>(null)
@@ -197,7 +196,7 @@ export default function MyClassesPage() {
             ))
         } catch (err) {
             console.error('Error cancelling class:', err)
-            alert('Failed to cancel class. Please try again.')
+            toast.error('Failed to cancel class. Please try again.')
         } finally {
             setCancellingId(null)
         }
@@ -1072,37 +1071,13 @@ export default function MyClassesPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Participant Details */}
+                                            {/* Booking Notes */}
                                             <div className="space-y-4">
-                                                <h4 className="font-semibold text-gray-900">Participant Details</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Child's Name *</label>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Enter child's name"
-                                                            value={bookingChildName}
-                                                            onChange={(e) => setBookingChildName(e.target.value)}
-                                                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Child's Age *</label>
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Enter age"
-                                                            min="1"
-                                                            max="18"
-                                                            value={bookingChildAge}
-                                                            onChange={(e) => setBookingChildAge(e.target.value)}
-                                                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                                                        />
-                                                    </div>
-                                                </div>
+                                                <h4 className="font-semibold text-gray-900">Additional Information</h4>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes (Optional)</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
                                                     <textarea
-                                                        placeholder="Any allergies, medical conditions, or special requirements..."
+                                                        placeholder="Any medical conditions, special requirements, or notes..."
                                                         rows={3}
                                                         value={bookingNotes}
                                                         onChange={(e) => setBookingNotes(e.target.value)}
@@ -1118,7 +1093,7 @@ export default function MyClassesPage() {
                                                 </Button>
                                                 <Button
                                                     className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-                                                    disabled={submittingBooking || !bookingChildName.trim() || !bookingChildAge}
+                                                    disabled={submittingBooking}
                                                     onClick={async () => {
                                                         try {
                                                             setSubmittingBooking(true)
@@ -1126,7 +1101,7 @@ export default function MyClassesPage() {
                                                                 classId: selectedEvent.id,
                                                                 date: selectedSession.date,
                                                                 time: selectedSession.time,
-                                                                notes: `Child: ${bookingChildName}, Age: ${bookingChildAge}. Type: ${selectedEvent.type}. ${bookingNotes}`
+                                                                notes: `Type: ${selectedEvent.type}. ${bookingNotes}`.trim()
                                                             })
                                                             setBookingSuccess(true)
                                                             loadClasses()

@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 // Social Hub Types
 export interface Post {
@@ -127,8 +125,8 @@ export interface Conversation {
 class SocialHubService {
     // Posts
     async createPost(data: Partial<Post>): Promise<Post> {
-        const response = await axios.post(`${API_URL}/social/posts`, data);
-        return response.data;
+        const response = await apiClient.post(`/social/posts`, data);
+        return response;
     }
 
     async getPosts(filters?: {
@@ -138,65 +136,65 @@ class SocialHubService {
         limit?: number;
         offset?: number;
     }): Promise<Post[]> {
-        const response = await axios.get(`${API_URL}/social/posts`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/social/posts`, { params: filters });
+        return response;
     }
 
     async getPostById(id: string): Promise<Post> {
-        const response = await axios.get(`${API_URL}/social/posts/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/social/posts/${id}`);
+        return response;
     }
 
     async updatePost(id: string, data: Partial<Post>): Promise<Post> {
-        const response = await axios.put(`${API_URL}/social/posts/${id}`, data);
-        return response.data;
+        const response = await apiClient.put(`/social/posts/${id}`, data);
+        return response;
     }
 
     async deletePost(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/social/posts/${id}`);
+        await apiClient.delete(`/social/posts/${id}`);
     }
 
     async likePost(id: string): Promise<Post> {
-        const response = await axios.post(`${API_URL}/social/posts/${id}/like`);
-        return response.data;
+        const response = await apiClient.post(`/social/posts/${id}/like`);
+        return response;
     }
 
     async unlikePost(id: string): Promise<Post> {
-        const response = await axios.post(`${API_URL}/social/posts/${id}/unlike`);
-        return response.data;
+        const response = await apiClient.post(`/social/posts/${id}/unlike`);
+        return response;
     }
 
     async sharePost(id: string, content?: string): Promise<Post> {
-        const response = await axios.post(`${API_URL}/social/posts/${id}/share`, { content });
-        return response.data;
+        const response = await apiClient.post(`/social/posts/${id}/share`, { content });
+        return response;
     }
 
     // Comments
     async createComment(postId: string, data: Partial<Comment>): Promise<Comment> {
-        const response = await axios.post(`${API_URL}/social/posts/${postId}/comments`, data);
-        return response.data;
+        const response = await apiClient.post(`/social/posts/${postId}/comments`, data);
+        return response;
     }
 
     async getComments(postId: string): Promise<Comment[]> {
-        const response = await axios.get(`${API_URL}/social/posts/${postId}/comments`);
-        return response.data;
+        const response = await apiClient.get(`/social/posts/${postId}/comments`);
+        return response;
     }
 
     async deleteComment(postId: string, commentId: string): Promise<void> {
-        await axios.delete(`${API_URL}/social/posts/${postId}/comments/${commentId}`);
+        await apiClient.delete(`/social/posts/${postId}/comments/${commentId}`);
     }
 
     async likeComment(postId: string, commentId: string): Promise<Comment> {
-        const response = await axios.post(
-            `${API_URL}/social/posts/${postId}/comments/${commentId}/like`
+        const response = await apiClient.post(
+            `/social/posts/${postId}/comments/${commentId}/like`
         );
-        return response.data;
+        return response;
     }
 
     // Challenges
     async createChallenge(data: Partial<Challenge>): Promise<Challenge> {
-        const response = await axios.post(`${API_URL}/social/challenges`, data);
-        return response.data;
+        const response = await apiClient.post(`/social/challenges`, data);
+        return response;
     }
 
     async getChallenges(filters?: {
@@ -204,34 +202,34 @@ class SocialHubService {
         category?: string;
         status?: string;
     }): Promise<Challenge[]> {
-        const response = await axios.get(`${API_URL}/social/challenges`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/social/challenges`, { params: filters });
+        return response;
     }
 
     async getChallengeById(id: string): Promise<Challenge> {
-        const response = await axios.get(`${API_URL}/social/challenges/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/social/challenges/${id}`);
+        return response;
     }
 
     async joinChallenge(id: string): Promise<ChallengeParticipant> {
-        const response = await axios.post(`${API_URL}/social/challenges/${id}/join`);
-        return response.data;
+        const response = await apiClient.post(`/social/challenges/${id}/join`);
+        return response;
     }
 
     async leaveChallenge(id: string): Promise<void> {
-        await axios.post(`${API_URL}/social/challenges/${id}/leave`);
+        await apiClient.post(`/social/challenges/${id}/leave`);
     }
 
     async getChallengeParticipants(id: string): Promise<ChallengeParticipant[]> {
-        const response = await axios.get(`${API_URL}/social/challenges/${id}/participants`);
-        return response.data;
+        const response = await apiClient.get(`/social/challenges/${id}/participants`);
+        return response;
     }
 
     async updateChallengeProgress(id: string, progress: number): Promise<ChallengeParticipant> {
-        const response = await axios.post(`${API_URL}/social/challenges/${id}/progress`, {
+        const response = await apiClient.post(`/social/challenges/${id}/progress`, {
             progress
         });
-        return response.data;
+        return response;
     }
 
     // Leaderboards
@@ -242,8 +240,8 @@ class SocialHubService {
         locationId?: string;
         programId?: string;
     }): Promise<Leaderboard> {
-        const response = await axios.get(`${API_URL}/social/leaderboards`, { params: filters });
-        return response.data;
+        const response = await apiClient.get(`/social/leaderboards`, { params: filters });
+        return response;
     }
 
     async getUserRank(userId: string, filters: {
@@ -251,49 +249,49 @@ class SocialHubService {
         category: string;
         period: string;
     }): Promise<LeaderboardEntry> {
-        const response = await axios.get(`${API_URL}/social/leaderboards/rank/${userId}`, {
+        const response = await apiClient.get(`/social/leaderboards/rank/${userId}`, {
             params: filters
         });
-        return response.data;
+        return response;
     }
 
     // Messaging
     async getConversations(): Promise<Conversation[]> {
-        const response = await axios.get(`${API_URL}/social/conversations`);
-        return response.data;
+        const response = await apiClient.get(`/social/conversations`);
+        return response;
     }
 
     async getConversationById(id: string): Promise<Conversation> {
-        const response = await axios.get(`${API_URL}/social/conversations/${id}`);
-        return response.data;
+        const response = await apiClient.get(`/social/conversations/${id}`);
+        return response;
     }
 
     async createConversation(data: {
         type: 'direct' | 'group';
         participants: string[];
     }): Promise<Conversation> {
-        const response = await axios.post(`${API_URL}/social/conversations`, data);
-        return response.data;
+        const response = await apiClient.post(`/social/conversations`, data);
+        return response;
     }
 
     async getMessages(conversationId: string, limit?: number): Promise<Message[]> {
-        const response = await axios.get(`${API_URL}/social/conversations/${conversationId}/messages`, {
+        const response = await apiClient.get(`/social/conversations/${conversationId}/messages`, {
             params: { limit }
         });
-        return response.data;
+        return response;
     }
 
     async sendMessage(conversationId: string, data: Partial<Message>): Promise<Message> {
-        const response = await axios.post(
-            `${API_URL}/social/conversations/${conversationId}/messages`,
+        const response = await apiClient.post(
+            `/social/conversations/${conversationId}/messages`,
             data
         );
-        return response.data;
+        return response;
     }
 
     async markAsRead(conversationId: string, messageId: string): Promise<void> {
-        await axios.post(
-            `${API_URL}/social/conversations/${conversationId}/messages/${messageId}/read`
+        await apiClient.post(
+            `/social/conversations/${conversationId}/messages/${messageId}/read`
         );
     }
 }

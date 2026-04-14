@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BookingStep4Props {
     bookingId: string;
@@ -22,6 +23,8 @@ export default function BookingStep4({
     packageName,
     amount,
 }: BookingStep4Props) {
+    const { role } = useAuth();
+    const dashboardBookingsUrl = role?.toUpperCase() === 'PARENT' ? '/parent/bookings' : '/user/bookings';
     return (
         <div className="space-y-6 text-center">
             {/* Success Icon */}
@@ -124,7 +127,7 @@ export default function BookingStep4({
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
                 <Link id="booking-booking-step4-nav-my-bookings"
-                    href="/my-bookings"
+                    href={dashboardBookingsUrl}
                     className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
                 >
                     View My Bookings

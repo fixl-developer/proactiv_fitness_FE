@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import apiClient from '@/services/api/client'
+import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
 
 interface BookingStats {
     total: number
@@ -45,22 +46,78 @@ const ParentBookingsPage = () => {
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
+    // Transform raw booking from DB to parent bookings display format
+    const transformBooking = (b: any) => {
+        // If booking already has 'child' field, it's already in the right format
+        if (b.child && b.program) return b
+
+        const specialData: Record<string, string> = {}
+        ;(b.specialRequests || []).forEach((r: string) => {
+            const [key, ...valParts] = r.split(':')
+            if (key) specialData[key] = valParts.join(':')
+        })
+        return {
+            id: b._id || b.bookingId || b.id,
+            child: specialData.childName || 'N/A',
+            program: specialData.program || specialData.className || (b.bookingType === 'assessment' ? 'Assessment' : 'Class'),
+            coach: 'TBD',
+            date: b.sessionDate ? new Date(b.sessionDate).toLocaleDateString() : 'N/A',
+            time: b.sessionTime?.startTime || 'N/A',
+            duration: b.bookingType === 'assessment' ? '30 min' : '60 min',
+            location: specialData.location || 'N/A',
+            status: b.status || 'confirmed',
+            price: b.payment?.amount ? `HKD ${b.payment.amount}` : 'Free',
+            type: b.bookingType || 'class',
+        }
+    }
+
     const loadBookings = useCallback(async () => {
         try {
             setIsLoading(true)
             setError(null)
-            const response = await apiClient.get(`/parent/bookings?status=${selectedFilter}`)
-            if (response.success) {
-                setBookings(response.data.bookings || [])
-                setStats(response.data.stats || { total: 0, upcoming: 0, completed: 0, cancelled: 0 })
+
+            let bookingsList: any[] = []
+            let bookingStats = { total: 0, upcoming: 0, completed: 0, cancelled: 0 }
+
+            try {
+                // Try parent-specific endpoint first
+                const response = await apiClient.get(`/parent/bookings?status=${selectedFilter}`)
+                if (response.success) {
+                    bookingsList = response.data.bookings || []
+                    bookingStats = response.data.stats || bookingStats
+                }
+            } catch (parentErr: any) {
+                // If 401, redirect to login
+                if (parentErr.response?.status === 401) {
+                    router.push('/login')
+                    return
+                }
+                // Fallback: try my-bookings endpoint
+                try {
+                    const myBookingsResponse = await apiClient.get<any>('/bookings/my-bookings')
+                    const myBookings = (myBookingsResponse?.data || []).map(transformBooking)
+                    bookingsList = myBookings
+                    bookingStats = {
+                        total: bookingsList.length,
+                        upcoming: bookingsList.filter((b: any) => b.status === 'confirmed' || b.status === 'pending').length,
+                        completed: bookingsList.filter((b: any) => b.status === 'completed').length,
+                        cancelled: bookingsList.filter((b: any) => b.status === 'cancelled').length,
+                    }
+                } catch (fallbackErr) {
+                    console.error('All booking endpoints failed:', fallbackErr)
+                    throw fallbackErr
+                }
             }
+
+            setBookings(bookingsList)
+            setStats(bookingStats)
         } catch (err) {
             console.error('Error loading bookings:', err)
             setError('Failed to load bookings')
         } finally {
             setIsLoading(false)
         }
-    }, [selectedFilter])
+    }, [selectedFilter, router])
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -75,10 +132,11 @@ const ParentBookingsPage = () => {
 
         try {
             await apiClient.put(`/parent/bookings/${bookingId}/cancel`, {})
+            toast.success('Booking cancelled successfully')
             await loadBookings()
         } catch (err) {
             console.error('Error cancelling booking:', err)
-            alert('Failed to cancel booking. Please try again.')
+            toast.error('Failed to cancel booking. Please try again.')
         }
     }
 
@@ -182,10 +240,10 @@ const ParentBookingsPage = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-                    <p className="text-gray-600 mt-2">Manage your children's class bookings</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Bookings</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-2">Manage your children's class bookings</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button
@@ -236,20 +294,20 @@ const ParentBookingsPage = () => {
             {/* Filters */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>Filter Bookings</CardTitle>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <CardTitle className="text-base md:text-lg">Filter Bookings</CardTitle>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <Search className="w-4 h-4 text-gray-500" />
                                 <input
                                     type="text"
                                     placeholder="Search bookings..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
-                            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
                                 {[
                                     { key: 'all', label: 'All' },
                                     { key: 'upcoming', label: 'Upcoming' },
@@ -316,21 +374,21 @@ const ParentBookingsPage = () => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all border border-gray-200"
+                                    className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all border border-gray-200 gap-3"
                                 >
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm md:text-base flex-shrink-0">
                                             {booking.child.split(' ').map((n: string) => n[0]).join('')}
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-semibold text-gray-900">{booking.program}</h4>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h4 className="font-semibold text-sm md:text-base text-gray-900">{booking.program}</h4>
                                                 <Badge className={getStatusColor(booking.status)}>
                                                     {booking.status.toUpperCase()}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-gray-600">{booking.child} • Coach: {booking.coach}</p>
-                                            <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                                            <p className="text-xs md:text-sm text-gray-600 truncate">{booking.child} - Coach: {booking.coach}</p>
+                                            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-gray-500 mt-1">
                                                 <div className="flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
                                                     {booking.date}
@@ -346,12 +404,13 @@ const ParentBookingsPage = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-blue-600">{booking.price}</p>
-                                        <p className="text-sm text-gray-600">{booking.type}</p>
+                                    <div className="flex items-center justify-between w-full md:w-auto gap-3">
+                                    <div className="text-left md:text-right">
+                                        <p className="text-base md:text-lg font-bold text-blue-600">{booking.price}</p>
+                                        <p className="text-xs md:text-sm text-gray-600">{booking.type}</p>
                                         <p className="text-xs text-gray-500">ID: {booking.id}</p>
                                     </div>
-                                    <div className="flex items-center gap-2 ml-4">
+                                    <div className="flex items-center gap-2">
                                         {getStatusIcon(booking.status)}
                                         <Button
                                             id={`parent-bookings-view-${booking.id}-btn`}
@@ -382,6 +441,7 @@ const ParentBookingsPage = () => {
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         )}
+                                    </div>
                                     </div>
                                 </motion.div>
                             ))}

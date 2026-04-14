@@ -24,7 +24,7 @@ class TeamServiceClass {
     async getPublicTeam(): Promise<TeamMember[]> {
         try {
             const response = await apiClient.get<TeamResponse>('/api/team/public')
-            return response.data.data || []
+            return response.data || []
         } catch (error) {
             // Silently fail - component will use fallback mock data
             throw error
@@ -50,7 +50,7 @@ class TeamServiceClass {
     async getTeamMemberById(memberId: string): Promise<TeamMember> {
         try {
             const response = await apiClient.get<{ data: TeamMember }>(`/api/team/${memberId}`)
-            return response.data.data
+            return response.data
         } catch (error) {
             console.error('Failed to fetch team member:', error)
             throw error
@@ -63,7 +63,7 @@ class TeamServiceClass {
     async createTeamMember(data: Partial<TeamMember>): Promise<TeamMember> {
         try {
             const response = await apiClient.post<{ data: TeamMember }>('/api/team', data)
-            return response.data.data
+            return response.data
         } catch (error) {
             console.error('Failed to create team member:', error)
             throw error
@@ -76,7 +76,7 @@ class TeamServiceClass {
     async updateTeamMember(memberId: string, data: Partial<TeamMember>): Promise<TeamMember> {
         try {
             const response = await apiClient.put<{ data: TeamMember }>(`/api/team/${memberId}`, data)
-            return response.data.data
+            return response.data
         } catch (error) {
             console.error('Failed to update team member:', error)
             throw error
@@ -103,7 +103,7 @@ class TeamServiceClass {
             const response = await apiClient.get<TeamResponse>('/api/team', {
                 params: { specialization }
             })
-            return response.data.data || []
+            return response.data || []
         } catch (error) {
             console.error('Failed to fetch team by specialization:', error)
             throw error

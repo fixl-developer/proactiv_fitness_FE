@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/services/api/client';
 import BookingStep1 from '@/components/booking/BookingStep1';
 import BookingStep2 from '@/components/booking/BookingStep2';
 import BookingStep3 from '@/components/booking/BookingStep3';
@@ -10,7 +12,12 @@ import BookingStep4 from '@/components/booking/BookingStep4';
 export default function BookClassPage() {
     const params = useParams();
     const router = useRouter();
+    const { isAuthenticated, user, isLoading: authLoading } = useAuth();
+    const classId = params.id as string;
+
     const [currentStep, setCurrentStep] = useState(1);
+    const [isBooking, setIsBooking] = useState(false);
+    const [bookingError, setBookingError] = useState<string | null>(null);
     const [bookingData, setBookingData] = useState({
         studentId: '',
         packageId: '',
@@ -18,13 +25,20 @@ export default function BookClassPage() {
         bookingId: '',
     });
 
-    // Mock class data - replace with API call
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push(`/login?redirectTo=${encodeURIComponent(`/classes/${classId}/book`)}`);
+        }
+    }, [authLoading, isAuthenticated, router, classId]);
+
+    // Class details (in production, fetch from API)
     const classDetails = {
-        id: params.id as string,
-        name: 'Beginner Gymnastics',
-        date: '2026-03-15',
+        id: classId,
+        name: 'Gymnastics Class',
+        date: new Date().toISOString().split('T')[0],
         time: '10:00 AM',
-        location: 'Downtown Center',
+        location: 'ProGym Center',
     };
 
     const handleStep1Next = (studentId: string) => {
@@ -39,24 +53,60 @@ export default function BookClassPage() {
 
     const handleStep3Next = async (paymentData: any) => {
         setBookingData((prev) => ({ ...prev, paymentData }));
+        setIsBooking(true);
+        setBookingError(null);
 
-        // TODO: Call booking API
-        // const response = await createBooking({
-        //     classId: classDetails.id,
-        //     studentId: bookingData.studentId,
-        //     packageId: bookingData.packageId,
-        //     paymentData,
-        // });
+        try {
+            // Call actual booking API with auth token
+            const result = await apiClient.post('/bookings/class', {
+                classId: classDetails.id,
+                className: classDetails.name,
+                classDate: classDetails.date,
+                classTime: classDetails.time,
+                location: classDetails.location,
+                price: 320,
+                childName: user?.name || '',
+                notes: paymentData.paymentMethod === 'cash' ? 'Payment: Cash' : 'Payment: Card',
+            });
 
-        // Mock booking ID
-        const mockBookingId = 'BK' + Date.now().toString().slice(-8);
-        setBookingData((prev) => ({ ...prev, bookingId: mockBookingId }));
-        setCurrentStep(4);
+            if (result.success) {
+                setBookingData((prev) => ({
+                    ...prev,
+                    bookingId: result.data.bookingId,
+                }));
+                setCurrentStep(4);
+            } else {
+                setBookingError(result.message || 'Failed to create booking');
+            }
+        } catch (err: any) {
+            console.error('Booking error:', err);
+            if (err.response?.status === 401) {
+                router.push(`/login?redirectTo=${encodeURIComponent(`/classes/${classId}/book`)}`);
+            } else {
+                setBookingError(err.response?.data?.message || 'Failed to create booking. Please try again.');
+            }
+        } finally {
+            setIsBooking(false);
+        }
     };
 
     const handleBackToClass = () => {
-        router.push(`/classes/${classDetails.id}`);
+        router.push(`/classes`);
     };
+
+    // Show loading while checking auth
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            </div>
+        );
+    }
+
+    // Don't render if not authenticated (will redirect)
+    if (!isAuthenticated) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-12">
@@ -99,6 +149,14 @@ export default function BookClassPage() {
                     </div>
                 )}
 
+                {/* Booking Error */}
+                {bookingError && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+                        <p className="font-medium">Booking Error</p>
+                        <p className="text-sm">{bookingError}</p>
+                    </div>
+                )}
+
                 {/* Booking Form Card */}
                 <div className="bg-white rounded-lg shadow-lg p-8">
                     {currentStep === 1 && (
@@ -127,10 +185,20 @@ export default function BookClassPage() {
                         <BookingStep4
                             bookingId={bookingData.bookingId}
                             classDetails={classDetails}
-                            studentName="John Doe"
+                            studentName={user?.name || 'Student'}
                             packageName="8 Sessions Package"
                             amount={320}
                         />
+                    )}
+
+                    {/* Loading overlay during booking */}
+                    {isBooking && (
+                        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-xl p-8 text-center shadow-2xl">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+                                <p className="text-gray-700 font-medium">Creating your booking...</p>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

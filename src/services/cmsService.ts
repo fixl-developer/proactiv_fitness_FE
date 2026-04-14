@@ -1,4 +1,4 @@
-import apiClient from '@/lib/apiClient'
+import { apiClient } from '@/services/api/client'
 
 // =============================================
 // TYPES
@@ -244,111 +244,111 @@ export interface LandingPageData {
 // PUBLIC CMS SERVICE (for frontend website)
 // =============================================
 class CMSPublicService {
-    private baseUrl = '/api/v1/cms'
+    private baseUrl = '/cms'
 
     async getLandingPageData(): Promise<LandingPageData> {
         const response = await apiClient.get<any>(`${this.baseUrl}/landing-page`)
-        return response.data.data
+        return response.data
     }
 
     async getHeroSlides(): Promise<HeroSlide[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/hero-slides`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getSiteStats(): Promise<SiteStat[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/stats`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getServices(): Promise<ServiceCardData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/services`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getTestimonials(): Promise<TestimonialData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/testimonials`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getPartners(): Promise<ClientPartnerData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/partners`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getAbout(): Promise<AboutContentData | null> {
         const response = await apiClient.get<any>(`${this.baseUrl}/about`)
-        return response.data.data
+        return response.data
     }
 
     async getAIFeatures(): Promise<AIFeatureData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/ai-features`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getAssessments(): Promise<AssessmentData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/assessments`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getClassSessions(params?: { category?: string; location?: string }): Promise<ClassSessionData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/classes`, { params })
-        return response.data.data || []
+        return response.data || []
     }
 
     async getPartyPackages(): Promise<PartyPackageData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/party-packages`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getProgramLevels(): Promise<ProgramLevelData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/programs`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getCampPrograms(): Promise<CampProgramData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/camps`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getLocations(): Promise<LocationDetailData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/locations`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getLocationBySlug(slug: string): Promise<LocationDetailData | null> {
         const response = await apiClient.get<any>(`${this.baseUrl}/locations/${slug}`)
-        return response.data.data
+        return response.data
     }
 
     async getBlogPosts(category?: string): Promise<BlogPostData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/blog`, { params: { category } })
-        return response.data.data || []
+        return response.data || []
     }
 
     async getBlogBySlug(slug: string): Promise<BlogPostData | null> {
         const response = await apiClient.get<any>(`${this.baseUrl}/blog/${slug}`)
-        return response.data.data
+        return response.data
     }
 
     async getFeaturedBlogPosts(): Promise<BlogPostData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/blog/featured`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getJobPositions(): Promise<JobPositionData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/careers`)
-        return response.data.data || []
+        return response.data || []
     }
 
     async getContactInfo(): Promise<ContactInfoData | null> {
         const response = await apiClient.get<any>(`${this.baseUrl}/contact-info`)
-        return response.data.data
+        return response.data
     }
 
     async getFAQs(category?: string): Promise<FAQItemData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/faqs`, { params: { category } })
-        return response.data.data || []
+        return response.data || []
     }
 }
 
@@ -356,26 +356,28 @@ class CMSPublicService {
 // ADMIN CMS SERVICE (for admin dashboard)
 // =============================================
 class CMSAdminServiceClass {
-    private baseUrl = '/api/v1/admin/cms'
+    private baseUrl = '/admin/cms'
 
     private async _getAll(endpoint: string, params?: any) {
         const response = await apiClient.get<any>(`${this.baseUrl}/${endpoint}`, { params })
-        return response.data
+        // response = {success, data, message} from apiClient
+        // Return full response so CMSCrudTable can access response.data
+        return response
     }
 
     private async _getById(endpoint: string, id: string) {
         const response = await apiClient.get<any>(`${this.baseUrl}/${endpoint}/${id}`)
-        return response.data.data
+        return response.data
     }
 
     private async _create(endpoint: string, data: any) {
         const response = await apiClient.post<any>(`${this.baseUrl}/${endpoint}`, data)
-        return response.data.data
+        return response.data
     }
 
     private async _update(endpoint: string, id: string, data: any) {
         const response = await apiClient.patch<any>(`${this.baseUrl}/${endpoint}/${id}`, data)
-        return response.data.data
+        return response.data
     }
 
     private async _delete(endpoint: string, id: string) {
@@ -506,35 +508,35 @@ class CMSAdminServiceClass {
     about = {
         get: async () => {
             const response = await apiClient.get<any>(`${this.baseUrl}/about`)
-            return response.data.data
+            return response.data
         },
         upsert: async (data: any) => {
             const response = await apiClient.put<any>(`${this.baseUrl}/about`, data)
-            return response.data.data
+            return response.data
         },
     }
 
     contactInfo = {
         get: async () => {
             const response = await apiClient.get<any>(`${this.baseUrl}/contact-info`)
-            return response.data.data
+            return response.data
         },
         upsert: async (data: any) => {
             const response = await apiClient.put<any>(`${this.baseUrl}/contact-info`, data)
-            return response.data.data
+            return response.data
         },
     }
 
     // Seed default data (only fills empty collections)
     async seedDefaultData(): Promise<{ seeded: string[]; skipped: string[] }> {
         const response = await apiClient.post<any>(`${this.baseUrl}/seed`)
-        return response.data.data
+        return response.data
     }
 
     // Reset all data and re-seed with defaults
     async resetAndSeedData(): Promise<{ cleared: string[]; seeded: string[]; skipped: string[] }> {
         const response = await apiClient.post<any>(`${this.baseUrl}/reset-and-seed`)
-        return response.data.data
+        return response.data
     }
 }
 

@@ -189,7 +189,7 @@ class NotificationService {
      */
     async getNotificationById(notificationId: string): Promise<Notification> {
         const response = await apiClient.get(`${this.baseUrl}/${notificationId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -197,7 +197,7 @@ class NotificationService {
      */
     async sendNotification(data: SendNotificationDto): Promise<Notification> {
         const response = await apiClient.post(`${this.baseUrl}/send`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -205,7 +205,7 @@ class NotificationService {
      */
     async sendBulkNotifications(data: BulkNotificationDto): Promise<{ sent: number; failed: number }> {
         const response = await apiClient.post(`${this.baseUrl}/send-bulk`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -213,7 +213,7 @@ class NotificationService {
      */
     async markAsRead(notificationId: string): Promise<Notification> {
         const response = await apiClient.patch(`${this.baseUrl}/${notificationId}/read`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -246,7 +246,7 @@ class NotificationService {
      */
     async getUnreadCount(familyId: string): Promise<number> {
         const response = await apiClient.get(`${this.baseUrl}/unread-count?familyId=${familyId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -254,7 +254,7 @@ class NotificationService {
      */
     async getNotificationPreferences(familyId: string): Promise<NotificationPreferences> {
         const response = await apiClient.get(`${this.baseUrl}/preferences/${familyId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -265,7 +265,7 @@ class NotificationService {
         preferences: Partial<NotificationPreferences>
     ): Promise<NotificationPreferences> {
         const response = await apiClient.put(`${this.baseUrl}/preferences/${familyId}`, preferences);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -287,7 +287,7 @@ class NotificationService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/templates?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -295,7 +295,7 @@ class NotificationService {
      */
     async getTemplateById(templateId: string): Promise<NotificationTemplate> {
         const response = await apiClient.get(`${this.baseUrl}/templates/${templateId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -303,7 +303,7 @@ class NotificationService {
      */
     async createTemplate(data: Partial<NotificationTemplate>): Promise<NotificationTemplate> {
         const response = await apiClient.post(`${this.baseUrl}/templates`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -311,7 +311,7 @@ class NotificationService {
      */
     async updateTemplate(templateId: string, data: Partial<NotificationTemplate>): Promise<NotificationTemplate> {
         const response = await apiClient.put(`${this.baseUrl}/templates/${templateId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -336,7 +336,7 @@ class NotificationService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -344,7 +344,7 @@ class NotificationService {
      */
     async resendNotification(notificationId: string): Promise<Notification> {
         const response = await apiClient.post(`${this.baseUrl}/${notificationId}/resend`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -352,7 +352,7 @@ class NotificationService {
      */
     async scheduleNotification(data: SendNotificationDto & { scheduledFor: Date }): Promise<Notification> {
         const response = await apiClient.post(`${this.baseUrl}/schedule`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -367,7 +367,7 @@ class NotificationService {
      */
     async testNotification(data: SendNotificationDto): Promise<{ success: boolean; message: string }> {
         const response = await apiClient.post(`${this.baseUrl}/test`, data);
-        return response.data.data;
+        return response.data;
     }
 }
 

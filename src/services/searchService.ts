@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiClient } from '@/services/api/client';
 
 export interface SearchFilters {
     tenantId: string;
@@ -28,61 +26,61 @@ export interface SearchResult {
 
 class SearchService {
     async search(filters: SearchFilters) {
-        const response = await axios.get(`${API_URL}/search`, {
+        const response = await apiClient.get(`/search`, {
             params: filters,
         });
-        return response.data;
+        return response;
     }
 
     async searchPrograms(tenantId: string, query: string, filters?: any) {
-        const response = await axios.get(`${API_URL}/search/programs`, {
+        const response = await apiClient.get(`/search/programs`, {
             params: { tenantId, query, ...filters },
         });
-        return response.data;
+        return response;
     }
 
     async searchCoaches(tenantId: string, query: string, filters?: any) {
-        const response = await axios.get(`${API_URL}/search/coaches`, {
+        const response = await apiClient.get(`/search/coaches`, {
             params: { tenantId, query, ...filters },
         });
-        return response.data;
+        return response;
     }
 
     async searchStudents(tenantId: string, query: string, filters?: any) {
-        const response = await axios.get(`${API_URL}/search/students`, {
+        const response = await apiClient.get(`/search/students`, {
             params: { tenantId, query, ...filters },
         });
-        return response.data;
+        return response;
     }
 
     async searchDocuments(tenantId: string, query: string, filters?: any) {
-        const response = await axios.get(`${API_URL}/search/documents`, {
+        const response = await apiClient.get(`/search/documents`, {
             params: { tenantId, query, ...filters },
         });
-        return response.data;
+        return response;
     }
 
     async getSearchSuggestions(tenantId: string, query: string) {
-        const response = await axios.get(`${API_URL}/search/suggestions`, {
+        const response = await apiClient.get(`/search/suggestions`, {
             params: { tenantId, query },
         });
-        return response.data;
+        return response;
     }
 
     async getPopularSearches(tenantId: string, limit: number = 10) {
-        const response = await axios.get(`${API_URL}/search/popular`, {
+        const response = await apiClient.get(`/search/popular`, {
             params: { tenantId, limit },
         });
-        return response.data;
+        return response;
     }
 
     async saveSearchHistory(tenantId: string, userId: string, query: string) {
-        const response = await axios.post(`${API_URL}/search/history`, {
+        const response = await apiClient.post(`/search/history`, {
             tenantId,
             userId,
             query,
         });
-        return response.data;
+        return response;
     }
 }
 

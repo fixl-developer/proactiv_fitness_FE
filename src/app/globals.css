@@ -125,9 +125,15 @@ body {
     color: #333;
     background-color: white;
     overflow-x: hidden;
-    zoom: 0.9;
-    -moz-transform: scale(0.9);
-    -moz-transform-origin: 0 0;
+    -webkit-text-size-adjust: 100%;
+}
+
+@media (min-width: 1024px) {
+    body {
+        zoom: 0.9;
+        -moz-transform: scale(0.9);
+        -moz-transform-origin: 0 0;
+    }
 }
 
 /* Mobile-specific overflow prevention - only when needed */
@@ -545,4 +551,118 @@ h6 {
 
 .animate-bounce-gentle {
     animation: gentleBounce 2s ease-in-out infinite;
+}
+
+/* ============================================= */
+/* GLOBAL MOBILE RESPONSIVE FIXES               */
+/* ============================================= */
+
+/* Dashboard layout mobile fixes */
+@media (max-width: 768px) {
+    /* Make all tables scrollable */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    /* Fix sidebar overlay */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+    }
+
+    /* Fix form layouts */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Fix modal widths */
+    [role="dialog"],
+    .modal-content {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 0.5rem auto !important;
+    }
+
+    /* Fix card grid layouts */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Ensure text doesn't overflow */
+    h1, h2, h3, h4, h5, h6, p, span, label, a {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Fix button groups */
+    .button-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    /* Fix action buttons in tables */
+    td .flex {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+    table {
+        font-size: 0.875rem;
+    }
+}
+
+/* Dashboard sidebar responsive */
+.dashboard-sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 50;
+        transform: translateX(-100%);
+    }
+
+    .dashboard-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .dashboard-content {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+}
+
+/* Ensure images are responsive */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Fix overflow issues on mobile */
+* {
+    box-sizing: border-box;
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 768px) {
+    button, a, [role="button"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    input, select, textarea {
+        font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
 }

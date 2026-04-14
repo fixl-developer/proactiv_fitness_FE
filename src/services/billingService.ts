@@ -171,7 +171,7 @@ class BillingService {
      */
     async getInvoiceById(invoiceId: string): Promise<Invoice> {
         const response = await apiClient.get(`${this.baseUrl}/invoices/${invoiceId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -179,7 +179,7 @@ class BillingService {
      */
     async createInvoice(data: CreateInvoiceDto): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -187,7 +187,7 @@ class BillingService {
      */
     async updateInvoice(invoiceId: string, data: Partial<Invoice>): Promise<Invoice> {
         const response = await apiClient.put(`${this.baseUrl}/invoices/${invoiceId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -202,7 +202,7 @@ class BillingService {
      */
     async sendInvoice(invoiceId: string): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices/${invoiceId}/send`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -210,7 +210,7 @@ class BillingService {
      */
     async markInvoiceAsPaid(invoiceId: string, paymentDetails: { amount: number; paymentMethodId: string; transactionId?: string }): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices/${invoiceId}/pay`, paymentDetails);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -218,7 +218,7 @@ class BillingService {
      */
     async cancelInvoice(invoiceId: string, reason?: string): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices/${invoiceId}/cancel`, { reason });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -249,7 +249,7 @@ class BillingService {
         }
 
         const response = await apiClient.get(`${this.baseUrl}/statistics?${params.toString()}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -257,7 +257,7 @@ class BillingService {
      */
     async getBillingSchedule(familyId: string): Promise<BillingSchedule> {
         const response = await apiClient.get(`${this.baseUrl}/schedules/${familyId}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -265,7 +265,7 @@ class BillingService {
      */
     async createBillingSchedule(data: Partial<BillingSchedule>): Promise<BillingSchedule> {
         const response = await apiClient.post(`${this.baseUrl}/schedules`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -273,7 +273,7 @@ class BillingService {
      */
     async updateBillingSchedule(scheduleId: string, data: Partial<BillingSchedule>): Promise<BillingSchedule> {
         const response = await apiClient.put(`${this.baseUrl}/schedules/${scheduleId}`, data);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -298,7 +298,7 @@ class BillingService {
      */
     async applyDiscount(invoiceId: string, discountCode: string): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices/${invoiceId}/discount`, { discountCode });
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -306,7 +306,7 @@ class BillingService {
      */
     async addInvoiceItem(invoiceId: string, item: BillingItem): Promise<Invoice> {
         const response = await apiClient.post(`${this.baseUrl}/invoices/${invoiceId}/items`, item);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -314,7 +314,7 @@ class BillingService {
      */
     async removeInvoiceItem(invoiceId: string, itemIndex: number): Promise<Invoice> {
         const response = await apiClient.delete(`${this.baseUrl}/invoices/${invoiceId}/items/${itemIndex}`);
-        return response.data.data;
+        return response.data;
     }
 
     /**
@@ -325,7 +325,7 @@ class BillingService {
             familyId,
             billingPeriod
         });
-        return response.data.data;
+        return response.data;
     }
 }
 
