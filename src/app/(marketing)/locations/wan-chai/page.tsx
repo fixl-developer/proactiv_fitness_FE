@@ -21,19 +21,19 @@ const staticLocationData = {
         {
             title: 'Gymnastics Programs',
             description: 'Comprehensive gymnastics training for all ages and abilities',
-            icon: '??',
+            icon: '🤸',
             programs: ['Toddler Classes', 'Youth Programs', 'Teen Training', 'Adult Classes']
         },
         {
             title: 'Holiday Camps',
             description: 'Exciting holiday programs with gymnastics and activities',
-            icon: '???',
+            icon: '🏕️',
             programs: ['Summer Camps', 'Winter Programs', 'Easter Camps', 'Special Events']
         },
         {
             title: 'Birthday Parties',
             description: 'Unforgettable gymnastics-themed birthday celebrations',
-            icon: '??',
+            icon: '🎉',
             programs: ['Standard Packages', 'Premium Parties', 'Custom Themes', 'Group Bookings']
         }
     ],
@@ -225,7 +225,7 @@ const WanChaiLocationPage = () => {
                             className="inline-flex items-center px-6 py-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-sm font-semibold mb-6"
                         >
                             <span className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></span>
-                            ?? WAN CHAI LOCATION
+                            📍 WAN CHAI LOCATION
                         </motion.div>
 
                         <motion.h1
@@ -248,7 +248,7 @@ const WanChaiLocationPage = () => {
                             className="text-xl sm:text-2xl text-white mb-8 leading-relaxed max-w-3xl mx-auto"
                             style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
                         >
-                            ?? Central Hong Kong Location � ?? 3 mins from MTR � ?? Professional Training
+                            🌏 Central Hong Kong Location • 🚇 3 mins from MTR • 🏆 Professional Training
                             <br />
                             <span className="text-lg text-gray-200 mt-2 block">Modern facility in the heart of Wan Chai district</span>
                         </motion.p>
@@ -263,13 +263,13 @@ const WanChaiLocationPage = () => {
                                 href="/book-trial"
                                 className="group bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center space-x-3"
                             >
-                                <span>?? Book Free Trial</span>
+                                <span>🎯 Book Free Trial</span>
                             </Link>
                             <Link id="marketing-locations-wan-chai-nav-contact-info"
                                 href="#contact-info"
                                 className="group bg-white/20 backdrop-blur-md border-2 border-white text-white hover:bg-white hover:text-gray-900 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center space-x-3"
                             >
-                                <span>?? Visit Us Today</span>
+                                <span>🏢 Visit Us Today</span>
                             </Link>
                         </motion.div>
                     </motion.div>

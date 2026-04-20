@@ -523,7 +523,7 @@ const CyberportLocationPage = () => {
                                             transition={{ duration: 4, repeat: Infinity }}
                                             className="text-7xl mb-4"
                                         >
-                                            ??
+                                            🏢
                                         </motion.div>
                                         <p className="text-xl font-bold">Cyberport Location</p>
                                         <p className="text-sm text-white/80 mt-2">Hong Kong's Premier Gymnastics Hub</p>
@@ -625,7 +625,7 @@ const CyberportLocationPage = () => {
                                             className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 shadow-lg"
                                         >
                                             <span className="text-2xl">
-                                                {index === 0 ? '???' : index === 1 ? '???????????' : index === 2 ? '??' : '??'}
+                                                {index === 0 ? '🤸' : index === 1 ? '👁️' : index === 2 ? '🚪' : '🎉'}
                                             </span>
                                         </motion.div>
 
@@ -693,7 +693,7 @@ const CyberportLocationPage = () => {
                             viewport={{ once: true }}
                             className="inline-flex items-center px-4 py-2 bg-blue-100 rounded-full mb-6"
                         >
-                            <span className="text-blue-600 text-sm font-semibold">?? CLASS SCHEDULE</span>
+                            <span className="text-blue-600 text-sm font-semibold">📅 CLASS SCHEDULE</span>
                         </motion.div>
 
                         <h2 className="text-3xl sm:text-4xl font-heading font-bold text-gray-900 mb-4">
@@ -757,7 +757,7 @@ const CyberportLocationPage = () => {
                                                         className="font-bold text-blue-600 text-sm mb-2 flex items-center"
                                                         whileHover={{ x: 5 }}
                                                     >
-                                                        <span className="mr-2">??</span>
+                                                        <span className="mr-2">🕐</span>
                                                         {classItem.time}
                                                     </motion.div>
                                                     <div className="font-semibold text-gray-900 text-sm mb-3 group-hover/card:text-blue-600 transition-colors">
@@ -801,7 +801,7 @@ const CyberportLocationPage = () => {
                                 href="/book-trial"
                                 className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl"
                             >
-                                <span className="mr-2">??</span>
+                                <span className="mr-2">🚀</span>
                                 Book Your Class Today
                             </Link>
                         </motion.div>

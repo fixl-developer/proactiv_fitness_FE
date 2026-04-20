@@ -206,7 +206,7 @@ export default function StaffDashboard() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
+            <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading dashboard...</p>
@@ -218,11 +218,11 @@ export default function StaffDashboard() {
     const stats = dashboardData || {}
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div>
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">Support Dashboard</h1>
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Support Dashboard</h1>
                     <p className="text-gray-600">Welcome back, {user?.name || 'Support Staff'}</p>
                 </div>
 
