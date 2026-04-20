@@ -2,9 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Save, Plus, Trash2, Loader2 } from 'lucide-react'
+import { Save, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
+
+type FieldError = Record<string, string>
+
+const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
 
 export default function AboutContentPage() {
     const [formData, setFormData] = useState({
@@ -18,6 +22,8 @@ export default function AboutContentPage() {
     })
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [errors, setErrors] = useState<FieldError>({})
+    const [submitError, setSubmitError] = useState('')
 
     useEffect(() => {
         loadData()
@@ -35,21 +41,93 @@ export default function AboutContentPage() {
         }
     }
 
+    const validate = (): boolean => {
+        const next: FieldError = {}
+
+        if (!formData.mission.trim()) next.mission = 'Mission is required'
+        else if (formData.mission.trim().length < 10) next.mission = 'Mission must be at least 10 characters'
+        else if (formData.mission.length > 1000) next.mission = 'Mission must be at most 1000 characters'
+
+        if (!formData.vision.trim()) next.vision = 'Vision is required'
+        else if (formData.vision.trim().length < 10) next.vision = 'Vision must be at least 10 characters'
+        else if (formData.vision.length > 1000) next.vision = 'Vision must be at most 1000 characters'
+
+        if (formData.history && formData.history.length > 5000) {
+            next.history = 'History must be at most 5000 characters'
+        }
+
+        formData.values.forEach((v, i) => {
+            if (!v.title.trim()) next[`values.${i}.title`] = 'Title is required'
+            if (!v.description.trim()) next[`values.${i}.description`] = 'Description is required'
+        })
+
+        formData.stats.forEach((s, i) => {
+            if (!s.label.trim()) next[`stats.${i}.label`] = 'Label is required'
+            if (!s.value.trim()) next[`stats.${i}.value`] = 'Value is required'
+        })
+
+        formData.features.forEach((f, i) => {
+            if (!f.title.trim()) next[`features.${i}.title`] = 'Title is required'
+            if (!f.description.trim()) next[`features.${i}.description`] = 'Description is required'
+        })
+
+        formData.images.forEach((url, i) => {
+            if (url && !URL_REGEX.test(url)) next[`images.${i}`] = 'Must be a valid URL starting with http:// or https://'
+        })
+
+        setErrors(next)
+        if (Object.keys(next).length > 0) {
+            setSubmitError('Please fix the highlighted fields before saving')
+            return false
+        }
+        setSubmitError('')
+        return true
+    }
+
     const handleSave = async () => {
+        if (!validate()) {
+            toast.error('Please fix the highlighted fields')
+            return
+        }
         try {
             setSaving(true)
-            await CMSAdminService.about.upsert(formData)
+            const payload = {
+                ...formData,
+                mission: formData.mission.trim(),
+                vision: formData.vision.trim(),
+                history: formData.history.trim(),
+                images: formData.images.filter(u => u.trim() !== ''),
+                values: formData.values.filter(v => v.title.trim() || v.description.trim()),
+                stats: formData.stats.filter(s => s.label.trim() || s.value.trim()),
+                features: formData.features.filter(f => f.title.trim() || f.description.trim()),
+            }
+            await CMSAdminService.about.upsert(payload)
             toast.success('About content saved successfully!')
-        } catch (error) {
+            setSubmitError('')
+            setErrors({})
+        } catch (error: any) {
             console.error('Save failed:', error)
-            toast.error('Failed to save about content')
+            const msg = error?.response?.data?.message || 'Failed to save about content'
+            setSubmitError(msg)
+            toast.error(msg)
         } finally {
             setSaving(false)
         }
     }
 
+    const clearError = (key: string) => {
+        if (errors[key]) {
+            setErrors(prev => {
+                const next = { ...prev }
+                delete next[key]
+                return next
+            })
+        }
+    }
+
     const updateField = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
+        clearError(field)
     }
 
     const addArrayObjectItem = (field: 'values' | 'stats' | 'features') => {
@@ -64,6 +142,13 @@ export default function AboutContentPage() {
             ...prev,
             [field]: prev[field].filter((_, i) => i !== index),
         }))
+        setErrors(prev => {
+            const next: FieldError = {}
+            Object.keys(prev).forEach(k => {
+                if (!k.startsWith(`${field}.${index}.`)) next[k] = prev[k]
+            })
+            return next
+        })
     }
 
     const updateArrayObjectItem = (field: 'values' | 'stats' | 'features', index: number, key: string, value: string) => {
@@ -71,6 +156,7 @@ export default function AboutContentPage() {
             ...prev,
             [field]: prev[field].map((item, i) => i === index ? { ...item, [key]: value } : item),
         }))
+        clearError(`${field}.${index}.${key}`)
     }
 
     const addImageUrl = () => {
@@ -79,6 +165,7 @@ export default function AboutContentPage() {
 
     const removeImageUrl = (index: number) => {
         setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))
+        clearError(`images.${index}`)
     }
 
     const updateImageUrl = (index: number, value: string) => {
@@ -86,6 +173,7 @@ export default function AboutContentPage() {
             ...prev,
             images: prev.images.map((img, i) => i === index ? value : img),
         }))
+        clearError(`images.${index}`)
     }
 
     if (loading) {
@@ -99,9 +187,17 @@ export default function AboutContentPage() {
         )
     }
 
-    const inputClass = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm'
+    const inputBase = 'w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent transition-all text-sm'
+    const okClass = 'border-gray-200 focus:ring-blue-500'
+    const errClass = 'border-red-400 focus:ring-red-500 bg-red-50/40'
+    const cn = (key: string) => `${inputBase} ${errors[key] ? errClass : okClass}`
     const labelClass = 'block text-sm font-medium text-gray-700 mb-1.5'
     const sectionClass = 'bg-white rounded-xl border border-gray-200 p-6 shadow-sm'
+    const errorMsg = (key: string) => errors[key] ? (
+        <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />{errors[key]}
+        </p>
+    ) : null
 
     return (
         <div className="space-y-6">
@@ -123,30 +219,41 @@ export default function AboutContentPage() {
                 </motion.button>
             </div>
 
+            {submitError && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{submitError}</span>
+                </div>
+            )}
+
             {/* Mission */}
             <div className={sectionClass}>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Mission Statement</h2>
-                <label className={labelClass}>Mission</label>
+                <label className={labelClass}>Mission <span className="text-red-500">*</span></label>
                 <textarea
                     value={formData.mission}
                     onChange={(e) => updateField('mission', e.target.value)}
                     rows={4}
+                    maxLength={1000}
                     placeholder="Enter your organization's mission statement..."
-                    className={inputClass + ' resize-y'}
+                    className={cn('mission') + ' resize-y'}
                 />
+                {errorMsg('mission')}
             </div>
 
             {/* Vision */}
             <div className={sectionClass}>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Vision Statement</h2>
-                <label className={labelClass}>Vision</label>
+                <label className={labelClass}>Vision <span className="text-red-500">*</span></label>
                 <textarea
                     value={formData.vision}
                     onChange={(e) => updateField('vision', e.target.value)}
                     rows={4}
+                    maxLength={1000}
                     placeholder="Enter your organization's vision statement..."
-                    className={inputClass + ' resize-y'}
+                    className={cn('vision') + ' resize-y'}
                 />
+                {errorMsg('vision')}
             </div>
 
             {/* History */}
@@ -157,9 +264,11 @@ export default function AboutContentPage() {
                     value={formData.history}
                     onChange={(e) => updateField('history', e.target.value)}
                     rows={8}
+                    maxLength={5000}
                     placeholder="Tell the story of your organization..."
-                    className={inputClass + ' resize-y'}
+                    className={cn('history') + ' resize-y'}
                 />
+                {errorMsg('history')}
             </div>
 
             {/* Values */}
@@ -181,14 +290,16 @@ export default function AboutContentPage() {
                         <div key={idx} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-100">
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                    <label className={labelClass}>Title</label>
+                                    <label className={labelClass}>Title <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={item.title}
                                         onChange={(e) => updateArrayObjectItem('values', idx, 'title', e.target.value)}
+                                        maxLength={120}
                                         placeholder="Value title"
-                                        className={inputClass}
+                                        className={cn(`values.${idx}.title`)}
                                     />
+                                    {errorMsg(`values.${idx}.title`)}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Icon</label>
@@ -197,18 +308,21 @@ export default function AboutContentPage() {
                                         value={item.icon}
                                         onChange={(e) => updateArrayObjectItem('values', idx, 'icon', e.target.value)}
                                         placeholder="e.g. Heart, Star, Shield"
-                                        className={inputClass}
+                                        maxLength={40}
+                                        className={cn(`values.${idx}.icon`)}
                                     />
                                 </div>
                                 <div className="md:col-span-3">
-                                    <label className={labelClass}>Description</label>
+                                    <label className={labelClass}>Description <span className="text-red-500">*</span></label>
                                     <textarea
                                         value={item.description}
                                         onChange={(e) => updateArrayObjectItem('values', idx, 'description', e.target.value)}
                                         placeholder="Describe this value..."
                                         rows={2}
-                                        className={inputClass + ' resize-y'}
+                                        maxLength={500}
+                                        className={cn(`values.${idx}.description`) + ' resize-y'}
                                     />
+                                    {errorMsg(`values.${idx}.description`)}
                                 </div>
                             </div>
                             <button
@@ -241,24 +355,28 @@ export default function AboutContentPage() {
                         <div key={idx} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-100">
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                    <label className={labelClass}>Label</label>
+                                    <label className={labelClass}>Label <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={item.label}
                                         onChange={(e) => updateArrayObjectItem('stats', idx, 'label', e.target.value)}
                                         placeholder="e.g. Happy Members"
-                                        className={inputClass}
+                                        maxLength={80}
+                                        className={cn(`stats.${idx}.label`)}
                                     />
+                                    {errorMsg(`stats.${idx}.label`)}
                                 </div>
                                 <div>
-                                    <label className={labelClass}>Value</label>
+                                    <label className={labelClass}>Value <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={item.value}
                                         onChange={(e) => updateArrayObjectItem('stats', idx, 'value', e.target.value)}
                                         placeholder="e.g. 500+"
-                                        className={inputClass}
+                                        maxLength={20}
+                                        className={cn(`stats.${idx}.value`)}
                                     />
+                                    {errorMsg(`stats.${idx}.value`)}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Icon</label>
@@ -267,7 +385,8 @@ export default function AboutContentPage() {
                                         value={item.icon}
                                         onChange={(e) => updateArrayObjectItem('stats', idx, 'icon', e.target.value)}
                                         placeholder="e.g. Users, Trophy"
-                                        className={inputClass}
+                                        maxLength={40}
+                                        className={cn(`stats.${idx}.icon`)}
                                     />
                                 </div>
                             </div>
@@ -301,14 +420,16 @@ export default function AboutContentPage() {
                         <div key={idx} className="flex gap-3 items-start p-4 bg-gray-50 rounded-lg border border-gray-100">
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                    <label className={labelClass}>Title</label>
+                                    <label className={labelClass}>Title <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={item.title}
                                         onChange={(e) => updateArrayObjectItem('features', idx, 'title', e.target.value)}
                                         placeholder="Feature title"
-                                        className={inputClass}
+                                        maxLength={120}
+                                        className={cn(`features.${idx}.title`)}
                                     />
+                                    {errorMsg(`features.${idx}.title`)}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Icon</label>
@@ -317,18 +438,21 @@ export default function AboutContentPage() {
                                         value={item.icon}
                                         onChange={(e) => updateArrayObjectItem('features', idx, 'icon', e.target.value)}
                                         placeholder="e.g. Zap, Award"
-                                        className={inputClass}
+                                        maxLength={40}
+                                        className={cn(`features.${idx}.icon`)}
                                     />
                                 </div>
                                 <div className="md:col-span-3">
-                                    <label className={labelClass}>Description</label>
+                                    <label className={labelClass}>Description <span className="text-red-500">*</span></label>
                                     <textarea
                                         value={item.description}
                                         onChange={(e) => updateArrayObjectItem('features', idx, 'description', e.target.value)}
                                         placeholder="Describe this feature..."
                                         rows={2}
-                                        className={inputClass + ' resize-y'}
+                                        maxLength={500}
+                                        className={cn(`features.${idx}.description`) + ' resize-y'}
                                     />
+                                    {errorMsg(`features.${idx}.description`)}
                                 </div>
                             </div>
                             <button
@@ -358,28 +482,31 @@ export default function AboutContentPage() {
                 )}
                 <div className="space-y-3">
                     {formData.images.map((url, idx) => (
-                        <div key={idx} className="flex gap-3 items-center">
-                            <input
-                                type="text"
-                                value={url}
-                                onChange={(e) => updateImageUrl(idx, e.target.value)}
-                                placeholder="https://example.com/image.jpg"
-                                className={inputClass + ' flex-1'}
-                            />
-                            {url && (
-                                <img
-                                    src={url}
-                                    alt={`Image ${idx + 1}`}
-                                    className="w-10 h-10 rounded-lg object-cover border border-gray-200"
-                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                        <div key={idx}>
+                            <div className="flex gap-3 items-center">
+                                <input
+                                    type="url"
+                                    value={url}
+                                    onChange={(e) => updateImageUrl(idx, e.target.value)}
+                                    placeholder="https://example.com/image.jpg"
+                                    className={cn(`images.${idx}`) + ' flex-1'}
                                 />
-                            )}
-                            <button
-                                onClick={() => removeImageUrl(idx)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                                {url && (
+                                    <img
+                                        src={url}
+                                        alt={`Image ${idx + 1}`}
+                                        className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                                    />
+                                )}
+                                <button
+                                    onClick={() => removeImageUrl(idx)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                            {errorMsg(`images.${idx}`)}
                         </div>
                     ))}
                 </div>

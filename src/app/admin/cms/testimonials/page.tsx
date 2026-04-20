@@ -8,14 +8,14 @@ export default function TestimonialsPage() {
             title="Testimonials"
             description="Manage customer testimonials displayed on the landing page. Add reviews, ratings, and customer details."
             fields={[
-                { name: 'name', label: 'Name', type: 'text', required: true, showInTable: true },
-                { name: 'role', label: 'Role', type: 'text', required: true, showInTable: true },
-                { name: 'rating', label: 'Rating', type: 'number', required: true, showInTable: true },
-                { name: 'text', label: 'Testimonial Text', type: 'textarea', required: true },
-                { name: 'image', label: 'Image URL', type: 'image' },
+                { name: 'name', label: 'Name', type: 'text', required: true, minLength: 2, maxLength: 80, showInTable: true },
+                { name: 'role', label: 'Role', type: 'text', required: true, minLength: 2, maxLength: 80, showInTable: true },
+                { name: 'rating', label: 'Rating (1-5)', type: 'number', required: true, min: 1, max: 5, showInTable: true, helpText: 'Between 1 and 5' },
+                { name: 'text', label: 'Testimonial Text', type: 'textarea', required: true, minLength: 10, maxLength: 1000 },
+                { name: 'image', label: 'Image', type: 'image' },
                 { name: 'fallbackGradient', label: 'Fallback Gradient CSS', type: 'text' },
-                { name: 'program', label: 'Program', type: 'text', showInTable: true },
-                { name: 'order', label: 'Display Order', type: 'number' },
+                { name: 'program', label: 'Program', type: 'text', maxLength: 80, showInTable: true },
+                { name: 'order', label: 'Display Order', type: 'number', min: 0, max: 999 },
                 { name: 'isActive', label: 'Active', type: 'boolean' },
             ]}
             service={CMSAdminService.testimonials}

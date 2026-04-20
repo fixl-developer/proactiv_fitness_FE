@@ -162,23 +162,6 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                     </nav>
                 </div>
 
-                {/* Collapse Toggle */}
-                <div className="flex-shrink-0 px-2 py-2 border-t border-gray-200/50">
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    >
-                        {sidebarCollapsed ? (
-                            <PanelLeftOpen className="w-5 h-5" />
-                        ) : (
-                            <div className="flex items-center space-x-2 w-full justify-center">
-                                <PanelLeftClose className="w-5 h-5" />
-                                <span className="text-sm font-medium">Collapse</span>
-                            </div>
-                        )}
-                    </button>
-                </div>
 
                 {/* Sidebar Footer - User Info + Logout */}
                 <div className="flex-shrink-0 border-t border-gray-200/50 bg-white px-3 pt-3 pb-2">
@@ -254,7 +237,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-4 md:p-6 min-h-screen">
+                <main className="pt-24 md:pt-28 p-4 md:p-6 min-h-screen">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

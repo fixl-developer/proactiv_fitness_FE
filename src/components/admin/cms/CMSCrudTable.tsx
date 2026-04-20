@@ -2,19 +2,26 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Save } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Save, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUploader from './ImageUploader'
 
-interface FieldConfig {
+export interface FieldConfig {
     name: string
     label: string
-    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'richtext'
+    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'richtext' | 'email' | 'url' | 'slug' | 'tel'
     required?: boolean
     options?: { label: string; value: string }[]
     placeholder?: string
     width?: string
     showInTable?: boolean
+    minLength?: number
+    maxLength?: number
+    min?: number
+    max?: number
+    pattern?: RegExp
+    patternMessage?: string
+    helpText?: string
 }
 
 interface CMSCrudTableProps {
@@ -31,6 +38,113 @@ interface CMSCrudTableProps {
     tableColumns?: string[]
 }
 
+// =============================================
+// Built-in validators
+// =============================================
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
+const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const PHONE_REGEX = /^[+]?[\d\s()-]{7,20}$/
+
+function validateField(field: FieldConfig, value: any): string | null {
+    const isEmpty =
+        value === undefined ||
+        value === null ||
+        (typeof value === 'string' && value.trim() === '') ||
+        (Array.isArray(value) && value.length === 0)
+
+    if (field.required && isEmpty) {
+        return `${field.label} is required`
+    }
+
+    // If empty but not required, skip further checks
+    if (isEmpty) return null
+
+    // Array fields: strip empty strings, require at least one if required
+    if (field.type === 'array') {
+        const cleaned = (value as string[]).filter(v => typeof v === 'string' && v.trim() !== '')
+        if (field.required && cleaned.length === 0) {
+            return `${field.label} must have at least one non-empty item`
+        }
+        return null
+    }
+
+    // Number range
+    if (field.type === 'number') {
+        const n = Number(value)
+        if (Number.isNaN(n)) return `${field.label} must be a valid number`
+        if (field.min !== undefined && n < field.min) return `${field.label} must be at least ${field.min}`
+        if (field.max !== undefined && n > field.max) return `${field.label} must be at most ${field.max}`
+        return null
+    }
+
+    // String-based types
+    const str = String(value).trim()
+
+    if (field.minLength !== undefined && str.length < field.minLength) {
+        return `${field.label} must be at least ${field.minLength} characters`
+    }
+    if (field.maxLength !== undefined && str.length > field.maxLength) {
+        return `${field.label} must be at most ${field.maxLength} characters`
+    }
+
+    if (field.type === 'email' && !EMAIL_REGEX.test(str)) {
+        return `${field.label} must be a valid email address`
+    }
+    if (field.type === 'url' && !URL_REGEX.test(str)) {
+        return `${field.label} must be a valid URL (http:// or https://)`
+    }
+    if (field.type === 'slug' && !SLUG_REGEX.test(str)) {
+        return `${field.label} must be lowercase letters, numbers, and hyphens only (e.g., my-blog-post)`
+    }
+    if (field.type === 'tel' && !PHONE_REGEX.test(str)) {
+        return `${field.label} must be a valid phone number`
+    }
+    if (field.type === 'image' && field.required && !str) {
+        return `${field.label} is required`
+    }
+
+    if (field.pattern && !field.pattern.test(str)) {
+        return field.patternMessage || `${field.label} format is invalid`
+    }
+
+    return null
+}
+
+function extractServerError(error: any, fields: FieldConfig[]): { fieldErrors: Record<string, string>; message: string } {
+    const fieldErrors: Record<string, string> = {}
+    let message = 'Failed to save. Please check all required fields.'
+
+    const resp = error?.response?.data
+    if (resp) {
+        if (typeof resp.message === 'string' && resp.message.trim()) {
+            message = resp.message
+        }
+        // express-validator style: errors: [{ path/param, msg }]
+        if (Array.isArray(resp.errors)) {
+            resp.errors.forEach((e: any) => {
+                const key = e.path || e.param || e.field
+                const msg = e.msg || e.message
+                if (key && msg) {
+                    const field = fields.find(f => f.name === key)
+                    fieldErrors[key] = field ? `${field.label} — ${msg}` : msg
+                }
+            })
+            if (Object.keys(fieldErrors).length > 0 && !resp.message) {
+                message = 'Please fix the highlighted fields'
+            }
+        } else if (resp.errors && typeof resp.errors === 'object') {
+            Object.entries(resp.errors).forEach(([k, v]) => {
+                fieldErrors[k] = typeof v === 'string' ? v : String((v as any)?.message || v)
+            })
+        }
+    } else if (error?.message) {
+        message = error.message
+    }
+
+    return { fieldErrors, message }
+}
+
 export default function CMSCrudTable({ title, description, fields, service, tableColumns }: CMSCrudTableProps) {
     const [items, setItems] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -42,13 +156,13 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
     const [totalPages, setTotalPages] = useState(1)
     const [saving, setSaving] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+    const [errors, setErrors] = useState<Record<string, string>>({})
+    const [submitError, setSubmitError] = useState<string>('')
 
     const loadData = useCallback(async () => {
         try {
             setLoading(true)
             const result = await service.getAll({ page, limit: 20, search })
-            // result is {success, data, message} from apiClient
-            // result.data can be an array or {data: [], pagination: {}}
             const payload = result?.data
             if (payload) {
                 if (Array.isArray(payload)) {
@@ -62,7 +176,6 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                     setItems([])
                 }
             } else {
-                // result itself might be an array (fallback)
                 if (Array.isArray(result)) {
                     setItems(result)
                 } else {
@@ -81,40 +194,88 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         loadData()
     }, [loadData])
 
+    const resetFormState = () => {
+        setErrors({})
+        setSubmitError('')
+    }
+
     const openCreate = () => {
         setEditingItem(null)
         const defaults: any = {}
         fields.forEach(f => {
             if (f.type === 'boolean') defaults[f.name] = true
-            else if (f.type === 'number') defaults[f.name] = 0
+            else if (f.type === 'number') defaults[f.name] = f.min ?? 0
             else if (f.type === 'array') defaults[f.name] = []
             else defaults[f.name] = ''
         })
         setFormData(defaults)
+        resetFormState()
         setShowModal(true)
     }
 
     const openEdit = async (item: any) => {
         setEditingItem(item)
         setFormData({ ...item })
+        resetFormState()
         setShowModal(true)
     }
 
+    const validateAll = (): boolean => {
+        const nextErrors: Record<string, string> = {}
+        fields.forEach(field => {
+            const err = validateField(field, formData[field.name])
+            if (err) nextErrors[field.name] = err
+        })
+        setErrors(nextErrors)
+        if (Object.keys(nextErrors).length > 0) {
+            setSubmitError('Please fix the highlighted fields before saving')
+            return false
+        }
+        setSubmitError('')
+        return true
+    }
+
+    const sanitizePayload = (data: any) => {
+        const payload: any = { ...data }
+        fields.forEach(field => {
+            const value = payload[field.name]
+            if (field.type === 'array' && Array.isArray(value)) {
+                payload[field.name] = value.filter(v => typeof v === 'string' ? v.trim() !== '' : v != null)
+            }
+            if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel') && typeof value === 'string') {
+                payload[field.name] = value.trim()
+            }
+        })
+        return payload
+    }
+
     const handleSave = async () => {
+        if (!validateAll()) {
+            toast.error('Please fix the highlighted fields')
+            return
+        }
+
         try {
             setSaving(true)
+            setSubmitError('')
+            const payload = sanitizePayload(formData)
             if (editingItem) {
-                await service.update(editingItem.id || editingItem._id, formData)
+                await service.update(editingItem.id || editingItem._id, payload)
                 toast.success('Item updated successfully')
             } else {
-                await service.create(formData)
+                await service.create(payload)
                 toast.success('Item created successfully')
             }
             setShowModal(false)
             loadData()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Save failed:', error)
-            toast.error('Failed to save. Please check all required fields.')
+            const { fieldErrors, message } = extractServerError(error, fields)
+            if (Object.keys(fieldErrors).length > 0) {
+                setErrors(prev => ({ ...prev, ...fieldErrors }))
+            }
+            setSubmitError(message)
+            toast.error(message)
         } finally {
             setSaving(false)
         }
@@ -134,6 +295,23 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
 
     const handleFieldChange = (name: string, value: any) => {
         setFormData((prev: any) => ({ ...prev, [name]: value }))
+        if (errors[name]) {
+            setErrors(prev => {
+                const next = { ...prev }
+                delete next[name]
+                return next
+            })
+        }
+    }
+
+    const handleFieldBlur = (field: FieldConfig) => {
+        const err = validateField(field, formData[field.name])
+        setErrors(prev => {
+            const next = { ...prev }
+            if (err) next[field.name] = err
+            else delete next[field.name]
+            return next
+        })
     }
 
     const handleArrayChange = (name: string, index: number, value: string) => {
@@ -160,6 +338,11 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
             String(val).toLowerCase().includes(search.toLowerCase())
         )
     })
+
+    const inputBase = 'w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent transition-all text-sm'
+    const inputOk = 'border-gray-200 focus:ring-blue-500'
+    const inputErr = 'border-red-400 focus:ring-red-500 bg-red-50/40'
+    const inputClass = (name: string) => `${inputBase} ${errors[name] ? inputErr : inputOk}`
 
     return (
         <div className="space-y-6">
@@ -352,6 +535,12 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
 
                             {/* Modal Body */}
                             <div className="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
+                                {submitError && (
+                                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2.5 text-sm">
+                                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                        <span>{submitError}</span>
+                                    </div>
+                                )}
                                 {fields.map(field => (
                                     <div key={field.name}>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -360,40 +549,53 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                         </label>
 
                                         {field.type === 'image' ? (
-                                            <ImageUploader
-                                                value={formData[field.name] || ''}
-                                                onChange={(url) => handleFieldChange(field.name, url)}
-                                                folder={title.toLowerCase().replace(/\s+/g, '-')}
-                                                label=""
-                                            />
-                                        ) : field.type === 'text' ? (
+                                            <div className={errors[field.name] ? 'ring-2 ring-red-400 rounded-lg' : ''}>
+                                                <ImageUploader
+                                                    value={formData[field.name] || ''}
+                                                    onChange={(url) => handleFieldChange(field.name, url)}
+                                                    folder={title.toLowerCase().replace(/\s+/g, '-')}
+                                                    label=""
+                                                />
+                                            </div>
+                                        ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' ? (
                                             <input
-                                                type="text"
+                                                type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : field.type === 'tel' ? 'tel' : 'text'}
                                                 value={formData[field.name] || ''}
                                                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                                onBlur={() => handleFieldBlur(field)}
                                                 placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                maxLength={field.maxLength}
+                                                className={inputClass(field.name)}
                                             />
                                         ) : field.type === 'textarea' || field.type === 'richtext' ? (
                                             <textarea
                                                 value={formData[field.name] || ''}
                                                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                                onBlur={() => handleFieldBlur(field)}
                                                 placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                                                 rows={field.type === 'richtext' ? 8 : 3}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm resize-y"
+                                                maxLength={field.maxLength}
+                                                className={inputClass(field.name) + ' resize-y'}
                                             />
                                         ) : field.type === 'number' ? (
                                             <input
                                                 type="number"
                                                 value={formData[field.name] ?? ''}
-                                                onChange={(e) => handleFieldChange(field.name, Number(e.target.value))}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                min={field.min}
+                                                max={field.max}
+                                                onChange={(e) => {
+                                                    const v = e.target.value
+                                                    handleFieldChange(field.name, v === '' ? '' : Number(v))
+                                                }}
+                                                onBlur={() => handleFieldBlur(field)}
+                                                className={inputClass(field.name)}
                                             />
                                         ) : field.type === 'select' ? (
                                             <select
                                                 value={formData[field.name] || ''}
                                                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                onBlur={() => handleFieldBlur(field)}
+                                                className={inputClass(field.name)}
                                             >
                                                 <option value="">Select {field.label}</option>
                                                 {field.options?.map(opt => (
@@ -444,7 +646,15 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                             </div>
                                         ) : null}
 
-                                        {/* ImageUploader already includes preview */}
+                                        {errors[field.name] && (
+                                            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                                                <AlertCircle className="w-3 h-3" />
+                                                {errors[field.name]}
+                                            </p>
+                                        )}
+                                        {!errors[field.name] && field.helpText && (
+                                            <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
+                                        )}
                                     </div>
                                 ))}
                             </div>

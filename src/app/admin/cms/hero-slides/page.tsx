@@ -8,13 +8,13 @@ export default function HeroSlidesPage() {
             title="Hero Slides"
             description="Manage the hero carousel on the landing page. Add images, titles, and call-to-action buttons."
             fields={[
-                { name: 'title', label: 'Title', type: 'text', required: true, showInTable: true },
-                { name: 'subtitle', label: 'Subtitle', type: 'text' },
-                { name: 'image', label: 'Image URL', type: 'image', required: true, showInTable: true },
+                { name: 'title', label: 'Title', type: 'text', required: true, minLength: 2, maxLength: 120, showInTable: true },
+                { name: 'subtitle', label: 'Subtitle', type: 'text', maxLength: 200 },
+                { name: 'image', label: 'Image', type: 'image', required: true, showInTable: true, helpText: 'Upload an image or paste a valid URL' },
                 { name: 'fallbackGradient', label: 'Fallback Gradient CSS', type: 'text', placeholder: 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800' },
-                { name: 'ctaText', label: 'CTA Button Text', type: 'text' },
-                { name: 'ctaLink', label: 'CTA Button Link', type: 'text' },
-                { name: 'order', label: 'Display Order', type: 'number' },
+                { name: 'ctaText', label: 'CTA Button Text', type: 'text', maxLength: 40 },
+                { name: 'ctaLink', label: 'CTA Button Link', type: 'url', helpText: 'Must start with http:// or https://' },
+                { name: 'order', label: 'Display Order', type: 'number', min: 0, max: 999 },
                 { name: 'isActive', label: 'Active', type: 'boolean' },
             ]}
             service={CMSAdminService.heroSlides}
