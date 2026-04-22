@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client'
+import { apiClient } from '@/services/api/client'
 
 interface SupportTicket {
     subject: string

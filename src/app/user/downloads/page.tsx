@@ -15,7 +15,7 @@ import {
     Share2,
     Trash2,
     Calendar,
-    FileSize
+    HardDrive
 } from 'lucide-react'
 import downloadsService from '@/services/modules/downloads.service'
 
@@ -158,8 +158,8 @@ export default function DownloadsPage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${message.type === 'success'
-                            ? 'bg-emerald-50 border border-emerald-200'
-                            : 'bg-red-50 border border-red-200'
+                        ? 'bg-emerald-50 border border-emerald-200'
+                        : 'bg-red-50 border border-red-200'
                         }`}
                 >
                     {message.type === 'success' ? (

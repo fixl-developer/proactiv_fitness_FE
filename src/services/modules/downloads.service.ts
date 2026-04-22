@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client'
+import { apiClient } from '@/services/api/client'
 
 const downloadsService = {
     async getDownloads(): Promise<any[]> {
