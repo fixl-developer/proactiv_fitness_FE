@@ -1,240 +1,85 @@
-import { apiClient } from '../api/client'
-import ErrorHandler from '../api/errorHandler'
+import { apiClient } from '@/services/api/client'
 
-export interface AttendanceRecord {
-    id: string
-    studentId: string
-    classId: string
-    date: string
-    status: 'present' | 'absent' | 'late' | 'excused'
-    checkInTime?: string
-    checkOutTime?: string
-    notes?: string
-    markedBy: string
-    markedAt: string
-}
-
-export interface CreateAttendanceDTO {
-    studentId: string
-    classId: string
-    date: string
-    status: 'present' | 'absent' | 'late' | 'excused'
-    checkInTime?: string
-    checkOutTime?: string
-    notes?: string
-}
-
-export interface UpdateAttendanceDTO {
-    status?: 'present' | 'absent' | 'late' | 'excused'
-    checkInTime?: string
-    checkOutTime?: string
-    notes?: string
-}
-
-export interface AttendanceListResponse {
-    success: boolean
-    data: {
-        records: AttendanceRecord[]
-        total: number
-        page: number
-        limit: number
-    }
-}
-
-export interface AttendanceDetailResponse {
-    success: boolean
-    data: AttendanceRecord
-}
-
-export interface AttendanceStatsResponse {
-    success: boolean
-    data: {
-        totalClasses: number
-        presentDays: number
-        absentDays: number
-        lateDays: number
-        excusedDays: number
-        attendancePercentage: number
-        trend: Array<{ date: string; status: string }>
-    }
-}
-
-class AttendanceService {
-    private readonly MODULE_NAME = 'attendance'
-
-    async getAttendance(filters?: {
-        page?: number
-        limit?: number
-        studentId?: string
-        classId?: string
-        dateFrom?: string
-        dateTo?: string
-        status?: string
-    }): Promise<AttendanceListResponse> {
+export const attendanceService = {
+    async checkIn() {
         try {
-            const response = await apiClient.get<AttendanceListResponse>(
-                '/attendance',
-                { params: filters }
-            )
+            const response = await apiClient.post('/attendance/check-in', {})
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Check-in failed'
+            }
         }
-    }
+    },
 
-    async getAttendanceById(id: string): Promise<AttendanceDetailResponse> {
+    async checkOut() {
         try {
-            const response = await apiClient.get<AttendanceDetailResponse>(
-                `/attendance/${id}`
-            )
+            const response = await apiClient.post('/attendance/check-out', {})
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Check-out failed'
+            }
         }
-    }
+    },
 
-    async createAttendance(data: CreateAttendanceDTO): Promise<AttendanceDetailResponse> {
+    async getHistory(limit = 20) {
         try {
-            const response = await apiClient.post<AttendanceDetailResponse>(
-                '/attendance',
-                data
-            )
+            const response = await apiClient.get(`/attendance/history?limit=${limit}`)
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch history',
+                data: []
+            }
         }
-    }
+    },
 
-    async updateAttendance(id: string, data: UpdateAttendanceDTO): Promise<AttendanceDetailResponse> {
+    async getStats() {
         try {
-            const response = await apiClient.put<AttendanceDetailResponse>(
-                `/attendance/${id}`,
-                data
-            )
+            const response = await apiClient.get('/attendance/stats')
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch stats',
+                data: {
+                    totalDays: 0,
+                    presentDays: 0,
+                    absentDays: 0,
+                    lateDays: 0,
+                    attendancePercentage: 0
+                }
+            }
         }
-    }
+    },
 
-    async deleteAttendance(id: string): Promise<{ success: boolean; message: string }> {
+    async getCalendar(month: string, year: string) {
         try {
-            const response = await apiClient.delete<{ success: boolean; message: string }>(
-                `/attendance/${id}`
-            )
+            const response = await apiClient.get(`/attendance/calendar/${month}/${year}`)
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch calendar',
+                data: []
+            }
         }
-    }
+    },
 
-    async getAttendanceByStudent(studentId: string, filters?: {
-        page?: number
-        limit?: number
-        dateFrom?: string
-        dateTo?: string
-    }): Promise<AttendanceListResponse> {
+    async getReport(month: string, year: string) {
         try {
-            const response = await apiClient.get<AttendanceListResponse>(
-                `/attendance/student/${studentId}`,
-                { params: filters }
-            )
+            const response = await apiClient.get(`/attendance/report/${month}/${year}`)
             return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
-        }
-    }
-
-    async getAttendanceByClass(classId: string, filters?: {
-        page?: number
-        limit?: number
-        date?: string
-    }): Promise<AttendanceListResponse> {
-        try {
-            const response = await apiClient.get<AttendanceListResponse>(
-                `/attendance/class/${classId}`,
-                { params: filters }
-            )
-            return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
-        }
-    }
-
-    async getStudentAttendanceStats(studentId: string): Promise<AttendanceStatsResponse> {
-        try {
-            const response = await apiClient.get<AttendanceStatsResponse>(
-                `/attendance/student/${studentId}/stats`
-            )
-            return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
-        }
-    }
-
-    async markBulkAttendance(data: CreateAttendanceDTO[]): Promise<{
-        success: boolean
-        data: AttendanceRecord[]
-        message: string
-    }> {
-        try {
-            const response = await apiClient.post<any>(
-                '/attendance/bulk',
-                { records: data }
-            )
-            return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
-        }
-    }
-
-    async getClassAttendanceReport(classId: string, dateFrom: string, dateTo: string): Promise<{
-        success: boolean
-        data: {
-            classId: string
-            dateRange: { from: string; to: string }
-            students: Array<{
-                studentId: string
-                name: string
-                present: number
-                absent: number
-                late: number
-                excused: number
-                percentage: number
-            }>
-        }
-    }> {
-        try {
-            const response = await apiClient.get<any>(
-                `/attendance/class/${classId}/report`,
-                { params: { dateFrom, dateTo } }
-            )
-            return response
-        } catch (error) {
-            const appError = ErrorHandler.classifyError(error)
-            ErrorHandler.logError(appError, this.MODULE_NAME)
-            throw error
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch report',
+                data: null
+            }
         }
     }
 }
-
-export const attendanceService = new AttendanceService()
-export default AttendanceService

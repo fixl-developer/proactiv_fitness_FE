@@ -1,102 +1,109 @@
-import { apiClient } from '../api/client'
+import { apiClient } from '@/lib/api-client'
 
-class SupportService {
-    // Tickets
-    async getAllTickets(page = 1, limit = 20, filters?: any) {
-        const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() })
-        if (filters?.status) params.append('status', filters.status)
-        if (filters?.priority) params.append('priority', filters.priority)
-        if (filters?.assignedTo) params.append('assignedTo', filters.assignedTo)
+interface SupportTicket {
+    subject: string
+    description: string
+    priority: 'low' | 'medium' | 'high'
+    category: string
+}
 
-        const response = await apiClient.get(`/admin/support/tickets?${params}`)
-        return response.data
-    }
+interface ContactMessage {
+    name: string
+    email: string
+    phone?: string
+    subject: string
+    message: string
+}
 
-    async getTicketById(id: string) {
-        const response = await apiClient.get(`/admin/support/tickets/${id}`)
-        return response.data
-    }
+const supportService = {
+    async getTickets(): Promise<any[]> {
+        try {
+            const response = await apiClient.get('/support/tickets')
+            return response.data?.data || []
+        } catch (error) {
+            console.error('Failed to fetch support tickets:', error)
+            return []
+        }
+    },
 
-    async createTicket(data: {
-        subject: string
-        description: string
-        priority: 'low' | 'medium' | 'high' | 'urgent'
-        category: string
-        userId?: string
-    }) {
-        const response = await apiClient.post('/admin/support/tickets', data)
-        return response.data
-    }
+    async createTicket(ticket: SupportTicket): Promise<any> {
+        try {
+            const response = await apiClient.post('/support/tickets', ticket)
+            return response.data?.data || {}
+        } catch (error) {
+            console.error('Failed to create support ticket:', error)
+            throw error
+        }
+    },
 
-    async updateTicket(id: string, data: any) {
-        const response = await apiClient.put(`/admin/support/tickets/${id}`, data)
-        return response.data
-    }
+    async getTicketById(id: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/support/tickets/${id}`)
+            return response.data?.data || {}
+        } catch (error) {
+            console.error('Failed to fetch support ticket:', error)
+            return {}
+        }
+    },
 
-    async assignTicket(id: string, assignedTo: string) {
-        const response = await apiClient.put(`/admin/support/tickets/${id}/assign`, { assignedTo })
-        return response.data
-    }
+    async updateTicket(id: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.put(`/support/tickets/${id}`, data)
+            return response.data?.data || {}
+        } catch (error) {
+            console.error('Failed to update support ticket:', error)
+            throw error
+        }
+    },
 
-    async closeTicket(id: string, resolution: string) {
-        const response = await apiClient.put(`/admin/support/tickets/${id}/close`, { resolution })
-        return response.data
-    }
+    async deleteTicket(id: string): Promise<void> {
+        try {
+            await apiClient.delete(`/support/tickets/${id}`)
+        } catch (error) {
+            console.error('Failed to delete support ticket:', error)
+            throw error
+        }
+    },
 
-    async addComment(ticketId: string, comment: string) {
-        const response = await apiClient.post(`/admin/support/tickets/${ticketId}/comments`, { comment })
-        return response.data
-    }
+    async getFAQs(): Promise<any[]> {
+        try {
+            const response = await apiClient.get('/support/faqs')
+            return response.data?.data || []
+        } catch (error) {
+            console.error('Failed to fetch FAQs:', error)
+            return []
+        }
+    },
 
-    async getTicketStatistics() {
-        const response = await apiClient.get('/admin/support/tickets/statistics')
-        return response.data
-    }
+    async sendContactMessage(message: ContactMessage): Promise<any> {
+        try {
+            const response = await apiClient.post('/support/contact', message)
+            return response.data?.data || {}
+        } catch (error) {
+            console.error('Failed to send contact message:', error)
+            throw error
+        }
+    },
 
-    // Knowledge Base
-    async getAllArticles(page = 1, limit = 20, category?: string) {
-        const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() })
-        if (category) params.append('category', category)
+    async addReply(ticketId: string, reply: string): Promise<any> {
+        try {
+            const response = await apiClient.post(`/support/tickets/${ticketId}/replies`, { reply })
+            return response.data?.data || {}
+        } catch (error) {
+            console.error('Failed to add reply:', error)
+            throw error
+        }
+    },
 
-        const response = await apiClient.get(`/admin/support/knowledge?${params}`)
-        return response.data
-    }
-
-    async getArticleById(id: string) {
-        const response = await apiClient.get(`/admin/support/knowledge/${id}`)
-        return response.data
-    }
-
-    async createArticle(data: {
-        title: string
-        content: string
-        category: string
-        tags?: string[]
-        status: 'draft' | 'published'
-    }) {
-        const response = await apiClient.post('/admin/support/knowledge', data)
-        return response.data
-    }
-
-    async updateArticle(id: string, data: any) {
-        const response = await apiClient.put(`/admin/support/knowledge/${id}`, data)
-        return response.data
-    }
-
-    async deleteArticle(id: string) {
-        const response = await apiClient.delete(`/admin/support/knowledge/${id}`)
-        return response.data
-    }
-
-    async getCategories() {
-        const response = await apiClient.get('/admin/support/knowledge/categories')
-        return response.data
-    }
-
-    async searchArticles(query: string) {
-        const response = await apiClient.get(`/admin/support/knowledge/search?q=${query}`)
-        return response.data
+    async getReplies(ticketId: string): Promise<any[]> {
+        try {
+            const response = await apiClient.get(`/support/tickets/${ticketId}/replies`)
+            return response.data?.data || []
+        } catch (error) {
+            console.error('Failed to fetch replies:', error)
+            return []
+        }
     }
 }
 
-export default new SupportService()
+export default supportService
