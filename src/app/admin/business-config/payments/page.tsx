@@ -1,515 +1,549 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { apiClient } from '@/services/api/client'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { CreditCard, Plus, Edit, Trash2, CheckCircle, XCircle, Loader2, Wifi, Star, Shield } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { validateName, validateUrl, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
-import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, CreditCard, X, Eye, EyeOff, Wifi } from 'lucide-react'
+import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { PaymentGatewayService } from '@/services/businessConfigService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface PaymentGateway {
   id: string
   name: string
   provider: string
-  isDefault: boolean
-  status: string
+  apiKey?: string
+  secretKey?: string
   webhookUrl?: string
-  createdAt?: string
+  supportedCurrencies?: string[]
+  isActive: boolean
 }
 
 export default function PaymentGatewaysPage() {
   const [gateways, setGateways] = useState<PaymentGateway[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Form
   const [showForm, setShowForm] = useState(false)
-  const [editingGateway, setEditingGateway] = useState<PaymentGateway | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [testingConnection, setTestingConnection] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     name: '',
-    provider: 'stripe' as 'stripe' | 'paypal' | 'square',
+    provider: 'Stripe',
     apiKey: '',
     secretKey: '',
     webhookUrl: '',
-    isDefault: false,
-    status: 'active' as 'active' | 'inactive',
+    supportedCurrencies: [] as string[],
+    isActive: true,
   })
-  const [saving, setSaving] = useState(false)
 
-  // Validation errors
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [newCurrency, setNewCurrency] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [showSecretKey, setShowSecretKey] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Delete
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const providers = ['Stripe', 'PayPal', 'PayPay', 'Square']
 
-  // Test connection
-  const [testingConnection, setTestingConnection] = useState<string | null>(null)
-  const [connectionResults, setConnectionResults] = useState<Record<string, 'success' | 'error'>>({})
-
-  const loadGateways = useCallback(async () => {
+  const loadGateways = async () => {
     try {
       setLoading(true)
-      const data = await apiClient.get<any>('/payment-gateways')
-      setGateways(Array.isArray(data) ? data : data?.data || [])
-    } catch (error: any) {
-      console.error('Failed to load payment gateways:', error)
-      // If endpoint not found, show helpful empty state
-      setGateways([])
+      const response = await PaymentGatewayService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      })
+      setGateways(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading payment gateways:', error)
+      toast.error('Failed to load payment gateways')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadGateways()
-  }, [loadGateways])
+  }, [currentPage, searchTerm])
 
-  const openForm = (gateway?: PaymentGateway) => {
-    if (gateway) {
-      setEditingGateway(gateway)
-      setFormData({
-        name: gateway.name,
-        provider: gateway.provider as 'stripe' | 'paypal' | 'square',
-        apiKey: '',
-        secretKey: '',
-        webhookUrl: gateway.webhookUrl || '',
-        isDefault: gateway.isDefault,
-        status: gateway.status as 'active' | 'inactive',
-      })
-    } else {
-      setEditingGateway(null)
-      setFormData({
-        name: '',
-        provider: 'stripe',
-        apiKey: '',
-        secretKey: '',
-        webhookUrl: '',
-        isDefault: false,
-        status: 'active',
-      })
-    }
-    setFormErrors({})
-    setShowForm(true)
-  }
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
 
-  const validateGatewayForm = (): boolean => {
-    const errs: Record<string, string> = {}
-    const nameErr = validateName(formData.name, 'Gateway name')
-    if (nameErr) errs.name = nameErr
-    const provErr = validateSelect(formData.provider, 'Provider')
-    if (provErr) errs.provider = provErr
-    if (formData.webhookUrl) {
-      const urlErr = validateUrl(formData.webhookUrl, false)
-      if (urlErr) errs.webhookUrl = urlErr
+    if (!formData.name) newErrors.name = 'Gateway name is required'
+    if (!formData.provider) newErrors.provider = 'Provider is required'
+    if (!formData.apiKey && !editingId) newErrors.apiKey = 'API key is required'
+    if (!formData.secretKey && !editingId) newErrors.secretKey = 'Secret key is required'
+
+    if (formData.webhookUrl && !/^https?:\/\/.+/.test(formData.webhookUrl)) {
+      newErrors.webhookUrl = 'Invalid URL format'
     }
-    setFormErrors(errs)
-    return Object.keys(errs).length === 0
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateGatewayForm()) return
-    setSaving(true)
+
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
+
     try {
+      setSubmitting(true)
+
       const payload = { ...formData }
-      // Don't send empty key fields on edit
-      if (editingGateway) {
+      // Don't send empty keys on edit
+      if (editingId) {
         if (!payload.apiKey) delete (payload as any).apiKey
         if (!payload.secretKey) delete (payload as any).secretKey
-        await apiClient.put(`/payment-gateways/${editingGateway.id}`, payload)
+      }
+
+      if (editingId) {
+        await PaymentGatewayService.update(editingId, payload)
         toast.success('Payment gateway updated successfully')
       } else {
-        await apiClient.post('/payment-gateways', payload)
+        await PaymentGatewayService.create(payload)
         toast.success('Payment gateway created successfully')
       }
+
       setShowForm(false)
-      setEditingGateway(null)
+      resetForm()
       loadGateways()
-    } catch (error: any) {
-      toast.error(editingGateway ? 'Failed to update gateway' : 'Failed to create gateway')
+    } catch (error) {
+      console.error('Error saving payment gateway:', error)
+      toast.error(getErrorMessage(error))
     } finally {
-      setSaving(false)
+      setSubmitting(false)
     }
   }
 
-  const handleSetDefault = async (id: string) => {
-    try {
-      await apiClient.patch(`/payment-gateways/${id}`, { isDefault: true })
-      toast.success('Default gateway updated')
-      loadGateways()
-    } catch (error: any) {
-      toast.error('Failed to set default gateway')
-    }
+  const handleEdit = (gateway: PaymentGateway) => {
+    setFormData({
+      name: gateway.name,
+      provider: gateway.provider,
+      apiKey: '',
+      secretKey: '',
+      webhookUrl: gateway.webhookUrl || '',
+      supportedCurrencies: gateway.supportedCurrencies || [],
+      isActive: gateway.isActive,
+    })
+    setEditingId(gateway.id)
+    setShowForm(true)
   }
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setDeleting(true)
+  const handleDelete = async (id: string) => {
     try {
-      await apiClient.delete(`/payment-gateways/${deleteTarget.id}`)
+      await PaymentGatewayService.delete(id)
       toast.success('Payment gateway deleted successfully')
-      setDeleteTarget(null)
+      setDeleteConfirm(null)
       loadGateways()
-    } catch (error: any) {
-      toast.error('Failed to delete gateway')
-    } finally {
-      setDeleting(false)
+    } catch (error) {
+      console.error('Error deleting payment gateway:', error)
+      toast.error(getErrorMessage(error))
     }
   }
 
-  const testConnection = async (gatewayId: string) => {
-    setTestingConnection(gatewayId)
+  const handleTestConnection = async (id: string) => {
     try {
-      await apiClient.get(`/payments/health`)
-      setConnectionResults((prev) => ({ ...prev, [gatewayId]: 'success' }))
+      setTestingConnection(id)
+      await PaymentGatewayService.test(id)
       toast.success('Connection test successful')
-    } catch (error: any) {
-      // Try alternative endpoint
-      try {
-        await apiClient.get(`/payments/stats`)
-        setConnectionResults((prev) => ({ ...prev, [gatewayId]: 'success' }))
-        toast.success('Connection test successful')
-      } catch {
-        setConnectionResults((prev) => ({ ...prev, [gatewayId]: 'error' }))
-        toast.error('Connection test failed - gateway may be unreachable')
-      }
+    } catch (error) {
+      console.error('Error testing connection:', error)
+      toast.error('Connection test failed')
     } finally {
       setTestingConnection(null)
     }
   }
 
-  const getProviderIcon = (provider: string) => {
-    switch (provider) {
-      case 'stripe':
-        return 'bg-gradient-to-br from-indigo-500 to-purple-600'
-      case 'paypal':
-        return 'bg-gradient-to-br from-blue-500 to-blue-700'
-      case 'square':
-        return 'bg-gradient-to-br from-green-500 to-teal-600'
-      default:
-        return 'bg-gradient-to-br from-gray-500 to-gray-700'
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      provider: 'Stripe',
+      apiKey: '',
+      secretKey: '',
+      webhookUrl: '',
+      supportedCurrencies: [],
+      isActive: true,
+    })
+    setNewCurrency('')
+    setShowApiKey(false)
+    setShowSecretKey(false)
+    setErrors({})
+    setEditingId(null)
+  }
+
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  const addCurrency = () => {
+    if (newCurrency.trim() && !formData.supportedCurrencies.includes(newCurrency.trim().toUpperCase())) {
+      setFormData({
+        ...formData,
+        supportedCurrencies: [...formData.supportedCurrencies, newCurrency.trim().toUpperCase()],
+      })
+      setNewCurrency('')
     }
   }
 
-  const activeGateways = gateways.filter((g) => g.status === 'active')
-  const defaultGateway = gateways.find((g) => g.isDefault)
+  const removeCurrency = (index: number) => {
+    setFormData({
+      ...formData,
+      supportedCurrencies: formData.supportedCurrencies.filter((_, i) => i !== index),
+    })
+  }
+
+  const maskApiKey = (key?: string) => {
+    if (!key) return '••••••••'
+    return `••••${key.slice(-4)}`
+  }
+
+  const getProviderColor = (provider: string) => {
+    switch (provider.toLowerCase()) {
+      case 'stripe':
+        return 'bg-purple-100 text-purple-800'
+      case 'paypal':
+        return 'bg-blue-100 text-blue-800'
+      case 'paypay':
+        return 'bg-red-100 text-red-800'
+      case 'square':
+        return 'bg-green-100 text-green-800'
+      default:
+        return 'bg-slate-100 text-slate-800'
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Payment Gateways</h1>
-          <p className="text-gray-600 mt-2">Configure and manage payment gateway integrations</p>
-        </div>
-        <Button id="btn-open-form-admin-business-config-payments" onClick={() => openForm()}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Gateway
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <CreditCard className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Payment Gateways</h1>
+          </div>
+          <p className="text-slate-600">Configure and manage payment gateway integrations</p>
+        </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Gateways', value: gateways.length.toString(), icon: CreditCard, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-          { label: 'Active', value: activeGateways.length.toString(), icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-          { label: 'Default', value: defaultGateway?.name || 'None', icon: Star, gradient: 'from-yellow-500 to-yellow-600', bgGradient: 'from-yellow-50 to-yellow-100', isText: true },
-          { label: 'Providers', value: [...new Set(gateways.map((g) => g.provider))].length.toString(), icon: Shield, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-        ].map((stat, idx) => (
-          <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-            <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search payment gateways..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Gateway
+          </button>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading payment gateways...</p>
+            </div>
+          ) : gateways.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No payment gateways found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Provider</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">API Key</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Currencies</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {gateways.map((gateway) => (
+                      <tr key={gateway.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{gateway.name}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getProviderColor(gateway.provider)}`}>
+                            {gateway.provider}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 font-mono">{maskApiKey(gateway.apiKey)}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                            {gateway.supportedCurrencies?.length || 0} currencies
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${gateway.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}
+                          >
+                            {gateway.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleTestConnection(gateway.id)}
+                              disabled={testingConnection === gateway.id}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded transition disabled:opacity-50"
+                              title="Test Connection"
+                            >
+                              {testingConnection === gateway.id ? (
+                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <Wifi className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button onClick={() => handleEdit(gateway)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setDeleteConfirm(gateway.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className={`${(stat as any).isText ? 'text-lg' : 'text-2xl'} font-bold text-gray-900 truncate`}>{stat.value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </>
+          )}
+        </motion.div>
 
-      {/* Gateway Cards */}
-      {loading ? (
-        <Card>
-          <CardContent className="p-12">
-            <div className="flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-              <p className="text-gray-500">Loading payment gateways...</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : gateways.length === 0 ? (
-        <Card>
-          <CardContent className="p-12">
-            <div className="text-center">
-              <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No payment gateways configured</p>
-              <p className="text-gray-400 mt-1">Payment gateways are typically configured via environment variables.</p>
-              <p className="text-gray-400">You can add gateway records here for tracking and management.</p>
-              <Button id="admin-business-config-payments-add-empty-btn" className="mt-4" onClick={() => openForm()}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Gateway
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {gateways.map((gateway, idx) => (
-            <motion.div key={gateway.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 ${getProviderIcon(gateway.provider)} rounded-lg flex items-center justify-center text-white`}>
-                        <CreditCard className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{gateway.name}</h3>
-                        <p className="text-sm text-gray-500 capitalize">{gateway.provider}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      {gateway.isDefault && (
-                        <Badge className="bg-blue-100 text-blue-800">Default</Badge>
-                      )}
-                      <Badge className={gateway.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                        {gateway.status}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Connection status */}
-                  {connectionResults[gateway.id] && (
-                    <div
-                      className={`flex items-center gap-2 p-2 rounded-lg mb-4 ${
-                        connectionResults[gateway.id] === 'success'
-                          ? 'bg-green-50 text-green-700'
-                          : 'bg-red-50 text-red-700'
-                      }`}
-                    >
-                      {connectionResults[gateway.id] === 'success' ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <XCircle className="w-4 h-4" />
-                      )}
-                      <span className="text-sm">
-                        {connectionResults[gateway.id] === 'success' ? 'Connected' : 'Connection failed'}
-                      </span>
-                    </div>
-                  )}
-
-                  {gateway.webhookUrl && (
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500">Webhook URL</p>
-                      <p className="text-sm text-gray-700 truncate">{gateway.webhookUrl}</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Button id={`admin-business-config-payments-test-${gateway.id}-btn`}
-                      variant="outline"
-                      className="w-full"
-                      size="sm"
-                      onClick={() => testConnection(gateway.id)}
-                      disabled={testingConnection === gateway.id}
-                    >
-                      {testingConnection === gateway.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Wifi className="w-4 h-4 mr-2" />
-                      )}
-                      Test Connection
-                    </Button>
-                    <div className="flex gap-2">
-                      {!gateway.isDefault && (
-                        <Button id={`admin-business-config-payments-setdefault-${gateway.id}-btn`} variant="outline" size="sm" className="flex-1" onClick={() => handleSetDefault(gateway.id)}>
-                          <Star className="w-4 h-4 mr-1" />
-                          Set Default
-                        </Button>
-                      )}
-                      <Button id={`admin-business-config-payments-edit-${gateway.id}-btn`} variant="outline" size="sm" onClick={() => openForm(gateway)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button id={`admin-business-config-payments-delete-${gateway.id}-btn`}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => setDeleteTarget({ id: gateway.id, name: gateway.name })}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      )}
-
-      {/* Environment Config Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="w-5 h-5 text-gray-600" />
-            Environment Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-600 mb-3">
-            Payment gateway API keys and secrets are configured via environment variables for security.
-            The records above are for management and status tracking.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { name: 'Stripe', vars: ['STRIPE_PUBLIC_KEY', 'STRIPE_SECRET_KEY'] },
-              { name: 'PayPal', vars: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'] },
-              { name: 'Square', vars: ['SQUARE_ACCESS_TOKEN', 'SQUARE_LOCATION_ID'] },
-            ].map((provider) => (
-              <div key={provider.name} className="p-3 bg-gray-50 rounded-lg">
-                <p className="font-medium text-sm text-gray-900 mb-1">{provider.name}</p>
-                {provider.vars.map((v) => (
-                  <p key={v} className="text-xs text-gray-500 font-mono">{v}</p>
-                ))}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Form Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingGateway ? 'Edit Gateway' : 'Add Payment Gateway'}</DialogTitle>
-            <DialogDescription>
-              {editingGateway
-                ? 'Update the gateway details. Leave API key fields empty to keep existing values.'
-                : 'Configure a new payment gateway integration.'}
-            </DialogDescription>
-          </DialogHeader>
-          <form id="form-admin-business-config-payments" onSubmit={handleSubmit} className="space-y-4">
+        <SlideInDrawer isOpen={showForm} onClose={handleCloseDrawer} title={editingId ? 'Edit Payment Gateway' : 'Add New Payment Gateway'} size="lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">Gateway Name</label>
-              <input id="input-text-admin-business-config-payments"
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Gateway Name <span className="text-red-500">*</span>
+              </label>
+              <input
                 type="text"
                 value={formData.name}
-                onKeyDown={filterNameInput}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value })
-                  const err = validateName(e.target.value, 'Gateway name')
-                  setFormErrors((prev) => ({ ...prev, name: err || '' }))
+                  if (errors.name) setErrors({ ...errors, name: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${formErrors.name ? 'border-red-500' : ''}`}
-                placeholder="e.g. Primary Stripe"
-                required
+                placeholder="e.g., Primary Stripe Gateway"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
-              <FormFieldHint hint={FORMAT_HINTS.name} error={formErrors.name} />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-2">Provider</label>
-              <select id="select-admin-business-config-payments-11"
-                value={formData.provider}
-                onChange={(e) => setFormData({ ...formData, provider: e.target.value as 'stripe' | 'paypal' | 'square' })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-              >
-                <option value="stripe">Stripe</option>
-                <option value="paypal">PayPal</option>
-                <option value="square">Square</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Webhook URL <span className="text-gray-400 font-normal">(optional)</span>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Provider <span className="text-red-500">*</span>
               </label>
-              <input id="input-url-admin-business-config-payments"
+              <select
+                value={formData.provider}
+                onChange={(e) => {
+                  setFormData({ ...formData, provider: e.target.value })
+                  if (errors.provider) setErrors({ ...errors, provider: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.provider ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                {providers.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {provider}
+                  </option>
+                ))}
+              </select>
+              {errors.provider && <p className="mt-1 text-sm text-red-600">{errors.provider}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                API Key <span className="text-red-500">*</span>
+                {editingId && <span className="text-slate-500 font-normal text-xs ml-2">(leave empty to keep existing)</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={formData.apiKey}
+                  onChange={(e) => {
+                    setFormData({ ...formData, apiKey: e.target.value })
+                    if (errors.apiKey) setErrors({ ...errors, apiKey: '' })
+                  }}
+                  placeholder="Enter API key"
+                  className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${errors.apiKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.apiKey && <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Secret Key <span className="text-red-500">*</span>
+                {editingId && <span className="text-slate-500 font-normal text-xs ml-2">(leave empty to keep existing)</span>}
+              </label>
+              <div className="relative">
+                <input
+                  type={showSecretKey ? 'text' : 'password'}
+                  value={formData.secretKey}
+                  onChange={(e) => {
+                    setFormData({ ...formData, secretKey: e.target.value })
+                    if (errors.secretKey) setErrors({ ...errors, secretKey: '' })
+                  }}
+                  placeholder="Enter secret key"
+                  className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${errors.secretKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecretKey(!showSecretKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.secretKey && <p className="mt-1 text-sm text-red-600">{errors.secretKey}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Webhook URL (Optional)</label>
+              <input
                 type="url"
                 value={formData.webhookUrl}
                 onChange={(e) => {
                   setFormData({ ...formData, webhookUrl: e.target.value })
-                  if (e.target.value) {
-                    const err = validateUrl(e.target.value, false)
-                    setFormErrors((prev) => ({ ...prev, webhookUrl: err || '' }))
-                  } else {
-                    setFormErrors((prev) => ({ ...prev, webhookUrl: '' }))
-                  }
+                  if (errors.webhookUrl) setErrors({ ...errors, webhookUrl: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${formErrors.webhookUrl ? 'border-red-500' : ''}`}
                 placeholder="https://example.com/webhook"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.webhookUrl ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
-              <FormFieldHint hint={FORMAT_HINTS.url} error={formErrors.webhookUrl} />
+              {errors.webhookUrl && <p className="mt-1 text-sm text-red-600">{errors.webhookUrl}</p>}
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select id="select-admin-business-config-payments-12"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Supported Currencies</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newCurrency}
+                  onChange={(e) => setNewCurrency(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCurrency())}
+                  placeholder="e.g., USD, EUR, GBP"
+                  maxLength={3}
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button type="button" onClick={addCurrency} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                  Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.supportedCurrencies.map((currency, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    {currency}
+                    <button type="button" onClick={() => removeCurrency(index)} className="hover:text-blue-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="admin-business-config-payments-default-checkbox"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="rounded"
-              />
-              <label htmlFor="admin-business-config-payments-default-checkbox" className="text-sm font-medium">
-                Set as default gateway
+
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="sr-only" />
+                  <div className={`w-11 h-6 rounded-full transition-colors ${formData.isActive ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                    <div
+                      className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData.isActive ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'
+                        }`}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-slate-900">Active</span>
               </label>
             </div>
-            <DialogFooter>
-              <Button id="btn-set-show-form-admin-business-config-payments" type="button" variant="outline" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-              <Button id="admin-business-config-payments-btn-3" type="submit" disabled={saving}>
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingGateway ? 'Update Gateway' : 'Create Gateway'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button id="btn-set-delete-target-admin-business-config-payments" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancel
-            </Button>
-            <Button id="btn-delete-admin-business-config-payments" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
-              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button type="button" onClick={handleCloseDrawer} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
+                {submitting ? 'Saving...' : editingId ? 'Update Gateway' : 'Create Gateway'}
+              </button>
+            </div>
+          </form>
+        </SlideInDrawer>
+
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Payment Gateway?</h3>
+              <p className="text-slate-600 mb-6">This action cannot be undone. Payment processing may be affected if this gateway is in use.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
+                  Cancel
+                </button>
+                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

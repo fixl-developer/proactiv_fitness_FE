@@ -1,383 +1,614 @@
-'use client';
+'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { apiClient } from '@/services/api/client';
-import { toast } from 'sonner';
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  Download,
-  Filter,
-  Search,
-  BookOpen,
-  TrendingUp,
-  TrendingDown,
-  Scale,
-  Hash,
-  Calendar,
-  Loader2,
-  WifiOff,
-  RotateCcw,
-} from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, BookOpen } from 'lucide-react'
+import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { LedgerService } from '@/services/financeService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface LedgerEntry {
-  id: string;
-  date: string;
-  reference: string;
-  description: string;
-  account: string;
-  debit: number;
-  credit: number;
-  category: 'Revenue' | 'Expense' | 'Refund' | 'Salary';
+  id: string
+  date: string
+  type: 'debit' | 'credit'
+  account: string
+  amount: number
+  currency: string
+  description: string
+  reference?: string
+  status: 'pending' | 'posted' | 'reconciled'
+  createdAt?: string
 }
 
-const fallbackLedgerEntries: LedgerEntry[] = [
-  { id: 'TXN-001', date: '2026-03-01', reference: 'REF-2601', description: 'Term Fees Collected - Spring 2026', account: 'Accounts Receivable', debit: 0, credit: 45000, category: 'Revenue' },
-  { id: 'TXN-002', date: '2026-03-05', reference: 'REF-2602', description: 'Coach Salaries - March', account: 'Payroll Expense', debit: 28000, credit: 0, category: 'Salary' },
-  { id: 'TXN-003', date: '2026-03-08', reference: 'REF-2603', description: 'Equipment Purchase - Mats & Bars', account: 'Equipment', debit: 5200, credit: 0, category: 'Expense' },
-  { id: 'TXN-004', date: '2026-03-10', reference: 'REF-2604', description: 'Camp Registration Fees', account: 'Accounts Receivable', debit: 0, credit: 12500, category: 'Revenue' },
-  { id: 'TXN-005', date: '2026-03-12', reference: 'REF-2605', description: 'Rent Payment - Cyberport', account: 'Rent Expense', debit: 18000, credit: 0, category: 'Expense' },
-  { id: 'TXN-006', date: '2026-03-15', reference: 'REF-2606', description: 'Refund - Amy Wong (Camp)', account: 'Refunds Payable', debit: 625, credit: 0, category: 'Refund' },
-];
+export default function LedgerPage() {
+  const [entries, setEntries] = useState<LedgerEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-const categoryConfig: Record<string, { className: string }> = {
-  Revenue: { className: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-100' },
-  Expense: { className: 'bg-red-100 text-red-700 hover:bg-red-100' },
-  Refund: { className: 'bg-amber-100 text-amber-700 hover:bg-amber-100' },
-  Salary: { className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
-};
+  const [formData, setFormData] = useState({
+    date: '',
+    type: 'debit',
+    account: 'revenue',
+    amount: '',
+    currency: 'USD',
+    description: '',
+    reference: '',
+    status: 'pending',
+  })
 
-export default function FinancialLedgerPage() {
-  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'HKD', 'JPY', 'AUD', 'CAD', 'SGD', 'CNY']
+  const types = ['debit', 'credit']
+  const accounts = ['revenue', 'expenses', 'assets', 'liabilities', 'equity']
+  const statuses = ['pending', 'posted', 'reconciled']
+
+  // Load ledger entries
+  const loadEntries = async () => {
     try {
-      const params: Record<string, string> = {};
-      if (dateFrom) params.startDate = dateFrom;
-      if (dateTo) params.endDate = dateTo;
-      if (categoryFilter !== 'All') params.category = categoryFilter;
-
-      const response = await apiClient.get('/financial-ledger/entries', { params });
-      const raw = response?.data?.data ?? response?.data ?? response;
-      const data = Array.isArray(raw) ? raw : raw?.entries ?? raw?.data ?? [];
-
-      const categoryMap: Record<string, string> = { payment: 'Revenue', refund: 'Refund', fee: 'Expense', adjustment: 'Expense', commission: 'Expense' };
-      setLedgerEntries(data.map((item: Record<string, unknown>) => ({
-        id: (item.entryId as string) || (item.id as string) || (item._id as string) || `TXN-${Math.random().toString(36).slice(2, 6)}`,
-        date: (item.createdAt as string) || (item.date as string) || new Date().toISOString().slice(0, 10),
-        reference: (item.transactionId as string) || (item.reference as string) || '',
-        description: (item.description as string) || '',
-        account: (item.account as string) || (item.category as string) || '',
-        debit: (item.type === 'debit' ? Number(item.amount) : Number(item.debit)) || 0,
-        credit: (item.type === 'credit' ? Number(item.amount) : Number(item.credit)) || 0,
-        category: (categoryMap[(item.category as string)] || (item.category as string) || 'Expense') as LedgerEntry['category'],
-      })));
-      setUsingFallback(false);
-    } catch {
-      setLedgerEntries(fallbackLedgerEntries);
-      setUsingFallback(true);
+      setLoading(true)
+      const response = await LedgerService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      })
+      setEntries(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading ledger entries:', error)
+      toast.error('Failed to load ledger entries')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false);
-  }, [dateFrom, dateTo, categoryFilter]);
+  }
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    loadEntries()
+  }, [currentPage, searchTerm])
 
-  const filteredEntries = useMemo(() => {
-    return ledgerEntries.filter((entry) => {
-      const matchesSearch =
-        entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.account.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === 'All' || entry.category === categoryFilter;
-      const matchesDateFrom = !dateFrom || entry.date >= dateFrom;
-      const matchesDateTo = !dateTo || entry.date <= dateTo;
-      return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
-    });
-  }, [ledgerEntries, searchTerm, categoryFilter, dateFrom, dateTo]);
+  // Validate form
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
 
-  const runningBalances = useMemo(() => {
-    let balance = 0;
-    return filteredEntries.map((entry) => {
-      balance = balance + entry.credit - entry.debit;
-      return balance;
-    });
-  }, [filteredEntries]);
+    if (!formData.date) newErrors.date = 'Date is required'
+    if (!formData.type) newErrors.type = 'Type is required'
+    if (!formData.account) newErrors.account = 'Account is required'
+    if (!formData.amount) newErrors.amount = 'Amount is required'
+    else if (parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0'
+    if (!formData.currency) newErrors.currency = 'Currency is required'
+    if (!formData.description) newErrors.description = 'Description is required'
+    else if (formData.description.length < 10) newErrors.description = 'Description must be at least 10 characters'
+    if (!formData.status) newErrors.status = 'Status is required'
 
-  const totalDebit = filteredEntries.reduce((sum, e) => sum + e.debit, 0);
-  const totalCredit = filteredEntries.reduce((sum, e) => sum + e.credit, 0);
-  const netBalance = totalCredit - totalDebit;
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
-  const stats = [
-    { label: 'Total Debit', value: `HK$${totalDebit.toLocaleString()}`, icon: TrendingDown, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
-    { label: 'Total Credit', value: `HK$${totalCredit.toLocaleString()}`, icon: TrendingUp, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-    { label: 'Net Balance', value: `HK$${netBalance.toLocaleString()}`, icon: Scale, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-    { label: 'Entries (MTD)', value: ledgerEntries.length.toString(), icon: Hash, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-  ];
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const handleExportCSV = () => {
-    const headers = ['Date', 'Reference', 'Description', 'Account', 'Debit (HK$)', 'Credit (HK$)', 'Balance', 'Category'];
-    const rows = filteredEntries.map((entry, i) => [
-      entry.date,
-      entry.reference,
-      `"${entry.description}"`,
-      entry.account,
-      entry.debit || '',
-      entry.credit || '',
-      runningBalances[i],
-      entry.category,
-    ]);
-    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ledger_export_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Ledger exported to CSV');
-  };
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
 
-  const expenseRatio = totalDebit > 0 && totalCredit > 0 ? Math.round((totalDebit / totalCredit) * 100) : 0;
+    try {
+      setSubmitting(true)
 
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-gray-500">Loading ledger data...</p>
-        </div>
-      </div>
-    );
+      const submitData = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+      }
+
+      if (editingId) {
+        await LedgerService.update(editingId, submitData)
+        toast.success('Ledger entry updated successfully')
+      } else {
+        await LedgerService.create(submitData)
+        toast.success('Ledger entry created successfully')
+      }
+
+      setShowForm(false)
+      resetForm()
+      loadEntries()
+    } catch (error) {
+      console.error('Error saving ledger entry:', error)
+      toast.error(getErrorMessage(error))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handle edit
+  const handleEdit = (entry: LedgerEntry) => {
+    setFormData({
+      date: entry.date,
+      type: entry.type,
+      account: entry.account,
+      amount: entry.amount.toString(),
+      currency: entry.currency,
+      description: entry.description,
+      reference: entry.reference || '',
+      status: entry.status,
+    })
+    setEditingId(entry.id)
+    setShowForm(true)
+  }
+
+  // Handle delete
+  const handleDelete = async (id: string) => {
+    try {
+      await LedgerService.delete(id)
+      toast.success('Ledger entry deleted successfully')
+      setDeleteConfirm(null)
+      loadEntries()
+    } catch (error) {
+      console.error('Error deleting ledger entry:', error)
+      toast.error(getErrorMessage(error))
+    }
+  }
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      date: '',
+      type: 'debit',
+      account: 'revenue',
+      amount: '',
+      currency: 'USD',
+      description: '',
+      reference: '',
+      status: 'pending',
+    })
+    setErrors({})
+    setEditingId(null)
+  }
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'debit':
+        return 'bg-red-100 text-red-800'
+      case 'credit':
+        return 'bg-green-100 text-green-800'
+      default:
+        return 'bg-slate-100 text-slate-800'
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'posted':
+        return 'bg-blue-100 text-blue-800'
+      case 'reconciled':
+        return 'bg-green-100 text-green-800'
+      default:
+        return 'bg-slate-100 text-slate-800'
+    }
+  }
+
+  const getTotalDebits = () => {
+    return entries
+      .filter((e) => e.type === 'debit')
+      .reduce((sum, e) => sum + e.amount, 0)
+      .toFixed(2)
+  }
+
+  const getTotalCredits = () => {
+    return entries
+      .filter((e) => e.type === 'credit')
+      .reduce((sum, e) => sum + e.amount, 0)
+      .toFixed(2)
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      {usingFallback && (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-center gap-3"
+          className="mb-8"
         >
-          <WifiOff className="h-4 w-4 text-amber-600 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
-            Backend endpoint not available - showing sample data. Connect the backend for live ledger entries.
-          </p>
-          <Button id="btn-fetch-data-admin-finance-ledger" variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-100">
-            <RotateCcw className="h-3.5 w-3.5" /> Retry
-          </Button>
+          <div className="flex items-center gap-3 mb-2">
+            <BookOpen className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Financial Ledger</h1>
+          </div>
+          <p className="text-slate-600">Manage all financial ledger entries and transactions</p>
         </motion.div>
-      )}
 
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Financial Ledger</h1>
-          <p className="text-gray-500 text-sm mt-1">Double-entry bookkeeping and transaction records</p>
-        </div>
-        <Button id="btn-export-c-s-v-admin-finance-ledger" variant="outline" size="sm" className="gap-2" onClick={handleExportCSV}>
-          <Download className="h-4 w-4" /> Export to CSV
-        </Button>
-      </motion.div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-          >
-            <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Expense Ratio */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Expense-to-Revenue Ratio</span>
-              <span className="text-sm font-semibold text-gray-900">{expenseRatio}%</span>
-            </div>
-            <Progress value={expenseRatio} className="h-2" />
-            <p className="text-xs text-gray-500 mt-2">
-              {expenseRatio < 80
-                ? 'Healthy ratio - expenses are well managed'
-                : 'Warning - expenses approaching revenue levels'}
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Total Debits</p>
+            <p className="text-3xl font-bold text-red-600 mt-2">${getTotalDebits()}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Total Credits</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">${getTotalCredits()}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Balance</p>
+            <p className={`text-3xl font-bold mt-2 ${parseFloat(getTotalCredits()) >= parseFloat(getTotalDebits()) ? 'text-green-600' : 'text-red-600'}`}>
+              ${(parseFloat(getTotalCredits()) - parseFloat(getTotalDebits())).toFixed(2)}
             </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+        </motion.div>
 
-      {/* Filters & Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col gap-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-gray-500" />
-                Ledger Entries
-              </CardTitle>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input id="input-text-admin-finance-ledger"
-                    type="text"
-                    placeholder="Search entries..."
-                    className="pl-9 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-[200px]"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-1 border rounded-lg p-1">
-                  <Filter className="h-3.5 w-3.5 text-gray-400 ml-1.5" />
-                  {['All', 'Revenue', 'Expense', 'Salary', 'Refund'].map((cat) => (
-                    <button id="admin-finance-ledger-btn"
-                      key={cat}
-                      onClick={() => setCategoryFilter(cat)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                        categoryFilter === cat ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <input id={`input-date-admin-finance-ledger-${cat}`}
-                    type="date"
-                    className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                  />
-                  <span className="text-gray-400 text-sm">to</span>
-                  <input id="input-date-admin-finance-ledger"
-                    type="date"
-                    className="text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                  />
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-4 items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search by description or reference..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Entry
+          </button>
+        </motion.div>
+
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow-lg overflow-hidden"
+        >
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading ledger entries...</p>
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No ledger entries found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Type</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Account</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Amount</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Description</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {entries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {new Date(entry.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getTypeColor(entry.type)}`}>
+                            {entry.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 capitalize">{entry.account}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {entry.amount.toFixed(2)} {entry.currency}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{entry.description}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(entry.status)}`}>
+                            {entry.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(entry)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(entry.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
+            </>
+          )}
+        </motion.div>
+
+        {/* Form Drawer */}
+        <SlideInDrawer
+          isOpen={showForm}
+          onClose={handleCloseDrawer}
+          title={editingId ? 'Edit Ledger Entry' : 'Add New Ledger Entry'}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  setFormData({ ...formData, date: e.target.value })
+                  if (errors.date) setErrors({ ...errors, date: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50/50">
-                    <th className="text-left p-3 font-medium text-gray-600">Date</th>
-                    <th className="text-left p-3 font-medium text-gray-600">Reference</th>
-                    <th className="text-left p-3 font-medium text-gray-600">Description</th>
-                    <th className="text-left p-3 font-medium text-gray-600">Account</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Debit (HK$)</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Credit (HK$)</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Balance</th>
-                    <th className="text-left p-3 font-medium text-gray-600">Category</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEntries.map((entry, i) => (
-                    <motion.tr
-                      key={entry.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="border-b hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="p-3 text-gray-600">
-                        {new Date(entry.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </td>
-                      <td className="p-3 font-mono text-xs text-blue-600">{entry.reference}</td>
-                      <td className="p-3 text-gray-900 font-medium">{entry.description}</td>
-                      <td className="p-3 text-gray-600">{entry.account}</td>
-                      <td className="p-3 text-right">
-                        {entry.debit > 0 ? (
-                          <span className="text-red-600 font-semibold flex items-center justify-end gap-1">
-                            <ArrowDownRight className="h-3.5 w-3.5" />
-                            ${entry.debit.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-right">
-                        {entry.credit > 0 ? (
-                          <span className="text-emerald-600 font-semibold flex items-center justify-end gap-1">
-                            <ArrowUpRight className="h-3.5 w-3.5" />
-                            ${entry.credit.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-right font-semibold">
-                        <span className={runningBalances[i] >= 0 ? 'text-emerald-700' : 'text-red-700'}>
-                          {runningBalances[i] >= 0 ? '' : '-'}${Math.abs(runningBalances[i]).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <Badge className={(categoryConfig[entry.category] || categoryConfig['Expense']).className}>
-                          {entry.category}
-                        </Badge>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 font-semibold">
-                    <td className="p-3" colSpan={4}>
-                      Totals
-                    </td>
-                    <td className="p-3 text-right text-red-600">${totalDebit.toLocaleString()}</td>
-                    <td className="p-3 text-right text-emerald-600">${totalCredit.toLocaleString()}</td>
-                    <td className="p-3 text-right">
-                      <span className={netBalance >= 0 ? 'text-emerald-700' : 'text-red-700'}>
-                        ${netBalance.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="p-3"></td>
-                  </tr>
-                </tfoot>
-              </table>
-              {filteredEntries.length === 0 && (
-                <div className="text-center py-10 text-gray-500">
-                  <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No ledger entries found for the selected filters</p>
-                </div>
-              )}
+
+            {/* Type */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.type}
+                onChange={(e) => {
+                  setFormData({ ...formData, type: e.target.value })
+                  if (errors.type) setErrors({ ...errors, type: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Type</option>
+                {types.map((type) => (
+                  <option key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
+            {/* Account */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Account <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.account}
+                onChange={(e) => {
+                  setFormData({ ...formData, account: e.target.value })
+                  if (errors.account) setErrors({ ...errors, account: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.account ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Account</option>
+                {accounts.map((account) => (
+                  <option key={account} value={account}>
+                    {account.charAt(0).toUpperCase() + account.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.account && <p className="mt-1 text-sm text-red-600">{errors.account}</p>}
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Amount <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => {
+                  setFormData({ ...formData, amount: e.target.value })
+                  if (errors.amount) setErrors({ ...errors, amount: '' })
+                }}
+                placeholder="0.00"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.amount ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+            </div>
+
+            {/* Currency */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Currency <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.currency}
+                onChange={(e) => {
+                  setFormData({ ...formData, currency: e.target.value })
+                  if (errors.currency) setErrors({ ...errors, currency: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.currency ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Currency</option>
+                {currencies.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
+              {errors.currency && <p className="mt-1 text-sm text-red-600">{errors.currency}</p>}
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value })
+                  if (errors.description) setErrors({ ...errors, description: '' })
+                }}
+                placeholder="Detailed description of the transaction (min 10 characters)"
+                rows={3}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+            </div>
+
+            {/* Reference */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Reference</label>
+              <input
+                type="text"
+                value={formData.reference}
+                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                placeholder="Optional reference number or ID"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => {
+                  setFormData({ ...formData, status: e.target.value })
+                  if (errors.status) setErrors({ ...errors, status: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Status</option>
+                {statuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Saving...' : editingId ? 'Update Entry' : 'Create Entry'}
+              </button>
+            </div>
+          </form>
+        </SlideInDrawer>
+
+        {/* Delete Confirmation */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-sm"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Ledger Entry?</h3>
+              <p className="text-slate-600 mb-6">
+                This action cannot be undone. The ledger entry will be permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }

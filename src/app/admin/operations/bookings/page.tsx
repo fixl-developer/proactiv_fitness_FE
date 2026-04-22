@@ -1,348 +1,527 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Calendar, CheckCircle, Clock, XCircle, DollarSign } from 'lucide-react'
-import { apiClient } from '@/services/api/client'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { validateRequired, FORMAT_HINTS } from '@/utils/validation'
-import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { BookingService } from '@/services/operationsService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-// ── Fallback mock data ──────────────────────────────────────────────
-const MOCK_BOOKINGS = [
-  { _id: 'bk-1', userId: { _id: 'u1', firstName: 'Alice', lastName: 'Wong' }, sessionId: { _id: 's1', name: 'Morning Yoga', date: '2025-10-02T08:00:00Z' }, status: 'confirmed', createdAt: '2025-09-28T10:00:00Z', notes: '' },
-  { _id: 'bk-2', userId: { _id: 'u2', firstName: 'Bob', lastName: 'Lee' }, sessionId: { _id: 's2', name: 'HIIT Blast', date: '2025-10-02T10:00:00Z' }, status: 'pending', createdAt: '2025-09-29T14:30:00Z', notes: 'First timer' },
-  { _id: 'bk-3', userId: { _id: 'u3', firstName: 'Cara', lastName: 'Kim' }, sessionId: { _id: 's1', name: 'Morning Yoga', date: '2025-10-02T08:00:00Z' }, status: 'cancelled', createdAt: '2025-09-27T09:00:00Z', notes: '' },
-]
-
-const MOCK_STATS = { totalBookings: 3, confirmed: 1, pending: 1, cancelled: 1, revenue: 450 }
-
-// ── Types ───────────────────────────────────────────────────────────
 interface Booking {
-  _id: string
-  userId: any
-  sessionId: any
-  status: string
-  createdAt: string
+  id: string
+  customerId: string
+  programId: string
+  sessionId: string
+  date: string
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  paymentStatus: 'pending' | 'paid' | 'refunded'
   notes?: string
+  createdAt?: string
 }
 
-interface BookingStats {
-  totalBookings: number
-  confirmed: number
-  pending: number
-  cancelled: number
-  revenue?: number
-}
-
-// ── Component ───────────────────────────────────────────────────────
-export default function OperationsBookingsPage() {
+export default function BookingManagementPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [stats, setStats] = useState<BookingStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [apiFailed, setApiFailed] = useState(false)
-
-  // Pagination
-  const [page, setPage] = useState(1)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const limit = 20
-
-  // Filters
-  const [statusFilter, setStatusFilter] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-
-  // Create modal
-  const [showCreate, setShowCreate] = useState(false)
-  const [createForm, setCreateForm] = useState({ userId: '', sessionId: '', notes: '' })
   const [submitting, setSubmitting] = useState(false)
-  const [bookingErrors, setBookingErrors] = useState<Record<string, string>>({})
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  // ── Load data ───────────────────────────────────────────────────
-  const loadBookings = useCallback(async () => {
+  const [formData, setFormData] = useState({
+    customerId: '',
+    programId: '',
+    sessionId: '',
+    date: '',
+    status: 'pending' as 'pending' | 'confirmed' | 'cancelled' | 'completed',
+    paymentStatus: 'pending' as 'pending' | 'paid' | 'refunded',
+    notes: '',
+  })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Load bookings
+  const loadBookings = async () => {
     try {
-      const params: Record<string, any> = { page, limit }
-      if (statusFilter) params.status = statusFilter
-      if (dateFrom) params.dateFrom = dateFrom
-      if (dateTo) params.dateTo = dateTo
-      const data = await apiClient.get<any>('/bookings', { params })
-      const raw = data?.data ?? data
-      if (Array.isArray(raw)) {
-        setBookings(raw)
-        setTotalPages(1)
-      } else {
-        const list = raw?.bookings ?? raw?.data ?? []
-        setBookings(Array.isArray(list) ? list : [])
-        setTotalPages(raw?.totalPages ?? raw?.pagination?.totalPages ?? data?.totalPages ?? 1)
-      }
-      setApiFailed(false)
-    } catch (error: any) {
-      console.error('Failed to load bookings:', error)
-      setBookings(MOCK_BOOKINGS)
-      setTotalPages(1)
-      setApiFailed(true)
-    }
-  }, [page, statusFilter, dateFrom, dateTo])
-
-  const loadStats = useCallback(async () => {
-    try {
-      const data = await apiClient.get<any>('/bookings/statistics')
-      const raw = data?.data ?? data
-      setStats({
-        totalBookings: raw?.totalBookings ?? raw?.total ?? 0,
-        confirmed: raw?.confirmed ?? 0,
-        pending: raw?.pending ?? 0,
-        cancelled: raw?.cancelled ?? 0,
-        revenue: raw?.revenue ?? raw?.totalRevenue ?? 0,
-      })
-    } catch {
-      setStats(MOCK_STATS)
-    }
-  }, [])
-
-  useEffect(() => {
-    const init = async () => {
       setLoading(true)
-      await Promise.all([loadBookings(), loadStats()])
+      const response = await BookingService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      })
+      setBookings(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading bookings:', error)
+      toast.error('Failed to load bookings')
+    } finally {
       setLoading(false)
     }
-    init()
-  }, [loadBookings, loadStats])
-
-  // ── Create booking ────────────────────────────────────────────
-  const validateBookingForm = (): boolean => {
-    const errs: Record<string, string> = {}
-    const userErr = validateRequired(createForm.userId, 'User ID')
-    if (userErr) errs.userId = userErr
-    const sessErr = validateRequired(createForm.sessionId, 'Session ID')
-    if (sessErr) errs.sessionId = sessErr
-    setBookingErrors(errs)
-    return Object.keys(errs).length === 0
   }
 
-  const handleCreate = async () => {
-    if (!validateBookingForm()) return
-    setSubmitting(true)
+  useEffect(() => {
+    loadBookings()
+  }, [currentPage, searchTerm])
+
+  // Validate form
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.customerId) newErrors.customerId = 'Customer ID is required'
+    if (!formData.programId) newErrors.programId = 'Program ID is required'
+    if (!formData.sessionId) newErrors.sessionId = 'Session ID is required'
+    if (!formData.date) newErrors.date = 'Date is required'
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
+
     try {
-      await apiClient.post('/bookings', {
-        userId: createForm.userId,
-        sessionId: createForm.sessionId,
-        notes: createForm.notes || undefined,
-      })
-      toast.success('Booking created successfully')
-      setShowCreate(false)
-      setCreateForm({ userId: '', sessionId: '', notes: '' })
-      await Promise.all([loadBookings(), loadStats()])
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error.message || 'Failed to create booking'
-      toast.error(msg)
+      setSubmitting(true)
+
+      if (editingId) {
+        await BookingService.update(editingId, formData)
+        toast.success('Booking updated successfully')
+      } else {
+        await BookingService.create(formData)
+        toast.success('Booking created successfully')
+      }
+
+      setShowForm(false)
+      resetForm()
+      loadBookings()
+    } catch (error) {
+      console.error('Error saving booking:', error)
+      toast.error(getErrorMessage(error))
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Cancel booking ────────────────────────────────────────────
-  const handleCancel = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this booking?')) return
+  // Handle edit
+  const handleEdit = (booking: Booking) => {
+    setFormData({
+      customerId: booking.customerId,
+      programId: booking.programId,
+      sessionId: booking.sessionId,
+      date: booking.date,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      notes: booking.notes || '',
+    })
+    setEditingId(booking.id)
+    setShowForm(true)
+  }
+
+  // Handle delete
+  const handleDelete = async (id: string) => {
     try {
-      await apiClient.patch(`/bookings/${id}/cancel`)
-      toast.success('Booking cancelled')
-      await Promise.all([loadBookings(), loadStats()])
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error.message || 'Failed to cancel booking'
-      toast.error(msg)
+      await BookingService.delete(id)
+      toast.success('Booking deleted successfully')
+      setDeleteConfirm(null)
+      loadBookings()
+    } catch (error) {
+      console.error('Error deleting booking:', error)
+      toast.error(getErrorMessage(error))
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
-  const userName = (b: Booking) => {
-    if (typeof b.userId === 'object' && b.userId) return `${b.userId.firstName ?? ''} ${b.userId.lastName ?? ''}`.trim()
-    return b.userId ?? '-'
-  }
-  const sessionName = (b: Booking) => {
-    if (typeof b.sessionId === 'object' && b.sessionId) return b.sessionId.name ?? b.sessionId._id
-    return b.sessionId ?? '-'
-  }
-  const sessionDate = (b: Booking) => {
-    const d = typeof b.sessionId === 'object' ? b.sessionId?.date : null
-    if (!d) return '-'
-    try { return new Date(d).toLocaleDateString() } catch { return d }
+  // Handle cancel booking
+  const handleCancelBooking = async (id: string) => {
+    try {
+      await BookingService.cancel(id)
+      toast.success('Booking cancelled successfully')
+      loadBookings()
+    } catch (error) {
+      console.error('Error cancelling booking:', error)
+      toast.error(getErrorMessage(error))
+    }
   }
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      customerId: '',
+      programId: '',
+      sessionId: '',
+      date: '',
+      status: 'pending',
+      paymentStatus: 'pending',
+      notes: '',
+    })
+    setErrors({})
+    setEditingId(null)
+  }
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-blue-100 text-blue-800',
       confirmed: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
       cancelled: 'bg-red-100 text-red-800',
-      completed: 'bg-blue-100 text-blue-800',
+      completed: 'bg-gray-100 text-gray-800',
     }
-    return map[status] ?? 'bg-gray-100 text-gray-600'
+    return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
-  // ── Render ────────────────────────────────────────────────────
+  // Get payment status badge color
+  const getPaymentStatusBadgeColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      paid: 'bg-green-100 text-green-800',
+      refunded: 'bg-red-100 text-red-800',
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Bookings Management</h1>
-        <button id="btn-admin-operations-bookings-1" onClick={() => { setBookingErrors({}); setShowCreate(true) }} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          + New Booking
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Calendar className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Booking Management</h1>
+          </div>
+          <p className="text-slate-600">Manage customer bookings and reservations</p>
+        </motion.div>
 
-      {apiFailed && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-sm">
-          Unable to reach the bookings API. Showing fallback demo data.
-        </div>
-      )}
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-4 items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search bookings..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Booking
+          </button>
+        </motion.div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {[
-            { label: 'Total Bookings', value: stats.totalBookings, icon: Calendar, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-            { label: 'Confirmed', value: stats.confirmed, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-            { label: 'Pending', value: stats.pending, icon: Clock, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-            { label: 'Cancelled', value: stats.cancelled, icon: XCircle, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
-            { label: 'Revenue', value: stats.revenue != null ? `$${stats.revenue}` : '-', icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow-lg overflow-hidden"
+        >
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading bookings...</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No bookings found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Customer ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Program ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Session ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Payment</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {bookings.map((booking) => (
+                      <tr key={booking.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{booking.customerId}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{booking.programId}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{booking.sessionId}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {new Date(booking.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusBadgeColor(booking.paymentStatus)}`}>
+                            {booking.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(booking)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                              <button
+                                onClick={() => handleCancelBooking(booking.id)}
+                                className="p-2 text-orange-600 hover:bg-orange-50 rounded transition"
+                                title="Cancel Booking"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setDeleteConfirm(booking.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            </>
+          )}
+        </motion.div>
+
+        {/* Form Drawer */}
+        <SlideInDrawer
+          isOpen={showForm}
+          onClose={handleCloseDrawer}
+          title={editingId ? 'Edit Booking' : 'Add New Booking'}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Customer ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Customer ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.customerId}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerId: e.target.value })
+                  if (errors.customerId) setErrors({ ...errors, customerId: '' })
+                }}
+                placeholder="e.g., CUST-12345"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.customerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.customerId && <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>}
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-          <select id="select-admin-operations-bookings-12" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">All</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="pending">Pending</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-          <input id="input-date-admin-operations-bookings-from" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
-          <input id="input-date-admin-operations-bookings" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-        <button id="btn-admin-operations-bookings-2" onClick={() => { setStatusFilter(''); setDateFrom(''); setDateTo(''); setPage(1) }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
-          Clear
-        </button>
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading bookings...</div>
-      ) : bookings.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">No bookings found.</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">Member</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Session</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Session Date</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Booked On</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Notes</th>
-                <th className="px-4 py-3 font-medium text-gray-600 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {bookings.map((b) => (
-                <tr key={b._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{userName(b)}</td>
-                  <td className="px-4 py-3 text-gray-600">{sessionName(b)}</td>
-                  <td className="px-4 py-3 text-gray-600">{sessionDate(b)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusBadge(b.status)}`}>{b.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '-'}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{b.notes || '-'}</td>
-                  <td className="px-4 py-3 text-right">
-                    {b.status !== 'cancelled' && b.status !== 'completed' && (
-                      <button id="btn-admin-operations-bookings-3" onClick={() => handleCancel(b._id)} className="text-red-600 hover:text-red-800 font-medium text-sm">
-                        Cancel
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-4">
-          <button id="btn-admin-operations-bookings-4" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
-            Previous
-          </button>
-          <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-          <button id="btn-admin-operations-bookings-5" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border rounded-lg text-sm disabled:opacity-40 hover:bg-gray-50">
-            Next
-          </button>
-        </div>
-      )}
-
-      {/* Create Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h2 className="text-xl font-bold mb-4">New Booking</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">User ID *</label>
-                <input id="input-text-admin-operations-bookings-userid" type="text" value={createForm.userId}
-                  onChange={(e) => {
-                    setCreateForm({ ...createForm, userId: e.target.value })
-                    const err = validateRequired(e.target.value, 'User ID')
-                    setBookingErrors((prev) => ({ ...prev, userId: err || '' }))
-                  }}
-                  placeholder="e.g. user-xyz456"
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${bookingErrors.userId ? 'border-red-500' : ''}`} />
-                <FormFieldHint error={bookingErrors.userId} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Session ID *</label>
-                <input id="input-text-admin-operations-bookings-sessionid" type="text" value={createForm.sessionId}
-                  onChange={(e) => {
-                    setCreateForm({ ...createForm, sessionId: e.target.value })
-                    const err = validateRequired(e.target.value, 'Session ID')
-                    setBookingErrors((prev) => ({ ...prev, sessionId: err || '' }))
-                  }}
-                  placeholder="e.g. session-abc123"
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${bookingErrors.sessionId ? 'border-red-500' : ''}`} />
-                <FormFieldHint error={bookingErrors.sessionId} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
-                <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} rows={3} placeholder="Optional notes..." className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
-              </div>
+            {/* Program ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Program ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.programId}
+                onChange={(e) => {
+                  setFormData({ ...formData, programId: e.target.value })
+                  if (errors.programId) setErrors({ ...errors, programId: '' })
+                }}
+                placeholder="e.g., PROG-67890"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.programId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.programId && <p className="mt-1 text-sm text-red-600">{errors.programId}</p>}
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button id="btn-admin-operations-bookings-6" onClick={() => setShowCreate(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button id="btn-admin-operations-bookings-7" onClick={handleCreate} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
-                {submitting ? 'Creating...' : 'Create Booking'}
+
+            {/* Session ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Session ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.sessionId}
+                onChange={(e) => {
+                  setFormData({ ...formData, sessionId: e.target.value })
+                  if (errors.sessionId) setErrors({ ...errors, sessionId: '' })
+                }}
+                placeholder="e.g., SESS-11111"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.sessionId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.sessionId && <p className="mt-1 text-sm text-red-600">{errors.sessionId}</p>}
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  setFormData({ ...formData, date: e.target.value })
+                  if (errors.date) setErrors({ ...errors, date: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'confirmed' | 'cancelled' | 'completed' })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            {/* Payment Status */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Payment Status</label>
+              <select
+                value={formData.paymentStatus}
+                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as 'pending' | 'paid' | 'refunded' })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Optional notes..."
+                rows={4}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Saving...' : editingId ? 'Update Booking' : 'Create Booking'}
               </button>
             </div>
+          </form>
+        </SlideInDrawer>
+
+        {/* Delete Confirmation */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-sm"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Booking?</h3>
+              <p className="text-slate-600 mb-6">
+                This action cannot be undone. The booking will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

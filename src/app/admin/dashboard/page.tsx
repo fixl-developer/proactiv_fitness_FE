@@ -8,7 +8,8 @@ import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle,
-    Brain, Sparkles, Loader2, RefreshCw, Zap, Mail, FileText, Send, Megaphone
+    Brain, Sparkles, Loader2, RefreshCw, Zap, Mail, FileText, Send, Megaphone,
+    Filter, X, ChevronDown
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { globalIntelligenceService, revenueIntelligenceService } from '@/services/advancedAIServices'
@@ -18,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { analyticsService } from '@/services/modules/analytics.service'
+import { toast } from 'sonner'
 import type { RevenueDataPoint, StudentDataPoint, ActivityItem, AlertItem } from '@/services/modules/analytics.service'
 
 const FALLBACK_DATA = {
@@ -31,6 +33,28 @@ const FALLBACK_DATA = {
     occupancyRate: 0,
     staffUtilization: 0,
     customerSatisfaction: 0
+}
+
+// Month options for dropdown
+const MONTHS = [
+    { value: 'january', label: 'January' },
+    { value: 'february', label: 'February' },
+    { value: 'march', label: 'March' },
+    { value: 'april', label: 'April' },
+    { value: 'may', label: 'May' },
+    { value: 'june', label: 'June' },
+    { value: 'july', label: 'July' },
+    { value: 'august', label: 'August' },
+    { value: 'september', label: 'September' },
+    { value: 'october', label: 'October' },
+    { value: 'november', label: 'November' },
+    { value: 'december', label: 'December' },
+]
+
+// Get current month
+const getCurrentMonth = () => {
+    const now = new Date()
+    return MONTHS[now.getMonth()]
 }
 
 const activityIcons: Record<string, any> = {
@@ -84,6 +108,16 @@ export default function AdminDashboard() {
     const [campaignPrediction, setCampaignPrediction] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
 
+    // New state for filtering
+    const [startDate, setStartDate] = useState<string>('')
+    const [endDate, setEndDate] = useState<string>('')
+    const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth().value)
+    const [showFilters, setShowFilters] = useState(false)
+    const [filterApplied, setFilterApplied] = useState(false)
+    const [statsLoading, setStatsLoading] = useState(false)
+    const [chartsLoading, setChartsLoading] = useState(false)
+    const [activitiesLoading, setActivitiesLoading] = useState(false)
+
     const loadAiInsights = async () => {
         setAiLoading(true)
         try {
@@ -98,19 +132,46 @@ export default function AdminDashboard() {
         finally { setAiLoading(false) }
     }
 
-    const loadDashboardData = useCallback(async () => {
-        try {
-            setIsLoading(true)
-            const [metricsRes, revenueRes, studentRes, activitiesRes, alertsRes] = await Promise.allSettled([
-                analyticsService.getDashboardMetrics(timeRange),
-                analyticsService.getRevenueTrend(6),
-                analyticsService.getStudentGrowth(6),
-                analyticsService.getRecentActivities(8),
-                analyticsService.getAlerts(),
-            ])
+    // Format date for API
+    const formatDateForAPI = (dateStr: string): string => {
+        if (!dateStr) return ''
+        const date = new Date(dateStr)
+        return date.toISOString().split('T')[0]
+    }
 
-            // KPI Metrics
-            const metrics = metricsRes.status === 'fulfilled' ? metricsRes.value?.data : null
+    // Get date range from month
+    const getDateRangeFromMonth = (month: string) => {
+        const now = new Date()
+        const monthIndex = MONTHS.findIndex(m => m.value === month)
+        const year = now.getFullYear()
+
+        const start = new Date(year, monthIndex, 1)
+        const end = new Date(year, monthIndex + 1, 0)
+
+        return {
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0]
+        }
+    }
+
+    // Load KPI stats with filters
+    const loadStats = useCallback(async () => {
+        try {
+            setStatsLoading(true)
+            const params: any = {}
+
+            if (filterApplied && startDate && endDate) {
+                params.startDate = formatDateForAPI(startDate)
+                params.endDate = formatDateForAPI(endDate)
+            } else if (selectedMonth) {
+                const range = getDateRangeFromMonth(selectedMonth)
+                params.startDate = range.start
+                params.endDate = range.end
+            }
+
+            const response = await apiClient.get('/admin/dashboard/metrics', { params })
+            const metrics = response?.data
+
             setDashboardData({
                 totalLocations: metrics?.totalLocations ?? FALLBACK_DATA.totalLocations,
                 totalStudents: metrics?.totalStudents ?? FALLBACK_DATA.totalStudents,
@@ -123,39 +184,124 @@ export default function AdminDashboard() {
                 staffUtilization: metrics?.staffUtilization ?? FALLBACK_DATA.staffUtilization,
                 customerSatisfaction: metrics?.customerSatisfaction ?? FALLBACK_DATA.customerSatisfaction
             })
+        } catch (error) {
+            console.error('Error loading stats:', error)
+            toast.error('Failed to load dashboard statistics')
+            setDashboardData(FALLBACK_DATA)
+        } finally {
+            setStatsLoading(false)
+        }
+    }, [filterApplied, startDate, endDate, selectedMonth])
 
-            // Revenue chart
+    // Load charts data with filters
+    const loadCharts = useCallback(async () => {
+        try {
+            setChartsLoading(true)
+            const params: any = {}
+
+            if (filterApplied && startDate && endDate) {
+                params.startDate = formatDateForAPI(startDate)
+                params.endDate = formatDateForAPI(endDate)
+            } else if (selectedMonth) {
+                const range = getDateRangeFromMonth(selectedMonth)
+                params.startDate = range.start
+                params.endDate = range.end
+            }
+
+            const [revenueRes, studentRes] = await Promise.allSettled([
+                apiClient.get('/admin/dashboard/revenue-trend', { params }),
+                apiClient.get('/admin/dashboard/student-growth', { params })
+            ])
+
             if (revenueRes.status === 'fulfilled') {
                 const rd = revenueRes.value?.data
                 setRevenueData(Array.isArray(rd) ? rd : rd?.data || [])
             }
 
-            // Student growth chart
             if (studentRes.status === 'fulfilled') {
                 const sd = studentRes.value?.data
                 setStudentData(Array.isArray(sd) ? sd : sd?.data || [])
             }
+        } catch (error) {
+            console.error('Error loading charts:', error)
+            toast.error('Failed to load chart data')
+        } finally {
+            setChartsLoading(false)
+        }
+    }, [filterApplied, startDate, endDate, selectedMonth])
 
-            // Recent activities
+    // Load activities with filters
+    const loadActivities = useCallback(async () => {
+        try {
+            setActivitiesLoading(true)
+            const params: any = { limit: 10 }
+
+            if (filterApplied && startDate && endDate) {
+                params.startDate = formatDateForAPI(startDate)
+                params.endDate = formatDateForAPI(endDate)
+            } else if (selectedMonth) {
+                const range = getDateRangeFromMonth(selectedMonth)
+                params.startDate = range.start
+                params.endDate = range.end
+            }
+
+            const [activitiesRes, alertsRes] = await Promise.allSettled([
+                apiClient.get('/admin/dashboard/activities', { params }),
+                apiClient.get('/admin/dashboard/alerts', { params })
+            ])
+
             if (activitiesRes.status === 'fulfilled') {
                 const ad = activitiesRes.value?.data
                 setRecentActivities(Array.isArray(ad) ? ad : ad?.data || [])
             }
 
-            // Alerts
             if (alertsRes.status === 'fulfilled') {
                 const al = alertsRes.value?.data
                 setAlerts(Array.isArray(al) ? al : al?.data || [])
             }
         } catch (error) {
-            console.error('Error loading dashboard:', error)
-            setDashboardData(FALLBACK_DATA)
+            console.error('Error loading activities:', error)
+            toast.error('Failed to load activities')
         } finally {
-            setIsLoading(false)
+            setActivitiesLoading(false)
         }
-    }, [timeRange])
+    }, [filterApplied, startDate, endDate, selectedMonth])
 
-    useRealtimeRefresh(['booking', 'payment', 'program', 'attendance', 'staff', 'location', 'schedule', 'ticket'], loadDashboardData)
+    // Handle apply filters
+    const handleApplyFilters = () => {
+        if (!startDate || !endDate) {
+            toast.error('Please select both start and end dates')
+            return
+        }
+        if (new Date(startDate) > new Date(endDate)) {
+            toast.error('Start date must be before end date')
+            return
+        }
+        setFilterApplied(true)
+        setShowFilters(false)
+        toast.success('Filters applied')
+    }
+
+    // Handle reset filters
+    const handleResetFilters = () => {
+        setStartDate('')
+        setEndDate('')
+        setSelectedMonth(getCurrentMonth().value)
+        setFilterApplied(false)
+        toast.success('Filters reset')
+    }
+
+    // Handle month change
+    const handleMonthChange = (month: string) => {
+        setSelectedMonth(month)
+        setFilterApplied(false)
+    }
+
+    useRealtimeRefresh(['booking', 'payment', 'program', 'attendance', 'staff', 'location', 'schedule', 'ticket'], () => {
+        loadStats()
+        loadCharts()
+        loadActivities()
+    })
 
     useEffect(() => {
         if (authLoading) return
@@ -163,9 +309,15 @@ export default function AdminDashboard() {
             router.push('/login')
             return
         }
-        loadDashboardData()
-        loadAiInsights()
-    }, [isAuthenticated, authLoading, router, loadDashboardData])
+
+        setIsLoading(true)
+        Promise.all([
+            loadStats(),
+            loadCharts(),
+            loadActivities(),
+            loadAiInsights()
+        ]).finally(() => setIsLoading(false))
+    }, [isAuthenticated, authLoading, router, loadStats, loadCharts, loadActivities])
 
     if (!isAuthenticated && !authLoading) return null
 

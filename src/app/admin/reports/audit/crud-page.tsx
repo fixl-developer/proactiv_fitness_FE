@@ -2,14 +2,26 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Database } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { DatabaseHealthService, DatabaseHealth } from '@/services/systemService'
+import { AuditLogService } from '@/services/reportsService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-export default function DatabaseHealthPage() {
-    const [databases, setDatabases] = useState<DatabaseHealth[]>([])
+interface AuditLog {
+    id: string
+    date: string
+    action: 'create' | 'update' | 'delete' | 'view' | 'export'
+    entityType: 'user' | 'payment' | 'booking' | 'staff'
+    entityId: string
+    userId: string
+    changes?: string
+    status: 'success' | 'failed'
+    createdAt?: string
+}
+
+export default function AuditLogsPage() {
+    const [logs, setLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -20,59 +32,74 @@ export default function DatabaseHealthPage() {
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
     const [formData, setFormData] = useState({
-        name: '',
-        host: '',
-        port: 5432,
-        status: 'healthy' as const,
-        diskUsage: 0,
-        connections: 0,
+        date: '',
+        action: 'create' as const,
+        entityType: 'user' as const,
+        entityId: '',
+        userId: '',
+        changes: '',
+        status: 'success' as const,
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
-    const statuses = ['healthy', 'warning', 'critical']
+    const actionOptions = ['create', 'update', 'delete', 'view', 'export']
+    const entityTypeOptions = ['user', 'payment', 'booking', 'staff']
+    const statusOptions = ['success', 'failed']
 
-    // Load databases
-    const loadDatabases = async () => {
+    const actionColors: Record<string, string> = {
+        create: 'bg-green-100 text-green-800',
+        update: 'bg-blue-100 text-blue-800',
+        delete: 'bg-red-100 text-red-800',
+        view: 'bg-gray-100 text-gray-800',
+        export: 'bg-purple-100 text-purple-800',
+    }
+
+    const statusColors: Record<string, string> = {
+        success: 'bg-green-100 text-green-800',
+        failed: 'bg-red-100 text-red-800',
+    }
+
+    // Load logs
+    const loadLogs = async () => {
         try {
             setLoading(true)
-            const response = await DatabaseHealthService.getAll({
+            const response = await AuditLogService.getAll({
                 page: currentPage,
                 limit: 10,
                 search: searchTerm,
             })
-            setDatabases(response.data || [])
+            setLogs(response.data || [])
             setTotalPages(response.pagination?.totalPages || 1)
         } catch (error) {
-            console.error('Error loading databases:', error)
-            toast.error('Failed to load database health data')
+            console.error('Error loading logs:', error)
+            toast.error('Failed to load audit logs')
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        loadDatabases()
+        loadLogs()
     }, [currentPage, searchTerm])
 
     // Validate form
     const validateFormData = () => {
         const newErrors: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Database name is required'
-        else if (formData.name.length < 2) newErrors.name = 'Database name must be at least 2 characters'
+        if (!formData.date) newErrors.date = 'Date is required'
 
-        if (!formData.host) newErrors.host = 'Host is required'
-        else if (!/^[a-zA-Z0-9.-]+$/.test(formData.host)) newErrors.host = 'Invalid host format'
+        if (!formData.action) newErrors.action = 'Action is required'
 
-        if (!formData.port) newErrors.port = 'Port is required'
-        else if (formData.port < 1 || formData.port > 65535) newErrors.port = 'Port must be between 1 and 65535'
+        if (!formData.entityType) newErrors.entityType = 'Entity type is required'
+
+        if (!formData.entityId) newErrors.entityId = 'Entity ID is required'
+        else if (formData.entityId.length < 2) newErrors.entityId = 'Entity ID must be at least 2 characters'
+
+        if (!formData.userId) newErrors.userId = 'User ID is required'
+        else if (formData.userId.length < 2) newErrors.userId = 'User ID must be at least 2 characters'
 
         if (!formData.status) newErrors.status = 'Status is required'
-
-        if (formData.diskUsage < 0 || formData.diskUsage > 100) newErrors.diskUsage = 'Disk usage must be between 0 and 100'
-
-        if (formData.connections < 0) newErrors.connections = 'Connections cannot be negative'
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -91,18 +118,18 @@ export default function DatabaseHealthPage() {
             setSubmitting(true)
 
             if (editingId) {
-                await DatabaseHealthService.update(editingId, formData)
-                toast.success('Database health record updated successfully')
+                await AuditLogService.update(editingId, formData)
+                toast.success('Audit log updated successfully')
             } else {
-                await DatabaseHealthService.create(formData)
-                toast.success('Database health record created successfully')
+                await AuditLogService.create(formData)
+                toast.success('Audit log created successfully')
             }
 
             setShowForm(false)
             resetForm()
-            loadDatabases()
+            loadLogs()
         } catch (error) {
-            console.error('Error saving database:', error)
+            console.error('Error saving log:', error)
             toast.error(getErrorMessage(error))
         } finally {
             setSubmitting(false)
@@ -110,28 +137,29 @@ export default function DatabaseHealthPage() {
     }
 
     // Handle edit
-    const handleEdit = (db: DatabaseHealth) => {
+    const handleEdit = (log: AuditLog) => {
         setFormData({
-            name: db.name,
-            host: db.host,
-            port: db.port,
-            status: db.status,
-            diskUsage: db.diskUsage,
-            connections: db.connections || 0,
+            date: log.date,
+            action: log.action,
+            entityType: log.entityType,
+            entityId: log.entityId,
+            userId: log.userId,
+            changes: log.changes || '',
+            status: log.status,
         })
-        setEditingId(db.id)
+        setEditingId(log.id)
         setShowForm(true)
     }
 
     // Handle delete
     const handleDelete = async (id: string) => {
         try {
-            await DatabaseHealthService.delete(id)
-            toast.success('Database health record deleted successfully')
+            await AuditLogService.delete(id)
+            toast.success('Audit log deleted successfully')
             setDeleteConfirm(null)
-            loadDatabases()
+            loadLogs()
         } catch (error) {
-            console.error('Error deleting database:', error)
+            console.error('Error deleting log:', error)
             toast.error(getErrorMessage(error))
         }
     }
@@ -139,12 +167,13 @@ export default function DatabaseHealthPage() {
     // Reset form
     const resetForm = () => {
         setFormData({
-            name: '',
-            host: '',
-            port: 5432,
-            status: 'healthy',
-            diskUsage: 0,
-            connections: 0,
+            date: '',
+            action: 'create',
+            entityType: 'user',
+            entityId: '',
+            userId: '',
+            changes: '',
+            status: 'success',
         })
         setErrors({})
         setEditingId(null)
@@ -154,25 +183,6 @@ export default function DatabaseHealthPage() {
     const handleCloseDrawer = () => {
         setShowForm(false)
         resetForm()
-    }
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'healthy':
-                return 'bg-green-100 text-green-800'
-            case 'warning':
-                return 'bg-yellow-100 text-yellow-800'
-            case 'critical':
-                return 'bg-red-100 text-red-800'
-            default:
-                return 'bg-slate-100 text-slate-800'
-        }
-    }
-
-    const getDiskUsageColor = (usage: number) => {
-        if (usage < 70) return 'text-green-600'
-        if (usage < 85) return 'text-yellow-600'
-        return 'text-red-600'
     }
 
     return (
@@ -185,10 +195,10 @@ export default function DatabaseHealthPage() {
                     className="mb-8"
                 >
                     <div className="flex items-center gap-3 mb-2">
-                        <Database className="w-8 h-8 text-blue-600" />
-                        <h1 className="text-4xl font-bold text-slate-900">Database Health</h1>
+                        <Shield className="w-8 h-8 text-red-600" />
+                        <h1 className="text-4xl font-bold text-slate-900">Audit Logs</h1>
                     </div>
-                    <p className="text-slate-600">Monitor database performance, connections, and query times</p>
+                    <p className="text-slate-600">Track and manage system audit logs and user activities</p>
                 </motion.div>
 
                 {/* Controls */}
@@ -201,13 +211,13 @@ export default function DatabaseHealthPage() {
                         <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
                         <input
                             type="text"
-                            placeholder="Search databases..."
+                            placeholder="Search by entity or user..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value)
                                 setCurrentPage(1)
                             }}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
                     </div>
                     <button
@@ -215,10 +225,10 @@ export default function DatabaseHealthPage() {
                             resetForm()
                             setShowForm(true)
                         }}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
                     >
                         <Plus className="w-5 h-5" />
-                        Add Database
+                        Add Log
                     </button>
                 </motion.div>
 
@@ -230,13 +240,13 @@ export default function DatabaseHealthPage() {
                 >
                     {loading ? (
                         <div className="p-8 text-center">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <p className="mt-4 text-slate-600">Loading database health...</p>
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                            <p className="mt-4 text-slate-600">Loading audit logs...</p>
                         </div>
-                    ) : databases.length === 0 ? (
+                    ) : logs.length === 0 ? (
                         <div className="p-8 text-center">
                             <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-600">No databases found</p>
+                            <p className="text-slate-600">No audit logs found</p>
                         </div>
                     ) : (
                         <>
@@ -244,40 +254,47 @@ export default function DatabaseHealthPage() {
                                 <table className="w-full">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Host</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Port</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Connections</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Disk Usage</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Action</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Entity</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">User</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {databases.map((db) => (
-                                            <tr key={db.id} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{db.name}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600 font-mono">{db.host}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{db.port}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{db.connections}</td>
-                                                <td className={`px-6 py-4 text-sm font-medium ${getDiskUsageColor(db.diskUsage)}`}>
-                                                    {db.diskUsage}%
+                                        {logs.map((log) => (
+                                            <tr key={log.id} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                    {new Date(log.date).toLocaleDateString()}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(db.status)}`}>
-                                                        {db.status}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${actionColors[log.action]}`}>
+                                                        {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div>
+                                                        <p className="font-medium text-slate-900">{log.entityType}</p>
+                                                        <p className="text-xs text-slate-500">{log.entityId}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{log.userId}</td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[log.status]}`}>
+                                                        {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleEdit(db)}
+                                                            onClick={() => handleEdit(log)}
                                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            onClick={() => setDeleteConfirm(db.id)}
+                                                            onClick={() => setDeleteConfirm(log.id)}
                                                             className="p-2 text-red-600 hover:bg-red-50 rounded transition"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -320,115 +337,112 @@ export default function DatabaseHealthPage() {
                 <SlideInDrawer
                     isOpen={showForm}
                     onClose={handleCloseDrawer}
-                    title={editingId ? 'Edit Database' : 'Add New Database'}
+                    title={editingId ? 'Edit Audit Log' : 'Add New Audit Log'}
                     size="lg"
                 >
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Database Name */}
+                        {/* Date */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Database Name <span className="text-red-500">*</span>
+                                Date <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                value={formData.date}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, date: e.target.value })
+                                    if (errors.date) setErrors({ ...errors, date: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
+                                    }`}
+                            />
+                            {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+                        </div>
+
+                        {/* Action */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Action <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={formData.action}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, action: e.target.value as any })
+                                    if (errors.action) setErrors({ ...errors, action: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.action ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
+                                    }`}
+                            >
+                                <option value="">Select Action</option>
+                                {actionOptions.map((action) => (
+                                    <option key={action} value={action}>
+                                        {action.charAt(0).toUpperCase() + action.slice(1)}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.action && <p className="mt-1 text-sm text-red-600">{errors.action}</p>}
+                        </div>
+
+                        {/* Entity Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Entity Type <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={formData.entityType}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, entityType: e.target.value as any })
+                                    if (errors.entityType) setErrors({ ...errors, entityType: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.entityType ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
+                                    }`}
+                            >
+                                <option value="">Select Entity Type</option>
+                                {entityTypeOptions.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.entityType && <p className="mt-1 text-sm text-red-600">{errors.entityType}</p>}
+                        </div>
+
+                        {/* Entity ID */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Entity ID <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                value={formData.name}
+                                value={formData.entityId}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, name: e.target.value })
-                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                    setFormData({ ...formData, entityId: e.target.value })
+                                    if (errors.entityId) setErrors({ ...errors, entityId: '' })
                                 }}
-                                placeholder="e.g., Production DB"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                placeholder="e.g., ENT001"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.entityId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
                                     }`}
                             />
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                            {errors.entityId && <p className="mt-1 text-sm text-red-600">{errors.entityId}</p>}
                         </div>
 
-                        {/* Host */}
+                        {/* User ID */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Host <span className="text-red-500">*</span>
+                                User ID <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                value={formData.host}
+                                value={formData.userId}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, host: e.target.value })
-                                    if (errors.host) setErrors({ ...errors, host: '' })
+                                    setFormData({ ...formData, userId: e.target.value })
+                                    if (errors.userId) setErrors({ ...errors, userId: '' })
                                 }}
-                                placeholder="e.g., db.example.com"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.host ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                placeholder="e.g., USER001"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.userId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
                                     }`}
                             />
-                            {errors.host && <p className="mt-1 text-sm text-red-600">{errors.host}</p>}
-                        </div>
-
-                        {/* Port */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Port <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.port}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, port: parseInt(e.target.value) || 5432 })
-                                    if (errors.port) setErrors({ ...errors, port: '' })
-                                }}
-                                placeholder="e.g., 5432"
-                                min="1"
-                                max="65535"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.port ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.port && <p className="mt-1 text-sm text-red-600">{errors.port}</p>}
-                        </div>
-
-                        {/* Connections */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Active Connections
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.connections}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, connections: parseInt(e.target.value) || 0 })
-                                    if (errors.connections) setErrors({ ...errors, connections: '' })
-                                }}
-                                placeholder="e.g., 45"
-                                min="0"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.connections ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.connections && <p className="mt-1 text-sm text-red-600">{errors.connections}</p>}
-                        </div>
-
-                        {/* Disk Usage */}
-                        <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Disk Usage (%)
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.diskUsage}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, diskUsage: parseInt(e.target.value) || 0 })
-                                    if (errors.diskUsage) setErrors({ ...errors, diskUsage: '' })
-                                }}
-                                placeholder="e.g., 65"
-                                min="0"
-                                max="100"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.diskUsage ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.diskUsage && <p className="mt-1 text-sm text-red-600">{errors.diskUsage}</p>}
-                            <div className="mt-2 w-full bg-slate-200 rounded-full h-2">
-                                <div
-                                    className={`h-2 rounded-full transition-all ${formData.diskUsage < 70 ? 'bg-green-500' : formData.diskUsage < 85 ? 'bg-yellow-500' : 'bg-red-500'
-                                        }`}
-                                    style={{ width: `${formData.diskUsage}%` }}
-                                />
-                            </div>
+                            {errors.userId && <p className="mt-1 text-sm text-red-600">{errors.userId}</p>}
                         </div>
 
                         {/* Status */}
@@ -442,17 +456,29 @@ export default function DatabaseHealthPage() {
                                     setFormData({ ...formData, status: e.target.value as any })
                                     if (errors.status) setErrors({ ...errors, status: '' })
                                 }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-red-500'
                                     }`}
                             >
                                 <option value="">Select Status</option>
-                                {statuses.map((status) => (
+                                {statusOptions.map((status) => (
                                     <option key={status} value={status}>
                                         {status.charAt(0).toUpperCase() + status.slice(1)}
                                     </option>
                                 ))}
                             </select>
                             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
+                        </div>
+
+                        {/* Changes */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Changes (Optional)</label>
+                            <textarea
+                                value={formData.changes}
+                                onChange={(e) => setFormData({ ...formData, changes: e.target.value })}
+                                placeholder="Describe what changed..."
+                                rows={4}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                            />
                         </div>
 
                         {/* Submit Button */}
@@ -467,9 +493,9 @@ export default function DatabaseHealthPage() {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
                             >
-                                {submitting ? 'Saving...' : editingId ? 'Update Database' : 'Create Database'}
+                                {submitting ? 'Saving...' : editingId ? 'Update Log' : 'Create Log'}
                             </button>
                         </div>
                     </form>
@@ -483,9 +509,9 @@ export default function DatabaseHealthPage() {
                             animate={{ scale: 1, opacity: 1 }}
                             className="bg-white rounded-lg p-6 max-w-sm"
                         >
-                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Database?</h3>
+                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Audit Log?</h3>
                             <p className="text-slate-600 mb-6">
-                                This action cannot be undone. The database health record will be permanently removed.
+                                This action cannot be undone. The audit log will be permanently removed.
                             </p>
                             <div className="flex gap-3">
                                 <button

@@ -1,397 +1,457 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Flag, Plus, Search, ToggleLeft, ToggleRight, Clock, FlaskConical, CheckCircle, XCircle, X, RefreshCw, Trash2, Edit2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { apiClient } from '@/services/api/client'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Flag } from 'lucide-react'
 import { toast } from 'sonner'
-
-interface FeatureFlag {
-    id: string
-    key: string
-    name: string
-    description: string
-    environment: string
-    enabled: boolean
-    rolloutPercentage: number
-    createdAt?: string
-    updatedAt?: string
-}
-
-function getEnvColor(env: string): string {
-    const normalized = env?.toLowerCase() || ''
-    if (normalized === 'production') return 'bg-green-100 text-green-700'
-    if (normalized === 'staging') return 'bg-amber-100 text-amber-700'
-    if (normalized === 'development') return 'bg-blue-100 text-blue-700'
-    return 'bg-gray-100 text-gray-700'
-}
-
-function getStatusInfo(enabled: boolean, rollout: number): { status: string; statusColor: string } {
-    if (!enabled || rollout === 0) return { status: 'Disabled', statusColor: 'bg-gray-100 text-gray-600' }
-    if (rollout === 100) return { status: 'Enabled', statusColor: 'bg-green-100 text-green-700' }
-    return { status: 'Testing', statusColor: 'bg-purple-100 text-purple-700' }
-}
-
-function formatDate(dateStr?: string): string {
-    if (!dateStr) return 'N/A'
-    try {
-        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    } catch {
-        return dateStr
-    }
-}
-
-const defaultForm = { key: '', name: '', description: '', environment: 'development', enabled: false, rolloutPercentage: 0 }
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FeatureFlagsService, FeatureFlag } from '@/services/systemService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 export default function FeatureFlagsPage() {
-    const [isLoading, setIsLoading] = useState(true)
     const [flags, setFlags] = useState<FeatureFlag[]>([])
-    const [searchQuery, setSearchQuery] = useState('')
-    const [showModal, setShowModal] = useState(false)
-    const [editingFlag, setEditingFlag] = useState<FeatureFlag | null>(null)
-    const [form, setForm] = useState(defaultForm)
+    const [loading, setLoading] = useState(true)
+    const [showForm, setShowForm] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const loadFlags = useCallback(async () => {
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        enabled: false,
+        rolloutPercentage: 0,
+        targetAudience: '',
+    })
+
+    const [errors, setErrors] = useState<Record<string, string>>({})
+
+    // Load feature flags
+    const loadFlags = async () => {
         try {
-            const data = await apiClient.get<any>('/feature-flags/list')
-            const items = Array.isArray(data) ? data : (data?.data || data?.flags || [])
-            const mapped: FeatureFlag[] = items.map((f: any) => ({
-                id: f.id || f._id || f.key,
-                key: f.key || f.flagKey || '',
-                name: f.name || f.key || 'Unnamed',
-                description: f.description || '',
-                environment: f.environment || f.env || 'development',
-                enabled: f.enabled ?? f.isEnabled ?? false,
-                rolloutPercentage: f.rolloutPercentage ?? f.rollout ?? (f.enabled ? 100 : 0),
-                createdAt: f.createdAt,
-                updatedAt: f.updatedAt,
-            }))
-            setFlags(mapped)
-        } catch {
-            setFlags([])
+            setLoading(true)
+            const response = await FeatureFlagsService.getAll({
+                page: currentPage,
+                limit: 10,
+                search: searchTerm,
+            })
+            setFlags(response.data || [])
+            setTotalPages(response.pagination?.totalPages || 1)
+        } catch (error) {
+            console.error('Error loading feature flags:', error)
+            toast.error('Failed to load feature flags')
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
-    }, [])
+    }
 
     useEffect(() => {
         loadFlags()
-    }, [loadFlags])
+    }, [currentPage, searchTerm])
 
-    const toggleFlag = async (flag: FeatureFlag) => {
-        const newEnabled = !flag.enabled
-        const newRollout = newEnabled ? (flag.rolloutPercentage === 0 ? 25 : flag.rolloutPercentage) : 0
+    // Validate form
+    const validateFormData = () => {
+        const newErrors: Record<string, string> = {}
 
-        setFlags(prev => prev.map(f => f.id === flag.id ? { ...f, enabled: newEnabled, rolloutPercentage: newRollout } : f))
+        if (!formData.name) newErrors.name = 'Feature name is required'
+        else if (formData.name.length < 2) newErrors.name = 'Feature name must be at least 2 characters'
 
-        try {
-            await apiClient.put(`/feature-flags/${flag.id}`, {
-                enabled: newEnabled,
-                rolloutPercentage: newRollout,
-            })
-            toast.success(`${flag.name} ${newEnabled ? 'enabled' : 'disabled'}`)
-        } catch {
-            setFlags(prev => prev.map(f => f.id === flag.id ? flag : f))
-            toast.error('Failed to update flag')
+        if (formData.rolloutPercentage < 0 || formData.rolloutPercentage > 100) {
+            newErrors.rolloutPercentage = 'Rollout percentage must be between 0 and 100'
         }
+
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
     }
 
-    const updateRollout = async (flag: FeatureFlag, value: number) => {
-        const newEnabled = value > 0
-        setFlags(prev => prev.map(f => f.id === flag.id ? { ...f, rolloutPercentage: value, enabled: newEnabled } : f))
+    // Handle submit
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
 
-        try {
-            await apiClient.put(`/feature-flags/${flag.id}`, {
-                enabled: newEnabled,
-                rolloutPercentage: value,
-            })
-        } catch {
-            setFlags(prev => prev.map(f => f.id === flag.id ? flag : f))
-            toast.error('Failed to update rollout')
-        }
-    }
-
-    const openCreateModal = () => {
-        setEditingFlag(null)
-        setForm(defaultForm)
-        setShowModal(true)
-    }
-
-    const openEditModal = (flag: FeatureFlag) => {
-        setEditingFlag(flag)
-        setForm({
-            key: flag.key,
-            name: flag.name,
-            description: flag.description,
-            environment: flag.environment,
-            enabled: flag.enabled,
-            rolloutPercentage: flag.rolloutPercentage,
-        })
-        setShowModal(true)
-    }
-
-    const handleSubmit = async () => {
-        if (!form.key.trim() || !form.name.trim()) {
-            toast.error('Key and name are required')
+        if (!validateFormData()) {
+            toast.error('Please fix the highlighted fields')
             return
         }
-        setSubmitting(true)
+
         try {
-            if (editingFlag) {
-                await apiClient.put(`/feature-flags/${editingFlag.id}`, {
-                    name: form.name,
-                    description: form.description,
-                    environment: form.environment,
-                    enabled: form.enabled,
-                    rolloutPercentage: form.rolloutPercentage,
-                })
-                toast.success('Feature flag updated')
+            setSubmitting(true)
+
+            if (editingId) {
+                await FeatureFlagsService.update(editingId, formData)
+                toast.success('Feature flag updated successfully')
             } else {
-                await apiClient.post('/feature-flags/create', {
-                    name: form.name,
-                    key: form.key,
-                    description: form.description,
-                    environment: form.environment,
-                    enabled: form.enabled,
-                    rolloutPercentage: form.rolloutPercentage,
-                })
-                toast.success('Feature flag created')
+                await FeatureFlagsService.create(formData)
+                toast.success('Feature flag created successfully')
             }
-            setShowModal(false)
-            setForm(defaultForm)
-            setEditingFlag(null)
+
+            setShowForm(false)
+            resetForm()
             loadFlags()
-        } catch (err: any) {
-            toast.error(editingFlag ? 'Failed to update flag' : 'Failed to create flag')
+        } catch (error) {
+            console.error('Error saving feature flag:', error)
+            toast.error(getErrorMessage(error))
         } finally {
             setSubmitting(false)
         }
     }
 
-    const handleDelete = async (flag: FeatureFlag) => {
+    // Handle edit
+    const handleEdit = (flag: FeatureFlag) => {
+        setFormData({
+            name: flag.name,
+            description: flag.description || '',
+            enabled: flag.enabled,
+            rolloutPercentage: flag.rolloutPercentage || 0,
+            targetAudience: flag.targetUsers || '',
+        })
+        setEditingId(flag.id)
+        setShowForm(true)
+    }
+
+    // Handle delete
+    const handleDelete = async (id: string) => {
         try {
-            await apiClient.delete(`/feature-flags/flags/${flag.key}`)
-            toast.success(`${flag.name} deleted`)
-            setFlags(prev => prev.filter(f => f.id !== flag.id))
+            await FeatureFlagsService.delete(id)
+            toast.success('Feature flag deleted successfully')
             setDeleteConfirm(null)
-        } catch {
-            toast.error('Failed to delete flag')
+            loadFlags()
+        } catch (error) {
+            console.error('Error deleting feature flag:', error)
+            toast.error(getErrorMessage(error))
         }
     }
 
-    const filtered = flags.filter(f =>
-        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.key.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    // Reset form
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            description: '',
+            enabled: false,
+            rolloutPercentage: 0,
+            targetAudience: '',
+        })
+        setErrors({})
+        setEditingId(null)
+    }
 
-    const enabledCount = flags.filter(f => f.enabled && f.rolloutPercentage === 100).length
-    const disabledCount = flags.filter(f => !f.enabled).length
-    const testingCount = flags.filter(f => f.enabled && f.rolloutPercentage < 100).length
+    // Handle close drawer
+    const handleCloseDrawer = () => {
+        setShowForm(false)
+        resetForm()
+    }
 
-    const stats = [
-        { label: 'Total Flags', value: flags.length.toString(), icon: Flag, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-        { label: 'Enabled', value: enabledCount.toString(), icon: ToggleRight, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-        { label: 'Disabled', value: disabledCount.toString(), icon: ToggleLeft, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
-        { label: 'In Testing', value: testingCount.toString(), icon: FlaskConical, gradient: 'from-cyan-500 to-cyan-600', bgGradient: 'from-cyan-50 to-cyan-100' },
-    ]
-
-    if (isLoading) {
-        return (
-            <div className="space-y-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
-                    </div>
-                    <div className="h-96 bg-gray-200 rounded-lg"></div>
-                </div>
-            </div>
-        )
+    const getRolloutColor = (percentage: number) => {
+        if (percentage === 0) return 'text-slate-600'
+        if (percentage < 50) return 'text-yellow-600'
+        if (percentage < 100) return 'text-blue-600'
+        return 'text-green-600'
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <h1 className="text-3xl font-bold text-gray-900">Feature Flags</h1>
-                    <p className="text-gray-600 mt-1">Control feature rollouts, A/B tests, and environment toggles</p>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button id={`btn-action-admin-system-features-${i}`} variant="outline" size="sm" onClick={() => { setIsLoading(true); loadFlags() }}>
-                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-                    </Button>
-                    <Button id="btn-open-create-modal-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={openCreateModal}>
-                        <Plus className="w-4 h-4 mr-2" /> Create Flag
-                    </Button>
-                </motion.div>
-            </div>
-
-            {/* Create / Edit Modal */}
-            {showModal && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                    <Card className="border-blue-200 shadow-lg">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>{editingFlag ? 'Edit Feature Flag' : 'Create Feature Flag'}</CardTitle>
-                                <Button id={`btn-action-admin-system-features-${i}`} variant="ghost" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}><X className="w-4 h-4" /></Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Flag Key</label>
-                                    <input id="input-text-admin-system-features"
-                                        type="text"
-                                        value={form.key}
-                                        onChange={e => setForm(f => ({ ...f, key: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                                        placeholder="my-feature-flag"
-                                        disabled={!!editingFlag}
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Display Name</label>
-                                    <input id="input-text-admin-system-features" type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="My Feature Flag" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
-                                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe what this flag controls..." rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Environment</label>
-                                    <select id="select-admin-system-features-16" value={form.environment} onChange={e => setForm(f => ({ ...f, environment: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
-                                        <option value="development">Development</option>
-                                        <option value="staging">Staging</option>
-                                        <option value="production">Production</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Initial State</label>
-                                    <select id="select-admin-system-features-17" value={form.enabled ? 'enabled' : 'disabled'} onChange={e => setForm(f => ({ ...f, enabled: e.target.value === 'enabled', rolloutPercentage: e.target.value === 'enabled' ? 25 : 0 }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
-                                        <option value="disabled">Disabled</option>
-                                        <option value="enabled">Enabled</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Rollout %</label>
-                                    <input id="input-number-admin-system-features" type="number" min="0" max="100" value={form.rolloutPercentage} onChange={e => setForm(f => ({ ...f, rolloutPercentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                                </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button id="btn-action-admin-system-features" variant="outline" size="sm" onClick={() => { setShowModal(false); setEditingFlag(null) }}>Cancel</Button>
-                                <Button id="btn-submit-admin-system-features" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={submitting}>
-                                    {submitting ? (editingFlag ? 'Updating...' : 'Creating...') : (editingFlag ? 'Update Flag' : 'Create Flag')}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            )}
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {stats.map((stat, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                        <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-                            <div className="flex items-center justify-between mb-3">
-                                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                                    <stat.icon className="w-5 h-5 text-white" />
-                                </div>
-                            </div>
-                            <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-
-            {/* Search */}
-            <Card>
-                <CardContent className="p-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input id="input-text-admin-system-features-search" type="text" placeholder="Search feature flags..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-3 mb-2">
+                        <Flag className="w-8 h-8 text-blue-600" />
+                        <h1 className="text-4xl font-bold text-slate-900">Feature Flags</h1>
                     </div>
-                </CardContent>
-            </Card>
+                    <p className="text-slate-600">Manage feature toggles for A/B testing and gradual rollouts</p>
+                </motion.div>
 
-            {/* Flags List */}
-            <div className="space-y-4">
-                {filtered.length === 0 && (
-                    <Card>
-                        <CardContent className="p-12 text-center">
-                            <Flag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-500 mb-1">No feature flags found</h3>
-                            <p className="text-sm text-gray-400">Create your first feature flag to get started</p>
-                        </CardContent>
-                    </Card>
-                )}
-                {filtered.map((flag, i) => {
-                    const { status, statusColor } = getStatusInfo(flag.enabled, flag.rolloutPercentage)
-                    return (
-                        <motion.div key={flag.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.07 }}>
-                            <Card className={`hover:shadow-lg transition-all duration-300 border-l-4 ${flag.enabled ? 'border-l-green-500' : 'border-l-gray-300'}`}>
-                                <CardContent className="p-5">
-                                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <h3 className="font-semibold text-gray-900 text-lg">{flag.name}</h3>
-                                                <Badge className={getEnvColor(flag.environment)}>{flag.environment}</Badge>
-                                                <Badge className={statusColor}>{status}</Badge>
-                                            </div>
-                                            <p className="text-sm text-gray-500">{flag.description}</p>
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <div className="flex items-center gap-1 text-xs text-gray-400">
-                                                    <Clock className="w-3 h-3" /> Updated: {formatDate(flag.updatedAt)}
-                                                </div>
-                                                <code className="text-xs text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">{flag.key}</code>
-                                            </div>
-                                        </div>
+                {/* Controls */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 flex gap-4 items-center"
+                >
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search feature flags..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setCurrentPage(1)
+                            }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <button
+                        onClick={() => {
+                            resetForm()
+                            setShowForm(true)
+                        }}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Add Flag
+                    </button>
+                </motion.div>
 
-                                        <div className="flex items-center gap-6 lg:gap-8">
-                                            <div className="w-48">
-                                                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                    <span>Rollout</span>
-                                                    <span className="font-medium">{flag.rolloutPercentage}%</span>
-                                                </div>
-                                                <input id="input-range-admin-system-features" type="range" min="0" max="100" step="5" value={flag.rolloutPercentage} onChange={(e) => updateRollout(flag, Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                                                <Progress value={flag.rolloutPercentage} className="h-1.5 mt-1" />
-                                            </div>
+                {/* Table */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-lg shadow-lg overflow-hidden"
+                >
+                    {loading ? (
+                        <div className="p-8 text-center">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <p className="mt-4 text-slate-600">Loading feature flags...</p>
+                        </div>
+                    ) : flags.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                            <p className="text-slate-600">No feature flags found</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Description</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Rollout %</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Target Audience</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {flags.map((flag) => (
+                                            <tr key={flag.id} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{flag.name}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{flag.description || '-'}</td>
+                                                <td className={`px-6 py-4 text-sm font-medium ${getRolloutColor(flag.rolloutPercentage || 0)}`}>
+                                                    {flag.rolloutPercentage || 0}%
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span
+                                                        className={`px-3 py-1 rounded-full text-xs font-medium ${flag.enabled
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-slate-100 text-slate-800'
+                                                            }`}
+                                                    >
+                                                        {flag.enabled ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{flag.targetUsers || 'All'}</td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleEdit(flag)}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirm(flag.id)}
+                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                            <button id="btn-admin-system-features-10" onClick={() => toggleFlag(flag)} className="flex items-center gap-2 shrink-0">
-                                                {flag.enabled ? <ToggleRight className="w-10 h-10 text-green-500" /> : <ToggleLeft className="w-10 h-10 text-gray-400" />}
-                                            </button>
+                            {/* Pagination */}
+                            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                                <p className="text-sm text-slate-600">
+                                    Page {currentPage} of {totalPages}
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </motion.div>
 
-                                            <Button id="btn-open-edit-modal-admin-system-features" variant="ghost" size="sm" onClick={() => openEditModal(flag)} className="text-blue-500 hover:text-blue-700 shrink-0">
-                                                <Edit2 className="w-4 h-4" />
-                                            </Button>
+                {/* Form Drawer */}
+                <SlideInDrawer
+                    isOpen={showForm}
+                    onClose={handleCloseDrawer}
+                    title={editingId ? 'Edit Feature Flag' : 'Add New Feature Flag'}
+                    size="lg"
+                >
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Feature Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Feature Name <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, name: e.target.value })
+                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                }}
+                                placeholder="e.g., new_dashboard_ui"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                        </div>
 
-                                            {deleteConfirm === flag.id ? (
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                    <Button id="btn-delete-admin-system-features" variant="ghost" size="sm" onClick={() => handleDelete(flag)} className="text-red-600 hover:text-red-800 text-xs">Confirm</Button>
-                                                    <Button id="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)} className="text-gray-500 text-xs">Cancel</Button>
-                                                </div>
-                                            ) : (
-                                                <Button id="btn-set-delete-confirm-admin-system-features" variant="ghost" size="sm" onClick={() => setDeleteConfirm(flag.id)} className="text-red-500 hover:text-red-700 shrink-0">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
-                                        </div>
+                        {/* Description */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Description</label>
+                            <textarea
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                placeholder="Describe what this feature does..."
+                                rows={3}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* Rollout Percentage */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Rollout Percentage (0-100)
+                            </label>
+                            <input
+                                type="number"
+                                value={formData.rolloutPercentage}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, rolloutPercentage: parseInt(e.target.value) || 0 })
+                                    if (errors.rolloutPercentage) setErrors({ ...errors, rolloutPercentage: '' })
+                                }}
+                                placeholder="e.g., 50"
+                                min="0"
+                                max="100"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.rolloutPercentage ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.rolloutPercentage && <p className="mt-1 text-sm text-red-600">{errors.rolloutPercentage}</p>}
+                            <div className="mt-2 w-full bg-slate-200 rounded-full h-2">
+                                <div
+                                    className="h-2 rounded-full bg-blue-500 transition-all"
+                                    style={{ width: `${formData.rolloutPercentage}%` }}
+                                />
+                            </div>
+                            <p className="mt-2 text-xs text-slate-500">
+                                {formData.rolloutPercentage === 0 && 'Feature is disabled for all users'}
+                                {formData.rolloutPercentage > 0 && formData.rolloutPercentage < 100 && `Feature is available to ${formData.rolloutPercentage}% of users`}
+                                {formData.rolloutPercentage === 100 && 'Feature is enabled for all users'}
+                            </p>
+                        </div>
+
+                        {/* Target Audience */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Target Audience (Optional)</label>
+                            <input
+                                type="text"
+                                value={formData.targetAudience}
+                                onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                                placeholder="e.g., beta_users, premium_members"
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p className="mt-1 text-xs text-slate-500">Comma-separated list of target user groups</p>
+                        </div>
+
+                        {/* Enabled Status */}
+                        <div>
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.enabled}
+                                        onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+                                        className="sr-only"
+                                    />
+                                    <div
+                                        className={`w-11 h-6 rounded-full transition-colors ${formData.enabled ? 'bg-blue-600' : 'bg-gray-200'
+                                            }`}
+                                    >
+                                        <div
+                                            className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData.enabled ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'
+                                                }`}
+                                        />
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <span className="text-sm font-medium text-slate-900">Enable Feature</span>
+                            </label>
+                            <p className="mt-1 text-xs text-slate-500">Toggle to enable or disable this feature flag</p>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-3 pt-6 border-t border-slate-200">
+                            <button
+                                type="button"
+                                onClick={handleCloseDrawer}
+                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                            >
+                                {submitting ? 'Saving...' : editingId ? 'Update Flag' : 'Create Flag'}
+                            </button>
+                        </div>
+                    </form>
+                </SlideInDrawer>
+
+                {/* Delete Confirmation */}
+                {deleteConfirm && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white rounded-lg p-6 max-w-sm"
+                        >
+                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Feature Flag?</h3>
+                            <p className="text-slate-600 mb-6">
+                                This action cannot be undone. The feature flag will be permanently removed.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </motion.div>
-                    )
-                })}
+                    </div>
+                )}
             </div>
         </div>
     )

@@ -1,434 +1,606 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Users, UserCheck, GraduationCap, Briefcase } from 'lucide-react'
-import { apiClient } from '@/services/api/client'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { validateName, validateEmail, validatePhone, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
-import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { StaffService } from '@/services/operationsService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-// ── Fallback mock data ──────────────────────────────────────────────
-const MOCK_STAFF = [
-  { _id: 'mock-1', firstName: 'Jane', lastName: 'Doe', email: 'jane@example.com', role: 'trainer', locationId: { _id: 'loc-1', name: 'Main Gym' }, status: 'active', certifications: ['CPT', 'Yoga'], phone: '555-0101', createdAt: '2025-06-01' },
-  { _id: 'mock-2', firstName: 'John', lastName: 'Smith', email: 'john@example.com', role: 'manager', locationId: { _id: 'loc-2', name: 'Downtown' }, status: 'active', certifications: ['MBA'], phone: '555-0102', createdAt: '2025-07-15' },
-  { _id: 'mock-3', firstName: 'Emily', lastName: 'Clark', email: 'emily@example.com', role: 'receptionist', locationId: { _id: 'loc-1', name: 'Main Gym' }, status: 'inactive', certifications: [], phone: '555-0103', createdAt: '2025-08-20' },
-]
-
-const MOCK_STATS = { totalStaff: 3, activeStaff: 2, trainers: 1, managers: 1 }
-
-// ── Types ───────────────────────────────────────────────────────────
 interface StaffMember {
-  _id: string
+  id: string
   firstName: string
   lastName: string
   email: string
-  role: string
-  locationId: any
-  status: string
-  certifications: string[]
   phone?: string
+  role: string
+  locationId?: string
+  status: 'active' | 'inactive'
+  hireDate?: string
+  certifications?: string[]
   createdAt?: string
 }
 
-interface StaffStats {
-  totalStaff: number
-  activeStaff: number
-  trainers: number
-  managers: number
-}
-
-// ── Component ───────────────────────────────────────────────────────
-export default function OperationsStaffPage() {
+export default function StaffManagementPage() {
   const [staff, setStaff] = useState<StaffMember[]>([])
-  const [stats, setStats] = useState<StaffStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [apiFailed, setApiFailed] = useState(false)
-
-  // Filters
-  const [roleFilter, setRoleFilter] = useState('')
-  const [locationFilter, setLocationFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Modal state
-  const [showModal, setShowModal] = useState(false)
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  // Validation errors
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-
-  // Form
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    role: 'trainer',
-    locationId: '',
-    certifications: '',
     phone: '',
+    role: 'Coach',
+    locationId: '',
+    status: 'active' as 'active' | 'inactive',
+    hireDate: '',
+    certifications: [] as string[],
   })
 
-  // ── Load data ───────────────────────────────────────────────────
-  const loadStaff = useCallback(async () => {
-    try {
-      const data = await apiClient.get<any>('/staff')
-      const raw = data?.data ?? data
-      const list = Array.isArray(raw) ? raw : raw?.staff ?? raw?.data ?? []
-      setStaff(Array.isArray(list) ? list : [])
-      setApiFailed(false)
-    } catch (error: any) {
-      console.error('Failed to load staff:', error)
-      setStaff(MOCK_STAFF)
-      setApiFailed(true)
-    }
-  }, [])
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [newCertification, setNewCertification] = useState('')
 
-  const loadStats = useCallback(async (staffList?: StaffMember[]) => {
-    try {
-      const data = await apiClient.get<any>('/staff/statistics/overview')
-      const raw = data?.data ?? data
-      setStats({
-        totalStaff: raw?.totalStaff ?? raw?.total ?? 0,
-        activeStaff: raw?.activeStaff ?? raw?.active ?? 0,
-        trainers: raw?.trainers ?? raw?.coaches ?? 0,
-        managers: raw?.managers ?? 0,
-      })
-    } catch {
-      // Compute from loaded staff if API fails
-      const list = staffList || []
-      const total = list.length
-      const active = list.filter(s => s.status === 'active').length
-      const trainers = list.filter(s => s.role === 'trainer' || s.role === 'coach').length
-      const managers = list.filter(s => s.role === 'manager' || s.role === 'admin').length
-      setStats(total > 0 ? { totalStaff: total, activeStaff: active, trainers, managers } : MOCK_STATS)
-    }
-  }, [])
+  // Role options
+  const roles = ['Coach', 'Trainer', 'Manager', 'Admin']
 
-  useEffect(() => {
-    const init = async () => {
+  // Load staff
+  const loadStaff = async () => {
+    try {
       setLoading(true)
-      await Promise.all([loadStaff(), loadStats()])
+      const response = await StaffService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      })
+      setStaff(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading staff:', error)
+      toast.error('Failed to load staff')
+    } finally {
       setLoading(false)
     }
-    init()
-  }, [loadStaff, loadStats])
-
-  // ── Create / Edit ─────────────────────────────────────────────
-  const openCreate = () => {
-    setEditingStaff(null)
-    setForm({ firstName: '', lastName: '', email: '', role: 'trainer', locationId: '', certifications: '', phone: '' })
-    setFormErrors({})
-    setShowModal(true)
   }
 
-  const openEdit = (s: StaffMember) => {
-    setEditingStaff(s)
-    setForm({
-      firstName: s.firstName,
-      lastName: s.lastName,
-      email: s.email,
-      role: s.role,
-      locationId: typeof s.locationId === 'object' ? s.locationId?._id ?? '' : s.locationId ?? '',
-      certifications: (s.certifications ?? []).join(', '),
-      phone: s.phone ?? '',
-    })
-    setFormErrors({})
-    setShowModal(true)
+  useEffect(() => {
+    loadStaff()
+  }, [currentPage, searchTerm])
+
+  // Validate form
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.firstName) newErrors.firstName = 'First name is required'
+    else if (formData.firstName.length < 2) newErrors.firstName = 'First name must be at least 2 characters'
+
+    if (!formData.lastName) newErrors.lastName = 'Last name is required'
+    else if (formData.lastName.length < 2) newErrors.lastName = 'Last name must be at least 2 characters'
+
+    if (!formData.email) newErrors.email = 'Email is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format'
+
+    if (formData.phone && !/^[+]?[\d\s()-]{7,20}$/.test(formData.phone)) newErrors.phone = 'Invalid phone format'
+
+    if (!formData.role) newErrors.role = 'Role is required'
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const validateStaffForm = (): boolean => {
-    const errs: Record<string, string> = {}
-    const fnErr = validateName(form.firstName, 'First name')
-    if (fnErr) errs.firstName = fnErr
-    const lnErr = validateName(form.lastName, 'Last name')
-    if (lnErr) errs.lastName = lnErr
-    const emErr = validateEmail(form.email)
-    if (emErr) errs.email = emErr
-    if (form.phone) {
-      const phErr = validatePhone(form.phone, false)
-      if (phErr) errs.phone = phErr
-    }
-    const roleErr = validateSelect(form.role, 'Role')
-    if (roleErr) errs.role = roleErr
-    setFormErrors(errs)
-    return Object.keys(errs).length === 0
-  }
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const handleSubmit = async () => {
-    if (!validateStaffForm()) return
-    setSubmitting(true)
-    const payload = {
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      role: form.role,
-      locationId: form.locationId || undefined,
-      certifications: form.certifications.split(',').map((c) => c.trim()).filter(Boolean),
-      phone: form.phone || undefined,
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
     }
 
     try {
-      if (editingStaff) {
-        await apiClient.put(`/staff/${editingStaff._id}`, payload)
+      setSubmitting(true)
+
+      if (editingId) {
+        await StaffService.update(editingId, formData)
         toast.success('Staff member updated successfully')
       } else {
-        await apiClient.post('/staff', payload)
+        await StaffService.create(formData)
         toast.success('Staff member created successfully')
       }
-      setShowModal(false)
-      await loadStaff()
-      await loadStats()
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error.message || 'Operation failed'
-      toast.error(msg)
+
+      setShowForm(false)
+      resetForm()
+      loadStaff()
+    } catch (error) {
+      console.error('Error saving staff member:', error)
+      toast.error(getErrorMessage(error))
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Filtering ─────────────────────────────────────────────────
-  const filteredStaff = staff.filter((s) => {
-    if (roleFilter && s.role !== roleFilter) return false
-    if (statusFilter && s.status !== statusFilter) return false
-    if (locationFilter) {
-      const locId = typeof s.locationId === 'object' ? s.locationId?._id : s.locationId
-      if (locId !== locationFilter) return false
-    }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      const fullName = `${s.firstName} ${s.lastName}`.toLowerCase()
-      if (!fullName.includes(q) && !s.email.toLowerCase().includes(q)) return false
-    }
-    return true
-  })
+  // Handle edit
+  const handleEdit = (member: StaffMember) => {
+    setFormData({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      phone: member.phone || '',
+      role: member.role,
+      locationId: member.locationId || '',
+      status: member.status,
+      hireDate: member.hireDate || '',
+      certifications: member.certifications || [],
+    })
+    setEditingId(member.id)
+    setShowForm(true)
+  }
 
-  const uniqueRoles = [...new Set(staff.map((s) => s.role))].filter(Boolean)
-  const uniqueLocations = staff.reduce<{ id: string; name: string }[]>((acc, s) => {
-    const id = typeof s.locationId === 'object' ? s.locationId?._id : s.locationId
-    const name = typeof s.locationId === 'object' ? s.locationId?.name : s.locationId
-    if (id && !acc.find((l) => l.id === id)) acc.push({ id, name: name ?? id })
-    return acc
-  }, [])
+  // Handle delete
+  const handleDelete = async (id: string) => {
+    try {
+      await StaffService.delete(id)
+      toast.success('Staff member deleted successfully')
+      setDeleteConfirm(null)
+      loadStaff()
+    } catch (error) {
+      console.error('Error deleting staff member:', error)
+      toast.error(getErrorMessage(error))
+    }
+  }
 
-  // ── Render ────────────────────────────────────────────────────
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: 'Coach',
+      locationId: '',
+      status: 'active',
+      hireDate: '',
+      certifications: [],
+    })
+    setErrors({})
+    setEditingId(null)
+    setNewCertification('')
+  }
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  // Add certification
+  const addCertification = () => {
+    if (newCertification.trim() && !formData.certifications.includes(newCertification.trim())) {
+      setFormData({
+        ...formData,
+        certifications: [...formData.certifications, newCertification.trim()],
+      })
+      setNewCertification('')
+    }
+  }
+
+  // Remove certification
+  const removeCertification = (cert: string) => {
+    setFormData({
+      ...formData,
+      certifications: formData.certifications.filter((c) => c !== cert),
+    })
+  }
+
+  // Get role badge color
+  const getRoleBadgeColor = (role: string) => {
+    const colors: Record<string, string> = {
+      Coach: 'bg-blue-100 text-blue-800',
+      Trainer: 'bg-purple-100 text-purple-800',
+      Manager: 'bg-orange-100 text-orange-800',
+      Admin: 'bg-red-100 text-red-800',
+    }
+    return colors[role] || 'bg-gray-100 text-gray-800'
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Staff Management</h1>
-        <button id="btn-admin-operations-staff-1" onClick={openCreate} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          + Add Staff
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Users className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Staff Management</h1>
+          </div>
+          <p className="text-slate-600">Manage staff members, roles, and certifications</p>
+        </motion.div>
 
-      {/* API warning banner */}
-      {apiFailed && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-sm">
-          Unable to reach the staff API. Showing fallback demo data.
-        </div>
-      )}
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-4 items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search staff..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Staff
+          </button>
+        </motion.div>
 
-      {/* Stats cards */}
-      {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Total Staff', value: stats.totalStaff, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-            { label: 'Active Staff', value: stats.activeStaff, icon: UserCheck, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-            { label: 'Trainers', value: stats.trainers, icon: GraduationCap, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-            { label: 'Managers', value: stats.managers, icon: Briefcase, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow-lg overflow-hidden"
+        >
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading staff...</p>
             </div>
-          ))}
-        </div>
-      )}
+          ) : staff.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No staff members found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Email</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Phone</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Role</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Certifications</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {staff.map((member) => (
+                      <tr key={member.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {member.firstName} {member.lastName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{member.email}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{member.phone || '-'}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}>
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${member.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                              }`}
+                          >
+                            {member.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {member.certifications && member.certifications.length > 0
+                            ? member.certifications.join(', ')
+                            : '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(member)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(member.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
-          <input id="input-text-admin-operations-staff-search"
-            type="text"
-            placeholder="Name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-          <select id="select-admin-operations-staff-12" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">All Roles</option>
-            {uniqueRoles.map((r) => (
-              <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Location</label>
-          <select id="select-admin-operations-staff-13" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">All Locations</option>
-            {uniqueLocations.map((l) => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-          <select id="select-admin-operations-staff-14" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading staff...</div>
-      ) : filteredStaff.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">No staff members match your filters.</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">Name</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Email</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Role</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Location</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Certifications</th>
-                <th className="px-4 py-3 font-medium text-gray-600 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredStaff.map((s) => (
-                <tr key={s._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{s.firstName} {s.lastName}</td>
-                  <td className="px-4 py-3 text-gray-600">{s.email}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 capitalize">{s.role}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{typeof s.locationId === 'object' ? s.locationId?.name : s.locationId ?? '-'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${s.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                      {s.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{(s.certifications ?? []).join(', ') || '-'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button id="btn-admin-operations-staff-2" onClick={() => openEdit(s)} className="text-blue-600 hover:text-blue-800 font-medium text-sm">Edit</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
-            <h2 className="text-xl font-bold mb-4">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h2>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
-                  <input id="input-text-admin-operations-staff-firstname" type="text" value={form.firstName}
-                    onKeyDown={filterNameInput}
-                    onChange={(e) => {
-                      setForm({ ...form, firstName: e.target.value })
-                      const err = validateName(e.target.value, 'First name')
-                      setFormErrors((prev) => ({ ...prev, firstName: err || '' }))
-                    }}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.firstName ? 'border-red-500' : ''}`} />
-                  <FormFieldHint hint={FORMAT_HINTS.firstName} error={formErrors.firstName} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
-                  <input id="input-text-admin-operations-staff" type="text" value={form.lastName}
-                    onKeyDown={filterNameInput}
-                    onChange={(e) => {
-                      setForm({ ...form, lastName: e.target.value })
-                      const err = validateName(e.target.value, 'Last name')
-                      setFormErrors((prev) => ({ ...prev, lastName: err || '' }))
-                    }}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.lastName ? 'border-red-500' : ''}`} />
-                  <FormFieldHint hint={FORMAT_HINTS.lastName} error={formErrors.lastName} />
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-                <input id="input-email-admin-operations-staff" type="email" value={form.email}
-                  onChange={(e) => {
-                    setForm({ ...form, email: e.target.value })
-                    const err = validateEmail(e.target.value)
-                    setFormErrors((prev) => ({ ...prev, email: err || '' }))
-                  }}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.email ? 'border-red-500' : ''}`} />
-                <FormFieldHint hint={FORMAT_HINTS.email} error={formErrors.email} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
-                <input id="input-text-admin-operations-staff-phone" type="text" value={form.phone}
-                  onKeyDown={filterPhoneInput}
-                  onChange={(e) => {
-                    setForm({ ...form, phone: e.target.value })
-                    if (e.target.value) {
-                      const err = validatePhone(e.target.value, false)
-                      setFormErrors((prev) => ({ ...prev, phone: err || '' }))
-                    } else {
-                      setFormErrors((prev) => ({ ...prev, phone: '' }))
+            </>
+          )}
+        </motion.div>
+
+        {/* Form Drawer */}
+        <SlideInDrawer
+          isOpen={showForm}
+          onClose={handleCloseDrawer}
+          title={editingId ? 'Edit Staff Member' : 'Add New Staff Member'}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* First Name */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                First Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => {
+                  setFormData({ ...formData, firstName: e.target.value })
+                  if (errors.firstName) setErrors({ ...errors, firstName: '' })
+                }}
+                placeholder="e.g., John"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Last Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => {
+                  setFormData({ ...formData, lastName: e.target.value })
+                  if (errors.lastName) setErrors({ ...errors, lastName: '' })
+                }}
+                placeholder="e.g., Doe"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value })
+                  if (errors.email) setErrors({ ...errors, email: '' })
+                }}
+                placeholder="e.g., john.doe@example.com"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Phone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => {
+                  setFormData({ ...formData, phone: e.target.value })
+                  if (errors.phone) setErrors({ ...errors, phone: '' })
+                }}
+                placeholder="e.g., +1 234 567 8900"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.role}
+                onChange={(e) => {
+                  setFormData({ ...formData, role: e.target.value })
+                  if (errors.role) setErrors({ ...errors, role: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.role ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role}</p>}
+            </div>
+
+            {/* Location ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Location ID</label>
+              <input
+                type="text"
+                value={formData.locationId}
+                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                placeholder="Optional location ID"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            {/* Hire Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Hire Date</label>
+              <input
+                type="date"
+                value={formData.hireDate}
+                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Certifications */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Certifications</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newCertification}
+                  onChange={(e) => setNewCertification(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addCertification()
                     }
                   }}
-                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-500' : ''}`} />
-                <FormFieldHint hint={FORMAT_HINTS.phone} error={formErrors.phone} />
+                  placeholder="Add certification"
+                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={addCertification}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition"
+                >
+                  Add
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
-                  <select id="select-admin-operations-staff-15" value={form.role}
-                    onChange={(e) => {
-                      setForm({ ...form, role: e.target.value })
-                      const err = validateSelect(e.target.value, 'Role')
-                      setFormErrors((prev) => ({ ...prev, role: err || '' }))
-                    }}
-                    className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.role ? 'border-red-500' : ''}`}>
-                    <option value="trainer">Trainer</option>
-                    <option value="manager">Manager</option>
-                    <option value="receptionist">Receptionist</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <FormFieldHint error={formErrors.role} />
+              {formData.certifications.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.certifications.map((cert) => (
+                    <span
+                      key={cert}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {cert}
+                      <button
+                        type="button"
+                        onClick={() => removeCertification(cert)}
+                        className="hover:bg-blue-200 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Location ID</label>
-                  <input id="input-text-admin-operations-staff-location" type="text" value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })} placeholder="e.g. loc-1" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Certifications (comma-separated)</label>
-                <input id="input-text-admin-operations-staff-certs" type="text" value={form.certifications} onChange={(e) => setForm({ ...form, certifications: e.target.value })} placeholder="CPT, Yoga, Pilates" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
+              )}
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button id="btn-admin-operations-staff-3" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button id="btn-admin-operations-staff-4" onClick={handleSubmit} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
-                {submitting ? 'Saving...' : editingStaff ? 'Update' : 'Create'}
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Saving...' : editingId ? 'Update Staff' : 'Create Staff'}
               </button>
             </div>
+          </form>
+        </SlideInDrawer>
+
+        {/* Delete Confirmation */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-sm"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Staff Member?</h3>
+              <p className="text-slate-600 mb-6">
+                This action cannot be undone. The staff member will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

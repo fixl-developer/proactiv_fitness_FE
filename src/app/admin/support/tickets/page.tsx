@@ -1,465 +1,498 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Ticket, Plus, Search, Clock, User, MessageSquare, CheckCircle, AlertCircle, MoreVertical, UserPlus, Reply, X, RefreshCw, AlertTriangle, Brain, Sparkles, Loader2, Zap, ThumbsUp, ThumbsDown, Send } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { apiClient } from '@/services/api/client'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Ticket } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatAIResponse } from '@/utils/formatAIResponse'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { SupportTicketService } from '@/services/supportService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface SupportTicket {
     id: string
-    subject: string
-    requester: string
-    priority: string
-    priorityColor: string
-    status: string
-    statusColor: string
-    assignee: string
-    created: string
-    sla: string
-    slaColor: string
+    ticketId?: string
+    title?: string
+    subject?: string
     description: string
-}
-
-const fallbackTickets: SupportTicket[] = [
-    { id: 'TK-001', subject: 'Cannot book class', requester: 'Sarah Johnson', priority: 'High', priorityColor: 'bg-orange-100 text-orange-700', status: 'Open', statusColor: 'bg-blue-100 text-blue-700', assignee: 'Unassigned', created: '2h ago', sla: 'Within SLA', slaColor: 'bg-green-100 text-green-700', description: 'Unable to book Gymnastics class for March 25th, getting error on payment step.' },
-    { id: 'TK-002', subject: 'Payment failed', requester: 'Tom Chen', priority: 'Critical', priorityColor: 'bg-red-100 text-red-700', status: 'In Progress', statusColor: 'bg-amber-100 text-amber-700', assignee: 'David Lee', created: '4h ago', sla: 'At Risk', slaColor: 'bg-yellow-100 text-yellow-700', description: 'Credit card payment failed for term enrollment, card has sufficient funds.' },
-    { id: 'TK-003', subject: 'Schedule conflict', requester: 'Coach Mike', priority: 'Medium', priorityColor: 'bg-blue-100 text-blue-700', status: 'Open', statusColor: 'bg-blue-100 text-blue-700', assignee: 'Unassigned', created: '1d ago', sla: 'Within SLA', slaColor: 'bg-green-100 text-green-700', description: 'Two classes assigned to the same time slot in Room 3 on March 22nd.' },
-    { id: 'TK-004', subject: 'Account access issue', requester: 'Emily Park', priority: 'High', priorityColor: 'bg-orange-100 text-orange-700', status: 'Resolved', statusColor: 'bg-green-100 text-green-700', assignee: 'Anna Park', created: '2d ago', sla: 'Met SLA', slaColor: 'bg-green-100 text-green-700', description: 'Cannot login to parent portal after password reset, verification email not received.' },
-]
-
-function timeAgo(dateStr: string): string {
-    const now = new Date()
-    const date = new Date(dateStr)
-    const diff = now.getTime() - date.getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 1) return 'Just now'
-    if (mins < 60) return `${mins}m ago`
-    const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    if (days < 7) return `${days}d ago`
-    return date.toLocaleDateString()
-}
-
-function getPriorityColor(priority: string): string {
-    const map: Record<string, string> = { Critical: 'bg-red-100 text-red-700', High: 'bg-orange-100 text-orange-700', Medium: 'bg-blue-100 text-blue-700', Low: 'bg-gray-100 text-gray-600' }
-    return map[priority] || 'bg-gray-100 text-gray-700'
-}
-
-function getStatusColor(status: string): string {
-    const map: Record<string, string> = { Open: 'bg-blue-100 text-blue-700', 'In Progress': 'bg-amber-100 text-amber-700', Resolved: 'bg-green-100 text-green-700', Closed: 'bg-gray-100 text-gray-600' }
-    return map[status] || 'bg-gray-100 text-gray-700'
+    userId?: string
+    customerId?: string
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    status: 'open' | 'in_progress' | 'resolved' | 'closed'
+    assignedTo?: string
+    createdAt?: string
 }
 
 export default function SupportTicketsPage() {
-    const [isLoading, setIsLoading] = useState(true)
     const [tickets, setTickets] = useState<SupportTicket[]>([])
-    const [searchQuery, setSearchQuery] = useState('')
-    const [filterStatus, setFilterStatus] = useState<string>('All')
-    const [usingFallback, setUsingFallback] = useState(false)
-    const [showCreateModal, setShowCreateModal] = useState(false)
-    const [createForm, setCreateForm] = useState({ subject: '', requester: '', priority: 'Medium', description: '' })
-    const [creating, setCreating] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [showForm, setShowForm] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [submitting, setSubmitting] = useState(false)
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const loadTickets = useCallback(async () => {
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        priority: 'medium' as const,
+        status: 'open' as const,
+        assignedTo: '',
+    })
+
+    const [errors, setErrors] = useState<Record<string, string>>({})
+
+    // Priority colors
+    const priorityColors: Record<string, string> = {
+        low: 'bg-blue-100 text-blue-800',
+        medium: 'bg-yellow-100 text-yellow-800',
+        high: 'bg-orange-100 text-orange-800',
+        urgent: 'bg-red-100 text-red-800',
+    }
+
+    // Status colors
+    const statusColors: Record<string, string> = {
+        open: 'bg-blue-100 text-blue-800',
+        in_progress: 'bg-yellow-100 text-yellow-800',
+        resolved: 'bg-green-100 text-green-800',
+        closed: 'bg-gray-100 text-gray-800',
+    }
+
+    // Load tickets
+    const loadTickets = async () => {
         try {
-            const res: any = await apiClient.get<any>('/support/tickets')
-            // Backend returns { success, data: { tickets: [...], total, pages } }
-            const raw = res?.data?.tickets ?? res?.data ?? res?.tickets ?? res
-            const items = Array.isArray(raw) ? raw : []
-
-            const statusMap: Record<string, string> = {
-                'open': 'Open', 'in-progress': 'In Progress', 'pending': 'Pending',
-                'resolved': 'Resolved', 'closed': 'Closed',
-            }
-            const priorityMap: Record<string, string> = {
-                'low': 'Low', 'medium': 'Medium', 'high': 'High', 'critical': 'Critical',
-            }
-
-            const mapped: SupportTicket[] = items.map((t: any, i: number) => {
-                const status = statusMap[t.status] || t.status || 'Open'
-                const priority = priorityMap[t.priority] || t.priority || 'Medium'
-                const created = t.createdAt ? timeAgo(t.createdAt) : (t.created || 'N/A')
-                return {
-                    id: t.ticketId || t._id || t.id || `TK-${String(i + 1).padStart(3, '0')}`,
-                    subject: t.subject || t.title || 'Untitled',
-                    requester: t.customer?.name || t.requester || 'Unknown',
-                    priority,
-                    priorityColor: getPriorityColor(priority),
-                    status,
-                    statusColor: getStatusColor(status),
-                    assignee: t.assignedTo || t.assignee || 'Unassigned',
-                    created,
-                    sla: t.sla || 'Within SLA',
-                    slaColor: 'bg-green-100 text-green-700',
-                    description: t.description || '',
-                }
+            setLoading(true)
+            const response = await SupportTicketService.getAll({
+                page: currentPage,
+                limit: 10,
+                search: searchTerm,
             })
-            setTickets(mapped)
-            setUsingFallback(false)
-        } catch (err: any) {
-            console.debug('[Tickets] API not available, using fallback data:', err?.message)
-            setTickets(fallbackTickets)
-            setUsingFallback(true)
+            setTickets(response.data || [])
+            setTotalPages(response.pagination?.totalPages || 1)
+        } catch (error) {
+            console.error('Error loading tickets:', error)
+            toast.error('Failed to load support tickets')
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
-    }, [])
+    }
 
     useEffect(() => {
         loadTickets()
-    }, [loadTickets])
+    }, [currentPage, searchTerm])
 
-    const handleCreate = async () => {
-        if (!createForm.subject.trim()) { toast.error('Subject is required'); return }
-        setCreating(true)
+    // Validate form
+    const validateFormData = () => {
+        const newErrors: Record<string, string> = {}
+
+        if (!formData.title) newErrors.title = 'Title is required'
+        else if (formData.title.length < 3) newErrors.title = 'Title must be at least 3 characters'
+
+        if (!formData.description) newErrors.description = 'Description is required'
+        else if (formData.description.length < 10) newErrors.description = 'Description must be at least 10 characters'
+
+        if (!formData.priority) newErrors.priority = 'Priority is required'
+        if (!formData.status) newErrors.status = 'Status is required'
+
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
+    }
+
+    // Handle submit
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (!validateFormData()) {
+            toast.error('Please fix the highlighted fields')
+            return
+        }
+
         try {
-            await apiClient.post('/support/tickets', createForm)
-            toast.success('Ticket created successfully')
-            setShowCreateModal(false)
-            setCreateForm({ subject: '', requester: '', priority: 'Medium', description: '' })
-            loadTickets()
-        } catch {
-            // Fallback: add locally
-            const newTicket: SupportTicket = {
-                id: `TK-${String(tickets.length + 1).padStart(3, '0')}`,
-                subject: createForm.subject,
-                requester: createForm.requester || 'Current User',
-                priority: createForm.priority,
-                priorityColor: getPriorityColor(createForm.priority),
-                status: 'Open',
-                statusColor: 'bg-blue-100 text-blue-700',
-                assignee: 'Unassigned',
-                created: 'Just now',
-                sla: 'Within SLA',
-                slaColor: 'bg-green-100 text-green-700',
-                description: createForm.description,
+            setSubmitting(true)
+
+            if (editingId) {
+                await SupportTicketService.update(editingId, formData)
+                toast.success('Ticket updated successfully')
+            } else {
+                await SupportTicketService.create(formData)
+                toast.success('Ticket created successfully')
             }
-            setTickets(prev => [newTicket, ...prev])
-            toast.success('Ticket created (local only)')
-            setShowCreateModal(false)
-            setCreateForm({ subject: '', requester: '', priority: 'Medium', description: '' })
+
+            setShowForm(false)
+            resetForm()
+            loadTickets()
+        } catch (error) {
+            console.error('Error saving ticket:', error)
+            toast.error(getErrorMessage(error))
         } finally {
-            setCreating(false)
+            setSubmitting(false)
         }
     }
 
-    const handleStatusChange = async (ticketId: string, newStatus: string) => {
+    // Handle edit
+    const handleEdit = (ticket: SupportTicket) => {
+        setFormData({
+            title: ticket.title || ticket.subject || '',
+            description: ticket.description,
+            priority: ticket.priority,
+            status: ticket.status,
+            assignedTo: ticket.assignedTo || '',
+        })
+        setEditingId(ticket.id)
+        setShowForm(true)
+    }
+
+    // Handle delete
+    const handleDelete = async (id: string) => {
         try {
-            await apiClient.patch(`/support/tickets/${ticketId}`, { status: newStatus })
-            toast.success(`Ticket ${newStatus.toLowerCase()}`)
-        } catch {
-            // Update locally
+            await SupportTicketService.delete(id)
+            toast.success('Ticket deleted successfully')
+            setDeleteConfirm(null)
+            loadTickets()
+        } catch (error) {
+            console.error('Error deleting ticket:', error)
+            toast.error(getErrorMessage(error))
         }
-        setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: newStatus, statusColor: getStatusColor(newStatus) } : t))
     }
 
-    const filtered = tickets.filter(t => {
-        const matchesSearch = t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.requester.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            t.id.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesStatus = filterStatus === 'All' || t.status === filterStatus
-        return matchesSearch && matchesStatus
-    })
+    // Reset form
+    const resetForm = () => {
+        setFormData({
+            title: '',
+            description: '',
+            priority: 'medium',
+            status: 'open',
+            assignedTo: '',
+        })
+        setErrors({})
+        setEditingId(null)
+    }
 
-    const openCount = tickets.filter(t => t.status === 'Open').length
-    const inProgressCount = tickets.filter(t => t.status === 'In Progress').length
-    const resolvedCount = tickets.filter(t => t.status === 'Resolved').length
-
-    const stats = [
-        { label: 'Open Tickets', value: openCount.toString(), icon: AlertCircle, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-        { label: 'In Progress', value: inProgressCount.toString(), icon: Clock, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-        { label: 'Resolved', value: resolvedCount.toString(), icon: CheckCircle, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-        { label: 'Total', value: tickets.length.toString(), icon: Ticket, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-    ]
-
-    if (isLoading) {
-        return (
-            <div className="space-y-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-gray-200 rounded-lg"></div>)}
-                    </div>
-                    <div className="h-96 bg-gray-200 rounded-lg"></div>
-                </div>
-            </div>
-        )
+    // Handle close drawer
+    const handleCloseDrawer = () => {
+        setShowForm(false)
+        resetForm()
     }
 
     return (
-        <div className="space-y-6">
-            {usingFallback && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
-                    <p className="text-sm text-yellow-800">Backend endpoint not available - showing sample data</p>
-                </motion.div>
-            )}
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
-                    <p className="text-gray-600 mt-1">Track, assign, and resolve support requests</p>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-2">
-                    <Button id="btn-action-admin-support-tickets" variant="outline" size="sm" onClick={() => { setIsLoading(true); loadTickets() }}>
-                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-                    </Button>
-                    <Button id="btn-set-show-create-modal-admin-support-tickets-create" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
-                        <Plus className="w-4 h-4 mr-2" /> Create Ticket
-                    </Button>
-                </motion.div>
-            </div>
-
-            {showCreateModal && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                    <Card className="border-blue-200 shadow-lg">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>Create Support Ticket</CardTitle>
-                                <Button id="btn-set-show-create-modal-admin-support-tickets" variant="ghost" size="sm" onClick={() => setShowCreateModal(false)}><X className="w-4 h-4" /></Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Subject</label>
-                                    <input id="input-text-admin-support-tickets" type="text" value={createForm.subject} onChange={e => setCreateForm(f => ({ ...f, subject: e.target.value }))} placeholder="Brief description of the issue" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-1 block">Priority</label>
-                                    <select id="select-admin-support-tickets-12" value={createForm.priority} onChange={e => setCreateForm(f => ({ ...f, priority: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none">
-                                        <option value="Low">Low</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="High">High</option>
-                                        <option value="Critical">Critical</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">Requester</label>
-                                <input id="input-text-admin-support-tickets" type="text" value={createForm.requester} onChange={e => setCreateForm(f => ({ ...f, requester: e.target.value }))} placeholder="Requester name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
-                                <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} placeholder="Detailed description..." rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" />
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button id="btn-set-show-create-modal-admin-support-tickets" variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                                <Button id="btn-create-admin-support-tickets" size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Ticket'}</Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {stats.map((stat, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                        <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-                            <div className="flex items-center justify-between mb-3">
-                                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                                    <stat.icon className="w-5 h-5 text-white" />
-                                </div>
-                            </div>
-                            <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-                            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input id={`input-text-admin-support-tickets-${i}`} type="text" placeholder="Search tickets by ID, subject, or requester..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" />
-                        </div>
-                        <div className="flex gap-2">
-                            {['All', 'Open', 'In Progress', 'Resolved'].map(s => (
-                                <Button id="btn-set-filter-status-admin-support-tickets" key={s} variant={filterStatus === s ? 'default' : 'outline'} size="sm" onClick={() => setFilterStatus(s)}>{s}</Button>
-                            ))}
-                        </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-3 mb-2">
+                        <Ticket className="w-8 h-8 text-blue-600" />
+                        <h1 className="text-4xl font-bold text-slate-900">Support Tickets</h1>
                     </div>
-                </CardContent>
-            </Card>
+                    <p className="text-slate-600">Manage customer support tickets and track resolutions</p>
+                </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Ticket className="w-5 h-5 text-blue-600" />
-                                <CardTitle>Tickets</CardTitle>
-                            </div>
-                            <Badge variant="outline">{filtered.length} tickets</Badge>
+                {/* Controls */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 flex gap-4 items-center"
+                >
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search tickets..."
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value)
+                                setCurrentPage(1)
+                            }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <button
+                        onClick={() => {
+                            resetForm()
+                            setShowForm(true)
+                        }}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Create Ticket
+                    </button>
+                </motion.div>
+
+                {/* Table */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-lg shadow-lg overflow-hidden"
+                >
+                    {loading ? (
+                        <div className="p-8 text-center">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <p className="mt-4 text-slate-600">Loading tickets...</p>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-3">
-                            {filtered.map((ticket, i) => (
-                                <motion.div key={ticket.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.07 }} className="border border-gray-100 rounded-lg p-4 hover:shadow-md hover:border-blue-100 transition-all duration-200">
-                                    <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 mb-1">
-                                                <span className="text-sm font-mono font-bold text-blue-600">{ticket.id}</span>
-                                                <Badge className={ticket.priorityColor}>{ticket.priority}</Badge>
-                                                <Badge className={ticket.statusColor}>{ticket.status}</Badge>
-                                                <Badge className={ticket.slaColor}>{ticket.sla}</Badge>
-                                            </div>
-                                            <h3 className="font-semibold text-gray-900">{ticket.subject}</h3>
-                                            <p className="text-sm text-gray-500 mt-1 line-clamp-1">{ticket.description}</p>
-                                        </div>
-                                        <div className="flex items-center gap-6 lg:gap-8 text-sm text-gray-500 shrink-0">
-                                            <div className="flex items-center gap-1.5">
-                                                <User className="w-3.5 h-3.5" />
-                                                <span>{ticket.requester}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <UserPlus className="w-3.5 h-3.5" />
-                                                <span className={ticket.assignee === 'Unassigned' ? 'text-red-500 font-medium' : ''}>{ticket.assignee}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                <span>{ticket.created}</span>
-                                            </div>
-                                            <div className="flex gap-1">
-                                                {ticket.status === 'Open' && (
-                                                    <Button id="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'In Progress')}>
-                                                        Start
-                                                    </Button>
-                                                )}
-                                                {ticket.status === 'In Progress' && (
-                                                    <Button id="btn-status-change-admin-support-tickets" variant="outline" size="sm" onClick={() => handleStatusChange(ticket.id, 'Resolved')}>
-                                                        Resolve
-                                                    </Button>
-                                                )}
-                                                {ticket.assignee === 'Unassigned' && (
-                                                    <Button id="admin-support-tickets-btn" variant="outline" size="sm">
-                                                        <UserPlus className="w-3.5 h-3.5 mr-1" /> Assign
-                                                    </Button>
-                                                )}
-                                                <Button id="admin-support-tickets-btn-2" variant="ghost" size="sm">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                    ) : tickets.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                            <p className="text-slate-600">No tickets found</p>
                         </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* AI Smart Support Hub */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                <SupportAIHub tickets={tickets} />
-            </motion.div>
-        </div>
-    )
-}
-
-function SupportAIHub({ tickets }: { tickets: SupportTicket[] }) {
-    const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
-    const [loading, setLoading] = useState<string | null>(null)
-    const [results, setResults] = useState<Record<string, any>>({})
-    const [optimizeText, setOptimizeText] = useState('')
-
-    const callAI = async (key: string, fn: () => Promise<any>) => {
-        setLoading(key)
-        try {
-            const res = await fn()
-            setResults(prev => ({ ...prev, [key]: { success: true, data: res?.data || res } }))
-        } catch {
-            setResults(prev => ({ ...prev, [key]: { success: false, data: { message: 'AI service unavailable' } } }))
-        } finally { setLoading(null) }
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-purple-600" />
-                    AI Smart Support
-                    <Badge className="bg-purple-100 text-purple-700 text-xs">AI Powered</Badge>
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Ticket Selector */}
-                <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Select Ticket for AI Analysis</label>
-                    <select value={selectedTicket?.id || ''} onChange={e => setSelectedTicket(tickets.find(t => t.id === e.target.value) || null)} className="w-full px-3 py-2 border rounded-lg text-sm">
-                        <option value="">-- Select a ticket --</option>
-                        {tickets.map(t => <option key={t.id} value={t.id}>{t.subject} ({t.requester})</option>)}
-                    </select>
-                </div>
-
-                {/* AI Action Buttons */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                    <button onClick={() => selectedTicket && callAI('classify', () => apiClient.post('/smart-support/classify-ticket', { description: selectedTicket.subject }))} disabled={!selectedTicket || loading === 'classify'} className="flex items-center gap-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-medium text-blue-700 transition-colors disabled:opacity-50">
-                        {loading === 'classify' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Classify
-                    </button>
-                    <button onClick={() => selectedTicket && callAI('sentiment', () => apiClient.post('/smart-support/analyze-sentiment', { text: selectedTicket.subject }))} disabled={!selectedTicket || loading === 'sentiment'} className="flex items-center gap-1 px-3 py-2 bg-green-50 hover:bg-green-100 rounded-lg text-xs font-medium text-green-700 transition-colors disabled:opacity-50">
-                        {loading === 'sentiment' ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />} Sentiment
-                    </button>
-                    <button onClick={() => selectedTicket && callAI('autoResolve', () => apiClient.post('/smart-support/auto-resolve', { ticketId: selectedTicket.id }))} disabled={!selectedTicket || loading === 'autoResolve'} className="flex items-center gap-1 px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs font-medium text-amber-700 transition-colors disabled:opacity-50">
-                        {loading === 'autoResolve' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />} Auto-Resolve
-                    </button>
-                    <button onClick={() => selectedTicket && callAI('suggest', () => apiClient.get(`/smart-support/suggest-response/${selectedTicket.id}`))} disabled={!selectedTicket || loading === 'suggest'} className="flex items-center gap-1 px-3 py-2 bg-purple-50 hover:bg-purple-100 rounded-lg text-xs font-medium text-purple-700 transition-colors disabled:opacity-50">
-                        {loading === 'suggest' ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />} Suggest Reply
-                    </button>
-                    <button onClick={() => callAI('optimize', () => apiClient.post('/ai-communication/optimize-message', { message: optimizeText || 'Thank you for contacting support', channels: ['email', 'sms'] }))} disabled={loading === 'optimize'} className="flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 rounded-lg text-xs font-medium text-rose-700 transition-colors disabled:opacity-50">
-                        {loading === 'optimize' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Optimize Msg
-                    </button>
-                </div>
-
-                {/* Message to optimize */}
-                <textarea value={optimizeText} onChange={e => setOptimizeText(e.target.value)} placeholder="Type a message to optimize with AI..." className="w-full px-3 py-2 border rounded-lg text-sm h-20 resize-none" />
-
-                {/* Results Grid */}
-                {Object.keys(results).length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {results.classify && (
-                            <div className="p-3 bg-blue-50 rounded-lg text-xs">
-                                <p className="font-medium text-blue-700 mb-1">Classification:</p>
-                                <p>{results.classify.data?.category || results.classify.data?.classification || results.classify.data?.message || formatAIResponse(results.classify.data, 150)}</p>
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Title</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Priority</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Assigned To</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Created</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {tickets.map((ticket) => (
+                                            <tr key={ticket.id} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                    {ticket.title || ticket.subject}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[ticket.priority]}`}>
+                                                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[ticket.status]}`}>
+                                                        {ticket.status.replace('_', ' ').charAt(0).toUpperCase() + ticket.status.replace('_', ' ').slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {ticket.assignedTo || 'Unassigned'}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                    {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : 'N/A'}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleEdit(ticket)}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirm(ticket.id)}
+                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
-                        {results.sentiment && (
-                            <div className="p-3 bg-green-50 rounded-lg text-xs">
-                                <p className="font-medium text-green-700 mb-1">Sentiment Analysis:</p>
-                                <p>{results.sentiment.data?.sentiment || results.sentiment.data?.score || results.sentiment.data?.message || formatAIResponse(results.sentiment.data, 150)}</p>
+
+                            {/* Pagination */}
+                            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                                <p className="text-sm text-slate-600">
+                                    Page {currentPage} of {totalPages}
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
-                        )}
-                        {results.autoResolve && (
-                            <div className="p-3 bg-amber-50 rounded-lg text-xs">
-                                <p className="font-medium text-amber-700 mb-1">Auto-Resolve:</p>
-                                <p>{results.autoResolve.data?.resolution || results.autoResolve.data?.resolved ? 'Resolved!' : results.autoResolve.data?.message || formatAIResponse(results.autoResolve.data, 150)}</p>
+                        </>
+                    )}
+                </motion.div>
+
+                {/* Form Drawer */}
+                <SlideInDrawer
+                    isOpen={showForm}
+                    onClose={handleCloseDrawer}
+                    title={editingId ? 'Edit Ticket' : 'Create New Ticket'}
+                    size="lg"
+                >
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Title */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Title <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.title}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, title: e.target.value })
+                                    if (errors.title) setErrors({ ...errors, title: '' })
+                                }}
+                                placeholder="e.g., Payment processing error"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.title
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Description <span className="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                value={formData.description}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, description: e.target.value })
+                                    if (errors.description) setErrors({ ...errors, description: '' })
+                                }}
+                                placeholder="Detailed description of the issue..."
+                                rows={4}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.description && (
+                                <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                            )}
+                        </div>
+
+                        {/* Priority */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Priority <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={formData.priority}
+                                onChange={(e) => {
+                                    setFormData({
+                                        ...formData,
+                                        priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent',
+                                    })
+                                    if (errors.priority) setErrors({ ...errors, priority: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.priority
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                            {errors.priority && <p className="mt-1 text-sm text-red-600">{errors.priority}</p>}
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Status <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => {
+                                    setFormData({
+                                        ...formData,
+                                        status: e.target.value as 'open' | 'in_progress' | 'resolved' | 'closed',
+                                    })
+                                    if (errors.status) setErrors({ ...errors, status: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            >
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
+                        </div>
+
+                        {/* Assigned To */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Assigned To
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.assignedTo}
+                                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                                placeholder="e.g., John Doe"
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p className="mt-1 text-xs text-slate-500">Leave empty for unassigned</p>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-3 pt-6 border-t border-slate-200">
+                            <button
+                                type="button"
+                                onClick={handleCloseDrawer}
+                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                            >
+                                {submitting ? 'Saving...' : editingId ? 'Update Ticket' : 'Create Ticket'}
+                            </button>
+                        </div>
+                    </form>
+                </SlideInDrawer>
+
+                {/* Delete Confirmation */}
+                {deleteConfirm && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-white rounded-lg p-6 max-w-sm"
+                        >
+                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Ticket?</h3>
+                            <p className="text-slate-600 mb-6">
+                                This action cannot be undone. The ticket and all associated data will be permanently deleted.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                                >
+                                    Delete
+                                </button>
                             </div>
-                        )}
-                        {results.suggest && (
-                            <div className="p-3 bg-purple-50 rounded-lg text-xs">
-                                <p className="font-medium text-purple-700 mb-1">Suggested Response:</p>
-                                <p>{results.suggest.data?.suggestion || results.suggest.data?.response || results.suggest.data?.message || formatAIResponse(results.suggest.data, 150)}</p>
-                            </div>
-                        )}
-                        {results.optimize && (
-                            <div className="p-3 bg-rose-50 rounded-lg text-xs col-span-2">
-                                <p className="font-medium text-rose-700 mb-1">Optimized Message:</p>
-                                <p>{results.optimize.data?.optimizedMessage || results.optimize.data?.email || results.optimize.data?.message || formatAIResponse(results.optimize.data, 200)}</p>
-                            </div>
-                        )}
+                        </motion.div>
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     )
 }
