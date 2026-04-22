@@ -1,7 +1,27 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Calendar, CreditCard, TrendingUp, Award, User, LogOut, Settings, Menu, Utensils, PanelLeftClose, PanelLeftOpen, Users } from 'lucide-react'
+import {
+    LayoutDashboard,
+    Calendar,
+    CreditCard,
+    TrendingUp,
+    Award,
+    User,
+    LogOut,
+    Settings,
+    Menu,
+    Utensils,
+    CheckCircle2,
+    Bell,
+    Heart,
+    Wallet,
+    Share2,
+    HelpCircle,
+    MessageSquare,
+    Download,
+    ChevronDown
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -10,16 +30,56 @@ import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
 import NotificationBell from '@/components/shared/NotificationBell'
 
-const navigation = [
-    { name: 'Dashboard', href: '/user/dashboard', icon: LayoutDashboard },
-    { name: 'My Classes', href: '/user/my-classes', icon: Calendar },
-    { name: 'Bookings', href: '/user/bookings', icon: Calendar },
-    { name: 'Payments', href: '/user/payments', icon: CreditCard },
-    { name: 'Progress', href: '/user/progress', icon: TrendingUp },
-    { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
-    { name: 'Achievements', href: '/user/achievements', icon: Award },
-    { name: 'Parent/Guardian', href: '/user/guardians', icon: Users },
-    { name: 'Profile', href: '/user/profile', icon: User }
+const navigationSections = [
+    {
+        title: 'Dashboard',
+        items: [
+            { name: 'Dashboard', href: '/user/dashboard', icon: LayoutDashboard },
+            { name: 'Attendance', href: '/user/attendance', icon: CheckCircle2 },
+            { name: 'Schedule', href: '/user/schedule', icon: Calendar },
+            { name: 'Notifications', href: '/user/notifications', icon: Bell },
+        ]
+    },
+    {
+        title: 'Learning & Classes',
+        items: [
+            { name: 'My Classes', href: '/user/my-classes', icon: Calendar },
+            { name: 'Bookings', href: '/user/bookings', icon: Calendar },
+        ]
+    },
+    {
+        title: 'Fitness & Health',
+        items: [
+            { name: 'Progress', href: '/user/progress', icon: TrendingUp },
+            { name: 'Nutrition', href: '/user/nutrition', icon: Utensils },
+            { name: 'Health Metrics', href: '/user/health-metrics', icon: Heart },
+            { name: 'Achievements', href: '/user/achievements', icon: Award },
+        ]
+    },
+    {
+        title: 'Financial',
+        items: [
+            { name: 'Payments', href: '/user/payments', icon: CreditCard },
+            { name: 'Wallet', href: '/user/wallet', icon: Wallet },
+            { name: 'Referrals', href: '/user/referrals', icon: Share2 },
+        ]
+    },
+    {
+        title: 'Personal',
+        items: [
+            { name: 'Profile', href: '/user/profile', icon: User },
+            { name: 'Certificates', href: '/user/certificates', icon: Award },
+            { name: 'Settings', href: '/user/settings', icon: Settings },
+        ]
+    },
+    {
+        title: 'Support',
+        items: [
+            { name: 'Support', href: '/user/support', icon: HelpCircle },
+            { name: 'Feedback', href: '/user/feedback', icon: MessageSquare },
+            { name: 'Downloads', href: '/user/downloads', icon: Download },
+        ]
+    }
 ]
 
 const colors = {
@@ -30,8 +90,9 @@ const colors = {
     hoverBg: 'hover:bg-emerald-50/60',
 }
 
-const SIDEBAR_EXPANDED = 256
+const SIDEBAR_EXPANDED = 280
 const SIDEBAR_COLLAPSED = 72
+const HEADER_HEIGHT = 120
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
@@ -40,6 +101,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+    const [expandedSections, setExpandedSections] = useState<string[]>([
+        'Dashboard',
+        'Learning & Classes',
+        'Fitness & Health',
+        'Financial',
+        'Personal',
+        'Support'
+    ])
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
@@ -52,6 +121,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
     const displayName = user?.name || (user as any)?.firstName || 'User'
     const userEmail = user?.email || ''
+
+    const toggleSection = (sectionTitle: string) => {
+        setExpandedSections(prev =>
+            prev.includes(sectionTitle)
+                ? prev.filter(s => s !== sectionTitle)
+                : [...prev, sectionTitle]
+        )
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/50">
@@ -88,58 +165,90 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 </div>
 
                 {/* Sidebar Menu - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-2">
+                <div className="flex-1 overflow-y-auto p-2 hover:overflow-y-scroll [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-400 transition-colors"
+                    style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'transparent transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.scrollbarColor = 'rgb(209, 213, 219) transparent'
+                    }}
+                    onMouseLeave={(e) => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.scrollbarColor = 'transparent transparent'
+                    }}
+                >
                     <nav className="space-y-1">
-                        {navigation.map((item) => {
-                            const isActive = pathname === item.href
-                            return (
-                                <div key={item.name} className="relative">
-                                    <button
-                                        id={`user-layout-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-btn`}
-                                        onClick={() => { router.push(item.href); setMobileMenuOpen(false) }}
-                                        onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
-                                        onMouseLeave={() => setHoveredItem(null)}
-                                        className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${
-                                            isActive
-                                                ? `${colors.activeBg} ${colors.text} font-semibold`
-                                                : `text-gray-700 ${colors.hoverBg} hover:text-gray-900`
-                                        }`}
-                                    >
-                                        <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? colors.text : 'text-gray-600'}`} />
-                                        {!sidebarCollapsed && (
-                                            <span className="font-medium text-sm">{item.name}</span>
-                                        )}
-                                    </button>
+                        {navigationSections.map((section) => {
+                            const isExpanded = expandedSections.includes(section.title)
+                            const hasActiveItem = section.items.some(item => pathname === item.href)
 
-                                    {/* Tooltip for collapsed state */}
-                                    {sidebarCollapsed && hoveredItem === item.href && (
-                                        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
-                                            {item.name}
-                                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
-                                        </div>
+                            return (
+                                <div key={section.title} className="mb-2">
+                                    {/* Section Header */}
+                                    {!sidebarCollapsed && (
+                                        <button
+                                            onClick={() => toggleSection(section.title)}
+                                            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${hasActiveItem ? colors.text : 'text-gray-500'} hover:text-gray-700`}
+                                        >
+                                            <span>{section.title}</span>
+                                            <motion.div
+                                                animate={{ rotate: isExpanded ? 180 : 0 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <ChevronDown className="w-3 h-3" />
+                                            </motion.div>
+                                        </button>
                                     )}
+
+                                    {/* Section Items */}
+                                    <motion.div
+                                        initial={false}
+                                        animate={{
+                                            height: sidebarCollapsed || isExpanded ? 'auto' : 0,
+                                            opacity: sidebarCollapsed || isExpanded ? 1 : 0
+                                        }}
+                                        transition={{ duration: 0.2 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="space-y-1">
+                                            {section.items.map((item) => {
+                                                const isActive = pathname === item.href
+                                                return (
+                                                    <div key={item.name} className="relative">
+                                                        <button
+                                                            id={`user-layout-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-btn`}
+                                                            onClick={() => { router.push(item.href); setMobileMenuOpen(false) }}
+                                                            onMouseEnter={() => sidebarCollapsed && setHoveredItem(item.href)}
+                                                            onMouseLeave={() => setHoveredItem(null)}
+                                                            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} p-3 rounded-lg transition-all duration-200 ${isActive
+                                                                ? `${colors.activeBg} ${colors.text} font-semibold`
+                                                                : `text-gray-700 ${colors.hoverBg} hover:text-gray-900`
+                                                                }`}
+                                                        >
+                                                            <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? colors.text : 'text-gray-600'}`} />
+                                                            {!sidebarCollapsed && (
+                                                                <span className="font-medium text-sm">{item.name}</span>
+                                                            )}
+                                                        </button>
+
+                                                        {/* Tooltip for collapsed state */}
+                                                        {sidebarCollapsed && hoveredItem === item.href && (
+                                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap z-[100] shadow-lg">
+                                                                {item.name}
+                                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </motion.div>
                                 </div>
                             )
                         })}
                     </nav>
-                </div>
-
-                {/* Collapse Toggle */}
-                <div className="flex-shrink-0 px-2 py-2 border-t border-gray-200/50">
-                    <button
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    >
-                        {sidebarCollapsed ? (
-                            <PanelLeftOpen className="w-5 h-5" />
-                        ) : (
-                            <div className="flex items-center space-x-2 w-full justify-center">
-                                <PanelLeftClose className="w-5 h-5" />
-                                <span className="text-sm font-medium">Collapse</span>
-                            </div>
-                        )}
-                    </button>
                 </div>
 
                 {/* Sidebar Footer - User Info + Logout */}
@@ -182,13 +291,25 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             {/* Main Content Area */}
-            <div className="transition-all duration-300 ease-in-out lg:ml-0" style={{ marginLeft: 0 }}>
+            <div
+                className="transition-all duration-300 ease-in-out"
+                style={{
+                    marginLeft: `${sidebarWidth}px`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: '100vh'
+                }}
+            >
                 {/* Header - Fixed */}
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out right-0"
-                    style={{ left: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${sidebarWidth}px` : 0 }}
+                    style={{
+                        left: `${sidebarWidth}px`,
+                        right: 0,
+                        width: `calc(100% - ${sidebarWidth}px)`
+                    }}
                 >
                     <div className="flex items-center justify-between px-4 md:px-6 py-4">
                         <div className="flex items-center space-x-4">
@@ -226,7 +347,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 </motion.header>
 
                 {/* Main Content */}
-                <main className="pt-20 p-4 md:p-6 min-h-screen">
+                <main
+                    className="flex-1 p-4 md:p-6 overflow-y-auto"
+                    style={{ paddingTop: `${HEADER_HEIGHT}px` }}
+                >
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}
