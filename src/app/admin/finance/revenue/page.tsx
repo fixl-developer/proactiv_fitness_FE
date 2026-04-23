@@ -1,522 +1,596 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { apiClient } from '@/services/api/client';
-import { toast } from 'sonner';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
-import {
-  DollarSign,
-  TrendingUp,
-  Target,
-  Calendar,
-  Download,
-  ArrowUpRight,
-  ArrowDownRight,
-  Loader2,
-  RotateCcw,
-  AlertCircle,
-} from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, TrendingUp, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { RevenueService } from '@/services/financeService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-interface MonthlyRevenue {
-  month: string;
-  actual: number;
-  target: number;
+interface Revenue {
+  id: string
+  date: string
+  source: string
+  amount: number
+  currency: string
+  locationId?: string
+  category: 'recurring' | 'one-time'
+  notes?: string
+  createdAt?: string
 }
-
-interface ProgramRevenue {
-  program: string;
-  revenue: number;
-  fill: string;
-}
-
-interface LocationRevenue {
-  name: string;
-  value: number;
-  revenue: number;
-  fill: string;
-}
-
-interface BreakdownRow {
-  program: string;
-  students: number;
-  revenue: number;
-  avg: number;
-  growth: number;
-}
-
-interface RevenueStat {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  bgGradient: string;
-  change: string;
-  up: boolean;
-}
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-const PROGRAM_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
 export default function RevenueReportsPage() {
-  const [period, setPeriod] = useState<'6m' | '1y' | 'all'>('6m');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [revenues, setRevenues] = useState<Revenue[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [sourceFilter, setSourceFilter] = useState('')
 
-  const [monthlyRevenueData, setMonthlyRevenueData] = useState<MonthlyRevenue[]>([]);
-  const [programRevenueData, setProgramRevenueData] = useState<ProgramRevenue[]>([]);
-  const [locationData, setLocationData] = useState<LocationRevenue[]>([]);
-  const [breakdownTable, setBreakdownTable] = useState<BreakdownRow[]>([]);
-  const [stats, setStats] = useState<RevenueStat[]>([]);
+  const [formData, setFormData] = useState({
+    date: '',
+    source: 'bookings',
+    amount: '',
+    currency: 'USD',
+    locationId: '',
+    category: 'recurring',
+    notes: '',
+  })
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'HKD', 'JPY', 'AUD', 'CAD', 'SGD', 'CNY']
+  const sources = ['bookings', 'memberships', 'products', 'events', 'other']
+  const categories = ['recurring', 'one-time']
+
+  // Load revenues
+  const loadRevenues = async () => {
     try {
-      const params: Record<string, string> = {};
-      if (dateFrom) params.startDate = dateFrom;
-      if (dateTo) params.endDate = dateTo;
-      if (!dateFrom && !dateTo) params.period = period;
-
-      const result: any = await apiClient.get('/analytics/revenue', { params });
-      const data = result?.data || result;
-
-      if (data && typeof data === 'object') {
-        // Monthly revenue
-        if (Array.isArray(data.monthly)) {
-          setMonthlyRevenueData(data.monthly.map((m: any) => ({
-            month: m.month || '',
-            actual: Number(m.actual || m.revenue) || 0,
-            target: Number(m.target) || 0,
-          })));
-        } else {
-          setMonthlyRevenueData([]);
-        }
-
-        // Program revenue
-        if (Array.isArray(data.byProgram)) {
-          setProgramRevenueData(data.byProgram.map((p: any, i: number) => ({
-            program: p.program || p.name || 'Other',
-            revenue: Number(p.revenue) || 0,
-            fill: PROGRAM_COLORS[i % PROGRAM_COLORS.length],
-          })));
-        } else {
-          setProgramRevenueData([]);
-        }
-
-        // Location revenue
-        if (Array.isArray(data.byLocation)) {
-          setLocationData(data.byLocation.map((l: any, i: number) => ({
-            name: l.name || l.location || 'Unknown',
-            value: Number(l.value || l.percentage) || 0,
-            revenue: Number(l.revenue) || 0,
-            fill: COLORS[i % COLORS.length],
-          })));
-        } else {
-          setLocationData([]);
-        }
-
-        // Breakdown table
-        if (Array.isArray(data.breakdown)) {
-          setBreakdownTable(data.breakdown.map((b: any) => ({
-            program: b.program || b.name || '',
-            students: Number(b.students) || 0,
-            revenue: Number(b.revenue) || 0,
-            avg: Number(b.avg || b.averagePerStudent) || 0,
-            growth: Number(b.growth) || 0,
-          })));
-        } else {
-          setBreakdownTable([]);
-        }
-
-        // Summary stats
-        if (data.summary) {
-          const s = data.summary;
-          setStats([
-            {
-              label: 'Total Revenue (YTD)',
-              value: s.totalRevenue || 'HK$0',
-              icon: DollarSign,
-              gradient: 'from-blue-500 to-blue-600',
-              bgGradient: 'from-blue-50 to-blue-100',
-              change: s.totalRevenueChange || '0%',
-              up: !(s.totalRevenueChange || '').startsWith('-'),
-            },
-            {
-              label: 'Monthly Average',
-              value: s.monthlyAverage || 'HK$0',
-              icon: Calendar,
-              gradient: 'from-green-500 to-emerald-600',
-              bgGradient: 'from-green-50 to-emerald-100',
-              change: s.monthlyAverageChange || '0%',
-              up: !(s.monthlyAverageChange || '').startsWith('-'),
-            },
-            {
-              label: 'Growth Rate',
-              value: s.growthRate || '0%',
-              icon: TrendingUp,
-              gradient: 'from-purple-500 to-purple-600',
-              bgGradient: 'from-purple-50 to-purple-100',
-              change: s.growthRateChange || '0%',
-              up: !(s.growthRateChange || '').startsWith('-'),
-            },
-            {
-              label: 'Projected Annual',
-              value: s.projectedAnnual || 'HK$0',
-              icon: Target,
-              gradient: 'from-orange-500 to-orange-600',
-              bgGradient: 'from-orange-50 to-orange-100',
-              change: s.projectedStatus || '-',
-              up: (s.projectedStatus || '').includes('track'),
-            },
-          ]);
-        } else {
-          setStats([]);
-        }
-      }
-    } catch (err: any) {
-      console.error('Revenue fetch error:', err);
-      setError('Failed to load revenue data. Please ensure the backend server is running.');
+      setLoading(true)
+      const response = await RevenueService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+        startDate,
+        endDate,
+        source: sourceFilter,
+      })
+      setRevenues(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading revenues:', error)
+      toast.error('Failed to load revenue reports')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false);
-  }, [period, dateFrom, dateTo]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleExport = () => {
-    if (breakdownTable.length === 0 && monthlyRevenueData.length === 0) {
-      toast.error('No data to export');
-      return;
-    }
-    const headers = ['Program', 'Students', 'Revenue (HK$)', 'Avg/Student', 'Growth %'];
-    const rows = breakdownTable.map((row) => [
-      row.program, row.students, row.revenue, row.avg, row.growth,
-    ]);
-    const monthHeaders = ['', '', 'Month', 'Actual Revenue', 'Target'];
-    const monthRows = monthlyRevenueData.map((m) => ['', '', m.month, m.actual, m.target]);
-    const allRows = [headers, ...rows, [], monthHeaders, ...monthRows];
-    const csv = allRows.map((row) => (row as (string | number)[]).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `revenue_report_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Revenue report exported to CSV');
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-gray-500">Loading revenue data...</p>
-        </div>
-      </div>
-    );
   }
 
-  // Find max revenue for progress bar scaling
-  const maxRevenue = breakdownTable.length > 0 ? Math.max(...breakdownTable.map((r) => r.revenue)) : 1;
+  useEffect(() => {
+    loadRevenues()
+  }, [currentPage, searchTerm, startDate, endDate, sourceFilter])
+
+  // Validate form
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.date) newErrors.date = 'Date is required'
+    if (!formData.source) newErrors.source = 'Source is required'
+    if (!formData.amount) newErrors.amount = 'Amount is required'
+    else if (parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0'
+    if (!formData.currency) newErrors.currency = 'Currency is required'
+    if (!formData.category) newErrors.category = 'Category is required'
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+
+      const submitData = {
+        ...formData,
+        amount: parseFloat(formData.amount),
+      }
+
+      if (editingId) {
+        await RevenueService.update(editingId, submitData)
+        toast.success('Revenue updated successfully')
+      } else {
+        await RevenueService.create(submitData)
+        toast.success('Revenue created successfully')
+      }
+
+      setShowForm(false)
+      resetForm()
+      loadRevenues()
+    } catch (error) {
+      console.error('Error saving revenue:', error)
+      toast.error(getErrorMessage(error))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handle edit
+  const handleEdit = (revenue: Revenue) => {
+    setFormData({
+      date: revenue.date,
+      source: revenue.source,
+      amount: revenue.amount.toString(),
+      currency: revenue.currency,
+      locationId: revenue.locationId || '',
+      category: revenue.category,
+      notes: revenue.notes || '',
+    })
+    setEditingId(revenue.id)
+    setShowForm(true)
+  }
+
+  // Handle delete
+  const handleDelete = async (id: string) => {
+    try {
+      await RevenueService.delete(id)
+      toast.success('Revenue deleted successfully')
+      setDeleteConfirm(null)
+      loadRevenues()
+    } catch (error) {
+      console.error('Error deleting revenue:', error)
+      toast.error(getErrorMessage(error))
+    }
+  }
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      date: '',
+      source: 'bookings',
+      amount: '',
+      currency: 'USD',
+      locationId: '',
+      category: 'recurring',
+      notes: '',
+    })
+    setErrors({})
+    setEditingId(null)
+  }
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'recurring':
+        return 'bg-green-100 text-green-800'
+      case 'one-time':
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-slate-100 text-slate-800'
+    }
+  }
+
+  const getTotalRevenue = () => {
+    return revenues.reduce((sum, r) => sum + r.amount, 0).toFixed(2)
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      {error && (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3"
+          className="mb-8"
         >
-          <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-          <p className="text-sm text-red-800">{error}</p>
-          <Button id={`btn-fetch-data-admin-finance-revenue-${r}`} variant="outline" size="sm" onClick={fetchData} className="ml-auto gap-1.5 text-red-700 border-red-300 hover:bg-red-100">
-            <RotateCcw className="h-3.5 w-3.5" /> Retry
-          </Button>
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Revenue Reports</h1>
+          </div>
+          <p className="text-slate-600">Track and manage revenue from all sources</p>
         </motion.div>
-      )}
 
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Revenue Reports</h1>
-          <p className="text-gray-500 text-sm mt-1">Financial performance and revenue analytics</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <input id={`input-date-admin-finance-revenue-${r}`}
-              type="date"
-              className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-            <span className="text-gray-400 text-sm">to</span>
-            <input id="input-date-admin-finance-revenue"
-              type="date"
-              className="text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Total Revenue</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">${getTotalRevenue()}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Total Entries</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{revenues.length}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-slate-600 text-sm">Average Entry</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">
+              ${revenues.length > 0 ? (getTotalRevenue() / revenues.length).toFixed(2) : '0.00'}
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-4 items-center flex-wrap"
+        >
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search revenue..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex border rounded-lg p-0.5">
-            {(['6m', '1y', 'all'] as const).map((p) => (
-              <button id="admin-finance-revenue-btn"
-                key={p}
-                onClick={() => { setPeriod(p); setDateFrom(''); setDateTo(''); }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  period === p && !dateFrom && !dateTo ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {p === '6m' ? '6 Months' : p === '1y' ? '1 Year' : 'All Time'}
-              </button>
+
+          <select
+            value={sourceFilter}
+            onChange={(e) => {
+              setSourceFilter(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Sources</option>
+            {sources.map((source) => (
+              <option key={source} value={source}>
+                {source.charAt(0).toUpperCase() + source.slice(1)}
+              </option>
             ))}
-          </div>
-          <Button id="btn-export-admin-finance-revenue" variant="outline" size="sm" className="gap-2" onClick={handleExport}>
-            <Download className="h-4 w-4" /> Export
-          </Button>
-          <Button id="btn-fetch-data-admin-finance-revenue" variant="outline" size="sm" className="gap-1.5" onClick={fetchData}>
-            <RotateCcw className="h-3.5 w-3.5" /> Refresh
-          </Button>
-        </div>
-      </motion.div>
+          </select>
 
-      {/* Stats */}
-      {stats.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => {
-            const IconComp = stat.icon;
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
-              >
-                <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                      <IconComp className="w-5 h-5 text-white" />
-                    </div>
-                    <Badge className={`text-[10px] ${stat.up ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                      {stat.change}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Monthly Revenue Line Chart */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Monthly Revenue Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {monthlyRevenueData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={monthlyRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip
-                    formatter={(value: number) => [`HK$${value.toLocaleString()}`, '']}
-                    labelStyle={{ fontWeight: 600 }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="actual" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: '#3b82f6' }} name="Actual Revenue" />
-                  <Line type="monotone" dataKey="target" stroke="#d1d5db" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3, fill: '#d1d5db' }} name="Previous Period" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[350px] text-gray-400 text-sm">
-                No monthly revenue data available
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Bar + Pie Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="text-lg">Revenue by Program</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {programRevenueData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={programRevenueData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`} />
-                    <YAxis type="category" dataKey="program" tick={{ fontSize: 11 }} width={120} />
-                    <Tooltip
-                      formatter={(value: number) => [`HK$${value.toLocaleString()}`, 'Revenue']}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    />
-                    <Bar dataKey="revenue" radius={[0, 6, 6, 0]} barSize={28}>
-                      {programRevenueData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
-                  No program revenue data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="text-lg">Revenue by Location</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {locationData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={locationData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={110}
-                        paddingAngle={4}
-                        dataKey="value"
-                        label={({ name, value }) => `${name} ${value}%`}
-                      >
-                        {locationData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number, _name: string, props: any) => [
-                          `${value}% (HK$${(props.payload.revenue || 0).toLocaleString()})`,
-                          'Share',
-                        ]}
-                        contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center gap-6 mt-2">
-                    {locationData.map((loc) => (
-                      <div key={loc.name} className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: loc.fill }} />
-                        <span className="text-xs text-gray-600">{loc.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
-                  No location revenue data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Revenue Breakdown Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Revenue Breakdown by Program</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50/50">
-                    <th className="text-left p-3 font-medium text-gray-600">Program</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Students</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Revenue (HK$)</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Avg / Student</th>
-                    <th className="text-right p-3 font-medium text-gray-600">Growth %</th>
-                    <th className="p-3 font-medium text-gray-600">Progress</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {breakdownTable.length > 0 ? breakdownTable.map((row, i) => (
-                    <motion.tr
-                      key={row.program}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.55 + i * 0.04 }}
-                      className="border-b hover:bg-gray-50/50"
-                    >
-                      <td className="p-3 font-medium text-gray-900">{row.program}</td>
-                      <td className="p-3 text-right text-gray-600">{row.students}</td>
-                      <td className="p-3 text-right font-semibold text-gray-900">${row.revenue.toLocaleString()}</td>
-                      <td className="p-3 text-right text-gray-600">${row.avg.toLocaleString()}</td>
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {row.growth >= 0 ? (
-                            <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
-                          ) : (
-                            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
-                          )}
-                          <span className={`font-medium ${row.growth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {row.growth > 0 ? '+' : ''}{row.growth}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3 w-32">
-                        <Progress value={maxRevenue > 0 ? Math.round((row.revenue / maxRevenue) * 100) : 0} className="h-1.5" />
-                      </td>
-                    </motion.tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={6} className="text-center py-10 text-gray-400">
-                        <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">No revenue breakdown data available yet</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          <div className="flex gap-2">
+            <div className="relative">
+              <Calendar className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Revenue
+          </button>
+        </motion.div>
+
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow-lg overflow-hidden"
+        >
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading revenue reports...</p>
+            </div>
+          ) : revenues.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No revenue records found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Source</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Amount</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Category</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Location</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {revenues.map((revenue) => (
+                      <tr key={revenue.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {new Date(revenue.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 capitalize">{revenue.source}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {revenue.amount.toFixed(2)} {revenue.currency}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getCategoryColor(revenue.category)}`}>
+                            {revenue.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{revenue.locationId || '-'}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(revenue)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(revenue.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </motion.div>
+
+        {/* Form Drawer */}
+        <SlideInDrawer
+          isOpen={showForm}
+          onClose={handleCloseDrawer}
+          title={editingId ? 'Edit Revenue' : 'Add New Revenue'}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  setFormData({ ...formData, date: e.target.value })
+                  if (errors.date) setErrors({ ...errors, date: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+            </div>
+
+            {/* Source */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Source <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.source}
+                onChange={(e) => {
+                  setFormData({ ...formData, source: e.target.value })
+                  if (errors.source) setErrors({ ...errors, source: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.source ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Source</option>
+                {sources.map((source) => (
+                  <option key={source} value={source}>
+                    {source.charAt(0).toUpperCase() + source.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.source && <p className="mt-1 text-sm text-red-600">{errors.source}</p>}
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Amount <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => {
+                  setFormData({ ...formData, amount: e.target.value })
+                  if (errors.amount) setErrors({ ...errors, amount: '' })
+                }}
+                placeholder="0.00"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.amount ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+            </div>
+
+            {/* Currency */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Currency <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.currency}
+                onChange={(e) => {
+                  setFormData({ ...formData, currency: e.target.value })
+                  if (errors.currency) setErrors({ ...errors, currency: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.currency ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Currency</option>
+                {currencies.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
+              {errors.currency && <p className="mt-1 text-sm text-red-600">{errors.currency}</p>}
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => {
+                  setFormData({ ...formData, category: e.target.value })
+                  if (errors.category) setErrors({ ...errors, category: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.category ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
+              </select>
+              {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+            </div>
+
+            {/* Location ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Location ID</label>
+              <input
+                type="text"
+                value={formData.locationId}
+                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                placeholder="Optional location ID"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Optional notes about this revenue"
+                rows={3}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Saving...' : editingId ? 'Update Revenue' : 'Create Revenue'}
+              </button>
+            </div>
+          </form>
+        </SlideInDrawer>
+
+        {/* Delete Confirmation */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-sm"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Revenue Record?</h3>
+              <p className="text-slate-600 mb-6">
+                This action cannot be undone. The revenue record will be permanently deleted.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }

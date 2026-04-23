@@ -19,7 +19,7 @@ interface Slide {
 const staticSlides: Slide[] = [
     {
         id: 1,
-        image: '/images/hero-1.jpg',
+        image: '/images/hero/gymnastics-1.jpg',
         title: 'Welcome to ProActiv Fitness',
         subtitle: 'Building Confidence Through Movement',
         cta: 'JOIN NOW',
@@ -27,7 +27,7 @@ const staticSlides: Slide[] = [
     },
     {
         id: 2,
-        image: '/images/hero-2.jpg',
+        image: '/images/hero/gymnastics-2.jpg',
         title: 'Expert Coaching Programs',
         subtitle: 'Professional Training for All Ages',
         cta: 'EXPLORE PROGRAMS',
@@ -35,19 +35,11 @@ const staticSlides: Slide[] = [
     },
     {
         id: 3,
-        image: '/images/hero-3.jpg',
+        image: '/images/hero/gymnastics-3.jpg',
         title: 'State-of-the-Art Facilities',
         subtitle: 'Safe & Modern Training Environment',
         cta: 'BOOK A TRIAL',
         ctaLink: '/book-trial',
-    },
-    {
-        id: 4,
-        image: '/images/hero-4.jpg',
-        title: 'Join Our Community',
-        subtitle: 'Where Champions Are Made',
-        cta: 'GET STARTED',
-        ctaLink: '/register',
     },
 ];
 
@@ -176,8 +168,8 @@ export function HeroCarousel() {
                                 key={index}
                                 onClick={() => goToSlide(index)}
                                 className={`w-3 h-3 rounded-full transition-all ${index === currentSlide
-                                        ? 'bg-white w-8'
-                                        : 'bg-white/50 hover:bg-white/75'
+                                    ? 'bg-white w-8'
+                                    : 'bg-white/50 hover:bg-white/75'
                                     }`}
                                 aria-label={`Go to slide ${index + 1}`}
                             />

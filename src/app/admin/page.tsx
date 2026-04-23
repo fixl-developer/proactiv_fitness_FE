@@ -1,260 +1,313 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import {
-    LayoutDashboard, Users, Calendar, DollarSign,
-    Building2, BarChart3, Settings, MessageSquare,
-    UserCheck, Target, Bell, Shield, Database
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { responsiveClasses } from '@/lib/responsiveClasses'
+import { TrendingUp, Users, DollarSign, Activity, Calendar, ChevronLeft, ChevronRight, AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-const AdminHomePage = () => {
-    const [isLoading, setIsLoading] = useState(true)
+interface DashboardMetrics {
+    totalRevenue: number
+    revenueGrowth: number
+    totalStudents: number
+    studentGrowth: number
+    activeClasses: number
+    classesGrowth: number
+    attendanceRate: number
+    attendanceGrowth: number
+}
+
+interface RevenueData {
+    date: string
+    amount: number
+}
+
+interface ActivityLog {
+    id: string
+    type: string
+    description: string
+    timestamp: string
+    user: string
+}
+
+export default function AdminDashboard() {
+    const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+    const [revenueData, setRevenueData] = useState<RevenueData[]>([])
+    const [activities, setActivities] = useState<ActivityLog[]>([])
+    const [loading, setLoading] = useState(true)
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+    const [startDate, setStartDate] = useState('')
+    const [endDate, setEndDate] = useState('')
+    const [showDateFilter, setShowDateFilter] = useState(false)
+
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+    const loadDashboardData = async () => {
+        try {
+            setLoading(true)
+            const params = new URLSearchParams()
+            if (selectedMonth !== null) params.append('month', (selectedMonth + 1).toString())
+            if (selectedYear) params.append('year', selectedYear.toString())
+            if (startDate) params.append('startDate', startDate)
+            if (endDate) params.append('endDate', endDate)
+
+            const metricsResponse = await fetch(`/api/v1/admin/dashboard/metrics?${params}`)
+            if (metricsResponse.ok) {
+                const metricsData = await metricsResponse.json()
+                setMetrics(metricsData.data || metricsData)
+            }
+
+            const revenueResponse = await fetch(`/api/v1/admin/dashboard/revenue-trend?${params}`)
+            if (revenueResponse.ok) {
+                const revenueDataResponse = await revenueResponse.json()
+                setRevenueData(revenueDataResponse.data || [])
+            }
+
+            const activitiesResponse = await fetch(`/api/v1/admin/dashboard/activities?${params}`)
+            if (activitiesResponse.ok) {
+                const activitiesDataResponse = await activitiesResponse.json()
+                setActivities(activitiesDataResponse.data || [])
+            }
+
+            toast.success('Dashboard data loaded')
+        } catch (error) {
+            console.error('Error loading dashboard data:', error)
+            toast.error(getErrorMessage(error))
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const isAuthenticated = localStorage.getItem('isAuthenticated')
-            if (!isAuthenticated) {
-                window.location.href = '/login'
+        loadDashboardData()
+    }, [selectedMonth, selectedYear, startDate, endDate])
+
+    const handlePreviousMonth = () => {
+        if (selectedMonth === 0) {
+            setSelectedMonth(11)
+            setSelectedYear(selectedYear - 1)
+        } else {
+            setSelectedMonth(selectedMonth - 1)
+        }
+    }
+
+    const handleNextMonth = () => {
+        if (selectedMonth === 11) {
+            setSelectedMonth(0)
+            setSelectedYear(selectedYear + 1)
+        } else {
+            setSelectedMonth(selectedMonth + 1)
+        }
+    }
+
+    const handleApplyDateFilter = () => {
+        if (startDate && endDate) {
+            if (new Date(startDate) > new Date(endDate)) {
+                toast.error('Start date must be before end date')
                 return
             }
+            setShowDateFilter(false)
+            loadDashboardData()
+        } else {
+            toast.error('Please select both start and end dates')
         }
-        setTimeout(() => setIsLoading(false), 1000)
-    }, [])
+    }
 
-    // Admin Navigation Items
-    const adminSections = [
-        {
-            title: 'Dashboard',
-            description: 'Business overview and key metrics',
-            icon: LayoutDashboard,
-            href: '/admin/dashboard',
-            color: 'bg-blue-500',
-            stats: 'Live data'
-        },
-        {
-            title: 'Users & Roles',
-            description: 'Manage user accounts and permissions',
-            icon: Users,
-            href: '/admin/users',
-            color: 'bg-green-500',
-            stats: '156 users'
-        },
-        {
-            title: 'Staff Management',
-            description: 'Coach schedules and performance',
-            icon: UserCheck,
-            href: '/admin/staff',
-            color: 'bg-purple-500',
-            stats: '54 coaches'
-        },
-        {
-            title: 'Customers',
-            description: 'Student and parent management',
-            icon: Target,
-            href: '/admin/customers',
-            color: 'bg-orange-500',
-            stats: '3,420 students'
-        },
-        {
-            title: 'Schedule',
-            description: 'Class scheduling and management',
-            icon: Calendar,
-            href: '/admin/schedule',
-            color: 'bg-red-500',
-            stats: '89 classes'
-        },
-        {
-            title: 'Bookings',
-            description: 'Assessment and class bookings',
-            icon: Bell,
-            href: '/admin/bookings',
-            color: 'bg-yellow-500',
-            stats: '12 today'
-        },
-        {
-            title: 'Payments',
-            description: 'Financial transactions and billing',
-            icon: DollarSign,
-            href: '/admin/payments',
-            color: 'bg-emerald-500',
-            stats: 'HK$485K/month'
-        },
-        {
-            title: 'Analytics',
-            description: 'Business intelligence and reports',
-            icon: BarChart3,
-            href: '/admin/analytics',
-            color: 'bg-indigo-500',
-            stats: 'Real-time'
-        },
-        {
-            title: 'Organization',
-            description: 'Business units and locations',
-            icon: Building2,
-            href: '/admin/organization',
-            color: 'bg-pink-500',
-            stats: '16 outlets'
-        },
-        {
-            title: 'Locations',
-            description: 'Gym locations and facilities',
-            icon: Building2,
-            href: '/admin/locations',
-            color: 'bg-cyan-500',
-            stats: '8 gyms'
-        },
-        {
-            title: 'AI Systems',
-            description: 'Chatbot and automation tools',
-            icon: MessageSquare,
-            href: '/admin/ai',
-            color: 'bg-violet-500',
-            stats: '87% resolution'
-        },
-        {
-            title: 'Students',
-            description: 'Student profiles and progress',
-            icon: Users,
-            href: '/admin/students',
-            color: 'bg-teal-500',
-            stats: '3,420 active'
-        }
-    ]
+    const handleClearDateFilter = () => {
+        setStartDate('')
+        setEndDate('')
+        setShowDateFilter(false)
+    }
 
-    if (isLoading) {
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value)
+    }
+
+    const GrowthIndicator = ({ value }: { value: number }) => {
+        const isPositive = value >= 0
         return (
-            <div className={responsiveClasses.pageContainer}>
-                <div className="animate-pulse space-y-4 sm:space-y-6">
-                    <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                            <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-                        ))}
-                    </div>
-                </div>
+            <div className={`flex items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                <span className="text-sm font-medium">{Math.abs(value)}%</span>
             </div>
         )
     }
 
     return (
-        <div className={responsiveClasses.pageContainer}>
-            {/* Header */}
-            <div className={responsiveClasses.headerContainer}>
-                <div>
-                    <motion.h1
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-4xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent animate-gradient-text"
-                    >
-                        Admin Center
-                    </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-gray-600 mt-2"
-                    >
-                        Manage all aspects of your <span className="font-semibold text-violet-600">gymnastics business</span>
-                    </motion.p>
-                </div>
-                <Button id="admin-go-to-dashboard-btn"
-                    onClick={() => window.location.href = '/admin/dashboard'}
-                    className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                    <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Go to Dashboard
-                </Button>
-            </div>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+            <div className="max-w-7xl mx-auto">
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                    <h1 className="text-4xl font-bold text-slate-900 mb-2">Dashboard</h1>
+                    <p className="text-slate-600">Welcome to your admin dashboard</p>
+                </motion.div>
 
-            {/* Admin Sections Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {adminSections.map((section, index) => (
-                    <motion.div
-                        key={section.title}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 * index }}
-                        whileHover={{ scale: 1.05, y: -5 }}
-                        className="group"
-                    >
-                        <Card
-                            id={`admin-section-${section.title.toLowerCase().replace(/\s+/g, '-')}-card`}
-                            className="hover:shadow-2xl transition-all duration-500 cursor-pointer group border-0 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm admin-card-hover"
-                            onClick={() => window.location.href = section.href}
-                        >
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-3 rounded-xl ${section.color} text-white group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl`}>
-                                        <section.icon className="w-6 h-6" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <CardTitle className="text-lg group-hover:text-violet-600 transition-colors duration-300 font-bold">
-                                            {section.title}
-                                        </CardTitle>
-                                        <p className="text-sm text-gray-600 mt-1 group-hover:text-gray-700 transition-colors">
-                                            {section.description}
-                                        </p>
-                                    </div>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-white rounded-lg shadow-md p-6">
+                    <div className="flex flex-wrap gap-4 items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-slate-700">Month:</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handlePreviousMonth} className="p-2 text-slate-600 hover:bg-slate-100 rounded transition">
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <div className="min-w-[200px] text-center">
+                                    <p className="text-sm font-semibold text-slate-900">{months[selectedMonth]} {selectedYear}</p>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-gray-500 group-hover:text-violet-600 transition-colors">
-                                        {section.stats}
-                                    </span>
-                                    <Button id={`admin-section-${section.title.toLowerCase().replace(/\s+/g, '-')}-open-btn`}
-                                        variant="ghost"
-                                        size="sm"
-                                        className="group-hover:bg-gradient-to-r group-hover:from-violet-50 group-hover:to-purple-50 group-hover:text-violet-600 transition-all duration-300 transform group-hover:scale-105"
-                                    >
-                                        Open →
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                ))}
-            </div>
+                                <button onClick={handleNextMonth} className="p-2 text-slate-600 hover:bg-slate-100 rounded transition">
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
 
-            {/* Quick Stats */}
-            <Card className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-                <CardHeader>
-                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                        System Overview
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        {[
-                            { value: '16', label: 'Total Locations', color: 'from-blue-500 to-cyan-500' },
-                            { value: '3,420', label: 'Active Students', color: 'from-emerald-500 to-teal-500' },
-                            { value: '156', label: 'Staff Members', color: 'from-purple-500 to-violet-500' },
-                            { value: '89', label: 'Active Classes', color: 'from-orange-500 to-amber-500' }
-                        ].map((stat, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.2 * index }}
-                                className="text-center group"
-                            >
-                                <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent group-hover:scale-110 transition-transform duration-300`}>
-                                    {stat.value}
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setShowDateFilter(!showDateFilter)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                <Calendar className="w-4 h-4" />
+                                Date Range
+                            </button>
+                            {(startDate || endDate) && (
+                                <button onClick={handleClearDateFilter} className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition">
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {showDateFilter && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap gap-4 items-end">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-900 mb-2">Start Date</label>
+                                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-900 mb-2">End Date</label>
+                                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <button onClick={handleApplyDateFilter} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                Apply
+                            </button>
+                        </motion.div>
+                    )}
+                </motion.div>
+
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                            <p className="text-slate-600">Loading dashboard data...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium text-slate-600">Total Revenue</h3>
+                                    <DollarSign className="w-5 h-5 text-green-600" />
                                 </div>
-                                <div className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-                                    {stat.label}
+                                <p className="text-3xl font-bold text-slate-900">{metrics ? formatCurrency(metrics.totalRevenue) : '$0'}</p>
+                                {metrics && <GrowthIndicator value={metrics.revenueGrowth} />}
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium text-slate-600">Total Students</h3>
+                                    <Users className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <p className="text-3xl font-bold text-slate-900">{metrics?.totalStudents || 0}</p>
+                                {metrics && <GrowthIndicator value={metrics.studentGrowth} />}
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium text-slate-600">Active Classes</h3>
+                                    <Activity className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <p className="text-3xl font-bold text-slate-900">{metrics?.activeClasses || 0}</p>
+                                {metrics && <GrowthIndicator value={metrics.classesGrowth} />}
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium text-slate-600">Attendance Rate</h3>
+                                    <TrendingUp className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <p className="text-3xl font-bold text-slate-900">{metrics?.attendanceRate || 0}%</p>
+                                {metrics && <GrowthIndicator value={metrics.attendanceGrowth} />}
+                            </div>
+                        </motion.div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+                                <h2 className="text-lg font-semibold text-slate-900 mb-6">Revenue Trend</h2>
+                                {revenueData.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {revenueData.slice(0, 7).map((item, index) => {
+                                            const maxAmount = Math.max(...revenueData.map((d) => d.amount))
+                                            const percentage = (item.amount / maxAmount) * 100
+                                            return (
+                                                <div key={index} className="flex items-center justify-between">
+                                                    <p className="text-sm font-medium text-slate-900 min-w-[80px]">{item.date}</p>
+                                                    <div className="flex-1 mx-4 bg-slate-200 rounded-full h-2">
+                                                        <div className="bg-green-600 h-2 rounded-full transition-all" style={{ width: `${percentage}%` }}></div>
+                                                    </div>
+                                                    <p className="text-sm font-semibold text-slate-900 min-w-[100px] text-right">{formatCurrency(item.amount)}</p>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center py-8">
+                                        <AlertCircle className="w-5 h-5 text-slate-400 mr-2" />
+                                        <p className="text-slate-500">No revenue data available</p>
+                                    </div>
+                                )}
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-md p-6">
+                                <h2 className="text-lg font-semibold text-slate-900 mb-6">Alerts</h2>
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-sm font-medium text-red-900">Low Attendance</p>
+                                        <p className="text-xs text-red-700 mt-1">Attendance rate below target</p>
+                                    </div>
+                                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <p className="text-sm font-medium text-yellow-900">Pending Payments</p>
+                                        <p className="text-xs text-yellow-700 mt-1">5 payments awaiting confirmation</p>
+                                    </div>
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <p className="text-sm font-medium text-blue-900">New Enrollments</p>
+                                        <p className="text-xs text-blue-700 mt-1">12 new students this month</p>
+                                    </div>
                                 </div>
                             </motion.div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                        </div>
+
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-md p-6">
+                            <h2 className="text-lg font-semibold text-slate-900 mb-6">Recent Activities</h2>
+                            {activities.length > 0 ? (
+                                <div className="space-y-4">
+                                    {activities.slice(0, 8).map((activity) => (
+                                        <div key={activity.id} className="flex items-start gap-4 pb-4 border-b border-slate-200 last:border-b-0">
+                                            <div className="w-2 h-2 rounded-full bg-blue-600 mt-2 flex-shrink-0"></div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium text-slate-900">{activity.description}</p>
+                                                <p className="text-xs text-slate-500 mt-1">{activity.user} • {activity.timestamp}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center py-8">
+                                    <AlertCircle className="w-5 h-5 text-slate-400 mr-2" />
+                                    <p className="text-slate-500">No activities available</p>
+                                </div>
+                            )}
+                        </motion.div>
+                    </>
+                )}
+            </div>
         </div>
     )
 }
-
-export default AdminHomePage

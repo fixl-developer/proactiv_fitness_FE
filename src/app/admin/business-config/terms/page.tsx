@@ -1,597 +1,515 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { apiClient } from '@/services/api/client'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Plus, Edit, Trash2, Search, Sun, Umbrella, Loader2, Clock } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { validateName, validateRequired, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
-import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { TermService, LocationService } from '@/services/businessConfigService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface Term {
   id: string
   name: string
   startDate: string
   endDate: string
-  createdAt?: string
+  locationId?: string
+  holidays?: Holiday[]
+  isActive: boolean
 }
 
 interface Holiday {
-  id: string
   name: string
   date: string
   type: string
-  createdAt?: string
 }
 
-function getTermStatus(startDate: string, endDate: string): 'active' | 'upcoming' | 'past' {
-  const now = new Date()
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  if (now >= start && now <= end) return 'active'
-  if (now < start) return 'upcoming'
-  return 'past'
-}
-
-function getWeeksBetween(startDate: string, endDate: string): number {
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  const diffMs = end.getTime() - start.getTime()
-  return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000))
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-export default function TermsHolidaysPage() {
+export default function TermsPage() {
   const [terms, setTerms] = useState<Term[]>([])
-  const [holidays, setHolidays] = useState<Holiday[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  // Term form
-  const [showTermForm, setShowTermForm] = useState(false)
-  const [editingTerm, setEditingTerm] = useState<Term | null>(null)
-  const [termForm, setTermForm] = useState({ name: '', startDate: '', endDate: '' })
-  const [savingTerm, setSavingTerm] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+    locationId: '',
+    holidays: [] as Holiday[],
+    isActive: true,
+  })
 
-  // Validation errors
-  const [termErrors, setTermErrors] = useState<Record<string, string>>({})
-  const [holidayErrors, setHolidayErrors] = useState<Record<string, string>>({})
+  const [newHoliday, setNewHoliday] = useState({ name: '', date: '', type: 'Public Holiday' })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Holiday form
-  const [showHolidayForm, setShowHolidayForm] = useState(false)
-  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null)
-  const [holidayForm, setHolidayForm] = useState({ name: '', date: '', type: 'Public Holiday' })
-  const [savingHoliday, setSavingHoliday] = useState(false)
+  const holidayTypes = ['Public Holiday', 'School Holiday', 'Company Holiday', 'Observance']
 
-  // Delete
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'term' | 'holiday'; id: string; name: string } | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
-  const loadData = useCallback(async () => {
+  const loadTerms = async () => {
     try {
       setLoading(true)
-      const [termsData, holidaysData] = await Promise.all([
-        apiClient.get<any>('/terms'),
-        apiClient.get<any>('/holiday-calendars'),
-      ])
-      setTerms(Array.isArray(termsData) ? termsData : termsData?.data || [])
-      setHolidays(Array.isArray(holidaysData) ? holidaysData : holidaysData?.data || [])
-    } catch (error: any) {
-      console.error('Failed to load data:', error)
-      toast.error('Failed to load terms and holidays')
+      const response = await TermService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+      })
+      setTerms(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading terms:', error)
+      toast.error('Failed to load terms')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
+
+  const loadLocations = async () => {
+    try {
+      const response = await LocationService.getAll({ limit: 100 })
+      setLocations(response.data || [])
+    } catch (error) {
+      console.error('Error loading locations:', error)
+    }
+  }
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadTerms()
+  }, [currentPage, searchTerm])
 
-  // Term CRUD
-  const openTermForm = (term?: Term) => {
-    if (term) {
-      setEditingTerm(term)
-      setTermForm({
-        name: term.name,
-        startDate: term.startDate?.split('T')[0] || '',
-        endDate: term.endDate?.split('T')[0] || '',
-      })
-    } else {
-      setEditingTerm(null)
-      setTermForm({ name: '', startDate: '', endDate: '' })
+  useEffect(() => {
+    loadLocations()
+  }, [])
+
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.name) newErrors.name = 'Term name is required'
+    if (!formData.startDate) newErrors.startDate = 'Start date is required'
+    if (!formData.endDate) newErrors.endDate = 'End date is required'
+
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate)
+      const end = new Date(formData.endDate)
+      if (end <= start) {
+        newErrors.endDate = 'End date must be after start date'
+      }
     }
-    setTermErrors({})
-    setShowTermForm(true)
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const validateTermForm = (): boolean => {
-    const errs: Record<string, string> = {}
-    const nameErr = validateName(termForm.name, 'Term name')
-    if (nameErr) errs.name = nameErr
-    const startErr = validateRequired(termForm.startDate, 'Start date')
-    if (startErr) errs.startDate = startErr
-    const endErr = validateRequired(termForm.endDate, 'End date')
-    if (endErr) errs.endDate = endErr
-    if (termForm.startDate && termForm.endDate && new Date(termForm.startDate) >= new Date(termForm.endDate)) {
-      errs.endDate = 'End date must be after start date'
-    }
-    setTermErrors(errs)
-    return Object.keys(errs).length === 0
-  }
-
-  const handleTermSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateTermForm()) return
-    setSavingTerm(true)
+
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
+
     try {
-      if (editingTerm) {
-        await apiClient.put(`/terms/${editingTerm.id}`, termForm)
+      setSubmitting(true)
+
+      if (editingId) {
+        await TermService.update(editingId, formData)
         toast.success('Term updated successfully')
       } else {
-        await apiClient.post('/terms', termForm)
+        await TermService.create(formData)
         toast.success('Term created successfully')
       }
-      setShowTermForm(false)
-      setEditingTerm(null)
-      loadData()
-    } catch (error: any) {
-      toast.error(editingTerm ? 'Failed to update term' : 'Failed to create term')
+
+      setShowForm(false)
+      resetForm()
+      loadTerms()
+    } catch (error) {
+      console.error('Error saving term:', error)
+      toast.error(getErrorMessage(error))
     } finally {
-      setSavingTerm(false)
+      setSubmitting(false)
     }
   }
 
-  // Holiday CRUD
-  const openHolidayForm = (holiday?: Holiday) => {
-    if (holiday) {
-      setEditingHoliday(holiday)
-      setHolidayForm({
-        name: holiday.name,
-        date: holiday.date?.split('T')[0] || '',
-        type: holiday.type,
+  const handleEdit = (term: Term) => {
+    setFormData({
+      name: term.name,
+      startDate: term.startDate?.split('T')[0] || '',
+      endDate: term.endDate?.split('T')[0] || '',
+      locationId: term.locationId || '',
+      holidays: term.holidays || [],
+      isActive: term.isActive,
+    })
+    setEditingId(term.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await TermService.delete(id)
+      toast.success('Term deleted successfully')
+      setDeleteConfirm(null)
+      loadTerms()
+    } catch (error) {
+      console.error('Error deleting term:', error)
+      toast.error(getErrorMessage(error))
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      startDate: '',
+      endDate: '',
+      locationId: '',
+      holidays: [],
+      isActive: true,
+    })
+    setNewHoliday({ name: '', date: '', type: 'Public Holiday' })
+    setErrors({})
+    setEditingId(null)
+  }
+
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  const addHoliday = () => {
+    if (newHoliday.name.trim() && newHoliday.date) {
+      setFormData({
+        ...formData,
+        holidays: [...formData.holidays, { ...newHoliday }],
       })
-    } else {
-      setEditingHoliday(null)
-      setHolidayForm({ name: '', date: '', type: 'Public Holiday' })
-    }
-    setHolidayErrors({})
-    setShowHolidayForm(true)
-  }
-
-  const validateHolidayForm = (): boolean => {
-    const errs: Record<string, string> = {}
-    const nameErr = validateName(holidayForm.name, 'Holiday name')
-    if (nameErr) errs.name = nameErr
-    const dateErr = validateRequired(holidayForm.date, 'Date')
-    if (dateErr) errs.date = dateErr
-    setHolidayErrors(errs)
-    return Object.keys(errs).length === 0
-  }
-
-  const handleHolidaySubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateHolidayForm()) return
-    setSavingHoliday(true)
-    try {
-      if (editingHoliday) {
-        await apiClient.put(`/holiday-calendars/${editingHoliday.id}`, holidayForm)
-        toast.success('Holiday updated successfully')
-      } else {
-        await apiClient.post('/holiday-calendars', holidayForm)
-        toast.success('Holiday created successfully')
-      }
-      setShowHolidayForm(false)
-      setEditingHoliday(null)
-      loadData()
-    } catch (error: any) {
-      toast.error(editingHoliday ? 'Failed to update holiday' : 'Failed to create holiday')
-    } finally {
-      setSavingHoliday(false)
+      setNewHoliday({ name: '', date: '', type: 'Public Holiday' })
     }
   }
 
-  // Delete
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setDeleting(true)
-    try {
-      if (deleteTarget.type === 'term') {
-        await apiClient.delete(`/terms/${deleteTarget.id}`)
-        toast.success('Term deleted successfully')
-      } else {
-        await apiClient.delete(`/holiday-calendars/${deleteTarget.id}`)
-        toast.success('Holiday deleted successfully')
-      }
-      setDeleteTarget(null)
-      loadData()
-    } catch (error: any) {
-      toast.error(`Failed to delete ${deleteTarget.type}`)
-    } finally {
-      setDeleting(false)
-    }
+  const removeHoliday = (index: number) => {
+    setFormData({
+      ...formData,
+      holidays: formData.holidays.filter((_, i) => i !== index),
+    })
   }
 
-  const activeTerms = terms.filter((t) => getTermStatus(t.startDate, t.endDate) === 'active')
-  const upcomingTerms = terms.filter((t) => getTermStatus(t.startDate, t.endDate) === 'upcoming')
-  const upcomingHolidays = holidays.filter((h) => new Date(h.date) >= new Date())
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
 
-  const statusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800'
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800'
-      case 'past':
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+  const getWeeksBetween = (startDate: string, endDate: string) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const diffMs = end.getTime() - start.getTime()
+    return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000))
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Terms & Holidays</h1>
-          <p className="text-gray-600 mt-2">Manage academic terms and holiday schedules</p>
-        </div>
-        <div className="flex gap-2">
-          <Button id="btn-open-holiday-form-admin-business-config-terms" variant="outline" onClick={() => openHolidayForm()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Holiday
-          </Button>
-          <Button id="btn-open-term-form-admin-business-config-terms" onClick={() => openTermForm()}>
-            <Plus className="w-4 h-4 mr-2" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Calendar className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Terms & Holidays</h1>
+          </div>
+          <p className="text-slate-600">Manage academic terms, schedules, and holiday calendars</p>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search terms..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
             Add Term
-          </Button>
-        </div>
-      </div>
+          </button>
+        </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Active Terms', value: activeTerms.length.toString(), icon: Calendar, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-          { label: 'Upcoming Terms', value: upcomingTerms.length.toString(), icon: Sun, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-          { label: 'Total Holidays', value: holidays.length.toString(), icon: Umbrella, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-          { label: 'Upcoming Holidays', value: upcomingHolidays.length.toString(), icon: Clock, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-        ].map((stat, idx) => (
-          <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-            <div className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading terms...</p>
+            </div>
+          ) : terms.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No terms found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Start Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">End Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Duration</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Holidays</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {terms.map((term) => (
+                      <tr key={term.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{term.name}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{formatDate(term.startDate)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{formatDate(term.endDate)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {getWeeksBetween(term.startDate, term.endDate)} weeks
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                            {term.holidays?.length || 0} holidays
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${term.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}
+                          >
+                            {term.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button onClick={() => handleEdit(term)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setDeleteConfirm(term.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </>
+          )}
+        </motion.div>
 
-      {loading ? (
-        <Card>
-          <CardContent className="p-12">
-            <div className="flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-              <p className="text-gray-500">Loading terms and holidays...</p>
+        <SlideInDrawer isOpen={showForm} onClose={handleCloseDrawer} title={editingId ? 'Edit Term' : 'Add New Term'} size="lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Term Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value })
+                  if (errors.name) setErrors({ ...errors, name: '' })
+                }}
+                placeholder="e.g., Spring Term 2025"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Terms Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  Academic Terms
-                </CardTitle>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Start Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => {
+                    setFormData({ ...formData, startDate: e.target.value })
+                    if (errors.startDate) setErrors({ ...errors, startDate: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.startDate ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                />
+                {errors.startDate && <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>}
               </div>
-            </CardHeader>
-            <CardContent>
-              {terms.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No terms found</p>
-                  <Button id="admin-business-config-terms-add-term-empty-btn" className="mt-3" size="sm" onClick={() => openTermForm()}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Term
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {terms.map((term, idx) => {
-                    const status = getTermStatus(term.startDate, term.endDate)
-                    const weeks = getWeeksBetween(term.startDate, term.endDate)
-                    return (
-                      <motion.div
-                        key={term.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                            {weeks}w
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-900">{term.name}</h4>
-                            <p className="text-sm text-gray-600">
-                              {formatDate(term.startDate)} to {formatDate(term.endDate)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Badge className={statusBadgeClass(status)}>{status}</Badge>
-                          <Button id={`admin-business-config-terms-edit-term-${term.id}-btn`} variant="ghost" size="sm" onClick={() => openTermForm(term)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button id={`admin-business-config-terms-delete-term-${term.id}-btn`}
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600"
-                            onClick={() => setDeleteTarget({ type: 'term', id: term.id, name: term.name })}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Holidays Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Umbrella className="w-5 h-5 text-purple-600" />
-                Holidays & Breaks
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {holidays.length === 0 ? (
-                <div className="text-center py-8">
-                  <Umbrella className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No holidays found</p>
-                  <Button id="admin-business-config-terms-add-holiday-empty-btn" className="mt-3" size="sm" onClick={() => openHolidayForm()}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Holiday
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {holidays.map((holiday, idx) => {
-                    const isPast = new Date(holiday.date) < new Date()
-                    return (
-                      <motion.div
-                        key={holiday.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className={`p-4 rounded-lg hover:shadow-md transition-all ${
-                          isPast
-                            ? 'bg-gradient-to-r from-gray-50 to-gray-100 opacity-75'
-                            : 'bg-gradient-to-r from-purple-50 to-pink-50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-gray-900">{holiday.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{holiday.type}</Badge>
-                            {isPast && (
-                              <Badge className="bg-gray-100 text-gray-600">Past</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600">{formatDate(holiday.date)}</p>
-                        <div className="flex gap-2 mt-3">
-                          <Button id={`admin-business-config-terms-edit-holiday-${holiday.id}-btn`} variant="outline" size="sm" className="flex-1" onClick={() => openHolidayForm(holiday)}>
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button id={`admin-business-config-terms-delete-holiday-${holiday.id}-btn`}
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600"
-                            onClick={() => setDeleteTarget({ type: 'holiday', id: holiday.id, name: holiday.name })}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  End Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => {
+                    setFormData({ ...formData, endDate: e.target.value })
+                    if (errors.endDate) setErrors({ ...errors, endDate: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.endDate ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                />
+                {errors.endDate && <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>}
+              </div>
+            </div>
 
-      {/* Term Form Dialog */}
-      <Dialog open={showTermForm} onOpenChange={setShowTermForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingTerm ? 'Edit Term' : 'Add Term'}</DialogTitle>
-            <DialogDescription>
-              {editingTerm ? 'Update the term details below.' : 'Fill in the details to create a new term.'}
-            </DialogDescription>
-          </DialogHeader>
-          <form id="admin-business-config-terms-term-form" onSubmit={handleTermSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Term Name</label>
-              <input id="admin-business-config-terms-term-name-input"
-                type="text"
-                value={termForm.name}
-                onKeyDown={filterNameInput}
-                onChange={(e) => {
-                  setTermForm({ ...termForm, name: e.target.value })
-                  const err = validateName(e.target.value, 'Term name')
-                  setTermErrors((prev) => ({ ...prev, name: err || '' }))
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.name ? 'border-red-500' : ''}`}
-                placeholder="e.g. Spring Term 2025"
-                required
-              />
-              <FormFieldHint hint={FORMAT_HINTS.name} error={termErrors.name} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Start Date</label>
-              <input id="admin-business-config-terms-start-date-input"
-                type="date"
-                value={termForm.startDate}
-                onChange={(e) => {
-                  setTermForm({ ...termForm, startDate: e.target.value })
-                  const err = validateRequired(e.target.value, 'Start date')
-                  setTermErrors((prev) => ({ ...prev, startDate: err || '' }))
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.startDate ? 'border-red-500' : ''}`}
-                required
-              />
-              <FormFieldHint error={termErrors.startDate} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">End Date</label>
-              <input id="admin-business-config-terms-end-date-input"
-                type="date"
-                value={termForm.endDate}
-                onChange={(e) => {
-                  setTermForm({ ...termForm, endDate: e.target.value })
-                  const err = validateRequired(e.target.value, 'End date')
-                  setTermErrors((prev) => ({ ...prev, endDate: err || '' }))
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${termErrors.endDate ? 'border-red-500' : ''}`}
-                required
-              />
-              <FormFieldHint error={termErrors.endDate} />
-            </div>
-            <DialogFooter>
-              <Button id="btn-set-show-term-form-admin-business-config-terms" type="button" variant="outline" onClick={() => setShowTermForm(false)}>
-                Cancel
-              </Button>
-              <Button id="admin-business-config-terms-btn-3" type="submit" disabled={savingTerm}>
-                {savingTerm && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingTerm ? 'Update Term' : 'Create Term'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Holiday Form Dialog */}
-      <Dialog open={showHolidayForm} onOpenChange={setShowHolidayForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingHoliday ? 'Edit Holiday' : 'Add Holiday'}</DialogTitle>
-            <DialogDescription>
-              {editingHoliday ? 'Update the holiday details below.' : 'Fill in the details to create a new holiday.'}
-            </DialogDescription>
-          </DialogHeader>
-          <form id="admin-business-config-terms-holiday-form" onSubmit={handleHolidaySubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Holiday Name</label>
-              <input id="admin-business-config-terms-holiday-name-input"
-                type="text"
-                value={holidayForm.name}
-                onKeyDown={filterNameInput}
-                onChange={(e) => {
-                  setHolidayForm({ ...holidayForm, name: e.target.value })
-                  const err = validateName(e.target.value, 'Holiday name')
-                  setHolidayErrors((prev) => ({ ...prev, name: err || '' }))
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${holidayErrors.name ? 'border-red-500' : ''}`}
-                placeholder="e.g. Chinese New Year"
-                required
-              />
-              <FormFieldHint hint={FORMAT_HINTS.name} error={holidayErrors.name} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Date</label>
-              <input id="admin-business-config-terms-holiday-date-input"
-                type="date"
-                value={holidayForm.date}
-                onChange={(e) => {
-                  setHolidayForm({ ...holidayForm, date: e.target.value })
-                  const err = validateRequired(e.target.value, 'Date')
-                  setHolidayErrors((prev) => ({ ...prev, date: err || '' }))
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none ${holidayErrors.date ? 'border-red-500' : ''}`}
-                required
-              />
-              <FormFieldHint error={holidayErrors.date} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Type</label>
-              <select id="select-admin-business-config-terms-16"
-                value={holidayForm.type}
-                onChange={(e) => setHolidayForm({ ...holidayForm, type: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+              <label className="block text-sm font-medium text-slate-900 mb-2">Location (Optional)</label>
+              <select
+                value={formData.locationId}
+                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Public Holiday">Public Holiday</option>
-                <option value="School Holiday">School Holiday</option>
-                <option value="Company Holiday">Company Holiday</option>
-                <option value="Observance">Observance</option>
+                <option value="">All Locations</option>
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
               </select>
             </div>
-            <DialogFooter>
-              <Button id="btn-set-show-holiday-form-admin-business-config-terms" type="button" variant="outline" onClick={() => setShowHolidayForm(false)}>
-                Cancel
-              </Button>
-              <Button id="admin-business-config-terms-btn-4" type="submit" disabled={savingHoliday}>
-                {savingHoliday && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingHoliday ? 'Update Holiday' : 'Create Holiday'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button id="btn-set-delete-target-admin-business-config-terms" variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancel
-            </Button>
-            <Button id="btn-delete-admin-business-config-terms" variant="destructive" onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
-              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Holidays</label>
+              <div className="space-y-3 mb-3">
+                <div className="grid grid-cols-12 gap-2">
+                  <input
+                    type="text"
+                    value={newHoliday.name}
+                    onChange={(e) => setNewHoliday({ ...newHoliday, name: e.target.value })}
+                    placeholder="Holiday name"
+                    className="col-span-5 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={newHoliday.date}
+                    onChange={(e) => setNewHoliday({ ...newHoliday, date: e.target.value })}
+                    className="col-span-4 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <select
+                    value={newHoliday.type}
+                    onChange={(e) => setNewHoliday({ ...newHoliday, type: e.target.value })}
+                    className="col-span-2 px-2 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    {holidayTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type.replace(' Holiday', '')}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={addHoliday}
+                    className="col-span-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {formData.holidays.map((holiday, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-900">{holiday.name}</p>
+                      <p className="text-xs text-slate-600">
+                        {formatDate(holiday.date)} • {holiday.type}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeHoliday(index)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="sr-only" />
+                  <div className={`w-11 h-6 rounded-full transition-colors ${formData.isActive ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                    <div
+                      className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData.isActive ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'
+                        }`}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-slate-900">Active</span>
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button type="button" onClick={handleCloseDrawer} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
+                {submitting ? 'Saving...' : editingId ? 'Update Term' : 'Create Term'}
+              </button>
+            </div>
+          </form>
+        </SlideInDrawer>
+
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Term?</h3>
+              <p className="text-slate-600 mb-6">This action cannot be undone. Classes and schedules linked to this term may be affected.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
+                  Cancel
+                </button>
+                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

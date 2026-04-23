@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Save, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUploader from './ImageUploader'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
 export interface FieldConfig {
     name: string
@@ -503,185 +504,159 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                 )}
             </div>
 
-            {/* Create/Edit Modal */}
-            <AnimatePresence>
-                {showModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-10 px-4 overflow-y-auto"
-                        onClick={() => setShowModal(false)}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mb-10"
-                        >
-                            {/* Modal Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                                <h2 className="text-lg font-bold text-gray-900">
-                                    {editingItem ? 'Edit Item' : 'Create New Item'}
-                                </h2>
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            {/* Create/Edit Form - SlideInDrawer */}
+            <SlideInDrawer
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                title={editingItem ? 'Edit Item' : 'Create New Item'}
+                size="lg"
+                showOverlay={true}
+            >
+                <div className="space-y-4">
+                    {submitError && (
+                        <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2.5 text-sm">
+                            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <span>{submitError}</span>
+                        </div>
+                    )}
+                    {fields.map(field => (
+                        <div key={field.name}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                {field.label}
+                                {field.required && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+
+                            {field.type === 'image' ? (
+                                <div className={errors[field.name] ? 'ring-2 ring-red-400 rounded-lg' : ''}>
+                                    <ImageUploader
+                                        value={formData[field.name] || ''}
+                                        onChange={(url) => handleFieldChange(field.name, url)}
+                                        folder={title.toLowerCase().replace(/\s+/g, '-')}
+                                        label=""
+                                    />
+                                </div>
+                            ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' ? (
+                                <input
+                                    type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : field.type === 'tel' ? 'tel' : 'text'}
+                                    value={formData[field.name] || ''}
+                                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                    onBlur={() => handleFieldBlur(field)}
+                                    placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                    maxLength={field.maxLength}
+                                    className={inputClass(field.name)}
+                                />
+                            ) : field.type === 'textarea' || field.type === 'richtext' ? (
+                                <textarea
+                                    value={formData[field.name] || ''}
+                                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                    onBlur={() => handleFieldBlur(field)}
+                                    placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                    rows={field.type === 'richtext' ? 8 : 3}
+                                    maxLength={field.maxLength}
+                                    className={inputClass(field.name) + ' resize-y'}
+                                />
+                            ) : field.type === 'number' ? (
+                                <input
+                                    type="number"
+                                    value={formData[field.name] ?? ''}
+                                    min={field.min}
+                                    max={field.max}
+                                    onChange={(e) => {
+                                        const v = e.target.value
+                                        handleFieldChange(field.name, v === '' ? '' : Number(v))
+                                    }}
+                                    onBlur={() => handleFieldBlur(field)}
+                                    className={inputClass(field.name)}
+                                />
+                            ) : field.type === 'select' ? (
+                                <select
+                                    value={formData[field.name] || ''}
+                                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                                    onBlur={() => handleFieldBlur(field)}
+                                    className={inputClass(field.name)}
                                 >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* Modal Body */}
-                            <div className="px-6 py-4 max-h-[70vh] overflow-y-auto space-y-4">
-                                {submitError && (
-                                    <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2.5 text-sm">
-                                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                        <span>{submitError}</span>
+                                    <option value="">Select {field.label}</option>
+                                    {field.options?.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            ) : field.type === 'boolean' ? (
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData[field.name] ?? false}
+                                            onChange={(e) => handleFieldChange(field.name, e.target.checked)}
+                                            className="sr-only"
+                                        />
+                                        <div className={`w-11 h-6 rounded-full transition-colors ${formData[field.name] ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                                            <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData[field.name] ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'}`} />
+                                        </div>
                                     </div>
-                                )}
-                                {fields.map(field => (
-                                    <div key={field.name}>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                            {field.label}
-                                            {field.required && <span className="text-red-500 ml-1">*</span>}
-                                        </label>
-
-                                        {field.type === 'image' ? (
-                                            <div className={errors[field.name] ? 'ring-2 ring-red-400 rounded-lg' : ''}>
-                                                <ImageUploader
-                                                    value={formData[field.name] || ''}
-                                                    onChange={(url) => handleFieldChange(field.name, url)}
-                                                    folder={title.toLowerCase().replace(/\s+/g, '-')}
-                                                    label=""
-                                                />
-                                            </div>
-                                        ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' ? (
+                                    <span className="text-sm text-gray-600">{formData[field.name] ? 'Enabled' : 'Disabled'}</span>
+                                </label>
+                            ) : field.type === 'array' ? (
+                                <div className="space-y-2">
+                                    {(formData[field.name] || []).map((item: string, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                            <GripVertical className="w-4 h-4 text-gray-300" />
                                             <input
-                                                type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : field.type === 'tel' ? 'tel' : 'text'}
-                                                value={formData[field.name] || ''}
-                                                onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                                                onBlur={() => handleFieldBlur(field)}
-                                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                                maxLength={field.maxLength}
-                                                className={inputClass(field.name)}
+                                                type="text"
+                                                value={item}
+                                                onChange={(e) => handleArrayChange(field.name, idx, e.target.value)}
+                                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                placeholder={`Item ${idx + 1}`}
                                             />
-                                        ) : field.type === 'textarea' || field.type === 'richtext' ? (
-                                            <textarea
-                                                value={formData[field.name] || ''}
-                                                onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                                                onBlur={() => handleFieldBlur(field)}
-                                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                                rows={field.type === 'richtext' ? 8 : 3}
-                                                maxLength={field.maxLength}
-                                                className={inputClass(field.name) + ' resize-y'}
-                                            />
-                                        ) : field.type === 'number' ? (
-                                            <input
-                                                type="number"
-                                                value={formData[field.name] ?? ''}
-                                                min={field.min}
-                                                max={field.max}
-                                                onChange={(e) => {
-                                                    const v = e.target.value
-                                                    handleFieldChange(field.name, v === '' ? '' : Number(v))
-                                                }}
-                                                onBlur={() => handleFieldBlur(field)}
-                                                className={inputClass(field.name)}
-                                            />
-                                        ) : field.type === 'select' ? (
-                                            <select
-                                                value={formData[field.name] || ''}
-                                                onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                                                onBlur={() => handleFieldBlur(field)}
-                                                className={inputClass(field.name)}
+                                            <button
+                                                onClick={() => removeArrayItem(field.name, idx)}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                             >
-                                                <option value="">Select {field.label}</option>
-                                                {field.options?.map(opt => (
-                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                ))}
-                                            </select>
-                                        ) : field.type === 'boolean' ? (
-                                            <label className="flex items-center gap-3 cursor-pointer">
-                                                <div className="relative">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData[field.name] ?? false}
-                                                        onChange={(e) => handleFieldChange(field.name, e.target.checked)}
-                                                        className="sr-only"
-                                                    />
-                                                    <div className={`w-11 h-6 rounded-full transition-colors ${formData[field.name] ? 'bg-blue-600' : 'bg-gray-200'}`}>
-                                                        <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData[field.name] ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'}`} />
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm text-gray-600">{formData[field.name] ? 'Enabled' : 'Disabled'}</span>
-                                            </label>
-                                        ) : field.type === 'array' ? (
-                                            <div className="space-y-2">
-                                                {(formData[field.name] || []).map((item: string, idx: number) => (
-                                                    <div key={idx} className="flex items-center gap-2">
-                                                        <GripVertical className="w-4 h-4 text-gray-300" />
-                                                        <input
-                                                            type="text"
-                                                            value={item}
-                                                            onChange={(e) => handleArrayChange(field.name, idx, e.target.value)}
-                                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
-                                                            placeholder={`Item ${idx + 1}`}
-                                                        />
-                                                        <button
-                                                            onClick={() => removeArrayItem(field.name, idx)}
-                                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                                <button
-                                                    onClick={() => addArrayItem(field.name)}
-                                                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                                >
-                                                    <Plus className="w-4 h-4" /> Add Item
-                                                </button>
-                                            </div>
-                                        ) : null}
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={() => addArrayItem(field.name)}
+                                        className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                        <Plus className="w-4 h-4" /> Add Item
+                                    </button>
+                                </div>
+                            ) : null}
 
-                                        {errors[field.name] && (
-                                            <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-                                                <AlertCircle className="w-3 h-3" />
-                                                {errors[field.name]}
-                                            </p>
-                                        )}
-                                        {!errors[field.name] && field.helpText && (
-                                            <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
+                            {errors[field.name] && (
+                                <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {errors[field.name]}
+                                </p>
+                            )}
+                            {!errors[field.name] && field.helpText && (
+                                <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
+                            )}
+                        </div>
+                    ))}
 
-                            {/* Modal Footer */}
-                            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50"
-                                >
-                                    <Save className="w-4 h-4" />
-                                    {saving ? 'Saving...' : editingItem ? 'Update' : 'Create'}
-                                </motion.button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    {/* Form Footer */}
+                    <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
+                        <button
+                            onClick={() => setShowModal(false)}
+                            className="px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50"
+                        >
+                            <Save className="w-4 h-4" />
+                            {saving ? 'Saving...' : editingItem ? 'Update' : 'Create'}
+                        </motion.button>
+                    </div>
+                </div>
+            </SlideInDrawer>
         </div>
     )
 }

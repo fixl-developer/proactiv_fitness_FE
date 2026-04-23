@@ -2,25 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Users2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { CRMService } from '@/services/communicationsService'
+import { EnrollmentReportService } from '@/services/reportsService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-interface CRMFamily {
+interface EnrollmentReport {
     id: string
-    name: string
-    email: string
-    phone?: string
-    address?: string
-    status: 'active' | 'inactive'
+    date: string
+    programId: string
+    locationId: string
+    enrollmentCount: number
+    status: 'active' | 'inactive' | 'completed'
     notes?: string
     createdAt?: string
 }
 
-export default function CRMPage() {
-    const [families, setFamilies] = useState<CRMFamily[]>([])
+export default function EnrollmentReportsPage() {
+    const [reports, setReports] = useState<EnrollmentReport[]>([])
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,56 +30,61 @@ export default function CRMPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState<{
-        name: string
-        email: string
-        phone: string
-        address: string
-        status: 'active' | 'inactive'
-        notes: string
-    }>({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        status: 'active',
+    const [formData, setFormData] = useState({
+        date: '',
+        programId: '',
+        locationId: '',
+        enrollmentCount: 1,
+        status: 'active' as const,
         notes: '',
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
-    const statuses = ['active', 'inactive']
+    const statusOptions = ['active', 'inactive', 'completed']
+    const statusColors: Record<string, string> = {
+        active: 'bg-green-100 text-green-800',
+        inactive: 'bg-red-100 text-red-800',
+        completed: 'bg-gray-100 text-gray-800',
+    }
 
-    const loadFamilies = async () => {
+    // Load reports
+    const loadReports = async () => {
         try {
             setLoading(true)
-            const response = await CRMService.getAll({
+            const response = await EnrollmentReportService.getAll({
                 page: currentPage,
                 limit: 10,
                 search: searchTerm,
             })
-            setFamilies(response.data || [])
+            setReports(response.data || [])
             setTotalPages(response.pagination?.totalPages || 1)
         } catch (error) {
-            console.error('Error loading families:', error)
-            toast.error('Failed to load CRM data')
+            console.error('Error loading reports:', error)
+            toast.error('Failed to load enrollment reports')
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        loadFamilies()
+        loadReports()
     }, [currentPage, searchTerm])
 
+    // Validate form
     const validateFormData = () => {
         const newErrors: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Name is required'
-        else if (formData.name.length < 2) newErrors.name = 'Name must be at least 2 characters'
+        if (!formData.date) newErrors.date = 'Date is required'
 
-        if (!formData.email) newErrors.email = 'Email is required'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format'
+        if (!formData.programId) newErrors.programId = 'Program ID is required'
+        else if (formData.programId.length < 2) newErrors.programId = 'Program ID must be at least 2 characters'
+
+        if (!formData.locationId) newErrors.locationId = 'Location ID is required'
+        else if (formData.locationId.length < 2) newErrors.locationId = 'Location ID must be at least 2 characters'
+
+        if (!formData.enrollmentCount) newErrors.enrollmentCount = 'Enrollment count is required'
+        else if (formData.enrollmentCount < 1) newErrors.enrollmentCount = 'Enrollment count must be at least 1'
 
         if (!formData.status) newErrors.status = 'Status is required'
 
@@ -87,6 +92,7 @@ export default function CRMPage() {
         return Object.keys(newErrors).length === 0
     }
 
+    // Handle submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -99,55 +105,58 @@ export default function CRMPage() {
             setSubmitting(true)
 
             if (editingId) {
-                await CRMService.update(editingId, formData)
-                toast.success('Family updated successfully')
+                await EnrollmentReportService.update(editingId, formData)
+                toast.success('Enrollment report updated successfully')
             } else {
-                await CRMService.create(formData)
-                toast.success('Family created successfully')
+                await EnrollmentReportService.create(formData)
+                toast.success('Enrollment report created successfully')
             }
 
             setShowForm(false)
             resetForm()
-            loadFamilies()
+            loadReports()
         } catch (error) {
-            console.error('Error saving family:', error)
+            console.error('Error saving report:', error)
             toast.error(getErrorMessage(error))
         } finally {
             setSubmitting(false)
         }
     }
 
-    const handleEdit = (family: CRMFamily) => {
+    // Handle edit
+    const handleEdit = (report: EnrollmentReport) => {
         setFormData({
-            name: family.name,
-            email: family.email,
-            phone: family.phone || '',
-            address: family.address || '',
-            status: family.status,
-            notes: family.notes || '',
+            date: report.date,
+            programId: report.programId,
+            locationId: report.locationId,
+            enrollmentCount: report.enrollmentCount,
+            status: report.status,
+            notes: report.notes || '',
         })
-        setEditingId(family.id)
+        setEditingId(report.id)
         setShowForm(true)
     }
 
+    // Handle delete
     const handleDelete = async (id: string) => {
         try {
-            await CRMService.delete(id)
-            toast.success('Family deleted successfully')
+            await EnrollmentReportService.delete(id)
+            toast.success('Enrollment report deleted successfully')
             setDeleteConfirm(null)
-            loadFamilies()
+            loadReports()
         } catch (error) {
-            console.error('Error deleting family:', error)
+            console.error('Error deleting report:', error)
             toast.error(getErrorMessage(error))
         }
     }
 
+    // Reset form
     const resetForm = () => {
         setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            address: '',
+            date: '',
+            programId: '',
+            locationId: '',
+            enrollmentCount: 1,
             status: 'active',
             notes: '',
         })
@@ -155,37 +164,29 @@ export default function CRMPage() {
         setEditingId(null)
     }
 
+    // Handle close drawer
     const handleCloseDrawer = () => {
         setShowForm(false)
         resetForm()
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'bg-green-100 text-green-800'
-            case 'inactive':
-                return 'bg-red-100 text-red-800'
-            default:
-                return 'bg-slate-100 text-slate-800'
-        }
-    }
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
             <div className="max-w-7xl mx-auto">
+                {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-8"
                 >
                     <div className="flex items-center gap-3 mb-2">
-                        <Users2 className="w-8 h-8 text-green-600" />
-                        <h1 className="text-4xl font-bold text-slate-900">CRM Management</h1>
+                        <Users className="w-8 h-8 text-blue-600" />
+                        <h1 className="text-4xl font-bold text-slate-900">Enrollment Reports</h1>
                     </div>
-                    <p className="text-slate-600">Manage families and customer relationships</p>
+                    <p className="text-slate-600">Manage enrollment data across programs and locations</p>
                 </motion.div>
 
+                {/* Controls */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -195,13 +196,13 @@ export default function CRMPage() {
                         <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
                         <input
                             type="text"
-                            placeholder="Search families..."
+                            placeholder="Search by program or location..."
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value)
                                 setCurrentPage(1)
                             }}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <button
@@ -209,13 +210,14 @@ export default function CRMPage() {
                             resetForm()
                             setShowForm(true)
                         }}
-                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
                         <Plus className="w-5 h-5" />
-                        Add Family
+                        Add Report
                     </button>
                 </motion.div>
 
+                {/* Table */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -223,13 +225,13 @@ export default function CRMPage() {
                 >
                     {loading ? (
                         <div className="p-8 text-center">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                            <p className="mt-4 text-slate-600">Loading families...</p>
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <p className="mt-4 text-slate-600">Loading enrollment reports...</p>
                         </div>
-                    ) : families.length === 0 ? (
+                    ) : reports.length === 0 ? (
                         <div className="p-8 text-center">
                             <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-600">No families found</p>
+                            <p className="text-slate-600">No enrollment reports found</p>
                         </div>
                     ) : (
                         <>
@@ -237,38 +239,38 @@ export default function CRMPage() {
                                 <table className="w-full">
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Name</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Email</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Phone</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Address</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Program</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Location</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Count</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {families.map((family) => (
-                                            <tr key={family.id} className="hover:bg-slate-50 transition">
+                                        {reports.map((report) => (
+                                            <tr key={report.id} className="hover:bg-slate-50 transition">
                                                 <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                                                    {family.name}
+                                                    {new Date(report.date).toLocaleDateString()}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{family.email}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{family.phone || '-'}</td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{family.address || '-'}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{report.programId}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600">{report.locationId}</td>
+                                                <td className="px-6 py-4 text-sm font-semibold text-slate-900">{report.enrollmentCount}</td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(family.status)}`}>
-                                                        {family.status}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[report.status]}`}>
+                                                        {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleEdit(family)}
+                                                            onClick={() => handleEdit(report)}
                                                             className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
                                                         >
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            onClick={() => setDeleteConfirm(family.id)}
+                                                            onClick={() => setDeleteConfirm(report.id)}
                                                             className="p-2 text-red-600 hover:bg-red-50 rounded transition"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -281,6 +283,7 @@ export default function CRMPage() {
                                 </table>
                             </div>
 
+                            {/* Pagination */}
                             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
                                 <p className="text-sm text-slate-600">
                                     Page {currentPage} of {totalPages}
@@ -306,69 +309,90 @@ export default function CRMPage() {
                     )}
                 </motion.div>
 
+                {/* Form Drawer */}
                 <SlideInDrawer
                     isOpen={showForm}
                     onClose={handleCloseDrawer}
-                    title={editingId ? 'Edit Family' : 'Add New Family'}
+                    title={editingId ? 'Edit Enrollment Report' : 'Add New Enrollment Report'}
                     size="lg"
                 >
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Date */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Name <span className="text-red-500">*</span>
+                                Date <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                value={formData.date}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, date: e.target.value })
+                                    if (errors.date) setErrors({ ...errors, date: '' })
+                                }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+                        </div>
+
+                        {/* Program ID */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Program ID <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                value={formData.name}
+                                value={formData.programId}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, name: e.target.value })
-                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                    setFormData({ ...formData, programId: e.target.value })
+                                    if (errors.programId) setErrors({ ...errors, programId: '' })
                                 }}
-                                placeholder="Family name"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-green-500'}`}
+                                placeholder="e.g., PROG001"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.programId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
                             />
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                            {errors.programId && <p className="mt-1 text-sm text-red-600">{errors.programId}</p>}
                         </div>
 
+                        {/* Location ID */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Email <span className="text-red-500">*</span>
+                                Location ID <span className="text-red-500">*</span>
                             </label>
                             <input
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, email: e.target.value })
-                                    if (errors.email) setErrors({ ...errors, email: '' })
-                                }}
-                                placeholder="email@example.com"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-green-500'}`}
-                            />
-                            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">Phone (Optional)</label>
-                            <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="Phone number"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">Address (Optional)</label>
-                            <input
                                 type="text"
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Address"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                value={formData.locationId}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, locationId: e.target.value })
+                                    if (errors.locationId) setErrors({ ...errors, locationId: '' })
+                                }}
+                                placeholder="e.g., LOC001"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.locationId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
                             />
+                            {errors.locationId && <p className="mt-1 text-sm text-red-600">{errors.locationId}</p>}
                         </div>
 
+                        {/* Enrollment Count */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Enrollment Count <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                value={formData.enrollmentCount}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, enrollmentCount: parseInt(e.target.value) || 1 })
+                                    if (errors.enrollmentCount) setErrors({ ...errors, enrollmentCount: '' })
+                                }}
+                                min="1"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.enrollmentCount ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
+                            />
+                            {errors.enrollmentCount && <p className="mt-1 text-sm text-red-600">{errors.enrollmentCount}</p>}
+                        </div>
+
+                        {/* Status */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Status <span className="text-red-500">*</span>
@@ -379,10 +403,11 @@ export default function CRMPage() {
                                     setFormData({ ...formData, status: e.target.value as any })
                                     if (errors.status) setErrors({ ...errors, status: '' })
                                 }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-green-500'}`}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
                             >
                                 <option value="">Select Status</option>
-                                {statuses.map((status) => (
+                                {statusOptions.map((status) => (
                                     <option key={status} value={status}>
                                         {status.charAt(0).toUpperCase() + status.slice(1)}
                                     </option>
@@ -391,17 +416,19 @@ export default function CRMPage() {
                             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
                         </div>
 
+                        {/* Notes */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">Notes (Optional)</label>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Notes</label>
                             <textarea
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                placeholder="Additional notes"
-                                rows={3}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="Add any additional notes..."
+                                rows={4}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
 
+                        {/* Submit Button */}
                         <div className="flex gap-3 pt-6 border-t border-slate-200">
                             <button
                                 type="button"
@@ -413,14 +440,15 @@ export default function CRMPage() {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
                             >
-                                {submitting ? 'Saving...' : editingId ? 'Update Family' : 'Create Family'}
+                                {submitting ? 'Saving...' : editingId ? 'Update Report' : 'Create Report'}
                             </button>
                         </div>
                     </form>
                 </SlideInDrawer>
 
+                {/* Delete Confirmation */}
                 {deleteConfirm && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <motion.div
@@ -428,8 +456,10 @@ export default function CRMPage() {
                             animate={{ scale: 1, opacity: 1 }}
                             className="bg-white rounded-lg p-6 max-w-sm"
                         >
-                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Family?</h3>
-                            <p className="text-slate-600 mb-6">This action cannot be undone.</p>
+                            <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Enrollment Report?</h3>
+                            <p className="text-slate-600 mb-6">
+                                This action cannot be undone. The enrollment data will be permanently removed.
+                            </p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setDeleteConfirm(null)}

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export default function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
     // Authentication is handled client-side via AuthContext and layout-level checks.
     // This middleware only adds cache-control headers for protected pages.
     const { pathname } = request.nextUrl

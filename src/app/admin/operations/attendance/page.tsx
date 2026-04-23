@@ -1,275 +1,472 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { ClipboardList, CheckCircle, Clock, XCircle, TrendingUp } from 'lucide-react'
-import { apiClient } from '@/services/api/client'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { AttendanceService } from '@/services/operationsService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
-// ── Fallback mock data ──────────────────────────────────────────────
-const MOCK_RECORDS = [
-  { _id: 'att-1', userId: { _id: 'u1', firstName: 'Alice', lastName: 'Wong' }, sessionId: { _id: 's1', name: 'Morning Yoga' }, status: 'present', checkInTime: '2025-10-01T08:05:00Z', date: '2025-10-01' },
-  { _id: 'att-2', userId: { _id: 'u2', firstName: 'Bob', lastName: 'Lee' }, sessionId: { _id: 's1', name: 'Morning Yoga' }, status: 'late', checkInTime: '2025-10-01T08:25:00Z', date: '2025-10-01' },
-  { _id: 'att-3', userId: { _id: 'u3', firstName: 'Cara', lastName: 'Kim' }, sessionId: { _id: 's2', name: 'HIIT Blast' }, status: 'absent', checkInTime: null, date: '2025-10-01' },
-]
-
-const MOCK_STATS = { totalRecords: 3, presentCount: 1, lateCount: 1, absentCount: 1, attendanceRate: 66.7 }
-
-// ── Types ───────────────────────────────────────────────────────────
 interface AttendanceRecord {
-  _id: string
-  userId: any
-  sessionId: any
-  status: string
-  checkInTime: string | null
+  id: string
+  studentId: string
+  classId: string
   date: string
+  status: 'present' | 'absent' | 'late'
+  notes?: string
+  checkInTime?: string
+  createdAt?: string
 }
 
-interface AttendanceStats {
-  totalRecords: number
-  presentCount: number
-  lateCount: number
-  absentCount: number
-  attendanceRate: number
-}
-
-// ── Component ───────────────────────────────────────────────────────
-export default function OperationsAttendancePage() {
+export default function AttendanceTrackingPage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([])
-  const [stats, setStats] = useState<AttendanceStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [apiFailed, setApiFailed] = useState(false)
-
-  // Filters
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [dateFilter, setDateFilter] = useState('')
-  const [sessionFilter, setSessionFilter] = useState('')
-
-  // Check-in modal
-  const [showCheckIn, setShowCheckIn] = useState(false)
-  const [checkInForm, setCheckInForm] = useState({ sessionId: '', userId: '', status: 'present' })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  // ── Load data ───────────────────────────────────────────────────
-  const loadRecords = useCallback(async () => {
+  const [formData, setFormData] = useState({
+    studentId: '',
+    classId: '',
+    date: '',
+    status: 'present' as 'present' | 'absent' | 'late',
+    notes: '',
+    checkInTime: '',
+  })
+
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Load attendance records
+  const loadRecords = async () => {
     try {
-      const params: Record<string, string> = {}
-      if (dateFilter) params.date = dateFilter
-      if (sessionFilter) params.sessionId = sessionFilter
-      const data = await apiClient.get<any>('/attendance/records', { params })
-      const raw = data?.data ?? data
-      const list = Array.isArray(raw) ? raw : raw?.records ?? raw?.data ?? []
-      setRecords(Array.isArray(list) ? list : [])
-      setApiFailed(false)
-    } catch (error: any) {
-      console.error('Failed to load attendance:', error)
-      setRecords(MOCK_RECORDS)
-      setApiFailed(true)
-    }
-  }, [dateFilter, sessionFilter])
-
-  const loadStats = useCallback(async () => {
-    try {
-      const data = await apiClient.get<any>('/attendance/statistics')
-      const raw = data?.data ?? data
-      setStats({
-        totalRecords: raw?.totalRecords ?? raw?.total ?? 0,
-        presentCount: raw?.presentCount ?? raw?.present ?? 0,
-        lateCount: raw?.lateCount ?? raw?.late ?? 0,
-        absentCount: raw?.absentCount ?? raw?.absent ?? 0,
-        attendanceRate: raw?.attendanceRate ?? raw?.rate ?? 0,
-      })
-    } catch {
-      setStats(MOCK_STATS)
-    }
-  }, [])
-
-  useEffect(() => {
-    const init = async () => {
       setLoading(true)
-      await Promise.all([loadRecords(), loadStats()])
+      const response = await AttendanceService.getAll({
+        page: currentPage,
+        limit: 10,
+        search: searchTerm,
+        date: dateFilter,
+      })
+      setRecords(response.data || [])
+      setTotalPages(response.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading attendance records:', error)
+      toast.error('Failed to load attendance records')
+    } finally {
       setLoading(false)
     }
-    init()
-  }, [loadRecords, loadStats])
+  }
 
-  // ── Check-in ──────────────────────────────────────────────────
-  const handleCheckIn = async () => {
-    if (!checkInForm.sessionId || !checkInForm.userId) {
-      toast.error('Session ID and User ID are required')
+  useEffect(() => {
+    loadRecords()
+  }, [currentPage, searchTerm, dateFilter])
+
+  // Validate form
+  const validateFormData = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.studentId) newErrors.studentId = 'Student ID is required'
+    if (!formData.classId) newErrors.classId = 'Class ID is required'
+    if (!formData.date) newErrors.date = 'Date is required'
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // Handle submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
       return
     }
-    setSubmitting(true)
+
     try {
-      await apiClient.post('/attendance/check-in', {
-        sessionId: checkInForm.sessionId,
-        userId: checkInForm.userId,
-        status: checkInForm.status,
-      })
-      toast.success('Check-in recorded successfully')
-      setShowCheckIn(false)
-      setCheckInForm({ sessionId: '', userId: '', status: 'present' })
-      await Promise.all([loadRecords(), loadStats()])
-    } catch (error: any) {
-      const msg = error?.response?.data?.message || error.message || 'Check-in failed'
-      toast.error(msg)
+      setSubmitting(true)
+
+      if (editingId) {
+        await AttendanceService.update(editingId, formData)
+        toast.success('Attendance record updated successfully')
+      } else {
+        await AttendanceService.create(formData)
+        toast.success('Attendance record created successfully')
+      }
+
+      setShowForm(false)
+      resetForm()
+      loadRecords()
+    } catch (error) {
+      console.error('Error saving attendance record:', error)
+      toast.error(getErrorMessage(error))
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
-  const userName = (r: AttendanceRecord) => {
-    if (typeof r.userId === 'object' && r.userId) return `${r.userId.firstName ?? ''} ${r.userId.lastName ?? ''}`.trim()
-    return r.userId ?? '-'
-  }
-  const sessionName = (r: AttendanceRecord) => {
-    if (typeof r.sessionId === 'object' && r.sessionId) return r.sessionId.name ?? r.sessionId._id
-    return r.sessionId ?? '-'
-  }
-  const formatTime = (t: string | null) => {
-    if (!t) return '-'
-    try { return new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } catch { return t }
+  // Handle edit
+  const handleEdit = (record: AttendanceRecord) => {
+    setFormData({
+      studentId: record.studentId,
+      classId: record.classId,
+      date: record.date,
+      status: record.status,
+      notes: record.notes || '',
+      checkInTime: record.checkInTime || '',
+    })
+    setEditingId(record.id)
+    setShowForm(true)
   }
 
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      present: 'bg-green-100 text-green-800',
-      late: 'bg-yellow-100 text-yellow-800',
-      absent: 'bg-red-100 text-red-800',
+  // Handle delete
+  const handleDelete = async (id: string) => {
+    try {
+      await AttendanceService.delete(id)
+      toast.success('Attendance record deleted successfully')
+      setDeleteConfirm(null)
+      loadRecords()
+    } catch (error) {
+      console.error('Error deleting attendance record:', error)
+      toast.error(getErrorMessage(error))
     }
-    return map[status] ?? 'bg-gray-100 text-gray-600'
   }
 
-  // ── Render ────────────────────────────────────────────────────
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      studentId: '',
+      classId: '',
+      date: '',
+      status: 'present',
+      notes: '',
+      checkInTime: '',
+    })
+    setErrors({})
+    setEditingId(null)
+  }
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setShowForm(false)
+    resetForm()
+  }
+
+  // Get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    const colors: Record<string, string> = {
+      present: 'bg-green-100 text-green-800',
+      absent: 'bg-red-100 text-red-800',
+      late: 'bg-yellow-100 text-yellow-800',
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Attendance Management</h1>
-        <button id="btn-admin-operations-attendance-1" onClick={() => setShowCheckIn(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-          + Check In
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <ClipboardCheck className="w-8 h-8 text-blue-600" />
+            <h1 className="text-4xl font-bold text-slate-900">Attendance Tracking</h1>
+          </div>
+          <p className="text-slate-600">Track and manage student attendance records</p>
+        </motion.div>
 
-      {apiFailed && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-800 text-sm">
-          Unable to reach the attendance API. Showing fallback demo data.
-        </div>
-      )}
-
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {[
-            { label: 'Total Records', value: stats.totalRecords, icon: ClipboardList, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
-            { label: 'Present', value: stats.presentCount, icon: CheckCircle, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100' },
-            { label: 'Late', value: stats.lateCount, icon: Clock, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100' },
-            { label: 'Absent', value: stats.absentCount, icon: XCircle, gradient: 'from-red-500 to-red-600', bgGradient: 'from-red-50 to-red-100' },
-            { label: 'Attendance Rate', value: `${stats.attendanceRate ?? 0}%`, icon: TrendingUp, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100' },
-          ].map((stat) => (
-            <div key={stat.label} className={`rounded-lg border-0 bg-gradient-to-br ${stat.bgGradient} p-4 hover:shadow-lg transition-all`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`bg-gradient-to-br ${stat.gradient} p-2.5 rounded-lg shadow-md`}>
-                  <stat.icon className="w-5 h-5 text-white" />
-                </div>
-              </div>
-              <p className="text-xs text-gray-600 font-medium mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
-          <input id="input-date-admin-operations-attendance"
+        {/* Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex gap-4 items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search records..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <input
             type="date"
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              setDateFilter(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Session ID</label>
-          <input id="input-text-admin-operations-attendance-session"
-            type="text"
-            placeholder="Filter by session ID..."
-            value={sessionFilter}
-            onChange={(e) => setSessionFilter(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <button id="btn-admin-operations-attendance-2" onClick={() => { setDateFilter(''); setSessionFilter('') }} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border rounded-lg hover:bg-gray-50">
-          Clear
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowForm(true)
+            }}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Record
+          </button>
+        </motion.div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading attendance records...</div>
-      ) : records.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">No attendance records found.</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">Member</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Session</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Date</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Check-In Time</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {records.map((r) => (
-                <tr key={r._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{userName(r)}</td>
-                  <td className="px-4 py-3 text-gray-600">{sessionName(r)}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.date ? new Date(r.date).toLocaleDateString() : '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatTime(r.checkInTime)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusBadge(r.status)}`}>{r.status}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Check-in Modal */}
-      {showCheckIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h2 className="text-xl font-bold mb-4">Record Check-In</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Session ID *</label>
-                <input id={`input-text-admin-operations-attendance-${r}`} type="text" value={checkInForm.sessionId} onChange={(e) => setCheckInForm({ ...checkInForm, sessionId: e.target.value })} placeholder="e.g. session-abc123" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">User ID *</label>
-                <input id="input-text-admin-operations-attendance" type="text" value={checkInForm.userId} onChange={(e) => setCheckInForm({ ...checkInForm, userId: e.target.value })} placeholder="e.g. user-xyz456" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                <select id="select-admin-operations-attendance-9" value={checkInForm.status} onChange={(e) => setCheckInForm({ ...checkInForm, status: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="present">Present</option>
-                  <option value="late">Late</option>
-                  <option value="absent">Absent</option>
-                </select>
-              </div>
+        {/* Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow-lg overflow-hidden"
+        >
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-4 text-slate-600">Loading attendance records...</p>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button id="btn-admin-operations-attendance-3" onClick={() => setShowCheckIn(false)} className="px-4 py-2 rounded-lg border text-gray-600 hover:bg-gray-50 text-sm font-medium">Cancel</button>
-              <button id="btn-admin-operations-attendance-4" onClick={handleCheckIn} disabled={submitting} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50">
-                {submitting ? 'Saving...' : 'Check In'}
+          ) : records.length === 0 ? (
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No attendance records found</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Student ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Class ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Check-In Time</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Notes</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {records.map((record) => (
+                      <tr key={record.id} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{record.studentId}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{record.classId}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {new Date(record.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(record.status)}`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{record.checkInTime || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{record.notes || '-'}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(record)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(record.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-sm text-slate-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </motion.div>
+
+        {/* Form Drawer */}
+        <SlideInDrawer
+          isOpen={showForm}
+          onClose={handleCloseDrawer}
+          title={editingId ? 'Edit Attendance Record' : 'Add New Attendance Record'}
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Student ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Student ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.studentId}
+                onChange={(e) => {
+                  setFormData({ ...formData, studentId: e.target.value })
+                  if (errors.studentId) setErrors({ ...errors, studentId: '' })
+                }}
+                placeholder="e.g., STU-12345"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.studentId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.studentId && <p className="mt-1 text-sm text-red-600">{errors.studentId}</p>}
+            </div>
+
+            {/* Class ID */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Class ID <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.classId}
+                onChange={(e) => {
+                  setFormData({ ...formData, classId: e.target.value })
+                  if (errors.classId) setErrors({ ...errors, classId: '' })
+                }}
+                placeholder="e.g., CLS-67890"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.classId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.classId && <p className="mt-1 text-sm text-red-600">{errors.classId}</p>}
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  setFormData({ ...formData, date: e.target.value })
+                  if (errors.date) setErrors({ ...errors, date: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'present' | 'absent' | 'late' })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="late">Late</option>
+              </select>
+            </div>
+
+            {/* Check-In Time */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Check-In Time</label>
+              <input
+                type="time"
+                value={formData.checkInTime}
+                onChange={(e) => setFormData({ ...formData, checkInTime: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Optional notes..."
+                rows={4}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-6 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Saving...' : editingId ? 'Update Record' : 'Create Record'}
               </button>
             </div>
+          </form>
+        </SlideInDrawer>
+
+        {/* Delete Confirmation */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-sm"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Attendance Record?</h3>
+              <p className="text-slate-600 mb-6">
+                This action cannot be undone. The attendance record will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
