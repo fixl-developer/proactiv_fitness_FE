@@ -61,7 +61,7 @@ export const EnrollmentReportService = {
     // Get all enrollment reports
     getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/reports/enrollment', { params })
+            const response = await apiClient.get('/reports/enrollment', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching enrollment reports:', error)
@@ -72,7 +72,7 @@ export const EnrollmentReportService = {
     // Get enrollment report by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/reports/enrollment/${id}`)
+            const response = await apiClient.get(`/reports/enrollment/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching enrollment report:', error)
@@ -83,7 +83,7 @@ export const EnrollmentReportService = {
     // Create enrollment report
     create: async (data: Partial<EnrollmentReport>) => {
         try {
-            const response = await apiClient.post('/api/v1/reports/enrollment', data)
+            const response = await apiClient.post('/reports/enrollment', data)
             return response.data
         } catch (error) {
             console.error('Error creating enrollment report:', error)
@@ -94,7 +94,7 @@ export const EnrollmentReportService = {
     // Update enrollment report
     update: async (id: string, data: Partial<EnrollmentReport>) => {
         try {
-            const response = await apiClient.put(`/api/v1/reports/enrollment/${id}`, data)
+            const response = await apiClient.put(`/reports/enrollment/${id}`, data)
             return response.data
         } catch (error) {
             console.error('Error updating enrollment report:', error)
@@ -105,7 +105,7 @@ export const EnrollmentReportService = {
     // Delete enrollment report
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/reports/enrollment/${id}`)
+            const response = await apiClient.delete(`/reports/enrollment/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting enrollment report:', error)
@@ -122,7 +122,7 @@ export const PerformanceAnalyticsService = {
     // Get all performance analytics
     getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/reports/performance', { params })
+            const response = await apiClient.get('/reports/performance', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching performance analytics:', error)
@@ -133,7 +133,7 @@ export const PerformanceAnalyticsService = {
     // Get performance analytics by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/reports/performance/${id}`)
+            const response = await apiClient.get(`/reports/performance/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching performance analytics:', error)
@@ -144,7 +144,7 @@ export const PerformanceAnalyticsService = {
     // Create performance analytics
     create: async (data: Partial<PerformanceAnalytics>) => {
         try {
-            const response = await apiClient.post('/api/v1/reports/performance', data)
+            const response = await apiClient.post('/reports/performance', data)
             return response.data
         } catch (error) {
             console.error('Error creating performance analytics:', error)
@@ -155,7 +155,7 @@ export const PerformanceAnalyticsService = {
     // Update performance analytics
     update: async (id: string, data: Partial<PerformanceAnalytics>) => {
         try {
-            const response = await apiClient.put(`/api/v1/reports/performance/${id}`, data)
+            const response = await apiClient.put(`/reports/performance/${id}`, data)
             return response.data
         } catch (error) {
             console.error('Error updating performance analytics:', error)
@@ -166,7 +166,7 @@ export const PerformanceAnalyticsService = {
     // Delete performance analytics
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/reports/performance/${id}`)
+            const response = await apiClient.delete(`/reports/performance/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting performance analytics:', error)
@@ -183,7 +183,7 @@ export const AuditLogService = {
     // Get all audit logs
     getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/reports/audit', { params })
+            const response = await apiClient.get('/reports/audit', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching audit logs:', error)
@@ -194,7 +194,7 @@ export const AuditLogService = {
     // Get audit log by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/reports/audit/${id}`)
+            const response = await apiClient.get(`/reports/audit/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching audit log:', error)
@@ -205,7 +205,7 @@ export const AuditLogService = {
     // Create audit log
     create: async (data: Partial<AuditLog>) => {
         try {
-            const response = await apiClient.post('/api/v1/reports/audit', data)
+            const response = await apiClient.post('/reports/audit', data)
             return response.data
         } catch (error) {
             console.error('Error creating audit log:', error)
@@ -216,7 +216,7 @@ export const AuditLogService = {
     // Update audit log
     update: async (id: string, data: Partial<AuditLog>) => {
         try {
-            const response = await apiClient.put(`/api/v1/reports/audit/${id}`, data)
+            const response = await apiClient.put(`/reports/audit/${id}`, data)
             return response.data
         } catch (error) {
             console.error('Error updating audit log:', error)
@@ -227,7 +227,7 @@ export const AuditLogService = {
     // Delete audit log
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/reports/audit/${id}`)
+            const response = await apiClient.delete(`/reports/audit/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting audit log:', error)

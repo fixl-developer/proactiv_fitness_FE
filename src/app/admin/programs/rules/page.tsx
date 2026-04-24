@@ -30,12 +30,21 @@ interface EvaluationResult {
   message: string
 }
 
-const EMPTY_FORM = {
+interface RuleFormData {
+  name: string
+  category: string
+  conditions: RuleCondition[]
+  priority: number
+  status: 'active' | 'inactive'
+  description: string
+}
+
+const EMPTY_FORM: RuleFormData = {
   name: '',
   category: 'enrollment',
-  conditions: [{ field: '', operator: 'equals' as const, value: '' }],
+  conditions: [{ field: '', operator: 'equals', value: '' }],
   priority: 1,
-  status: 'active' as const,
+  status: 'active',
   description: '',
 }
 
@@ -327,7 +336,7 @@ export default function ProgramRulesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Rule Name</label>
-                <input id={`input-text-admin-programs-rules-${i}`}
+                <input id="input-text-admin-programs-rules-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}

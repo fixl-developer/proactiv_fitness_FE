@@ -65,13 +65,34 @@ export const parseApiError = (error: any): ApiError => {
 export const getErrorMessage = (error: any): string => {
     const apiError = parseApiError(error);
 
-    const errorMessages: Record<number, string> = {
+    // For validation errors, surface the first field-level message if present
+    // (backend shape: { message: 'Validation failed', error: [{ field, message, value }] })
+    if (apiError.status === 422) {
+        const fieldErrors = apiError.details?.error;
+        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+            const first = fieldErrors[0];
+            if (first?.field && first?.message) return `${first.field}: ${first.message}`;
+            if (first?.message) return first.message;
+        }
+        if (apiError.message && apiError.message !== 'Validation failed') return apiError.message;
+        return 'Validation error. Please check your input.';
+    }
+
+    // Prefer the server's actual message when it's a real, specific string
+    const serverMessage = apiError.message;
+    const isSpecific =
+        serverMessage &&
+        serverMessage !== 'An error occurred' &&
+        serverMessage !== 'Error' &&
+        serverMessage !== 'Validation failed';
+    if (isSpecific) return serverMessage;
+
+    const fallbackMessages: Record<number, string> = {
         400: 'Invalid request. Please check your input.',
         401: 'Unauthorized. Please log in again.',
         403: 'Forbidden. You do not have permission to perform this action.',
         404: 'Resource not found.',
         409: 'Conflict. This resource already exists.',
-        422: 'Validation error. Please check your input.',
         429: 'Too many requests. Please try again later.',
         500: 'Server error. Please try again later.',
         502: 'Bad gateway. Please try again later.',
@@ -79,7 +100,7 @@ export const getErrorMessage = (error: any): string => {
         504: 'Gateway timeout. Please try again later.',
     };
 
-    return errorMessages[apiError.status] || apiError.message || 'An error occurred';
+    return fallbackMessages[apiError.status] || serverMessage || 'An error occurred';
 };
 
 // Check if error is retryable

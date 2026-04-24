@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { PaymentGatewayService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateUrl } from '@/utils/validation'
 
 interface PaymentGateway {
   id: string
@@ -33,7 +34,7 @@ export default function PaymentGatewaysPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    provider: 'Stripe',
+    provider: 'stripe',
     apiKey: '',
     secretKey: '',
     webhookUrl: '',
@@ -42,11 +43,24 @@ export default function PaymentGatewaysPage() {
   })
 
   const [newCurrency, setNewCurrency] = useState('')
+  const [currencyError, setCurrencyError] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
   const [showSecretKey, setShowSecretKey] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const providers = ['Stripe', 'PayPal', 'PayPay', 'Square']
+  // Provider values are lowercase to match backend enum ['stripe', 'paypal', 'square']
+  const providers: { value: string; label: string }[] = [
+    { value: 'stripe', label: 'Stripe' },
+    { value: 'paypal', label: 'PayPal' },
+    { value: 'square', label: 'Square' },
+  ]
+
+  // ISO 4217 currency code: exactly 3 uppercase letters
+  const CURRENCY_PATTERN = /^[A-Z]{3}$/
+  // Gateway name: 3-60 chars, letters, numbers, spaces, hyphens, apostrophes, periods
+  const GATEWAY_NAME_PATTERN = /^[A-Za-z0-9\s'.\-]+$/
+  // API/Secret key: allow most printable ASCII except spaces (covers Stripe sk_..., pk_..., PayPal client IDs, etc.)
+  const KEY_PATTERN = /^[A-Za-z0-9_\-.:/+=]+$/
 
   const loadGateways = async () => {
     try {
@@ -73,13 +87,61 @@ export default function PaymentGatewaysPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) newErrors.name = 'Gateway name is required'
-    if (!formData.provider) newErrors.provider = 'Provider is required'
-    if (!formData.apiKey && !editingId) newErrors.apiKey = 'API key is required'
-    if (!formData.secretKey && !editingId) newErrors.secretKey = 'Secret key is required'
+    // Gateway Name
+    const name = formData.name.trim()
+    if (!name) {
+      newErrors.name = 'Gateway name is required'
+    } else if (name.length < 3) {
+      newErrors.name = 'Gateway name must be at least 3 characters'
+    } else if (name.length > 60) {
+      newErrors.name = 'Gateway name must be at most 60 characters'
+    } else if (!GATEWAY_NAME_PATTERN.test(name)) {
+      newErrors.name = 'Only letters, numbers, spaces, hyphens, apostrophes and periods are allowed'
+    }
 
-    if (formData.webhookUrl && !/^https?:\/\/.+/.test(formData.webhookUrl)) {
-      newErrors.webhookUrl = 'Invalid URL format'
+    // Provider
+    if (!formData.provider) {
+      newErrors.provider = 'Provider is required'
+    } else if (!providers.some((p) => p.value === formData.provider)) {
+      newErrors.provider = 'Please select a valid provider'
+    }
+
+    // API Key (required for new gateway, optional on edit to keep existing)
+    const apiKey = formData.apiKey.trim()
+    if (!editingId) {
+      if (!apiKey) {
+        newErrors.apiKey = 'API key is required'
+      } else if (apiKey.length < 10) {
+        newErrors.apiKey = 'API key must be at least 10 characters'
+      } else if (apiKey.length > 200) {
+        newErrors.apiKey = 'API key must be at most 200 characters'
+      } else if (!KEY_PATTERN.test(apiKey)) {
+        newErrors.apiKey = 'API key contains invalid characters (no spaces allowed)'
+      }
+    } else if (apiKey && (apiKey.length < 10 || !KEY_PATTERN.test(apiKey))) {
+      newErrors.apiKey = 'API key must be at least 10 characters with no spaces'
+    }
+
+    // Secret Key (same rules as API key)
+    const secretKey = formData.secretKey.trim()
+    if (!editingId) {
+      if (!secretKey) {
+        newErrors.secretKey = 'Secret key is required'
+      } else if (secretKey.length < 10) {
+        newErrors.secretKey = 'Secret key must be at least 10 characters'
+      } else if (secretKey.length > 200) {
+        newErrors.secretKey = 'Secret key must be at most 200 characters'
+      } else if (!KEY_PATTERN.test(secretKey)) {
+        newErrors.secretKey = 'Secret key contains invalid characters (no spaces allowed)'
+      }
+    } else if (secretKey && (secretKey.length < 10 || !KEY_PATTERN.test(secretKey))) {
+      newErrors.secretKey = 'Secret key must be at least 10 characters with no spaces'
+    }
+
+    // Webhook URL (optional, but must be valid if provided)
+    if (formData.webhookUrl.trim()) {
+      const urlErr = validateUrl(formData.webhookUrl, false)
+      if (urlErr) newErrors.webhookUrl = urlErr
     }
 
     setErrors(newErrors)
@@ -126,7 +188,7 @@ export default function PaymentGatewaysPage() {
   const handleEdit = (gateway: PaymentGateway) => {
     setFormData({
       name: gateway.name,
-      provider: gateway.provider,
+      provider: (gateway.provider || 'stripe').toLowerCase(),
       apiKey: '',
       secretKey: '',
       webhookUrl: gateway.webhookUrl || '',
@@ -165,7 +227,7 @@ export default function PaymentGatewaysPage() {
   const resetForm = () => {
     setFormData({
       name: '',
-      provider: 'Stripe',
+      provider: 'stripe',
       apiKey: '',
       secretKey: '',
       webhookUrl: '',
@@ -173,6 +235,7 @@ export default function PaymentGatewaysPage() {
       isActive: true,
     })
     setNewCurrency('')
+    setCurrencyError('')
     setShowApiKey(false)
     setShowSecretKey(false)
     setErrors({})
@@ -185,13 +248,25 @@ export default function PaymentGatewaysPage() {
   }
 
   const addCurrency = () => {
-    if (newCurrency.trim() && !formData.supportedCurrencies.includes(newCurrency.trim().toUpperCase())) {
-      setFormData({
-        ...formData,
-        supportedCurrencies: [...formData.supportedCurrencies, newCurrency.trim().toUpperCase()],
-      })
-      setNewCurrency('')
+    const code = newCurrency.trim().toUpperCase()
+    if (!code) {
+      setCurrencyError('Enter a currency code')
+      return
     }
+    if (!CURRENCY_PATTERN.test(code)) {
+      setCurrencyError('Must be a 3-letter code (e.g., USD, EUR, GBP)')
+      return
+    }
+    if (formData.supportedCurrencies.includes(code)) {
+      setCurrencyError('This currency is already added')
+      return
+    }
+    setFormData({
+      ...formData,
+      supportedCurrencies: [...formData.supportedCurrencies, code],
+    })
+    setNewCurrency('')
+    setCurrencyError('')
   }
 
   const removeCurrency = (index: number) => {
@@ -368,15 +443,25 @@ export default function PaymentGatewaysPage() {
               <input
                 type="text"
                 value={formData.name}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/^[A-Za-z0-9\s'.\-]$/.test(e.key)) {
+                    e.preventDefault()
+                  }
+                }}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value })
                   if (errors.name) setErrors({ ...errors, name: '' })
                 }}
                 placeholder="e.g., Primary Stripe Gateway"
+                maxLength={60}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {errors.name ? (
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">3-60 characters: letters, numbers, spaces, hyphens, apostrophes, periods</p>
+              )}
             </div>
 
             <div>
@@ -393,8 +478,8 @@ export default function PaymentGatewaysPage() {
                   }`}
               >
                 {providers.map((provider) => (
-                  <option key={provider} value={provider}>
-                    {provider}
+                  <option key={provider.value} value={provider.value}>
+                    {provider.label}
                   </option>
                 ))}
               </select>
@@ -410,11 +495,15 @@ export default function PaymentGatewaysPage() {
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={formData.apiKey}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ') e.preventDefault()
+                  }}
                   onChange={(e) => {
-                    setFormData({ ...formData, apiKey: e.target.value })
+                    setFormData({ ...formData, apiKey: e.target.value.replace(/\s/g, '') })
                     if (errors.apiKey) setErrors({ ...errors, apiKey: '' })
                   }}
                   placeholder="Enter API key"
+                  maxLength={200}
                   className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${errors.apiKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
@@ -426,7 +515,11 @@ export default function PaymentGatewaysPage() {
                   {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.apiKey && <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>}
+              {errors.apiKey ? (
+                <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">Min 10 characters, no spaces allowed</p>
+              )}
             </div>
 
             <div>
@@ -438,11 +531,15 @@ export default function PaymentGatewaysPage() {
                 <input
                   type={showSecretKey ? 'text' : 'password'}
                   value={formData.secretKey}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ') e.preventDefault()
+                  }}
                   onChange={(e) => {
-                    setFormData({ ...formData, secretKey: e.target.value })
+                    setFormData({ ...formData, secretKey: e.target.value.replace(/\s/g, '') })
                     if (errors.secretKey) setErrors({ ...errors, secretKey: '' })
                   }}
                   placeholder="Enter secret key"
+                  maxLength={200}
                   className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 ${errors.secretKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
@@ -454,41 +551,71 @@ export default function PaymentGatewaysPage() {
                   {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.secretKey && <p className="mt-1 text-sm text-red-600">{errors.secretKey}</p>}
+              {errors.secretKey ? (
+                <p className="mt-1 text-sm text-red-600">{errors.secretKey}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">Min 10 characters, no spaces allowed</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Webhook URL (Optional)</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Webhook URL <span className="text-slate-500 font-normal text-xs">(Optional)</span>
+              </label>
               <input
                 type="url"
                 value={formData.webhookUrl}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') e.preventDefault()
+                }}
                 onChange={(e) => {
-                  setFormData({ ...formData, webhookUrl: e.target.value })
+                  setFormData({ ...formData, webhookUrl: e.target.value.replace(/\s/g, '') })
                   if (errors.webhookUrl) setErrors({ ...errors, webhookUrl: '' })
                 }}
                 placeholder="https://example.com/webhook"
+                maxLength={500}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.webhookUrl ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
-              {errors.webhookUrl && <p className="mt-1 text-sm text-red-600">{errors.webhookUrl}</p>}
+              {errors.webhookUrl ? (
+                <p className="mt-1 text-sm text-red-600">{errors.webhookUrl}</p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">Must start with http:// or https://</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Supported Currencies</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Supported Currencies <span className="text-slate-500 font-normal text-xs">(Optional)</span>
+              </label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
                   value={newCurrency}
-                  onChange={(e) => setNewCurrency(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key.length === 1 && !/^[A-Za-z]$/.test(e.key)) {
+                      e.preventDefault()
+                    }
+                  }}
+                  onChange={(e) => {
+                    setNewCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))
+                    if (currencyError) setCurrencyError('')
+                  }}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCurrency())}
                   placeholder="e.g., USD, EUR, GBP"
                   maxLength={3}
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${currencyError ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 />
                 <button type="button" onClick={addCurrency} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                   Add
                 </button>
               </div>
+              {currencyError ? (
+                <p className="mb-2 text-sm text-red-600">{currencyError}</p>
+              ) : (
+                <p className="mb-2 text-xs text-slate-500">3-letter ISO 4217 code (e.g., USD, EUR, GBP)</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {formData.supportedCurrencies.map((currency, index) => (
                   <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">

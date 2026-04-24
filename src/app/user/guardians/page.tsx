@@ -5,16 +5,21 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     Users, Plus, Search, Mail, Phone, MapPin, Shield, Star, Clock,
     Check, X, Send, Trash2, Edit3, UserPlus, AlertTriangle, RefreshCw,
-    Loader2, ChevronDown, Heart, Eye
+    Loader2, Eye
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { useAuth } from '@/contexts/AuthContext'
 import guardianService, {
     GuardianLink, AddGuardianData, UpdateGuardianData,
     GuardianRelationship, SearchedUser
 } from '@/services/modules/guardian.service'
+import {
+    validateName, validateEmail, validatePhone, validateSelect,
+    validateTextArea, validateAddress, filterNameInput, filterPhoneInput
+} from '@/utils/validation'
 
 const RELATIONSHIP_OPTIONS: { value: GuardianRelationship; label: string }[] = [
     { value: 'parent', label: 'Parent' },
@@ -53,13 +58,13 @@ function getGuardianEmail(g: GuardianLink): string {
 }
 
 export default function GuardiansPage() {
-    const { user } = useAuth()
+    useAuth()
     const [guardians, setGuardians] = useState<GuardianLink[]>([])
     const [pendingInvitations, setPendingInvitations] = useState<GuardianLink[]>([])
     const [loading, setLoading] = useState(true)
-    const [showAddModal, setShowAddModal] = useState(false)
-    const [showEditModal, setShowEditModal] = useState(false)
-    const [showDetailModal, setShowDetailModal] = useState(false)
+    const [showAdd, setShowAdd] = useState(false)
+    const [showEdit, setShowEdit] = useState(false)
+    const [showDetail, setShowDetail] = useState(false)
     const [selectedGuardian, setSelectedGuardian] = useState<GuardianLink | null>(null)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -85,9 +90,7 @@ export default function GuardiansPage() {
         }
     }, [])
 
-    useEffect(() => {
-        fetchData()
-    }, [fetchData])
+    useEffect(() => { fetchData() }, [fetchData])
 
     const handleRemoveGuardian = async (id: string) => {
         if (!confirm('Are you sure you want to remove this guardian?')) return
@@ -95,7 +98,7 @@ export default function GuardiansPage() {
         const result = await guardianService.removeGuardian(id)
         if (result.success) {
             showToast('Guardian removed successfully', 'success')
-            fetchData()
+            setGuardians(prev => prev.filter(g => g.id !== id))
         } else {
             showToast(result.message || 'Failed to remove guardian', 'error')
         }
@@ -119,7 +122,7 @@ export default function GuardiansPage() {
         const result = await guardianService.rejectInvitation(id)
         if (result.success) {
             showToast('Invitation rejected', 'success')
-            fetchData()
+            setPendingInvitations(prev => prev.filter(i => i.id !== id))
         } else {
             showToast(result.message || 'Failed to reject invitation', 'error')
         }
@@ -158,14 +161,13 @@ export default function GuardiansPage() {
 
     return (
         <div className="space-y-6">
-            {/* Toast */}
             <AnimatePresence>
                 {toast && (
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className={`fixed top-24 right-6 z-50 px-5 py-3 rounded-xl shadow-lg border ${
+                        className={`fixed top-24 right-6 z-[60] px-5 py-3 rounded-xl shadow-lg border ${
                             toast.type === 'success'
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                                 : 'bg-red-50 border-red-200 text-red-800'
@@ -179,7 +181,6 @@ export default function GuardiansPage() {
                 )}
             </AnimatePresence>
 
-            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Parent / Guardian</h1>
@@ -188,18 +189,13 @@ export default function GuardiansPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={fetchData}
-                        disabled={loading}
-                    >
+                    <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                         <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
                     <Button
                         size="sm"
-                        onClick={() => setShowAddModal(true)}
+                        onClick={() => setShowAdd(true)}
                         className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
                     >
                         <Plus className="w-4 h-4 mr-2" />
@@ -208,7 +204,6 @@ export default function GuardiansPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="border-emerald-100">
                     <CardContent className="p-4 flex items-center gap-4">
@@ -245,7 +240,6 @@ export default function GuardiansPage() {
                 </Card>
             </div>
 
-            {/* Pending Invitations for me (as guardian) */}
             {pendingInvitations.length > 0 && (
                 <Card className="border-blue-200 bg-blue-50/50">
                     <CardHeader className="pb-3">
@@ -301,7 +295,6 @@ export default function GuardiansPage() {
                 </Card>
             )}
 
-            {/* Guardians List */}
             {guardians.length === 0 ? (
                 <Card className="border-dashed border-2 border-gray-200">
                     <CardContent className="py-16 text-center">
@@ -313,7 +306,7 @@ export default function GuardiansPage() {
                             Add your parent or guardian so they can stay connected with your activities, receive updates, and be your emergency contact.
                         </p>
                         <Button
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => setShowAdd(true)}
                             className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
                         >
                             <Plus className="w-4 h-4 mr-2" />
@@ -326,11 +319,7 @@ export default function GuardiansPage() {
                     {guardians.map(guardian => {
                         const statusConfig = STATUS_CONFIG[guardian.status] || STATUS_CONFIG.pending
                         return (
-                            <motion.div
-                                key={guardian.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
+                            <motion.div key={guardian.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                                 <Card className="hover:shadow-md transition-shadow h-full">
                                     <CardContent className="p-5">
                                         <div className="flex items-start justify-between mb-4">
@@ -340,16 +329,10 @@ export default function GuardiansPage() {
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <h3 className="font-semibold text-gray-900">
-                                                            {getGuardianDisplayName(guardian)}
-                                                        </h3>
-                                                        {guardian.isPrimary && (
-                                                            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                                                        )}
+                                                        <h3 className="font-semibold text-gray-900">{getGuardianDisplayName(guardian)}</h3>
+                                                        {guardian.isPrimary && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
                                                     </div>
-                                                    <p className="text-sm text-gray-500">
-                                                        {getRelationshipLabel(guardian.relationship)}
-                                                    </p>
+                                                    <p className="text-sm text-gray-500">{getRelationshipLabel(guardian.relationship)}</p>
                                                 </div>
                                             </div>
                                             <Badge className={`${statusConfig.bg} ${statusConfig.color} border text-xs`}>
@@ -357,7 +340,6 @@ export default function GuardiansPage() {
                                             </Badge>
                                         </div>
 
-                                        {/* Contact Info */}
                                         <div className="space-y-2 mb-4">
                                             {getGuardianEmail(guardian) && (
                                                 <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -379,7 +361,6 @@ export default function GuardiansPage() {
                                             )}
                                         </div>
 
-                                        {/* Badges */}
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             {guardian.isPrimary && (
                                                 <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50 text-xs">
@@ -393,22 +374,11 @@ export default function GuardiansPage() {
                                             )}
                                         </div>
 
-                                        {/* Actions */}
                                         <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => { setSelectedGuardian(guardian); setShowDetailModal(true) }}
-                                                className="flex-1"
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => { setSelectedGuardian(guardian); setShowDetail(true) }} className="flex-1">
                                                 <Eye className="w-4 h-4 mr-1" /> View
                                             </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => { setSelectedGuardian(guardian); setShowEditModal(true) }}
-                                                className="flex-1"
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => { setSelectedGuardian(guardian); setShowEdit(true) }} className="flex-1">
                                                 <Edit3 className="w-4 h-4 mr-1" /> Edit
                                             </Button>
                                             {guardian.status === 'pending' && (
@@ -440,56 +410,62 @@ export default function GuardiansPage() {
                 </div>
             )}
 
-            {/* Add Guardian Modal */}
-            <AnimatePresence>
-                {showAddModal && (
-                    <AddGuardianModal
-                        onClose={() => setShowAddModal(false)}
-                        onSuccess={() => { setShowAddModal(false); fetchData(); showToast('Guardian added successfully!', 'success') }}
-                        onError={(msg) => showToast(msg, 'error')}
-                    />
-                )}
-            </AnimatePresence>
+            <AddGuardianDrawer
+                isOpen={showAdd}
+                onClose={() => setShowAdd(false)}
+                onSuccess={(newLink) => {
+                    setShowAdd(false)
+                    if (newLink) setGuardians(prev => [newLink, ...prev])
+                    else fetchData()
+                    showToast('Guardian added successfully!', 'success')
+                }}
+                onError={(msg) => showToast(msg, 'error')}
+            />
 
-            {/* Edit Guardian Modal */}
-            <AnimatePresence>
-                {showEditModal && selectedGuardian && (
-                    <EditGuardianModal
-                        guardian={selectedGuardian}
-                        onClose={() => { setShowEditModal(false); setSelectedGuardian(null) }}
-                        onSuccess={() => { setShowEditModal(false); setSelectedGuardian(null); fetchData(); showToast('Guardian updated successfully!', 'success') }}
-                        onError={(msg) => showToast(msg, 'error')}
-                    />
-                )}
-            </AnimatePresence>
+            <EditGuardianDrawer
+                isOpen={showEdit && !!selectedGuardian}
+                guardian={selectedGuardian}
+                onClose={() => { setShowEdit(false); setSelectedGuardian(null) }}
+                onSuccess={(updated) => {
+                    setShowEdit(false)
+                    if (updated && selectedGuardian) {
+                        setGuardians(prev => prev.map(g => g.id === selectedGuardian.id ? { ...g, ...updated } : g))
+                    } else {
+                        fetchData()
+                    }
+                    setSelectedGuardian(null)
+                    showToast('Guardian updated successfully!', 'success')
+                }}
+                onError={(msg) => showToast(msg, 'error')}
+            />
 
-            {/* Detail Modal */}
-            <AnimatePresence>
-                {showDetailModal && selectedGuardian && (
-                    <GuardianDetailModal
-                        guardian={selectedGuardian}
-                        onClose={() => { setShowDetailModal(false); setSelectedGuardian(null) }}
-                    />
-                )}
-            </AnimatePresence>
+            <GuardianDetailDrawer
+                isOpen={showDetail && !!selectedGuardian}
+                guardian={selectedGuardian}
+                onClose={() => { setShowDetail(false); setSelectedGuardian(null) }}
+            />
         </div>
     )
 }
 
 // =============================================
-// Add Guardian Modal
+// Add Guardian Drawer
 // =============================================
-function AddGuardianModal({ onClose, onSuccess, onError }: {
+type AddDrawerProps = {
+    isOpen: boolean
     onClose: () => void
-    onSuccess: () => void
+    onSuccess: (newLink?: GuardianLink) => void
     onError: (msg: string) => void
-}) {
+}
+
+function AddGuardianDrawer({ isOpen, onClose, onSuccess, onError }: AddDrawerProps) {
     const [mode, setMode] = useState<'search' | 'manual'>('manual')
     const [searchQuery, setSearchQuery] = useState('')
     const [searchResults, setSearchResults] = useState<SearchedUser[]>([])
     const [searching, setSearching] = useState(false)
     const [selectedUser, setSelectedUser] = useState<SearchedUser | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [errors, setErrors] = useState<Record<string, string>>({})
 
     const [form, setForm] = useState<AddGuardianData>({
         relationship: 'parent',
@@ -502,13 +478,38 @@ function AddGuardianModal({ onClose, onSuccess, onError }: {
         notes: '',
     })
 
+    useEffect(() => {
+        if (!isOpen) {
+            setMode('manual')
+            setSearchQuery('')
+            setSearchResults([])
+            setSelectedUser(null)
+            setErrors({})
+            setForm({
+                relationship: 'parent',
+                guardianName: '',
+                guardianEmail: '',
+                guardianPhone: '',
+                guardianAddress: '',
+                isPrimary: false,
+                isEmergencyContact: false,
+                notes: '',
+            })
+        }
+    }, [isOpen])
+
     const handleSearch = async (query: string) => {
         setSearchQuery(query)
         if (query.length < 2) { setSearchResults([]); return }
         setSearching(true)
-        const results = await guardianService.searchUsers(query)
-        setSearchResults(results)
-        setSearching(false)
+        try {
+            const results = await guardianService.searchUsers(query)
+            setSearchResults(results)
+        } catch {
+            setSearchResults([])
+        } finally {
+            setSearching(false)
+        }
     }
 
     const handleSelectUser = (user: SearchedUser) => {
@@ -520,505 +521,585 @@ function AddGuardianModal({ onClose, onSuccess, onError }: {
             guardianEmail: user.email,
             guardianPhone: user.phone || '',
         }))
+        setErrors({})
         setSearchResults([])
         setSearchQuery('')
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!form.guardianName.trim()) { onError('Guardian name is required'); return }
-
-        setSubmitting(true)
-        const result = await guardianService.addGuardian(form)
-        if (result.success) {
-            onSuccess()
-        } else {
-            onError(result.message || 'Failed to add guardian')
+    const validateAll = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nameErr = validateName(form.guardianName, 'Guardian name')
+        if (nameErr) errs.guardianName = nameErr
+        const relErr = validateSelect(form.relationship, 'relationship')
+        if (relErr) errs.relationship = relErr
+        if (form.guardianEmail) {
+            const emailErr = validateEmail(form.guardianEmail)
+            if (emailErr) errs.guardianEmail = emailErr
         }
-        setSubmitting(false)
+        if (form.guardianPhone) {
+            const phoneErr = validatePhone(form.guardianPhone, false)
+            if (phoneErr) errs.guardianPhone = phoneErr
+        }
+        if (form.guardianAddress && form.guardianAddress.trim()) {
+            const addrErr = validateAddress(form.guardianAddress, 'Address')
+            if (addrErr) errs.guardianAddress = addrErr
+        }
+        if (form.notes) {
+            const notesErr = validateTextArea(form.notes, 'Notes', 0, 1000)
+            if (notesErr) errs.notes = notesErr
+        }
+        setErrors(errs)
+        return Object.keys(errs).length === 0
     }
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!validateAll()) return
+        setSubmitting(true)
+        try {
+            const result = await guardianService.addGuardian(form)
+            if (result.success) {
+                onSuccess(result.data)
+            } else {
+                onError(result.message || 'Failed to add guardian')
+                setErrors(prev => ({ ...prev, _submit: result.message || 'Failed to add guardian' }))
+            }
+        } catch (err: any) {
+            onError(err?.message || 'Failed to add guardian')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const inputBase = 'w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none transition-colors'
+    const inputOk = 'border-gray-200 focus:border-emerald-500'
+    const inputErr = 'border-red-300 focus:border-red-500'
+
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+        <SlideInDrawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Add Guardian"
+            description="Link a parent or guardian to your account"
+            size="lg"
+            footer={
+                <div className="flex gap-3 justify-end">
+                    <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+                    <Button
+                        type="button"
+                        onClick={handleSubmit as any}
+                        disabled={submitting}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    >
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                        Add Guardian
+                    </Button>
+                </div>
+            }
         >
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            >
-                <div className="flex items-center justify-between p-6 border-b">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900">Add Guardian</h2>
-                        <p className="text-sm text-gray-500 mt-1">Link a parent or guardian to your account</p>
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {errors._submit && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
+                        {errors._submit}
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-                        <X className="w-5 h-5 text-gray-500" />
+                )}
+
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                    <button
+                        type="button"
+                        onClick={() => { setMode('manual'); setSelectedUser(null) }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${mode === 'manual' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                    >
+                        <UserPlus className="w-4 h-4 inline mr-1" /> Add Manually
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setMode('search')}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${mode === 'search' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                    >
+                        <Search className="w-4 h-4 inline mr-1" /> Search Existing User
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    {/* Mode Toggle */}
-                    <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-                        <button
-                            type="button"
-                            onClick={() => { setMode('manual'); setSelectedUser(null) }}
-                            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${mode === 'manual' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
-                        >
-                            <UserPlus className="w-4 h-4 inline mr-1" /> Add Manually
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode('search')}
-                            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${mode === 'search' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
-                        >
-                            <Search className="w-4 h-4 inline mr-1" /> Search Existing User
-                        </button>
-                    </div>
-
-                    {/* Search Mode */}
-                    {mode === 'search' && (
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name or email..."
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                                />
-                                {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />}
-                            </div>
-                            {searchResults.length > 0 && (
-                                <div className="border rounded-xl divide-y max-h-48 overflow-y-auto">
-                                    {searchResults.map(u => (
-                                        <button
-                                            key={u.id}
-                                            type="button"
-                                            onClick={() => handleSelectUser(u)}
-                                            className="w-full flex items-center gap-3 p-3 hover:bg-emerald-50 transition-colors text-left"
-                                        >
-                                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-sm">
-                                                {u.firstName[0]}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900 text-sm">{u.firstName} {u.lastName}</p>
-                                                <p className="text-xs text-gray-500">{u.email}</p>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {selectedUser && (
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Check className="w-4 h-4 text-emerald-600" />
-                                        <span className="text-sm font-medium text-emerald-700">
-                                            Selected: {selectedUser.firstName} {selectedUser.lastName}
-                                        </span>
-                                    </div>
-                                    <button type="button" onClick={() => { setSelectedUser(null); setForm(prev => ({ ...prev, guardianId: undefined, guardianName: '', guardianEmail: '', guardianPhone: '' })) }}>
-                                        <X className="w-4 h-4 text-gray-400" />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Guardian Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Name *</label>
-                        <input
-                            type="text"
-                            required
-                            value={form.guardianName}
-                            onChange={(e) => setForm(prev => ({ ...prev, guardianName: e.target.value }))}
-                            placeholder="Full name of guardian"
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                            readOnly={!!selectedUser}
-                        />
-                    </div>
-
-                    {/* Relationship */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
-                        <select
-                            required
-                            value={form.relationship}
-                            onChange={(e) => setForm(prev => ({ ...prev, relationship: e.target.value as GuardianRelationship }))}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                        >
-                            {RELATIONSHIP_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Email & Phone */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input
-                                type="email"
-                                value={form.guardianEmail || ''}
-                                onChange={(e) => setForm(prev => ({ ...prev, guardianEmail: e.target.value }))}
-                                placeholder="guardian@email.com"
-                                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                                readOnly={!!selectedUser}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input
-                                type="tel"
-                                value={form.guardianPhone || ''}
-                                onChange={(e) => setForm(prev => ({ ...prev, guardianPhone: e.target.value }))}
-                                placeholder="+1234567890"
-                                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Address */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                        <input
-                            type="text"
-                            value={form.guardianAddress || ''}
-                            onChange={(e) => setForm(prev => ({ ...prev, guardianAddress: e.target.value }))}
-                            placeholder="Guardian's address"
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                        />
-                    </div>
-
-                    {/* Toggles */}
+                {mode === 'search' && (
                     <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
-                                type="checkbox"
-                                checked={form.isPrimary}
-                                onChange={(e) => setForm(prev => ({ ...prev, isPrimary: e.target.checked }))}
-                                className="w-4 h-4 text-emerald-600 rounded"
+                                type="text"
+                                placeholder="Search by name or email..."
+                                value={searchQuery}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                className={`${inputBase} ${inputOk} pl-10`}
                             />
-                            <div>
-                                <span className="text-sm font-medium text-gray-700">Primary Guardian</span>
-                                <p className="text-xs text-gray-500">Mark as your primary parent/guardian</p>
+                            {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />}
+                        </div>
+                        {searchResults.length > 0 && (
+                            <div className="border rounded-xl divide-y max-h-48 overflow-y-auto">
+                                {searchResults.map(u => (
+                                    <button
+                                        key={u.id}
+                                        type="button"
+                                        onClick={() => handleSelectUser(u)}
+                                        className="w-full flex items-center gap-3 p-3 hover:bg-emerald-50 transition-colors text-left"
+                                    >
+                                        <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-sm">
+                                            {u.firstName[0]}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900 text-sm">{u.firstName} {u.lastName}</p>
+                                            <p className="text-xs text-gray-500">{u.email}</p>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={form.isEmergencyContact}
-                                onChange={(e) => setForm(prev => ({ ...prev, isEmergencyContact: e.target.checked }))}
-                                className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <div>
-                                <span className="text-sm font-medium text-gray-700">Emergency Contact</span>
-                                <p className="text-xs text-gray-500">Add as your emergency contact</p>
+                        )}
+                        {selectedUser && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-emerald-600" />
+                                    <span className="text-sm font-medium text-emerald-700">
+                                        Selected: {selectedUser.firstName} {selectedUser.lastName}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { setSelectedUser(null); setForm(prev => ({ ...prev, guardianId: undefined, guardianName: '', guardianEmail: '', guardianPhone: '' })) }}
+                                >
+                                    <X className="w-4 h-4 text-gray-400" />
+                                </button>
                             </div>
-                        </label>
+                        )}
                     </div>
+                )}
 
-                    {/* Notes */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Name <span className="text-red-500">*</span></label>
+                    <input
+                        type="text"
+                        value={form.guardianName}
+                        onChange={(e) => setForm(prev => ({ ...prev, guardianName: e.target.value }))}
+                        onKeyDown={filterNameInput}
+                        placeholder="e.g. John Doe"
+                        readOnly={!!selectedUser}
+                        className={`${inputBase} ${errors.guardianName ? inputErr : inputOk}`}
+                    />
+                    {errors.guardianName
+                        ? <p className="text-xs text-red-600 mt-1">{errors.guardianName}</p>
+                        : <p className="text-xs text-gray-500 mt-1">Only letters, spaces, hyphens and apostrophes</p>}
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Relationship <span className="text-red-500">*</span></label>
+                    <select
+                        value={form.relationship}
+                        onChange={(e) => setForm(prev => ({ ...prev, relationship: e.target.value as GuardianRelationship }))}
+                        className={`${inputBase} ${errors.relationship ? inputErr : inputOk}`}
+                    >
+                        {RELATIONSHIP_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                    {errors.relationship && <p className="text-xs text-red-600 mt-1">{errors.relationship}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
-                        <textarea
-                            value={form.notes || ''}
-                            onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                            placeholder="Any additional notes..."
-                            rows={2}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors resize-none"
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                            type="email"
+                            value={form.guardianEmail || ''}
+                            onChange={(e) => setForm(prev => ({ ...prev, guardianEmail: e.target.value }))}
+                            placeholder="guardian@email.com"
+                            readOnly={!!selectedUser}
+                            className={`${inputBase} ${errors.guardianEmail ? inputErr : inputOk}`}
                         />
+                        {errors.guardianEmail && <p className="text-xs text-red-600 mt-1">{errors.guardianEmail}</p>}
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input
+                            type="tel"
+                            value={form.guardianPhone || ''}
+                            onChange={(e) => setForm(prev => ({ ...prev, guardianPhone: e.target.value }))}
+                            onKeyDown={filterPhoneInput}
+                            placeholder="+1234567890"
+                            className={`${inputBase} ${errors.guardianPhone ? inputErr : inputOk}`}
+                        />
+                        {errors.guardianPhone && <p className="text-xs text-red-600 mt-1">{errors.guardianPhone}</p>}
+                    </div>
+                </div>
 
-                    {/* Submit */}
-                    <div className="flex gap-3 pt-2">
-                        <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={submitting || !form.guardianName.trim()}
-                            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-                        >
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                            Add Guardian
-                        </Button>
-                    </div>
-                </form>
-            </motion.div>
-        </motion.div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                        type="text"
+                        value={form.guardianAddress || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, guardianAddress: e.target.value }))}
+                        placeholder="Guardian's address"
+                        className={`${inputBase} ${errors.guardianAddress ? inputErr : inputOk}`}
+                    />
+                    {errors.guardianAddress && <p className="text-xs text-red-600 mt-1">{errors.guardianAddress}</p>}
+                </div>
+
+                <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isPrimary}
+                            onChange={(e) => setForm(prev => ({ ...prev, isPrimary: e.target.checked }))}
+                            className="w-4 h-4 text-emerald-600 rounded"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-700">Primary Guardian</span>
+                            <p className="text-xs text-gray-500">Mark as your primary parent/guardian</p>
+                        </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isEmergencyContact}
+                            onChange={(e) => setForm(prev => ({ ...prev, isEmergencyContact: e.target.checked }))}
+                            className="w-4 h-4 text-emerald-600 rounded"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-700">Emergency Contact</span>
+                            <p className="text-xs text-gray-500">Add as your emergency contact</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                    <textarea
+                        value={form.notes || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Any additional notes..."
+                        rows={3}
+                        className={`${inputBase} ${errors.notes ? inputErr : inputOk} resize-none`}
+                    />
+                    {errors.notes && <p className="text-xs text-red-600 mt-1">{errors.notes}</p>}
+                </div>
+            </form>
+        </SlideInDrawer>
     )
 }
 
 // =============================================
-// Edit Guardian Modal
+// Edit Guardian Drawer
 // =============================================
-function EditGuardianModal({ guardian, onClose, onSuccess, onError }: {
-    guardian: GuardianLink
+type EditDrawerProps = {
+    isOpen: boolean
+    guardian: GuardianLink | null
     onClose: () => void
-    onSuccess: () => void
+    onSuccess: (updated?: GuardianLink) => void
     onError: (msg: string) => void
-}) {
+}
+
+function EditGuardianDrawer({ isOpen, guardian, onClose, onSuccess, onError }: EditDrawerProps) {
     const [submitting, setSubmitting] = useState(false)
+    const [errors, setErrors] = useState<Record<string, string>>({})
     const [form, setForm] = useState<UpdateGuardianData>({
-        relationship: guardian.relationship,
-        isPrimary: guardian.isPrimary,
-        isEmergencyContact: guardian.isEmergencyContact,
-        guardianName: getGuardianDisplayName(guardian),
-        guardianEmail: getGuardianEmail(guardian),
-        guardianPhone: guardian.guardianPhone || '',
-        guardianAddress: guardian.guardianAddress || '',
-        notes: guardian.notes || '',
+        relationship: 'parent',
+        isPrimary: false,
+        isEmergencyContact: false,
+        guardianName: '',
+        guardianEmail: '',
+        guardianPhone: '',
+        guardianAddress: '',
+        notes: '',
     })
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSubmitting(true)
-        const result = await guardianService.updateGuardian(guardian.id, form)
-        if (result.success) {
-            onSuccess()
-        } else {
-            onError(result.message || 'Failed to update guardian')
+    useEffect(() => {
+        if (guardian && isOpen) {
+            setForm({
+                relationship: guardian.relationship,
+                isPrimary: guardian.isPrimary,
+                isEmergencyContact: guardian.isEmergencyContact,
+                guardianName: getGuardianDisplayName(guardian),
+                guardianEmail: getGuardianEmail(guardian),
+                guardianPhone: guardian.guardianPhone || '',
+                guardianAddress: guardian.guardianAddress || '',
+                notes: guardian.notes || '',
+            })
+            setErrors({})
         }
-        setSubmitting(false)
+    }, [guardian, isOpen])
+
+    const validateAll = (): boolean => {
+        const errs: Record<string, string> = {}
+        if (form.guardianName !== undefined) {
+            const nameErr = validateName(form.guardianName || '', 'Guardian name')
+            if (nameErr) errs.guardianName = nameErr
+        }
+        if (form.guardianEmail) {
+            const e = validateEmail(form.guardianEmail)
+            if (e) errs.guardianEmail = e
+        }
+        if (form.guardianPhone) {
+            const p = validatePhone(form.guardianPhone, false)
+            if (p) errs.guardianPhone = p
+        }
+        if (form.guardianAddress && form.guardianAddress.trim()) {
+            const a = validateAddress(form.guardianAddress, 'Address')
+            if (a) errs.guardianAddress = a
+        }
+        if (form.notes) {
+            const n = validateTextArea(form.notes, 'Notes', 0, 1000)
+            if (n) errs.notes = n
+        }
+        setErrors(errs)
+        return Object.keys(errs).length === 0
     }
 
+    const handleSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault()
+        if (!guardian) return
+        if (!validateAll()) return
+        setSubmitting(true)
+        try {
+            const result = await guardianService.updateGuardian(guardian.id, form)
+            if (result.success) {
+                onSuccess(result.data)
+            } else {
+                onError(result.message || 'Failed to update guardian')
+                setErrors(prev => ({ ...prev, _submit: result.message || 'Failed to update guardian' }))
+            }
+        } catch (err: any) {
+            onError(err?.message || 'Failed to update guardian')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const inputBase = 'w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none transition-colors'
+    const inputOk = 'border-gray-200 focus:border-emerald-500'
+    const inputErr = 'border-red-300 focus:border-red-500'
+
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+        <SlideInDrawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Edit Guardian"
+            description="Update guardian information"
+            size="lg"
+            footer={
+                <div className="flex gap-3 justify-end">
+                    <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+                    <Button
+                        type="button"
+                        onClick={() => handleSubmit()}
+                        disabled={submitting}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    >
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                        Save Changes
+                    </Button>
+                </div>
+            }
         >
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            >
-                <div className="flex items-center justify-between p-6 border-b">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900">Edit Guardian</h2>
-                        <p className="text-sm text-gray-500 mt-1">Update guardian information</p>
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {errors._submit && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">
+                        {errors._submit}
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-                        <X className="w-5 h-5 text-gray-500" />
-                    </button>
+                )}
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Name</label>
+                    <input
+                        type="text"
+                        value={form.guardianName || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, guardianName: e.target.value }))}
+                        onKeyDown={filterNameInput}
+                        className={`${inputBase} ${errors.guardianName ? inputErr : inputOk}`}
+                    />
+                    {errors.guardianName
+                        ? <p className="text-xs text-red-600 mt-1">{errors.guardianName}</p>
+                        : <p className="text-xs text-gray-500 mt-1">Only letters, spaces, hyphens and apostrophes</p>}
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                    <select
+                        value={form.relationship}
+                        onChange={(e) => setForm(prev => ({ ...prev, relationship: e.target.value as GuardianRelationship }))}
+                        className={`${inputBase} ${inputOk}`}
+                    >
+                        {RELATIONSHIP_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input
-                            type="text"
-                            value={form.guardianName || ''}
-                            onChange={(e) => setForm(prev => ({ ...prev, guardianName: e.target.value }))}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                            type="email"
+                            value={form.guardianEmail || ''}
+                            onChange={(e) => setForm(prev => ({ ...prev, guardianEmail: e.target.value }))}
+                            className={`${inputBase} ${errors.guardianEmail ? inputErr : inputOk}`}
                         />
+                        {errors.guardianEmail && <p className="text-xs text-red-600 mt-1">{errors.guardianEmail}</p>}
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                        <select
-                            value={form.relationship}
-                            onChange={(e) => setForm(prev => ({ ...prev, relationship: e.target.value as GuardianRelationship }))}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                        >
-                            {RELATIONSHIP_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input
-                                type="email"
-                                value={form.guardianEmail || ''}
-                                onChange={(e) => setForm(prev => ({ ...prev, guardianEmail: e.target.value }))}
-                                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input
-                                type="tel"
-                                value={form.guardianPhone || ''}
-                                onChange={(e) => setForm(prev => ({ ...prev, guardianPhone: e.target.value }))}
-                                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input
-                            type="text"
-                            value={form.guardianAddress || ''}
-                            onChange={(e) => setForm(prev => ({ ...prev, guardianAddress: e.target.value }))}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors"
+                            type="tel"
+                            value={form.guardianPhone || ''}
+                            onChange={(e) => setForm(prev => ({ ...prev, guardianPhone: e.target.value }))}
+                            onKeyDown={filterPhoneInput}
+                            className={`${inputBase} ${errors.guardianPhone ? inputErr : inputOk}`}
                         />
+                        {errors.guardianPhone && <p className="text-xs text-red-600 mt-1">{errors.guardianPhone}</p>}
                     </div>
+                </div>
 
-                    <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={form.isPrimary}
-                                onChange={(e) => setForm(prev => ({ ...prev, isPrimary: e.target.checked }))}
-                                className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">Primary Guardian</span>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={form.isEmergencyContact}
-                                onChange={(e) => setForm(prev => ({ ...prev, isEmergencyContact: e.target.checked }))}
-                                className="w-4 h-4 text-emerald-600 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">Emergency Contact</span>
-                        </label>
-                    </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                        type="text"
+                        value={form.guardianAddress || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, guardianAddress: e.target.value }))}
+                        className={`${inputBase} ${errors.guardianAddress ? inputErr : inputOk}`}
+                    />
+                    {errors.guardianAddress && <p className="text-xs text-red-600 mt-1">{errors.guardianAddress}</p>}
+                </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea
-                            value={form.notes || ''}
-                            onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                            rows={2}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none transition-colors resize-none"
+                <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isPrimary}
+                            onChange={(e) => setForm(prev => ({ ...prev, isPrimary: e.target.checked }))}
+                            className="w-4 h-4 text-emerald-600 rounded"
                         />
-                    </div>
+                        <span className="text-sm font-medium text-gray-700">Primary Guardian</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.isEmergencyContact}
+                            onChange={(e) => setForm(prev => ({ ...prev, isEmergencyContact: e.target.checked }))}
+                            className="w-4 h-4 text-emerald-600 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Emergency Contact</span>
+                    </label>
+                </div>
 
-                    <div className="flex gap-3 pt-2">
-                        <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-                        <Button
-                            type="submit"
-                            disabled={submitting}
-                            className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
-                        >
-                            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                            Save Changes
-                        </Button>
-                    </div>
-                </form>
-            </motion.div>
-        </motion.div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                        value={form.notes || ''}
+                        onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
+                        rows={3}
+                        className={`${inputBase} ${errors.notes ? inputErr : inputOk} resize-none`}
+                    />
+                    {errors.notes && <p className="text-xs text-red-600 mt-1">{errors.notes}</p>}
+                </div>
+            </form>
+        </SlideInDrawer>
     )
 }
 
 // =============================================
-// Guardian Detail Modal
+// Guardian Detail Drawer (read-only)
 // =============================================
-function GuardianDetailModal({ guardian, onClose }: {
-    guardian: GuardianLink
+type DetailDrawerProps = {
+    isOpen: boolean
+    guardian: GuardianLink | null
     onClose: () => void
-}) {
+}
+
+function GuardianDetailDrawer({ isOpen, guardian, onClose }: DetailDrawerProps) {
+    if (!guardian) {
+        return (
+            <SlideInDrawer isOpen={isOpen} onClose={onClose} title="Guardian Details">
+                <p className="text-sm text-gray-500">No guardian selected.</p>
+            </SlideInDrawer>
+        )
+    }
     const statusConfig = STATUS_CONFIG[guardian.status] || STATUS_CONFIG.pending
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-        >
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
-            >
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-gray-900">Guardian Details</h2>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-                            <X className="w-5 h-5 text-gray-500" />
-                        </button>
-                    </div>
-
-                    <div className="text-center mb-6">
-                        <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold text-2xl">
-                            {getGuardianDisplayName(guardian)[0]?.toUpperCase()}
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900">{getGuardianDisplayName(guardian)}</h3>
-                        <p className="text-gray-500">{getRelationshipLabel(guardian.relationship)}</p>
-                        <Badge className={`${statusConfig.bg} ${statusConfig.color} border mt-2`}>
-                            {statusConfig.label}
-                        </Badge>
-                    </div>
-
-                    <div className="space-y-4">
-                        {getGuardianEmail(guardian) && (
-                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                <Mail className="w-5 h-5 text-gray-400" />
-                                <div>
-                                    <p className="text-xs text-gray-500">Email</p>
-                                    <p className="text-sm font-medium text-gray-900">{getGuardianEmail(guardian)}</p>
-                                </div>
-                            </div>
-                        )}
-                        {guardian.guardianPhone && (
-                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                <Phone className="w-5 h-5 text-gray-400" />
-                                <div>
-                                    <p className="text-xs text-gray-500">Phone</p>
-                                    <p className="text-sm font-medium text-gray-900">{guardian.guardianPhone}</p>
-                                </div>
-                            </div>
-                        )}
-                        {guardian.guardianAddress && (
-                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                <MapPin className="w-5 h-5 text-gray-400" />
-                                <div>
-                                    <p className="text-xs text-gray-500">Address</p>
-                                    <p className="text-sm font-medium text-gray-900">{guardian.guardianAddress}</p>
-                                </div>
-                            </div>
-                        )}
-                        {guardian.notes && (
-                            <div className="p-3 bg-gray-50 rounded-xl">
-                                <p className="text-xs text-gray-500 mb-1">Notes</p>
-                                <p className="text-sm text-gray-700">{guardian.notes}</p>
-                            </div>
-                        )}
-
-                        <div className="flex flex-wrap gap-2">
-                            {guardian.isPrimary && (
-                                <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50">
-                                    <Star className="w-3 h-3 mr-1" /> Primary Guardian
-                                </Badge>
-                            )}
-                            {guardian.isEmergencyContact && (
-                                <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50">
-                                    <Shield className="w-3 h-3 mr-1" /> Emergency Contact
-                                </Badge>
-                            )}
-                        </div>
-
-                        {guardian.linkedAt && (
-                            <p className="text-xs text-gray-400 text-center">
-                                Linked on {new Date(guardian.linkedAt).toLocaleDateString()}
-                            </p>
-                        )}
-                    </div>
-
-                    <Button variant="outline" className="w-full mt-6" onClick={onClose}>
-                        Close
-                    </Button>
+        <SlideInDrawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Guardian Details"
+            description={getRelationshipLabel(guardian.relationship)}
+            size="md"
+            footer={
+                <div className="flex justify-end">
+                    <Button variant="outline" onClick={onClose}>Close</Button>
                 </div>
-            </motion.div>
-        </motion.div>
+            }
+        >
+            <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold text-2xl">
+                    {getGuardianDisplayName(guardian)[0]?.toUpperCase()}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">{getGuardianDisplayName(guardian)}</h3>
+                <p className="text-gray-500">{getRelationshipLabel(guardian.relationship)}</p>
+                <Badge className={`${statusConfig.bg} ${statusConfig.color} border mt-2`}>
+                    {statusConfig.label}
+                </Badge>
+            </div>
+
+            <div className="space-y-4">
+                {getGuardianEmail(guardian) && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <Mail className="w-5 h-5 text-gray-400" />
+                        <div>
+                            <p className="text-xs text-gray-500">Email</p>
+                            <p className="text-sm font-medium text-gray-900">{getGuardianEmail(guardian)}</p>
+                        </div>
+                    </div>
+                )}
+                {guardian.guardianPhone && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <Phone className="w-5 h-5 text-gray-400" />
+                        <div>
+                            <p className="text-xs text-gray-500">Phone</p>
+                            <p className="text-sm font-medium text-gray-900">{guardian.guardianPhone}</p>
+                        </div>
+                    </div>
+                )}
+                {guardian.guardianAddress && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <MapPin className="w-5 h-5 text-gray-400" />
+                        <div>
+                            <p className="text-xs text-gray-500">Address</p>
+                            <p className="text-sm font-medium text-gray-900">{guardian.guardianAddress}</p>
+                        </div>
+                    </div>
+                )}
+                {guardian.notes && (
+                    <div className="p-3 bg-gray-50 rounded-xl">
+                        <p className="text-xs text-gray-500 mb-1">Notes</p>
+                        <p className="text-sm text-gray-700">{guardian.notes}</p>
+                    </div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                    {guardian.isPrimary && (
+                        <Badge variant="outline" className="text-amber-700 border-amber-200 bg-amber-50">
+                            <Star className="w-3 h-3 mr-1" /> Primary Guardian
+                        </Badge>
+                    )}
+                    {guardian.isEmergencyContact && (
+                        <Badge variant="outline" className="text-red-700 border-red-200 bg-red-50">
+                            <Shield className="w-3 h-3 mr-1" /> Emergency Contact
+                        </Badge>
+                    )}
+                </div>
+
+                {guardian.linkedAt && (
+                    <p className="text-xs text-gray-400 text-center">
+                        Linked on {new Date(guardian.linkedAt).toLocaleDateString()}
+                    </p>
+                )}
+            </div>
+        </SlideInDrawer>
     )
 }

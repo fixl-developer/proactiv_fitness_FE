@@ -19,11 +19,17 @@ export default function ApiMonitoringPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string
+        endpoint: string
+        method: ApiIntegration['method']
+        status: ApiIntegration['status']
+        responseTime: number
+    }>({
         name: '',
         endpoint: '',
-        method: 'GET' as const,
-        status: 'active' as const,
+        method: 'GET',
+        status: 'active',
         responseTime: 0,
     })
 

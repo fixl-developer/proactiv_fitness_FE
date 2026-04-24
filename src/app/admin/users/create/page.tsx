@@ -60,6 +60,7 @@ interface CurrentUser {
   locationName?: string
   regionId?: string
   franchiseId?: string
+  organizationId?: string
 }
 
 interface FieldErrors {
@@ -1009,7 +1010,7 @@ export default function CreateUserPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
-                <input id="input-checkbox-admin-users-create"
+                <input
                   type="checkbox"
                   id="gdprConsent"
                   checked={gdprConsent}

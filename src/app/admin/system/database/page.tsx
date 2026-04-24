@@ -19,11 +19,18 @@ export default function DatabaseHealthPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string
+        host: string
+        port: number
+        status: DatabaseHealth['status']
+        diskUsage: number
+        connections: number
+    }>({
         name: '',
         host: '',
         port: 5432,
-        status: 'healthy' as const,
+        status: 'healthy',
         diskUsage: 0,
         connections: 0,
     })

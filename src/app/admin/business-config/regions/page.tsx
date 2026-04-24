@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { CountryService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateName, filterNameInput } from '@/utils/validation'
+import { COUNTRIES, ALL_CURRENCIES } from '@/data/countries'
 
 interface Country {
   id: string
@@ -29,18 +31,34 @@ export default function RegionsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    code: string
+    currency: string
+    timezone: string
+    languages: string[]
+    isActive: boolean
+  }>({
     name: '',
     code: '',
     currency: '',
     timezone: '',
+    languages: ['EN'],
     isActive: true,
   })
 
+  const languageOptions = [
+    { value: 'EN', label: 'English' },
+    { value: 'JA', label: 'Japanese' },
+    { value: 'ZH_HK', label: 'Chinese (Hong Kong)' },
+    { value: 'ZH_CN', label: 'Chinese (Simplified)' },
+  ]
+
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Common timezones
-  const timezones = [
+  // Common timezones. The currently-selected value (e.g. autofilled from a
+  // country pick) is merged in below so it always appears as a valid option.
+  const baseTimezones = [
     'UTC',
     'America/New_York',
     'America/Chicago',
@@ -52,9 +70,15 @@ export default function RegionsPage() {
     'Asia/Tokyo',
     'Australia/Sydney',
   ]
+  const timezones = formData.timezone && !baseTimezones.includes(formData.timezone)
+    ? [formData.timezone, ...baseTimezones]
+    : baseTimezones
 
-  // Common currencies
-  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'HKD', 'JPY', 'AUD', 'CAD', 'SGD', 'CNY']
+  // Full ISO 4217 currency list. If the currently-selected currency isn't in
+  // the list yet (e.g. an older record), merge it in so the <select> can display it.
+  const currencies = formData.currency && !ALL_CURRENCIES.includes(formData.currency)
+    ? [formData.currency, ...ALL_CURRENCIES]
+    : ALL_CURRENCIES
 
   // Load countries
   const loadCountries = async () => {
@@ -83,16 +107,18 @@ export default function RegionsPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) newErrors.name = 'Country name is required'
-    else if (formData.name.length < 2) newErrors.name = 'Country name must be at least 2 characters'
+    const nameErr = validateName(formData.name, 'Country name')
+    if (nameErr) newErrors.name = nameErr
 
     if (!formData.code) newErrors.code = 'Country code is required'
-    else if (!/^[A-Z]{2,3}$/.test(formData.code)) newErrors.code = 'Country code must be 2-3 uppercase letters (e.g., US, UAE)'
+    else if (!/^[A-Z]{2}$/.test(formData.code)) newErrors.code = 'Country code must be exactly 2 uppercase letters (ISO 3166-1, e.g., US, AE)'
 
     if (!formData.currency) newErrors.currency = 'Currency is required'
     else if (!/^[A-Z]{3}$/.test(formData.currency)) newErrors.currency = 'Currency must be 3 uppercase letters (e.g., USD)'
 
     if (!formData.timezone) newErrors.timezone = 'Timezone is required'
+
+    if (!formData.languages || formData.languages.length === 0) newErrors.languages = 'At least one language is required'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -136,6 +162,7 @@ export default function RegionsPage() {
       code: country.code,
       currency: country.currency,
       timezone: country.timezone,
+      languages: (country as any).languages || ['EN'],
       isActive: country.isActive,
     })
     setEditingId(country.id)
@@ -162,6 +189,7 @@ export default function RegionsPage() {
       code: '',
       currency: '',
       timezone: '',
+      languages: ['EN'],
       isActive: true,
     })
     setErrors({})
@@ -335,16 +363,39 @@ export default function RegionsPage() {
               </label>
               <input
                 type="text"
+                list="country-options"
+                autoComplete="off"
                 value={formData.name}
+                onKeyDown={filterNameInput}
                 onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value })
-                  if (errors.name) setErrors({ ...errors, name: '' })
+                  const name = e.target.value
+                  const match = COUNTRIES.find((c) => c.name === name)
+                  if (match) {
+                    setFormData({
+                      ...formData,
+                      name: match.name,
+                      code: match.code,
+                      currency: match.currency,
+                      timezone: match.timezone,
+                    })
+                    setErrors({ ...errors, name: '', code: '', currency: '', timezone: '' })
+                  } else {
+                    setFormData({ ...formData, name })
+                    if (errors.name) setErrors({ ...errors, name: '' })
+                  }
                 }}
-                placeholder="e.g., United Arab Emirates"
+                placeholder="Type to search — e.g., United Arab Emirates"
+                maxLength={80}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
+              <datalist id="country-options">
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.name}>{`${c.code} · ${c.currency}`}</option>
+                ))}
+              </datalist>
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {!errors.name && <p className="mt-1 text-xs text-slate-500">Pick a country to autofill code, currency and timezone</p>}
             </div>
 
             {/* Country Code */}
@@ -355,17 +406,21 @@ export default function RegionsPage() {
               <input
                 type="text"
                 value={formData.code}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/^[A-Za-z]$/.test(e.key)) e.preventDefault()
+                }}
                 onChange={(e) => {
-                  setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                  const letters = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase()
+                  setFormData({ ...formData, code: letters })
                   if (errors.code) setErrors({ ...errors, code: '' })
                 }}
-                placeholder="e.g., UAE"
-                maxLength={3}
+                placeholder="e.g., US, AE, GB"
+                maxLength={2}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code}</p>}
-              <p className="mt-1 text-xs text-slate-500">2-3 uppercase letters (e.g., US, UAE, GBR)</p>
+              <p className="mt-1 text-xs text-slate-500">Exactly 2 uppercase letters (ISO 3166-1 alpha-2, e.g., US, AE, GB)</p>
             </div>
 
             {/* Currency */}
@@ -390,6 +445,7 @@ export default function RegionsPage() {
                 ))}
               </select>
               {errors.currency && <p className="mt-1 text-sm text-red-600">{errors.currency}</p>}
+              {!errors.currency && <p className="mt-1 text-xs text-slate-500">Auto-filled from the selected country; change it if this location uses a different currency.</p>}
             </div>
 
             {/* Timezone */}
@@ -414,6 +470,34 @@ export default function RegionsPage() {
                 ))}
               </select>
               {errors.timezone && <p className="mt-1 text-sm text-red-600">{errors.timezone}</p>}
+            </div>
+
+            {/* Languages */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Languages <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-3 border border-slate-300 rounded-lg">
+                {languageOptions.map((lang) => (
+                  <label key={lang.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.languages.includes(lang.value)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...formData.languages, lang.value]
+                          : formData.languages.filter((l) => l !== lang.value)
+                        setFormData({ ...formData, languages: next })
+                        if (errors.languages) setErrors({ ...errors, languages: '' })
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{lang.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.languages && <p className="mt-1 text-sm text-red-600">{errors.languages}</p>}
+              {!errors.languages && <p className="mt-1 text-xs text-slate-500">Select at least one supported language</p>}
             </div>
 
             {/* Active Status */}

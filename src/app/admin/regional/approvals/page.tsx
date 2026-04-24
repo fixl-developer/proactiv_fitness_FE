@@ -1,15 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     CheckCircle, XCircle, Clock, AlertCircle, Search,
-    Eye, Plus, Filter, TrendingUp
+    Plus, TrendingUp, X, Loader2, Eye
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService } from '@/services/regionalAdminService'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+
+const APPROVAL_TYPES = [
+    { value: 'STAFF_HIRING', label: 'Staff Hiring' },
+    { value: 'BUDGET_ALLOCATION', label: 'Budget Allocation' },
+    { value: 'FACILITY_UPGRADE', label: 'Facility Upgrade' },
+    { value: 'PROGRAM_LAUNCH', label: 'Program Launch' },
+    { value: 'PRICE_CHANGE', label: 'Price Change' },
+    { value: 'OTHER', label: 'Other' },
+]
+
+const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
 
 export default function RegionalApprovalsPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -17,126 +30,117 @@ export default function RegionalApprovalsPage() {
     const [filterType, setFilterType] = useState('all')
     const [approvals, setApprovals] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [selectedApproval, setSelectedApproval] = useState<any>(null)
-    const [showDetails, setShowDetails] = useState(false)
-    const [successMsg, setSuccessMsg] = useState<string | null>(null)
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+    // New Request drawer state
+    const [newOpen, setNewOpen] = useState(false)
+    const [newForm, setNewForm] = useState({ type: 'STAFF_HIRING', title: '', description: '', priority: 'MEDIUM', location: '', details: '' })
+    const [newErrors, setNewErrors] = useState<Record<string, string>>({})
+    const [creating, setCreating] = useState(false)
+
+    // Rejection drawer state
+    const [rejectTarget, setRejectTarget] = useState<any | null>(null)
+    const [rejectReason, setRejectReason] = useState('')
+    const [rejectError, setRejectError] = useState<string | null>(null)
+    const [rejecting, setRejecting] = useState(false)
+
+    // Approve confirmation drawer
+    const [approveTarget, setApproveTarget] = useState<any | null>(null)
+    const [approveNotes, setApproveNotes] = useState('')
+    const [approving, setApproving] = useState(false)
+
+    // View details drawer
+    const [viewTarget, setViewTarget] = useState<any | null>(null)
 
     useEffect(() => {
-        fetchApprovals()
-    }, [searchTerm, filterStatus, filterType])
+        if (!toast) return
+        const t = setTimeout(() => setToast(null), 4000)
+        return () => clearTimeout(t)
+    }, [toast])
 
-    const showSuccess = (msg: string) => {
-        setSuccessMsg(msg)
-        setTimeout(() => setSuccessMsg(null), 3000)
-    }
-
-    const fetchApprovals = async () => {
+    const fetchApprovals = useCallback(async () => {
         try {
             setIsLoading(true)
             const resp = await RegionalAdminService.getPendingApprovals(1, 50, filterStatus, filterType)
-            if (resp?.data?.length) {
-                setApprovals(resp.data)
-                return
-            }
-            // Fallback mock data
-            setApprovals([
-                {
-                    id: '1',
-                    type: 'STAFF_HIRING',
-                    title: 'New Coach Hiring - Boston Downtown',
-                    description: 'Approval for hiring new gymnastics coach',
-                    requestedBy: 'John Smith',
-                    requestedDate: '2024-03-10',
-                    status: 'PENDING',
-                    priority: 'HIGH',
-                    location: 'Boston Downtown',
-                    details: 'Hiring Sarah Johnson as Senior Coach'
-                },
-                {
-                    id: '2',
-                    type: 'BUDGET_ALLOCATION',
-                    title: 'Q2 Budget Allocation - Northeast Region',
-                    description: 'Budget approval for Q2 operations',
-                    requestedBy: 'Regional Manager',
-                    requestedDate: '2024-03-08',
-                    status: 'PENDING',
-                    priority: 'MEDIUM',
-                    location: 'Northeast Region',
-                    details: '$50,000 for equipment and maintenance'
-                },
-                {
-                    id: '3',
-                    type: 'FACILITY_UPGRADE',
-                    title: 'Facility Upgrade - Providence Location',
-                    description: 'Approval for facility renovation',
-                    requestedBy: 'Location Manager',
-                    requestedDate: '2024-03-05',
-                    status: 'APPROVED',
-                    priority: 'MEDIUM',
-                    location: 'Providence',
-                    details: 'New trampoline area installation'
-                },
-                {
-                    id: '4',
-                    type: 'PROGRAM_LAUNCH',
-                    title: 'New Summer Camp Program',
-                    description: 'Launch new summer camp program',
-                    requestedBy: 'Marketing Team',
-                    requestedDate: '2024-03-01',
-                    status: 'APPROVED',
-                    priority: 'LOW',
-                    location: 'All Locations',
-                    details: '4-week summer gymnastics camp'
-                },
-                {
-                    id: '5',
-                    type: 'PRICE_CHANGE',
-                    title: 'Class Fee Adjustment',
-                    description: 'Approval for class fee increase',
-                    requestedBy: 'Finance Team',
-                    requestedDate: '2024-02-28',
-                    status: 'REJECTED',
-                    priority: 'MEDIUM',
-                    location: 'Northeast Region',
-                    details: '5% increase in class fees'
-                },
-            ])
+            setApprovals(Array.isArray(resp?.data) ? resp.data : [])
         } catch (err: any) {
             console.error('Error fetching approvals:', err)
+            setToast({ message: err?.message || 'Failed to load approvals', type: 'error' })
+            setApprovals([])
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [filterStatus, filterType])
 
-    const handleApprove = async (approvalId: string) => {
+    useEffect(() => { fetchApprovals() }, [fetchApprovals])
+
+    const handleApproveConfirm = async () => {
+        if (!approveTarget) return
+        setApproving(true)
         try {
-            await RegionalAdminService.approveRequest(approvalId)
-            setApprovals(approvals.map(a =>
-                a.id === approvalId ? { ...a, status: 'APPROVED' } : a
-            ))
-            showSuccess('Request approved successfully!')
+            await RegionalAdminService.approveRequest(approveTarget.id, approveNotes || undefined)
+            setApprovals(prev => prev.map(a => a.id === approveTarget.id ? { ...a, status: 'APPROVED' } : a))
+            setToast({ message: 'Request approved successfully!', type: 'success' })
+            setApproveTarget(null); setApproveNotes('')
         } catch (err: any) {
-            setApprovals(approvals.map(a =>
-                a.id === approvalId ? { ...a, status: 'APPROVED' } : a
-            ))
-            showSuccess('Request approved!')
+            setToast({ message: err?.message || 'Failed to approve', type: 'error' })
+        } finally {
+            setApproving(false)
         }
     }
 
-    const handleReject = async (approvalId: string) => {
-        const reason = window.prompt('Enter rejection reason:')
-        if (!reason) return
+    const handleRejectConfirm = async () => {
+        if (!rejectTarget) return
+        if (!rejectReason.trim() || rejectReason.trim().length < 3) {
+            setRejectError('Please enter a rejection reason (min 3 characters)')
+            return
+        }
+        setRejecting(true)
+        setRejectError(null)
         try {
-            await RegionalAdminService.rejectRequest(approvalId, reason)
-            setApprovals(approvals.map(a =>
-                a.id === approvalId ? { ...a, status: 'REJECTED' } : a
-            ))
-            showSuccess('Request rejected.')
+            await RegionalAdminService.rejectRequest(rejectTarget.id, rejectReason.trim())
+            setApprovals(prev => prev.map(a => a.id === rejectTarget.id ? { ...a, status: 'REJECTED' } : a))
+            setToast({ message: 'Request rejected', type: 'success' })
+            setRejectTarget(null); setRejectReason('')
         } catch (err: any) {
-            setApprovals(approvals.map(a =>
-                a.id === approvalId ? { ...a, status: 'REJECTED' } : a
-            ))
-            showSuccess('Request rejected.')
+            setToast({ message: err?.message || 'Failed to reject', type: 'error' })
+        } finally {
+            setRejecting(false)
+        }
+    }
+
+    const validateNewForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        if (!newForm.type) errs.type = 'Type is required'
+        if (!newForm.title.trim()) errs.title = 'Title is required'
+        else if (newForm.title.trim().length < 3) errs.title = 'Title must be at least 3 characters'
+        if (newForm.description && newForm.description.length > 500) errs.description = 'Description must be less than 500 characters'
+        if (!newForm.priority) errs.priority = 'Priority is required'
+        setNewErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
+    const handleCreateRequest = async () => {
+        if (!validateNewForm()) return
+        setCreating(true)
+        try {
+            await RegionalAdminService.createApprovalRequest({
+                type: newForm.type,
+                title: newForm.title.trim(),
+                description: newForm.description.trim() || undefined,
+                priority: newForm.priority,
+                location: newForm.location.trim() || undefined,
+                details: newForm.details.trim() || undefined,
+            })
+            setToast({ message: 'Request created successfully', type: 'success' })
+            setNewOpen(false)
+            setNewForm({ type: 'STAFF_HIRING', title: '', description: '', priority: 'MEDIUM', location: '', details: '' })
+            setNewErrors({})
+            fetchApprovals()
+        } catch (err: any) {
+            setToast({ message: err?.message || 'Failed to create request', type: 'error' })
+        } finally {
+            setCreating(false)
         }
     }
 
@@ -158,6 +162,11 @@ export default function RegionalApprovalsPage() {
         }
     }
 
+    const filteredApprovals = approvals.filter(a => {
+        const matchesSearch = !searchTerm || (a.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+        return matchesSearch
+    })
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -165,13 +174,6 @@ export default function RegionalApprovalsPage() {
             </div>
         )
     }
-
-    const filteredApprovals = approvals.filter(a => {
-        const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesStatus = filterStatus === 'all' || a.status === filterStatus
-        const matchesType = filterType === 'all' || a.type === filterType
-        return matchesSearch && matchesStatus && matchesType
-    })
 
     return (
         <div className="space-y-6">
@@ -181,13 +183,17 @@ export default function RegionalApprovalsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Approvals & Requests</h1>
                     <p className="text-gray-600 mt-1">Manage pending approvals and requests</p>
                 </div>
-                <button id="admin-regional-approvals-btn" className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button
+                    id="admin-regional-approvals-btn-new"
+                    onClick={() => setNewOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                     <Plus className="w-5 h-5" />
                     New Request
                 </button>
             </div>
 
-            {/* Summary Cards - Colorful Gradient Style */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[
                     { label: 'Total Requests', value: approvals.length, icon: TrendingUp, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100' },
@@ -226,7 +232,8 @@ export default function RegionalApprovalsPage() {
                                 className="pl-10"
                             />
                         </div>
-                        <select id="select-admin-regional-approvals-1"
+                        <select
+                            id="select-admin-regional-approvals-status"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -236,23 +243,20 @@ export default function RegionalApprovalsPage() {
                             <option value="APPROVED">Approved</option>
                             <option value="REJECTED">Rejected</option>
                         </select>
-                        <select id="select-admin-regional-approvals-2"
+                        <select
+                            id="select-admin-regional-approvals-type"
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
                             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="all">All Types</option>
-                            <option value="STAFF_HIRING">Staff Hiring</option>
-                            <option value="BUDGET_ALLOCATION">Budget</option>
-                            <option value="FACILITY_UPGRADE">Facility</option>
-                            <option value="PROGRAM_LAUNCH">Program</option>
-                            <option value="PRICE_CHANGE">Price Change</option>
+                            {APPROVAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                         </select>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Approvals List */}
+            {/* List */}
             <div className="space-y-4">
                 {filteredApprovals.map((approval, idx) => (
                     <motion.div
@@ -268,7 +272,7 @@ export default function RegionalApprovalsPage() {
                                         <div className="flex items-center gap-3 mb-2">
                                             {getStatusIcon(approval.status)}
                                             <h3 className="text-lg font-semibold text-gray-900">{approval.title}</h3>
-                                            <Badge variant={approval.priority === 'HIGH' ? 'destructive' : 'secondary'}>
+                                            <Badge variant={approval.priority === 'HIGH' || approval.priority === 'URGENT' ? 'destructive' : 'secondary'}>
                                                 {approval.priority}
                                             </Badge>
                                         </div>
@@ -280,7 +284,7 @@ export default function RegionalApprovalsPage() {
                                             </div>
                                             <div>
                                                 <p className="text-gray-600">Date</p>
-                                                <p className="font-medium text-gray-900">{approval.requestedDate}</p>
+                                                <p className="font-medium text-gray-900">{approval.requestedDate ? new Date(approval.requestedDate).toLocaleDateString() : 'N/A'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-gray-600">Location</p>
@@ -294,40 +298,42 @@ export default function RegionalApprovalsPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    {approval.status === 'PENDING' && (
-                                        <div className="flex gap-2">
-                                            <button id="admin-regional-approvals-btn-2"
-                                                onClick={() => handleApprove(approval.id)}
-                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                                            >
-                                                <CheckCircle className="w-4 h-4" />
-                                                Approve
-                                            </button>
-                                            <button id="admin-regional-approvals-btn-3"
-                                                onClick={() => handleReject(approval.id)}
-                                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                                            >
-                                                <XCircle className="w-4 h-4" />
-                                                Reject
-                                            </button>
-                                        </div>
-                                    )}
+                                    <div className="flex gap-2">
+                                        <button
+                                            id="admin-regional-approvals-btn-view"
+                                            onClick={() => setViewTarget(approval)}
+                                            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                            View
+                                        </button>
+                                        {approval.status === 'PENDING' && (
+                                            <>
+                                                <button
+                                                    id="admin-regional-approvals-btn-approve"
+                                                    onClick={() => setApproveTarget(approval)}
+                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                                >
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    id="admin-regional-approvals-btn-reject"
+                                                    onClick={() => setRejectTarget(approval)}
+                                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                    Reject
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </motion.div>
                 ))}
             </div>
-
-            {/* Success Message */}
-            {successMsg && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="fixed top-20 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5" />
-                        {successMsg}
-                    </div>
-                </motion.div>
-            )}
 
             {filteredApprovals.length === 0 && (
                 <Card>
@@ -337,6 +343,237 @@ export default function RegionalApprovalsPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Toast */}
+            <AnimatePresence>
+                {toast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg ${
+                            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                        }`}
+                    >
+                        <span className="text-sm font-medium">{toast.message}</span>
+                        <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70"><X className="w-4 h-4" /></button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* New Request Drawer */}
+            <SlideInDrawer
+                isOpen={newOpen}
+                onClose={() => { setNewOpen(false); setNewErrors({}) }}
+                title="New Approval Request"
+                description="Submit a new request for approval"
+                size="lg"
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                        <select
+                            value={newForm.type}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, type: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {APPROVAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                        <FormFieldHint hint="Choose the category of your request" error={newErrors.type} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                        <Input
+                            value={newForm.title}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Short descriptive title"
+                            className={newErrors.title ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint="3-120 characters" error={newErrors.title} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Priority *</label>
+                        <select
+                            value={newForm.priority}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, priority: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <Input
+                            value={newForm.location}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, location: e.target.value }))}
+                            placeholder="e.g. Boston Downtown"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea
+                            value={newForm.description}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, description: e.target.value }))}
+                            rows={3}
+                            placeholder="Brief description of the request"
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${newErrors.description ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint="Max 500 characters" error={newErrors.description} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Details</label>
+                        <textarea
+                            value={newForm.details}
+                            onChange={(e) => setNewForm(prev => ({ ...prev, details: e.target.value }))}
+                            rows={4}
+                            placeholder="Additional details or justification"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                        <button
+                            type="button"
+                            onClick={() => setNewOpen(false)}
+                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            disabled={creating}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCreateRequest}
+                            disabled={creating}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                            {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Submit Request
+                        </button>
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Rejection Drawer */}
+            <SlideInDrawer
+                isOpen={!!rejectTarget}
+                onClose={() => { setRejectTarget(null); setRejectReason(''); setRejectError(null) }}
+                title="Reject Request"
+                description={rejectTarget?.title || ''}
+                size="md"
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-800">
+                            You are about to reject this request. Please provide a clear reason so the requester understands your decision.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Rejection Reason *</label>
+                        <textarea
+                            value={rejectReason}
+                            onChange={(e) => { setRejectReason(e.target.value); if (rejectError) setRejectError(null) }}
+                            rows={5}
+                            placeholder="Explain why this request is being rejected..."
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${rejectError ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint="Minimum 3 characters" error={rejectError || undefined} />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                        <button
+                            type="button"
+                            onClick={() => { setRejectTarget(null); setRejectReason('') }}
+                            disabled={rejecting}
+                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleRejectConfirm}
+                            disabled={rejecting}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                            {rejecting && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Confirm Reject
+                        </button>
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Approve Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={!!approveTarget}
+                onClose={() => { setApproveTarget(null); setApproveNotes('') }}
+                title="Approve Request"
+                description={approveTarget?.title || ''}
+                size="md"
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">
+                            Confirm approval of this request. You may add optional notes.
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Approval Notes</label>
+                        <textarea
+                            value={approveNotes}
+                            onChange={(e) => setApproveNotes(e.target.value)}
+                            rows={4}
+                            placeholder="Optional notes for the requester..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                        <button
+                            type="button"
+                            onClick={() => { setApproveTarget(null); setApproveNotes('') }}
+                            disabled={approving}
+                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleApproveConfirm}
+                            disabled={approving}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                        >
+                            {approving && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Confirm Approve
+                        </button>
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* View Details Drawer */}
+            <SlideInDrawer
+                isOpen={!!viewTarget}
+                onClose={() => setViewTarget(null)}
+                title="Request Details"
+                description={viewTarget?.title || ''}
+                size="md"
+            >
+                {viewTarget && (
+                    <div className="space-y-3">
+                        {[
+                            ['Title', viewTarget.title],
+                            ['Type', viewTarget.type],
+                            ['Priority', viewTarget.priority],
+                            ['Status', viewTarget.status],
+                            ['Requested By', viewTarget.requestedBy],
+                            ['Date', viewTarget.requestedDate ? new Date(viewTarget.requestedDate).toLocaleString() : 'N/A'],
+                            ['Location', viewTarget.location],
+                            ['Description', viewTarget.description],
+                            ['Details', viewTarget.details],
+                        ].map(([label, value]) => (
+                            <div key={label} className="py-2 border-b border-gray-100 last:border-0">
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+                                <p className="text-sm text-gray-900">{value || 'N/A'}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }

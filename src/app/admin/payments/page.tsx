@@ -335,7 +335,7 @@ const AdminPaymentsPage = () => {
                             >
                                 <div className="flex items-center gap-4 flex-1">
                                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                                        {payment.student.split(' ').map(n => n[0]).join('')}
+                                        {payment.student.split(' ').map((n: string) => n[0]).join('')}
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">

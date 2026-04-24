@@ -117,6 +117,79 @@ export default function ProgramCatalogPage() {
     loadStats()
   }, [loadPrograms, loadStats])
 
+  // Transform minimal form data into the full payload the backend Joi schema expects.
+  // The UI only collects top-level fields; nested rules/templates get safe defaults.
+  const buildCreatePayload = (): any => {
+    // Backend Joi expects lowercase enum values (see ProgramType validation)
+    const programTypeMap: Record<string, string> = {
+      gymnastics: 'regular',
+      ninja: 'regular',
+      tumbling: 'regular',
+      regular: 'regular',
+      camp: 'camp',
+      event: 'event',
+      party: 'party',
+      assessment: 'assessment',
+      private: 'private',
+    }
+    const skillLevelMap: Record<string, string> = {
+      beginner: 'beginner',
+      intermediate: 'intermediate',
+      advanced: 'advanced',
+      expert: 'expert',
+    }
+    const [minStr, maxStr] = (formData.ageGroup || '5-10').split('-')
+    const minAge = Number(minStr) || 5
+    const maxAge = Number(maxStr) || 12
+
+    const description = formData.description || formData.name || 'Program'
+    const ageDescription = `Ages ${minAge}-${maxAge}`
+    const ageGroup = { minAge, maxAge, ageType: 'years', description: ageDescription }
+
+    return {
+      name: formData.name,
+      description,
+      shortDescription: description.slice(0, 200),
+      programType: programTypeMap[formData.type] || 'regular',
+      category: formData.type || 'general',
+      businessUnitId: (formData as any).businessUnitId,
+      locationIds: (formData as any).locationIds || [],
+      ageGroups: [ageGroup],
+      skillLevels: [skillLevelMap[formData.level] || 'beginner'],
+      capacityRules: {
+        minParticipants: 1,
+        maxParticipants: formData.capacity || 15,
+        coachToParticipantRatio: 10,
+        waitlistCapacity: 5,
+        allowOverbooking: false,
+      },
+      eligibilityRules: {
+        ageRestrictions: ageGroup,
+        medicalClearanceRequired: false,
+        parentalConsentRequired: true,
+      },
+      pricingModel: {
+        basePrice: formData.price || 0,
+        currency: 'USD',
+        pricingType: 'per_term',
+      },
+      classTemplates: [{
+        name: 'Default Session',
+        description: 'Standard class template',
+        duration: 60,
+        activities: ['Warm-up', 'Skill practice', 'Cool-down'],
+        learningObjectives: ['Skill development', 'Safety awareness'],
+      }],
+      sessionDuration: 60,
+      sessionsPerWeek: 1,
+      termDuration: 12,
+      availableDays: ['monday', 'wednesday', 'friday'],
+      availableTimeSlots: [{ startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
+      isActive: formData.status === 'active',
+      isPublic: formData.status !== 'draft',
+    }
+  }
+
   // ── Create / Edit ──────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,14 +199,15 @@ export default function ProgramCatalogPage() {
         await apiClient.put(`/programs/${editingId}`, formData)
         toast.success('Program updated successfully')
       } else {
-        await apiClient.post('/programs', formData)
+        await apiClient.post('/programs', buildCreatePayload())
         toast.success('Program created successfully')
       }
       resetForm()
       loadPrograms()
       loadStats()
     } catch (err: any) {
-      toast.error(editingId ? 'Failed to update program' : 'Failed to create program')
+      const msg = err?.response?.data?.message || (editingId ? 'Failed to update program' : 'Failed to create program')
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }

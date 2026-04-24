@@ -20,12 +20,18 @@ export default function IntegrationGatewayPage() {
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
     const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({})
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string
+        type: Integration['type']
+        url: string
+        apiKey: string
+        status: Integration['status']
+    }>({
         name: '',
-        type: 'payment' as const,
+        type: 'payment',
         url: '',
         apiKey: '',
-        status: 'active' as const,
+        status: 'active',
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})

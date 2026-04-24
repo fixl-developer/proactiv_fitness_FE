@@ -37,6 +37,7 @@ export interface PaymentListResponse {
         total: number
         page: number
         limit: number
+        paymentMethods?: Array<{ method: string; count: number; total?: number }>
     }
 }
 
@@ -52,6 +53,12 @@ export interface PaymentStatsResponse {
         totalPending: number
         totalFailed: number
         completedPayments: number
+        monthlyRevenue?: number
+        pendingPayments?: number
+        pendingCount?: number
+        failedCount?: number
+        averagePayment?: number
+        growthRate?: number
     }
 }
 

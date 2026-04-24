@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalStaff, RegionalLocation } from '@/services/regionalAdminService'
 import { validateName, validateEmail, validatePhone, validatePassword, validateSelect, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
 const ROLES = ['COACH', 'LOCATION_MANAGER', 'SUPPORT_STAFF', 'FRANCHISE_OWNER'] as const
 const ROLE_LABELS: Record<string, string> = {
@@ -19,8 +20,8 @@ const ROLE_LABELS: Record<string, string> = {
 }
 const PAGE_SIZE = 10
 
-// ─── Staff Form Modal ────────────────────────────────────────────────
-function StaffFormModal({
+// ─── Staff Form Drawer (slides in from right) ────────────────────────
+function StaffFormDrawer({
     open,
     onClose,
     onSubmit,
@@ -47,6 +48,7 @@ function StaffFormModal({
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
+        if (!open) return
         if (initial) {
             const nameParts = (initial.name || '').split(' ')
             setForm({
@@ -67,7 +69,6 @@ function StaffFormModal({
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
         setForm(prev => ({ ...prev, [name]: value }))
-        // Real-time validation
         let error: string | null = null
         if (name === 'firstName') error = validateName(value, 'First name')
         else if (name === 'lastName') error = validateName(value, 'Last name')
@@ -88,127 +89,114 @@ function StaffFormModal({
         const lnErr = validateName(form.lastName, 'Last name'); if (lnErr) newErrors.lastName = lnErr
         const emErr = validateEmail(form.email); if (emErr) newErrors.email = emErr
         const phErr = validatePhone(form.phone, false); if (phErr) newErrors.phone = phErr
+        if (!form.role) newErrors.role = 'Role is required'
         if (!initial) { const pwErr = validatePassword(form.password); if (pwErr) newErrors.password = pwErr }
         else if (form.password) { const pwErr = validatePassword(form.password); if (pwErr) newErrors.password = pwErr }
         setErrors(newErrors)
         if (Object.keys(newErrors).length > 0) return
-        const payload: any = { ...form }
+        const payload: any = { ...form, firstName: form.firstName.trim(), lastName: form.lastName.trim(), email: form.email.trim() }
         if (!payload.password) delete payload.password
         if (!payload.locationId) delete payload.locationId
         onSubmit(payload)
     }
 
-    if (!open) return null
-
     return (
-        <div id="admin-regional-staff-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        {initial ? 'Edit Staff Member' : 'Add Staff Member'}
-                    </h2>
-                    <button id="admin-regional-staff-btn" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
+        <SlideInDrawer
+            isOpen={open}
+            onClose={onClose}
+            title={initial ? 'Edit Staff Member' : 'Add Staff Member'}
+            description="Enter staff details with proper validation"
+            size="lg"
+        >
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                        <Input name="firstName" value={form.firstName} onChange={handleChange} onKeyDown={filterNameInput} placeholder="First name" className={errors.firstName ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <Input name="lastName" value={form.lastName} onChange={handleChange} onKeyDown={filterNameInput} placeholder="Last name" className={errors.lastName ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <Input name="email" type="email" value={form.email} onChange={handleChange} placeholder="email@example.com" className={errors.email ? 'border-red-500' : ''} />
+                    <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <Input name="phone" value={form.phone} onChange={handleChange} onKeyDown={filterPhoneInput} placeholder="+1 (555) 000-0000" className={errors.phone ? 'border-red-500' : ''} />
+                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                    <select
+                        name="role"
+                        value={form.role}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {ROLES.map(r => (
+                            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <select
+                        name="locationId"
+                        value={form.locationId}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Select location...</option>
+                        {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password {initial ? '(leave blank to keep current)' : '*'}
+                    </label>
+                    <Input
+                        name="password"
+                        type="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        placeholder={initial ? '********' : 'Enter password'}
+                        className={errors.password ? 'border-red-500' : ''}
+                    />
+                    <FormFieldHint hint={FORMAT_HINTS.password} error={errors.password} />
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                    <button id="admin-regional-staff-btn-cancel"
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                        disabled={submitting}
+                    >
+                        Cancel
+                    </button>
+                    <button id="admin-regional-staff-btn-submit"
+                        type="submit"
+                        disabled={submitting}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                        {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {initial ? 'Update Staff' : 'Create Staff'}
                     </button>
                 </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                            <Input name="firstName" value={form.firstName} onChange={handleChange} onKeyDown={filterNameInput} required placeholder="First name" className={errors.firstName ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.firstName} error={errors.firstName} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                            <Input name="lastName" value={form.lastName} onChange={handleChange} onKeyDown={filterNameInput} required placeholder="Last name" className={errors.lastName ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.lastName} error={errors.lastName} />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                        <Input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="email@example.com" className={errors.email ? 'border-red-500' : ''} />
-                        <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <Input name="phone" value={form.phone} onChange={handleChange} onKeyDown={filterPhoneInput} placeholder="+1 (555) 000-0000" className={errors.phone ? 'border-red-500' : ''} />
-                        <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                        <select
-                            name="role"
-                            value={form.role}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                        >
-                            {ROLES.map(r => (
-                                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                        <select
-                            name="locationId"
-                            value={form.locationId}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Select location...</option>
-                            {locations.map(loc => (
-                                <option key={loc.id} value={loc.id}>{loc.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Password {initial ? '(leave blank to keep current)' : '*'}
-                        </label>
-                        <Input
-                            name="password"
-                            type="password"
-                            value={form.password}
-                            onChange={handleChange}
-                            placeholder={initial ? '********' : 'Enter password'}
-                            className={errors.password ? 'border-red-500' : ''}
-                            {...(!initial ? { required: true } : {})}
-                        />
-                        <FormFieldHint hint={FORMAT_HINTS.password} error={errors.password} />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <button id="admin-regional-staff-btn-cancel"
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            disabled={submitting}
-                        >
-                            Cancel
-                        </button>
-                        <button id="admin-regional-staff-btn-2"
-                            type="submit"
-                            disabled={submitting}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        >
-                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {initial ? 'Update' : 'Create'}
-                        </button>
-                    </div>
-                </form>
-            </motion.div>
-        </div>
+            </form>
+        </SlideInDrawer>
     )
 }
 
-// ─── View Detail Modal ───────────────────────────────────────────────
-function StaffDetailModal({
+// ─── View Detail Drawer (slides in from right) ───────────────────────
+function StaffDetailDrawer({
     open,
     onClose,
     staff,
@@ -217,24 +205,10 @@ function StaffDetailModal({
     onClose: () => void
     staff: RegionalStaff | null
 }) {
-    if (!open || !staff) return null
-
     return (
-        <div id="admin-regional-staff-div-clickable-2" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-semibold text-gray-900">Staff Details</h2>
-                    <button id="admin-regional-staff-btn-3" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                </div>
-                <div className="p-6 space-y-5">
+        <SlideInDrawer isOpen={open} onClose={onClose} title="Staff Details" description={staff?.name || ''} size="md">
+            {staff && (
+                <div className="space-y-5">
                     <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl font-bold">
                             {staff.name?.charAt(0) || '?'}
@@ -244,7 +218,7 @@ function StaffDetailModal({
                             <Badge variant="outline">{ROLE_LABELS[staff.role] || staff.role}</Badge>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-4 text-sm">
                         <div>
                             <p className="text-gray-500 mb-1">Email</p>
                             <p className="flex items-center gap-1 text-gray-900"><Mail className="w-4 h-4 text-gray-400" />{staff.email}</p>
@@ -281,30 +255,10 @@ function StaffDetailModal({
                                 </div>
                             </div>
                         )}
-                        {staff.utilization != null && (
-                            <div>
-                                <p className="text-gray-500 mb-1">Utilization</p>
-                                <p className="text-gray-900">{staff.utilization}%</p>
-                            </div>
-                        )}
-                        {staff.satisfaction != null && (
-                            <div>
-                                <p className="text-gray-500 mb-1">Satisfaction</p>
-                                <p className="text-gray-900">{staff.satisfaction}</p>
-                            </div>
-                        )}
                     </div>
                 </div>
-                <div className="flex justify-end p-6 border-t">
-                    <button id="admin-regional-staff-btn-close"
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                        Close
-                    </button>
-                </div>
-            </motion.div>
-        </div>
+            )}
+        </SlideInDrawer>
     )
 }
 
@@ -758,21 +712,21 @@ export default function RegionalStaffPage() {
                 </div>
             )}
 
-            {/* Modals */}
+            {/* Drawers / Modals */}
+            <StaffFormDrawer
+                open={formOpen}
+                onClose={() => { setFormOpen(false); setEditTarget(null) }}
+                onSubmit={handleFormSubmit}
+                initial={editTarget}
+                locations={locations}
+                submitting={submitting}
+            />
+            <StaffDetailDrawer
+                open={!!viewTarget}
+                onClose={() => setViewTarget(null)}
+                staff={viewTarget}
+            />
             <AnimatePresence>
-                <StaffFormModal
-                    open={formOpen}
-                    onClose={() => { setFormOpen(false); setEditTarget(null) }}
-                    onSubmit={handleFormSubmit}
-                    initial={editTarget}
-                    locations={locations}
-                    submitting={submitting}
-                />
-                <StaffDetailModal
-                    open={!!viewTarget}
-                    onClose={() => setViewTarget(null)}
-                    staff={viewTarget}
-                />
                 <DeleteConfirmModal
                     open={!!deleteTarget}
                     onClose={() => setDeleteTarget(null)}

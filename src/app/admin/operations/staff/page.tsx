@@ -6,7 +6,9 @@ import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, U
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { StaffService } from '@/services/operationsService'
+import { BusinessUnitService, LocationService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateName, validateEmail, validatePhone, filterNameInput, filterPhoneInput } from '@/utils/validation'
 
 interface StaffMember {
   id: string
@@ -39,6 +41,7 @@ export default function StaffManagementPage() {
     email: '',
     phone: '',
     role: 'Coach',
+    businessUnitId: '',
     locationId: '',
     status: 'active' as 'active' | 'inactive',
     hireDate: '',
@@ -47,9 +50,27 @@ export default function StaffManagementPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newCertification, setNewCertification] = useState('')
+  const [businessUnits, setBusinessUnits] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
 
-  // Role options
-  const roles = ['Coach', 'Trainer', 'Manager', 'Admin']
+  // Role options — match backend staffType enum
+  const roles = ['Coach', 'Trainer', 'Manager', 'Admin', 'Instructor', 'Assistant']
+
+  // Load business units + locations once for dropdowns
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const [buRes, locRes] = await Promise.all([
+          BusinessUnitService.getAll({ limit: 100 }),
+          LocationService.getAll({ limit: 100 }),
+        ])
+        setBusinessUnits(buRes?.data || [])
+        setLocations(locRes?.data || [])
+      } catch (error) {
+        console.error('Failed to load business units/locations:', error)
+      }
+    })()
+  }, [])
 
   // Load staff
   const loadStaff = async () => {
@@ -60,8 +81,17 @@ export default function StaffManagementPage() {
         limit: 10,
         search: searchTerm,
       })
-      setStaff(response.data || [])
-      setTotalPages(response.pagination?.totalPages || 1)
+      const payload = response?.data ?? response
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : []
+      const pagination = payload?.pagination ?? response?.pagination
+      setStaff(list)
+      setTotalPages(pagination?.totalPages || 1)
     } catch (error) {
       console.error('Error loading staff:', error)
       toast.error('Failed to load staff')
@@ -78,18 +108,23 @@ export default function StaffManagementPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.firstName) newErrors.firstName = 'First name is required'
-    else if (formData.firstName.length < 2) newErrors.firstName = 'First name must be at least 2 characters'
+    const firstErr = validateName(formData.firstName, 'First name')
+    if (firstErr) newErrors.firstName = firstErr
 
-    if (!formData.lastName) newErrors.lastName = 'Last name is required'
-    else if (formData.lastName.length < 2) newErrors.lastName = 'Last name must be at least 2 characters'
+    const lastErr = validateName(formData.lastName, 'Last name')
+    if (lastErr) newErrors.lastName = lastErr
 
-    if (!formData.email) newErrors.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format'
+    const emailErr = validateEmail(formData.email)
+    if (emailErr) newErrors.email = emailErr
 
-    if (formData.phone && !/^[+]?[\d\s()-]{7,20}$/.test(formData.phone)) newErrors.phone = 'Invalid phone format'
+    if (formData.phone) {
+      const phoneErr = validatePhone(formData.phone, false)
+      if (phoneErr) newErrors.phone = phoneErr
+    }
 
     if (!formData.role) newErrors.role = 'Role is required'
+    if (!formData.businessUnitId) newErrors.businessUnitId = 'Business unit is required'
+    if (!formData.locationId) newErrors.locationId = 'Location is required'
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -134,6 +169,7 @@ export default function StaffManagementPage() {
       email: member.email,
       phone: member.phone || '',
       role: member.role,
+      businessUnitId: (member as any).businessUnitId || '',
       locationId: member.locationId || '',
       status: member.status,
       hireDate: member.hireDate || '',
@@ -164,6 +200,7 @@ export default function StaffManagementPage() {
       email: '',
       phone: '',
       role: 'Coach',
+      businessUnitId: '',
       locationId: '',
       status: 'active',
       hireDate: '',
@@ -380,15 +417,18 @@ export default function StaffManagementPage() {
               <input
                 type="text"
                 value={formData.firstName}
+                onKeyDown={filterNameInput}
                 onChange={(e) => {
                   setFormData({ ...formData, firstName: e.target.value })
                   if (errors.firstName) setErrors({ ...errors, firstName: '' })
                 }}
                 placeholder="e.g., John"
+                maxLength={50}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
+              {!errors.firstName && <p className="mt-1 text-xs text-slate-500">Letters, spaces, hyphens and apostrophes only</p>}
             </div>
 
             {/* Last Name */}
@@ -399,15 +439,18 @@ export default function StaffManagementPage() {
               <input
                 type="text"
                 value={formData.lastName}
+                onKeyDown={filterNameInput}
                 onChange={(e) => {
                   setFormData({ ...formData, lastName: e.target.value })
                   if (errors.lastName) setErrors({ ...errors, lastName: '' })
                 }}
                 placeholder="e.g., Doe"
+                maxLength={50}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+              {!errors.lastName && <p className="mt-1 text-xs text-slate-500">Letters, spaces, hyphens and apostrophes only</p>}
             </div>
 
             {/* Email */}
@@ -435,15 +478,18 @@ export default function StaffManagementPage() {
               <input
                 type="tel"
                 value={formData.phone}
+                onKeyDown={filterPhoneInput}
                 onChange={(e) => {
                   setFormData({ ...formData, phone: e.target.value })
                   if (errors.phone) setErrors({ ...errors, phone: '' })
                 }}
                 placeholder="e.g., +1 234 567 8900"
+                maxLength={20}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+              {!errors.phone && <p className="mt-1 text-xs text-slate-500">Digits, +, -, spaces only (7-15 digits)</p>}
             </div>
 
             {/* Role */}
@@ -469,16 +515,50 @@ export default function StaffManagementPage() {
               {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role}</p>}
             </div>
 
-            {/* Location ID */}
+            {/* Business Unit */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Location ID</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Business Unit <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.businessUnitId}
+                onChange={(e) => {
+                  setFormData({ ...formData, businessUnitId: e.target.value })
+                  if (errors.businessUnitId) setErrors({ ...errors, businessUnitId: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.businessUnitId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+              >
+                <option value="">Select Business Unit</option>
+                {businessUnits.map((bu) => (
+                  <option key={bu.id || bu._id} value={bu.id || bu._id}>
+                    {bu.name} {bu.code ? `(${bu.code})` : ''}
+                  </option>
+                ))}
+              </select>
+              {errors.businessUnitId && <p className="mt-1 text-sm text-red-600">{errors.businessUnitId}</p>}
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Location <span className="text-red-500">*</span>
+              </label>
+              <select
                 value={formData.locationId}
-                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
-                placeholder="Optional location ID"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+                onChange={(e) => {
+                  setFormData({ ...formData, locationId: e.target.value })
+                  if (errors.locationId) setErrors({ ...errors, locationId: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.locationId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+              >
+                <option value="">Select Location</option>
+                {locations.map((loc) => (
+                  <option key={loc.id || loc._id} value={loc.id || loc._id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+              {errors.locationId && <p className="mt-1 text-sm text-red-600">{errors.locationId}</p>}
             </div>
 
             {/* Status */}

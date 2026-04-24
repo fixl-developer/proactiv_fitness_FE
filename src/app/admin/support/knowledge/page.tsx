@@ -31,9 +31,15 @@ export default function KnowledgeBasePage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        title: string
+        category: KnowledgeBaseArticle['category']
+        content: string
+        tags: string
+        isPublished: boolean
+    }>({
         title: '',
-        category: 'faq' as const,
+        category: 'faq',
         content: '',
         tags: '',
         isPublished: true,
