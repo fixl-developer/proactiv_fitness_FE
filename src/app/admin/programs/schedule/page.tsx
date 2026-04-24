@@ -547,7 +547,7 @@ export default function ProgramSchedulePage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
                         Start Date <span className="text-red-500">*</span>
                       </label>
-                      <input id={`input-date-admin-programs-schedule-${t.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      <input id="input-date-admin-programs-schedule-start"
                         type="date"
                         value={form.startDate}
                         onChange={(e) => setForm({ ...form, startDate: e.target.value })}

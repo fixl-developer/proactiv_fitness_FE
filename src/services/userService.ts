@@ -1,6 +1,10 @@
 /**
  * User Management Service
  * Handles all user-related API calls for admin dashboard
+ *
+ * Response shape normalization — same pattern as businessConfigService:
+ * List endpoints return { data: T[], pagination: {...} }
+ * Single-item endpoints return T directly (unwrapped from body.data).
  */
 
 import { apiClient } from '@/services/api/client'
@@ -55,75 +59,129 @@ export interface Permission {
     updatedAt?: string
 }
 
+export interface ListResponse<T> {
+    data: T[]
+    pagination: {
+        page: number
+        limit: number
+        total: number
+        totalPages: number
+    }
+}
+
+// =============================================
+// HELPERS
+// =============================================
+
+function normalizeItem<T extends { id?: string; _id?: string }>(item: any): T {
+    if (!item || typeof item !== 'object') return item
+    if (!item.id && item._id) {
+        return { ...item, id: String(item._id) } as T
+    }
+    return item as T
+}
+
+function normalizeList<T extends { id?: string; _id?: string }>(items: any): T[] {
+    if (!Array.isArray(items)) return []
+    return items.map(normalizeItem) as T[]
+}
+
+function unwrapListResponse<T extends { id?: string; _id?: string }>(
+    body: any,
+    params?: { page?: number; limit?: number }
+): ListResponse<T> {
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+
+    // Prefer top-level pagination if backend provides it (new IAM RBAC shape):
+    // { success, data: [...], pagination: { page, limit, total, totalPages } }
+    const topLevelPagination = body?.pagination
+    const payload = body?.data !== undefined ? body.data : body
+
+    if (Array.isArray(payload)) {
+        if (topLevelPagination && typeof topLevelPagination === 'object') {
+            return {
+                data: normalizeList<T>(payload),
+                pagination: {
+                    page: topLevelPagination.page ?? page,
+                    limit: topLevelPagination.limit ?? limit,
+                    total: topLevelPagination.total ?? payload.length,
+                    totalPages:
+                        topLevelPagination.totalPages ??
+                        Math.max(1, Math.ceil((topLevelPagination.total ?? payload.length) / limit)),
+                },
+            }
+        }
+        // Fallback: client-side slice when backend returns a flat array without pagination
+        const total = payload.length
+        const start = (page - 1) * limit
+        const items = payload.slice(start, start + limit)
+        return {
+            data: normalizeList<T>(items),
+            pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+        }
+    }
+
+    if (payload && typeof payload === 'object') {
+        const items = payload.items || payload.data || payload.results || payload.users || []
+        return {
+            data: normalizeList<T>(items),
+            pagination: {
+                page: payload.page ?? page,
+                limit: payload.limit ?? limit,
+                total: payload.total ?? items.length,
+                totalPages: payload.totalPages ?? Math.max(1, Math.ceil((payload.total ?? items.length) / limit)),
+            },
+        }
+    }
+
+    return { data: [], pagination: { page, limit, total: 0, totalPages: 1 } }
+}
+
+function unwrapItemResponse<T extends { id?: string; _id?: string }>(body: any): T {
+    const payload = body?.data !== undefined ? body.data : body
+    return normalizeItem<T>(payload)
+}
+
 // =============================================
 // USER MANAGEMENT
 // =============================================
 
 export const UserService = {
-    // Get all users
-    getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/users', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching users:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }): Promise<ListResponse<User>> => {
+        const cleaned: Record<string, string | number> = {}
+        if (params?.page) cleaned.page = params.page
+        if (params?.limit) cleaned.limit = params.limit
+        if (params?.search && params.search.trim().length >= 2) cleaned.search = params.search.trim()
+        if (params?.role) cleaned.role = params.role
+        if (params?.status) cleaned.status = params.status
+
+        const body = await apiClient.get('/users', { params: cleaned })
+        return unwrapListResponse<User>(body, params)
     },
 
-    // Get user by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/users/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching user:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<User> => {
+        const body = await apiClient.get(`/users/${id}`)
+        return unwrapItemResponse<User>(body)
     },
 
-    // Create new user
-    create: async (data: CreateUserData) => {
-        try {
-            const response = await apiClient.post('/api/v1/users', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating user:', error)
-            throw error
-        }
+    create: async (data: CreateUserData): Promise<User> => {
+        const body = await apiClient.post('/users', data)
+        return unwrapItemResponse<User>(body)
     },
 
-    // Update user
-    update: async (id: string, data: UpdateUserData) => {
-        try {
-            const response = await apiClient.put(`/api/v1/users/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating user:', error)
-            throw error
-        }
+    update: async (id: string, data: UpdateUserData): Promise<User> => {
+        const body = await apiClient.put(`/users/${id}`, data)
+        return unwrapItemResponse<User>(body)
     },
 
-    // Update user status
-    updateStatus: async (id: string, status: string) => {
-        try {
-            const response = await apiClient.patch(`/api/v1/users/${id}/status`, { status })
-            return response.data
-        } catch (error) {
-            console.error('Error updating user status:', error)
-            throw error
-        }
+    updateStatus: async (id: string, status: string): Promise<User> => {
+        const body = await apiClient.patch(`/users/${id}/status`, { status })
+        return unwrapItemResponse<User>(body)
     },
 
-    // Delete user
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/users/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting user:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/users/${id}`)
     },
 }
 
@@ -132,59 +190,32 @@ export const UserService = {
 // =============================================
 
 export const RoleService = {
-    // Get all roles
-    getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/roles', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching roles:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<ListResponse<Role>> => {
+        const cleaned: Record<string, string | number> = {}
+        if (params?.page) cleaned.page = params.page
+        if (params?.limit) cleaned.limit = params.limit
+        if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
+        const body = await apiClient.get('/iam/roles', { params: cleaned })
+        return unwrapListResponse<Role>(body, params)
     },
 
-    // Get role by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/roles/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching role:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<Role> => {
+        const body = await apiClient.get(`/iam/roles/${id}`)
+        return unwrapItemResponse<Role>(body)
     },
 
-    // Create new role
-    create: async (data: { name: string; description?: string; permissions?: string[] }) => {
-        try {
-            const response = await apiClient.post('/api/v1/roles', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating role:', error)
-            throw error
-        }
+    create: async (data: { name: string; description?: string; permissions?: string[] }): Promise<Role> => {
+        const body = await apiClient.post('/iam/roles', data)
+        return unwrapItemResponse<Role>(body)
     },
 
-    // Update role
-    update: async (id: string, data: { name?: string; description?: string; permissions?: string[] }) => {
-        try {
-            const response = await apiClient.put(`/api/v1/roles/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating role:', error)
-            throw error
-        }
+    update: async (id: string, data: { name?: string; description?: string; permissions?: string[] }): Promise<Role> => {
+        const body = await apiClient.put(`/iam/roles/${id}`, data)
+        return unwrapItemResponse<Role>(body)
     },
 
-    // Delete role
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/roles/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting role:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/iam/roles/${id}`)
     },
 }
 
@@ -193,59 +224,33 @@ export const RoleService = {
 // =============================================
 
 export const PermissionService = {
-    // Get all permissions
-    getAll: async (params?: { page?: number; limit?: number; search?: string; module?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/permissions', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching permissions:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; module?: string }): Promise<ListResponse<Permission>> => {
+        const cleaned: Record<string, string | number> = {}
+        if (params?.page) cleaned.page = params.page
+        if (params?.limit) cleaned.limit = params.limit
+        if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
+        if (params?.module) cleaned.module = params.module
+        const body = await apiClient.get('/iam/permissions', { params: cleaned })
+        return unwrapListResponse<Permission>(body, params)
     },
 
-    // Get permission by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/permissions/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching permission:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<Permission> => {
+        const body = await apiClient.get(`/iam/permissions/${id}`)
+        return unwrapItemResponse<Permission>(body)
     },
 
-    // Create new permission
-    create: async (data: { name: string; description?: string; module: string; action: string }) => {
-        try {
-            const response = await apiClient.post('/api/v1/permissions', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating permission:', error)
-            throw error
-        }
+    create: async (data: { name: string; description?: string; module: string; action: string }): Promise<Permission> => {
+        const body = await apiClient.post('/iam/permissions', data)
+        return unwrapItemResponse<Permission>(body)
     },
 
-    // Update permission
-    update: async (id: string, data: { name?: string; description?: string; module?: string; action?: string }) => {
-        try {
-            const response = await apiClient.put(`/api/v1/permissions/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating permission:', error)
-            throw error
-        }
+    update: async (id: string, data: { name?: string; description?: string; module?: string; action?: string }): Promise<Permission> => {
+        const body = await apiClient.put(`/iam/permissions/${id}`, data)
+        return unwrapItemResponse<Permission>(body)
     },
 
-    // Delete permission
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/permissions/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting permission:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/iam/permissions/${id}`)
     },
 }
 

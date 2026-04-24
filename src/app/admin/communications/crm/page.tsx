@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { CRMService } from '@/services/communicationsService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateName, validateEmail, validatePhone, filterNameInput, filterPhoneInput } from '@/utils/validation'
 
 interface CRMFamily {
     id: string
@@ -75,11 +76,16 @@ export default function CRMPage() {
     const validateFormData = () => {
         const newErrors: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Name is required'
-        else if (formData.name.length < 2) newErrors.name = 'Name must be at least 2 characters'
+        const nameErr = validateName(formData.name, 'Family name')
+        if (nameErr) newErrors.name = nameErr
 
-        if (!formData.email) newErrors.email = 'Email is required'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format'
+        const emailErr = validateEmail(formData.email)
+        if (emailErr) newErrors.email = emailErr
+
+        if (formData.phone) {
+            const phoneErr = validatePhone(formData.phone, false)
+            if (phoneErr) newErrors.phone = phoneErr
+        }
 
         if (!formData.status) newErrors.status = 'Status is required'
 
@@ -320,14 +326,17 @@ export default function CRMPage() {
                             <input
                                 type="text"
                                 value={formData.name}
+                                onKeyDown={filterNameInput}
                                 onChange={(e) => {
                                     setFormData({ ...formData, name: e.target.value })
                                     if (errors.name) setErrors({ ...errors, name: '' })
                                 }}
                                 placeholder="Family name"
+                                maxLength={80}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-green-500'}`}
                             />
                             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                            {!errors.name && <p className="mt-1 text-xs text-slate-500">Letters, spaces, hyphens and apostrophes only</p>}
                         </div>
 
                         <div>
@@ -352,10 +361,16 @@ export default function CRMPage() {
                             <input
                                 type="tel"
                                 value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="Phone number"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                onKeyDown={filterPhoneInput}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, phone: e.target.value })
+                                    if (errors.phone) setErrors({ ...errors, phone: '' })
+                                }}
+                                placeholder="+1 555 123 4567"
+                                maxLength={20}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-green-500'}`}
                             />
+                            {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
                         </div>
 
                         <div>

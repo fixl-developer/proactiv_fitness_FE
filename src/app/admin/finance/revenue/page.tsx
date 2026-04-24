@@ -187,8 +187,12 @@ export default function RevenueReportsPage() {
     }
   }
 
+  const getTotalRevenueNumber = () => {
+    return revenues.reduce((sum, r) => sum + r.amount, 0)
+  }
+
   const getTotalRevenue = () => {
-    return revenues.reduce((sum, r) => sum + r.amount, 0).toFixed(2)
+    return getTotalRevenueNumber().toFixed(2)
   }
 
   return (
@@ -224,7 +228,7 @@ export default function RevenueReportsPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-slate-600 text-sm">Average Entry</p>
             <p className="text-3xl font-bold text-slate-900 mt-2">
-              ${revenues.length > 0 ? (getTotalRevenue() / revenues.length).toFixed(2) : '0.00'}
+              ${revenues.length > 0 ? (getTotalRevenueNumber() / revenues.length).toFixed(2) : '0.00'}
             </p>
           </div>
         </motion.div>

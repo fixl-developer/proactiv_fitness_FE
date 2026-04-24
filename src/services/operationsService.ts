@@ -57,7 +57,7 @@ export const StaffService = {
     // Get all staff
     getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string; locationId?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/staff', { params })
+            const response = await apiClient.get('/staff', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching staff:', error)
@@ -68,7 +68,7 @@ export const StaffService = {
     // Get staff by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/staff/${id}`)
+            const response = await apiClient.get(`/staff/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching staff member:', error)
@@ -76,10 +76,54 @@ export const StaffService = {
         }
     },
 
-    // Create staff
-    create: async (data: Partial<StaffMember>) => {
+    // Create staff — transforms flat frontend payload to backend's deeply nested schema.
+    // Fills in sensible defaults for required backend fields the minimal admin form doesn't collect
+    // (dateOfBirth, gender, nationality, idType, idNumber, address, emergencyContact, payrollInfo).
+    // Admin can edit staff afterward to supply real values.
+    create: async (data: Partial<StaffMember> & { businessUnitId?: string }) => {
         try {
-            const response = await apiClient.post('/api/v1/staff', data)
+            const staffTypeMap: Record<string, string> = {
+                Coach: 'coach', Trainer: 'coach',
+                Manager: 'manager', Admin: 'admin',
+                Instructor: 'instructor', Assistant: 'assistant',
+            }
+            const empId = `EMP-${Date.now()}`
+            const payload: any = {
+                personalInfo: {
+                    firstName: data.firstName || '',
+                    lastName: data.lastName || '',
+                    dateOfBirth: '1990-01-01',
+                    gender: 'other',
+                    nationality: 'Unknown',
+                    idNumber: empId,
+                    idType: 'national_id',
+                },
+                contactInfo: {
+                    email: data.email || '',
+                    phone: data.phone || '',
+                    address: {
+                        street: 'N/A', city: 'N/A', state: 'N/A',
+                        country: 'N/A', postalCode: '00000',
+                    },
+                    emergencyContact: {
+                        name: 'N/A', relationship: 'N/A', phone: data.phone || '+10000000000',
+                    },
+                },
+                staffType: staffTypeMap[data.role || ''] || (data.role || '').toLowerCase() || 'coach',
+                locationIds: data.locationId ? [data.locationId] : [],
+                primaryLocationId: data.locationId,
+                businessUnitId: data.businessUnitId,
+                specializations: [],
+                skills: [],
+                experienceYears: 0,
+                maxHoursPerWeek: 40,
+                payrollInfo: {
+                    employeeId: empId,
+                    currency: 'USD',
+                    paymentMethod: 'bank_transfer',
+                },
+            }
+            const response = await apiClient.post('/staff', payload)
             return response.data
         } catch (error) {
             console.error('Error creating staff member:', error)
@@ -87,10 +131,27 @@ export const StaffService = {
         }
     },
 
-    // Update staff
+    // Update staff — transforms flat payload the same way
     update: async (id: string, data: Partial<StaffMember>) => {
         try {
-            const response = await apiClient.put(`/api/v1/staff/${id}`, data)
+            const payload: any = {}
+            if (data.firstName || data.lastName) {
+                payload.personalInfo = {}
+                if (data.firstName) payload.personalInfo.firstName = data.firstName
+                if (data.lastName) payload.personalInfo.lastName = data.lastName
+            }
+            if (data.email || data.phone) {
+                payload.contactInfo = {}
+                if (data.email) payload.contactInfo.email = data.email
+                if (data.phone) payload.contactInfo.phone = data.phone
+            }
+            if (data.role) payload.staffType = data.role.toLowerCase()
+            if (data.locationId) {
+                payload.locationIds = [data.locationId]
+                payload.primaryLocationId = data.locationId
+            }
+            if (data.status) payload.status = data.status
+            const response = await apiClient.put(`/staff/${id}`, payload)
             return response.data
         } catch (error) {
             console.error('Error updating staff member:', error)
@@ -101,7 +162,7 @@ export const StaffService = {
     // Delete staff
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/staff/${id}`)
+            const response = await apiClient.delete(`/staff/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting staff member:', error)
@@ -112,7 +173,7 @@ export const StaffService = {
     // Get staff statistics
     getStatistics: async () => {
         try {
-            const response = await apiClient.get('/api/v1/staff/statistics')
+            const response = await apiClient.get('/staff/statistics')
             return response.data
         } catch (error) {
             console.error('Error fetching staff statistics:', error)
@@ -129,7 +190,7 @@ export const AttendanceService = {
     // Get all attendance records
     getAll: async (params?: { page?: number; limit?: number; search?: string; date?: string; status?: string; classId?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/attendance', { params })
+            const response = await apiClient.get('/attendance', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching attendance records:', error)
@@ -140,7 +201,7 @@ export const AttendanceService = {
     // Get attendance by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/attendance/${id}`)
+            const response = await apiClient.get(`/attendance/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching attendance record:', error)
@@ -151,7 +212,7 @@ export const AttendanceService = {
     // Create attendance record
     create: async (data: Partial<AttendanceRecord>) => {
         try {
-            const response = await apiClient.post('/api/v1/attendance', data)
+            const response = await apiClient.post('/attendance', data)
             return response.data
         } catch (error) {
             console.error('Error creating attendance record:', error)
@@ -162,7 +223,7 @@ export const AttendanceService = {
     // Update attendance record
     update: async (id: string, data: Partial<AttendanceRecord>) => {
         try {
-            const response = await apiClient.put(`/api/v1/attendance/${id}`, data)
+            const response = await apiClient.put(`/attendance/${id}`, data)
             return response.data
         } catch (error) {
             console.error('Error updating attendance record:', error)
@@ -173,7 +234,7 @@ export const AttendanceService = {
     // Delete attendance record
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/attendance/${id}`)
+            const response = await apiClient.delete(`/attendance/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting attendance record:', error)
@@ -184,7 +245,7 @@ export const AttendanceService = {
     // Get attendance statistics
     getStatistics: async (params?: { date?: string; classId?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/attendance/statistics', { params })
+            const response = await apiClient.get('/attendance/statistics', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching attendance statistics:', error)
@@ -201,7 +262,7 @@ export const BookingService = {
     // Get all bookings
     getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string; paymentStatus?: string; date?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/bookings', { params })
+            const response = await apiClient.get('/bookings', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching bookings:', error)
@@ -212,7 +273,7 @@ export const BookingService = {
     // Get booking by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/api/v1/bookings/${id}`)
+            const response = await apiClient.get(`/bookings/${id}`)
             return response.data
         } catch (error) {
             console.error('Error fetching booking:', error)
@@ -223,7 +284,7 @@ export const BookingService = {
     // Create booking
     create: async (data: Partial<Booking>) => {
         try {
-            const response = await apiClient.post('/api/v1/bookings', data)
+            const response = await apiClient.post('/bookings', data)
             return response.data
         } catch (error) {
             console.error('Error creating booking:', error)
@@ -234,7 +295,7 @@ export const BookingService = {
     // Update booking
     update: async (id: string, data: Partial<Booking>) => {
         try {
-            const response = await apiClient.put(`/api/v1/bookings/${id}`, data)
+            const response = await apiClient.put(`/bookings/${id}`, data)
             return response.data
         } catch (error) {
             console.error('Error updating booking:', error)
@@ -245,7 +306,7 @@ export const BookingService = {
     // Delete booking
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/api/v1/bookings/${id}`)
+            const response = await apiClient.delete(`/bookings/${id}`)
             return response.data
         } catch (error) {
             console.error('Error deleting booking:', error)
@@ -256,7 +317,7 @@ export const BookingService = {
     // Cancel booking
     cancel: async (id: string) => {
         try {
-            const response = await apiClient.patch(`/api/v1/bookings/${id}/cancel`)
+            const response = await apiClient.patch(`/bookings/${id}/cancel`)
             return response.data
         } catch (error) {
             console.error('Error cancelling booking:', error)
@@ -267,7 +328,7 @@ export const BookingService = {
     // Get booking statistics
     getStatistics: async (params?: { date?: string }) => {
         try {
-            const response = await apiClient.get('/api/v1/bookings/statistics', { params })
+            const response = await apiClient.get('/bookings/statistics', { params })
             return response.data
         } catch (error) {
             console.error('Error fetching booking statistics:', error)

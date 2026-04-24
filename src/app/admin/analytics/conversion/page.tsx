@@ -133,7 +133,7 @@ const ConversionReportsPage = () => {
     const monthlyTrends = [
         { month: 'Aug 2023', visitors: 9800, enrollments: 580, rate: 5.9 },
         { month: 'Sep 2023', visitors: 11200, enrollments: 728, rate: 6.5 },
-        { month: 'Oct 2023', visitors: 10800, visitors: 10800, enrollments: 702, rate: 6.5 },
+        { month: 'Oct 2023', visitors: 10800, enrollments: 702, rate: 6.5 },
         { month: 'Nov 2023', visitors: 9600, enrollments: 576, rate: 6.0 },
         { month: 'Dec 2023', visitors: 8900, enrollments: 534, rate: 6.0 },
         { month: 'Jan 2024', visitors: 12450, enrollments: 747, rate: 6.0 }

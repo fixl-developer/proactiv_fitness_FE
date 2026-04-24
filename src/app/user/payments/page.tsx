@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { paymentService, Payment } from '@/services/modules/payment.service'
 import { apiClient } from '@/services/api/client'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { validateCurrency, validateSelect, validateName, validateCardNumber, validateCVV, validateCardExpiry, validateZipCode, filterNameInput, filterCardNumberInput } from '@/utils/validation'
 
 function formatCurrency(amount: number): string {
     return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -25,6 +27,108 @@ export default function PaymentsPage() {
     const [stats, setStats] = useState({ totalPaid: 0, completedCount: 0, pendingCount: 0, failedCount: 0 })
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
+
+    // View payment drawer
+    const [viewPayment, setViewPayment] = useState<Payment | null>(null)
+    // Pay Now drawer
+    const [payPayment, setPayPayment] = useState<Payment | null>(null)
+    const [payForm, setPayForm] = useState({
+        amount: '',
+        paymentMethod: 'credit_card' as 'credit_card' | 'debit_card' | 'bank_transfer' | 'wallet',
+        cardholderName: '',
+        cardNumber: '',
+        expiry: '',
+        cvv: '',
+        billingZip: '',
+        bankName: '',
+        accountLast4: '',
+    })
+    const [payErrors, setPayErrors] = useState<Record<string, string>>({})
+    const [paySubmitting, setPaySubmitting] = useState(false)
+    const [paySuccess, setPaySuccess] = useState(false)
+
+    const openPayDrawer = (payment: Payment) => {
+        setPayPayment(payment)
+        setPaySuccess(false)
+        setPayErrors({})
+        setPayForm({
+            amount: String(payment.amount || ''),
+            paymentMethod: 'credit_card',
+            cardholderName: '',
+            cardNumber: '',
+            expiry: '',
+            cvv: '',
+            billingZip: '',
+            bankName: '',
+            accountLast4: '',
+        })
+    }
+
+    const closePayDrawer = () => {
+        if (paySubmitting) return
+        setPayPayment(null)
+    }
+
+    const validatePay = (): boolean => {
+        const e: Record<string, string> = {}
+        const amt = validateCurrency(payForm.amount, 'Amount')
+        if (amt) e.amount = amt
+        const method = validateSelect(payForm.paymentMethod, 'payment method')
+        if (method) e.paymentMethod = method
+
+        if (payForm.paymentMethod === 'credit_card' || payForm.paymentMethod === 'debit_card') {
+            const n = validateName(payForm.cardholderName, 'Cardholder name')
+            if (n) e.cardholderName = n
+            const cn = validateCardNumber(payForm.cardNumber)
+            if (cn) e.cardNumber = cn
+            const ex = validateCardExpiry(payForm.expiry)
+            if (ex) e.expiry = ex
+            const cv = validateCVV(payForm.cvv)
+            if (cv) e.cvv = cv
+        } else if (payForm.paymentMethod === 'bank_transfer') {
+            if (!payForm.bankName.trim()) e.bankName = 'Bank name is required'
+        }
+        if (payForm.billingZip) {
+            const z = validateZipCode(payForm.billingZip, false)
+            if (z) e.billingZip = z
+        }
+        setPayErrors(e)
+        return Object.keys(e).length === 0
+    }
+
+    const handleSubmitPayment = async () => {
+        if (!payPayment) return
+        if (!validatePay()) return
+        setPaySubmitting(true)
+        try {
+            const payload = {
+                paymentId: payPayment.id,
+                amount: parseFloat(payForm.amount),
+                paymentMethod: payForm.paymentMethod,
+                ...(payForm.paymentMethod === 'credit_card' || payForm.paymentMethod === 'debit_card'
+                    ? {
+                        cardholderName: payForm.cardholderName,
+                        cardLast4: payForm.cardNumber.replace(/\s/g, '').slice(-4),
+                        expiry: payForm.expiry,
+                        billingZip: payForm.billingZip || undefined,
+                    }
+                    : payForm.paymentMethod === 'bank_transfer'
+                        ? { bankName: payForm.bankName, accountLast4: payForm.accountLast4 || undefined }
+                        : {}),
+            }
+            await apiClient.post<any>(`/payments/${payPayment.id}/pay`, payload).catch(async () => {
+                // fallback to generic create payment endpoint
+                return apiClient.post<any>('/payments', payload)
+            })
+            setPaySuccess(true)
+            await loadPayments()
+            setTimeout(() => { setPayPayment(null); setPaySuccess(false) }, 1500)
+        } catch (err: any) {
+            setPayErrors(prev => ({ ...prev, _submit: err?.response?.data?.message || err?.message || 'Payment failed' }))
+        } finally {
+            setPaySubmitting(false)
+        }
+    }
 
     const computeStats = (paymentList: Payment[]) => {
         const paid = paymentList
@@ -99,21 +203,7 @@ export default function PaymentsPage() {
     }
 
     const handleViewPayment = (payment: Payment) => {
-        const details = [
-            `Payment Details`,
-            `━━━━━━━━━━━━━━━━━━━━`,
-            `ID: ${payment.id}`,
-            `Description: ${payment.description}`,
-            `Amount: ${formatCurrency(payment.amount)}`,
-            `Currency: ${payment.currency || 'USD'}`,
-            `Status: ${payment.status.toUpperCase()}`,
-            `Payment Method: ${payment.paymentMethod?.replace('_', ' ') || 'N/A'}`,
-            `Transaction ID: ${payment.transactionId || 'N/A'}`,
-            `Due Date: ${payment.dueDate ? formatDate(payment.dueDate) : 'N/A'}`,
-            `Paid Date: ${payment.paidDate ? formatDate(payment.paidDate) : 'N/A'}`,
-            `Created: ${payment.createdAt ? formatDate(payment.createdAt) : 'N/A'}`,
-        ].join('\n')
-        alert(details)
+        setViewPayment(payment)
     }
 
     const handleDownloadReceipt = () => {
@@ -407,6 +497,17 @@ export default function PaymentsPage() {
                                                     <Eye className="w-3.5 h-3.5 mr-1" />
                                                     View
                                                 </Button>
+                                                {(payment.status === 'pending' || payment.status === 'failed') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs text-gray-600 hover:text-emerald-600"
+                                                        onClick={() => openPayDrawer(payment)}
+                                                    >
+                                                        <CreditCard className="w-3.5 h-3.5 mr-1" />
+                                                        Pay Now
+                                                    </Button>
+                                                )}
                                                 {payment.status === 'completed' && (
                                                     <Button
                                                         variant="ghost"
@@ -427,6 +528,207 @@ export default function PaymentsPage() {
                     ))
                 )}
             </div>
+
+            {/* View Payment Drawer (read-only) */}
+            <SlideInDrawer
+                isOpen={!!viewPayment}
+                onClose={() => setViewPayment(null)}
+                title="Payment Details"
+                description={viewPayment?.description || undefined}
+                size="md"
+                footer={
+                    <div className="flex justify-end">
+                        <Button variant="outline" onClick={() => setViewPayment(null)}>Close</Button>
+                    </div>
+                }
+            >
+                {viewPayment && (
+                    <div className="space-y-3 text-sm">
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">ID</span><span className="font-medium text-gray-900 break-all">{viewPayment.id}</span></div>
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Amount</span><span className="font-semibold text-gray-900">{formatCurrency(viewPayment.amount)}</span></div>
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Currency</span><span className="text-gray-900">{viewPayment.currency || 'USD'}</span></div>
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Status</span><Badge className={`${getStatusBadgeStyle(viewPayment.status)} capitalize`}>{viewPayment.status}</Badge></div>
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Method</span><span className="text-gray-900 capitalize">{viewPayment.paymentMethod?.replace('_', ' ') || 'N/A'}</span></div>
+                        <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Transaction ID</span><span className="text-gray-900 break-all">{viewPayment.transactionId || 'N/A'}</span></div>
+                        {viewPayment.dueDate && <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Due Date</span><span className="text-gray-900">{formatDate(viewPayment.dueDate)}</span></div>}
+                        {viewPayment.paidDate && <div className="flex justify-between py-2 border-b"><span className="text-gray-500">Paid Date</span><span className="text-gray-900">{formatDate(viewPayment.paidDate)}</span></div>}
+                        {viewPayment.createdAt && <div className="flex justify-between py-2"><span className="text-gray-500">Created</span><span className="text-gray-900">{formatDate(viewPayment.createdAt)}</span></div>}
+                    </div>
+                )}
+            </SlideInDrawer>
+
+            {/* Make Payment Drawer */}
+            <SlideInDrawer
+                isOpen={!!payPayment}
+                onClose={closePayDrawer}
+                title={paySuccess ? 'Payment Submitted' : 'Make Payment'}
+                description={payPayment?.description || undefined}
+                size="lg"
+                footer={!paySuccess ? (
+                    <div className="flex gap-3 justify-end">
+                        <Button variant="outline" onClick={closePayDrawer} disabled={paySubmitting}>Cancel</Button>
+                        <Button
+                            onClick={handleSubmitPayment}
+                            disabled={paySubmitting}
+                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                        >
+                            {paySubmitting ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Processing...</> : <><CreditCard className="w-4 h-4 mr-2" /> Pay {formatCurrency(parseFloat(payForm.amount || '0'))}</>}
+                        </Button>
+                    </div>
+                ) : undefined}
+            >
+                {paySuccess ? (
+                    <div className="py-10 text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Submitted!</h3>
+                        <p className="text-gray-600">Your payment is being processed.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-5">
+                        {payErrors._submit && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{payErrors._submit}</div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Amount <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                value={payForm.amount}
+                                onChange={(e) => setPayForm(prev => ({ ...prev, amount: e.target.value.replace(/[^0-9.]/g, '') }))}
+                                readOnly={!!payPayment?.amount}
+                                className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none ${payErrors.amount ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'} ${payPayment?.amount ? 'bg-gray-50' : ''}`}
+                            />
+                            {payErrors.amount && <p className="text-xs text-red-600 mt-1">{payErrors.amount}</p>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method <span className="text-red-500">*</span></label>
+                            <select
+                                value={payForm.paymentMethod}
+                                onChange={(e) => setPayForm(prev => ({ ...prev, paymentMethod: e.target.value as any }))}
+                                className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none ${payErrors.paymentMethod ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                            >
+                                <option value="credit_card">Credit Card</option>
+                                <option value="debit_card">Debit Card</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="wallet">Wallet Balance</option>
+                            </select>
+                            {payErrors.paymentMethod && <p className="text-xs text-red-600 mt-1">{payErrors.paymentMethod}</p>}
+                        </div>
+
+                        {(payForm.paymentMethod === 'credit_card' || payForm.paymentMethod === 'debit_card') && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={payForm.cardholderName}
+                                        onChange={(e) => setPayForm(prev => ({ ...prev, cardholderName: e.target.value }))}
+                                        onKeyDown={filterNameInput}
+                                        placeholder="As shown on card"
+                                        className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none ${payErrors.cardholderName ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                    />
+                                    {payErrors.cardholderName
+                                        ? <p className="text-xs text-red-600 mt-1">{payErrors.cardholderName}</p>
+                                        : <p className="text-xs text-gray-500 mt-1">Only letters allowed</p>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={payForm.cardNumber}
+                                        onChange={(e) => setPayForm(prev => ({ ...prev, cardNumber: e.target.value }))}
+                                        onKeyDown={filterCardNumberInput}
+                                        placeholder="1234 5678 9012 3456"
+                                        maxLength={19}
+                                        className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none font-mono ${payErrors.cardNumber ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                    />
+                                    {payErrors.cardNumber && <p className="text-xs text-red-600 mt-1">{payErrors.cardNumber}</p>}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={payForm.expiry}
+                                            onChange={(e) => {
+                                                let v = e.target.value.replace(/[^0-9]/g, '')
+                                                if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2, 4)
+                                                setPayForm(prev => ({ ...prev, expiry: v }))
+                                            }}
+                                            placeholder="MM/YY"
+                                            maxLength={5}
+                                            className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none font-mono ${payErrors.expiry ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                        />
+                                        {payErrors.expiry && <p className="text-xs text-red-600 mt-1">{payErrors.expiry}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">CVV <span className="text-red-500">*</span></label>
+                                        <input
+                                            type="password"
+                                            value={payForm.cvv}
+                                            onChange={(e) => setPayForm(prev => ({ ...prev, cvv: e.target.value.replace(/[^0-9]/g, '') }))}
+                                            placeholder="123"
+                                            maxLength={4}
+                                            className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none font-mono ${payErrors.cvv ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                        />
+                                        {payErrors.cvv && <p className="text-xs text-red-600 mt-1">{payErrors.cvv}</p>}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Billing Zip Code</label>
+                                    <input
+                                        type="text"
+                                        value={payForm.billingZip}
+                                        onChange={(e) => setPayForm(prev => ({ ...prev, billingZip: e.target.value }))}
+                                        placeholder="10001"
+                                        className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none ${payErrors.billingZip ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                    />
+                                    {payErrors.billingZip && <p className="text-xs text-red-600 mt-1">{payErrors.billingZip}</p>}
+                                </div>
+                            </>
+                        )}
+
+                        {payForm.paymentMethod === 'bank_transfer' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={payForm.bankName}
+                                        onChange={(e) => setPayForm(prev => ({ ...prev, bankName: e.target.value }))}
+                                        placeholder="e.g. Chase"
+                                        className={`w-full px-4 py-2.5 border-2 rounded-xl focus:outline-none ${payErrors.bankName ? 'border-red-300' : 'border-gray-200 focus:border-emerald-500'}`}
+                                    />
+                                    {payErrors.bankName && <p className="text-xs text-red-600 mt-1">{payErrors.bankName}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Last 4 Digits (optional)</label>
+                                    <input
+                                        type="text"
+                                        value={payForm.accountLast4}
+                                        onChange={(e) => setPayForm(prev => ({ ...prev, accountLast4: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) }))}
+                                        placeholder="1234"
+                                        maxLength={4}
+                                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 font-mono"
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {payForm.paymentMethod === 'wallet' && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
+                                Your payment will be deducted from your wallet balance.
+                            </div>
+                        )}
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import {
     HelpCircle,
     MessageSquare,
@@ -12,24 +13,35 @@ import {
     CheckCircle2,
     Loader,
     Clock,
-    User,
     Search,
     ChevronDown,
     Phone,
     Mail,
-    MapPin
+    MapPin,
+    Plus
 } from 'lucide-react'
 import supportService from '@/services/modules/support.service'
+import {
+    validateRequired,
+    validateSelect,
+    validateTextArea,
+    validateName,
+    validateEmail,
+    validatePhone,
+    filterNameInput,
+    filterPhoneInput
+} from '@/utils/validation'
 
 interface SupportTicket {
     id: string
     subject: string
     description: string
     status: 'open' | 'in-progress' | 'resolved' | 'closed'
-    priority: 'low' | 'medium' | 'high'
+    priority: 'low' | 'medium' | 'high' | 'urgent'
     createdAt: string
     updatedAt: string
     replies: number
+    category?: string
 }
 
 interface FAQ {
@@ -37,6 +49,21 @@ interface FAQ {
     question: string
     answer: string
     category: string
+}
+
+type TicketFormState = {
+    subject: string
+    description: string
+    priority: 'low' | 'medium' | 'high' | 'urgent'
+    category: string
+}
+
+type ContactFormState = {
+    name: string
+    email: string
+    phone: string
+    subject: string
+    message: string
 }
 
 export default function SupportPage() {
@@ -51,20 +78,24 @@ export default function SupportPage() {
     const [faqs, setFaqs] = useState<FAQ[]>([])
     const [filterStatus, setFilterStatus] = useState<'all' | 'open' | 'in-progress' | 'resolved'>('all')
 
-    const [newTicket, setNewTicket] = useState({
+    const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false)
+
+    const [newTicket, setNewTicket] = useState<TicketFormState>({
         subject: '',
         description: '',
-        priority: 'medium' as const,
-        category: 'general'
+        priority: 'medium',
+        category: ''
     })
+    const [ticketErrors, setTicketErrors] = useState<Record<string, string>>({})
 
-    const [contactForm, setContactForm] = useState({
+    const [contactForm, setContactForm] = useState<ContactFormState>({
         name: '',
         email: '',
         phone: '',
         subject: '',
         message: ''
     })
+    const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         loadData()
@@ -77,8 +108,8 @@ export default function SupportPage() {
                 supportService.getTickets(),
                 supportService.getFAQs()
             ])
-            setTickets(ticketsData || [])
-            setFaqs(faqsData || [])
+            setTickets(Array.isArray(ticketsData) ? ticketsData : [])
+            setFaqs(Array.isArray(faqsData) ? faqsData : [])
         } catch (error) {
             console.error('Failed to load support data:', error)
             setMessage({ type: 'error', text: 'Failed to load support data' })
@@ -87,40 +118,89 @@ export default function SupportPage() {
         }
     }
 
-    const handleCreateTicket = async () => {
-        if (!newTicket.subject || !newTicket.description) {
-            setMessage({ type: 'error', text: 'Please fill in all fields' })
-            return
+    const validateTicket = (): boolean => {
+        const errors: Record<string, string> = {}
+        const subjectErr = validateRequired(newTicket.subject, 'Subject')
+        if (subjectErr) {
+            errors.subject = subjectErr
+        } else if (newTicket.subject.trim().length < 5) {
+            errors.subject = 'Subject must be at least 5 characters'
+        } else if (newTicket.subject.trim().length > 100) {
+            errors.subject = 'Subject must be less than 100 characters'
         }
+
+        const categoryErr = validateSelect(newTicket.category, 'Category')
+        if (categoryErr) errors.category = categoryErr
+
+        const priorityErr = validateSelect(newTicket.priority, 'Priority')
+        if (priorityErr) errors.priority = priorityErr
+
+        const descErr = validateTextArea(newTicket.description, 'Description', 10, 2000)
+        if (descErr) errors.description = descErr
+
+        setTicketErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleCreateTicket = async () => {
+        if (!validateTicket()) return
 
         try {
             setSubmitting(true)
-            const ticket = await supportService.createTicket(newTicket)
-            setTickets(prev => [ticket, ...prev])
-            setNewTicket({ subject: '', description: '', priority: 'medium', category: 'general' })
+            const payload = {
+                subject: newTicket.subject.trim(),
+                description: newTicket.description.trim(),
+                priority: newTicket.priority as any,
+                category: newTicket.category
+            }
+            const ticket = await supportService.createTicket(payload)
+            if (ticket && ticket.id) {
+                setTickets(prev => [ticket, ...prev])
+            } else {
+                await loadData()
+            }
+            setNewTicket({ subject: '', description: '', priority: 'medium', category: '' })
+            setTicketErrors({})
+            setIsTicketDrawerOpen(false)
             setMessage({ type: 'success', text: 'Support ticket created successfully' })
             setTimeout(() => setMessage(null), 3000)
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to create ticket' })
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error?.response?.data?.message || 'Failed to create ticket' })
         } finally {
             setSubmitting(false)
         }
     }
 
-    const handleContactSubmit = async () => {
-        if (!contactForm.name || !contactForm.email || !contactForm.subject || !contactForm.message) {
-            setMessage({ type: 'error', text: 'Please fill in all fields' })
-            return
+    const validateContact = (): boolean => {
+        const errors: Record<string, string> = {}
+        const nameErr = validateName(contactForm.name, 'Name')
+        if (nameErr) errors.name = nameErr
+        const emailErr = validateEmail(contactForm.email)
+        if (emailErr) errors.email = emailErr
+        if (contactForm.phone) {
+            const phoneErr = validatePhone(contactForm.phone, false)
+            if (phoneErr) errors.phone = phoneErr
         }
+        const subjectErr = validateRequired(contactForm.subject, 'Subject')
+        if (subjectErr) errors.subject = subjectErr
+        const messageErr = validateTextArea(contactForm.message, 'Message', 10, 2000)
+        if (messageErr) errors.message = messageErr
+        setContactErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleContactSubmit = async () => {
+        if (!validateContact()) return
 
         try {
             setSubmitting(true)
             await supportService.sendContactMessage(contactForm)
             setContactForm({ name: '', email: '', phone: '', subject: '', message: '' })
+            setContactErrors({})
             setMessage({ type: 'success', text: 'Message sent successfully. We will contact you soon.' })
             setTimeout(() => setMessage(null), 3000)
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to send message' })
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error?.response?.data?.message || 'Failed to send message' })
         } finally {
             setSubmitting(false)
         }
@@ -128,13 +208,13 @@ export default function SupportPage() {
 
     const filteredTickets = tickets.filter(ticket => {
         const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus
-        const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesSearch = (ticket.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
         return matchesStatus && matchesSearch
     })
 
     const filteredFAQs = faqs.filter(faq =>
-        faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
+        (faq.question || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (faq.answer || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     const getStatusColor = (status: string) => {
@@ -154,6 +234,8 @@ export default function SupportPage() {
 
     const getPriorityColor = (priority: string) => {
         switch (priority) {
+            case 'urgent':
+                return 'text-red-700'
             case 'high':
                 return 'text-red-600'
             case 'medium':
@@ -179,10 +261,19 @@ export default function SupportPage() {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-8"
+                className="mb-8 flex items-center justify-between"
             >
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Support Center</h1>
-                <p className="text-gray-600">Get help with your account and fitness journey</p>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Support Center</h1>
+                    <p className="text-gray-600">Get help with your account and fitness journey</p>
+                </div>
+                <Button
+                    onClick={() => setIsTicketDrawerOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Ticket
+                </Button>
             </motion.div>
 
             {/* Message Alert */}
@@ -231,56 +322,6 @@ export default function SupportPage() {
                     animate={{ opacity: 1 }}
                     className="space-y-6"
                 >
-                    {/* Create New Ticket */}
-                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Create New Support Ticket</h2>
-                        <div className="space-y-4">
-                            <Input
-                                type="text"
-                                value={newTicket.subject}
-                                onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
-                                placeholder="Subject"
-                                className="w-full"
-                            />
-                            <textarea
-                                value={newTicket.description}
-                                onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Describe your issue..."
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                                rows={4}
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <select
-                                    value={newTicket.category}
-                                    onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value }))}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                >
-                                    <option value="general">General</option>
-                                    <option value="billing">Billing</option>
-                                    <option value="technical">Technical</option>
-                                    <option value="account">Account</option>
-                                </select>
-                                <select
-                                    value={newTicket.priority}
-                                    onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as any }))}
-                                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                >
-                                    <option value="low">Low Priority</option>
-                                    <option value="medium">Medium Priority</option>
-                                    <option value="high">High Priority</option>
-                                </select>
-                            </div>
-                            <Button
-                                onClick={handleCreateTicket}
-                                disabled={submitting}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                            >
-                                <Send className="w-4 h-4 mr-2" />
-                                {submitting ? 'Creating...' : 'Create Ticket'}
-                            </Button>
-                        </div>
-                    </div>
-
                     {/* Tickets List */}
                     <div className="space-y-4">
                         <div className="flex items-center space-x-4">
@@ -310,6 +351,13 @@ export default function SupportPage() {
                             <div className="text-center py-12">
                                 <HelpCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                 <p className="text-gray-600">No support tickets found</p>
+                                <Button
+                                    onClick={() => setIsTicketDrawerOpen(true)}
+                                    className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create Your First Ticket
+                                </Button>
                             </div>
                         ) : (
                             filteredTickets.map(ticket => (
@@ -322,23 +370,23 @@ export default function SupportPage() {
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3 mb-2">
-                                                <h3 className="font-semibold text-gray-900">{ticket.subject}</h3>
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(ticket.status)}`}>
                                                     {ticket.status}
                                                 </span>
+                                                <h3 className="font-semibold text-gray-900">{ticket.subject}</h3>
                                                 <span className={`text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                                                    {ticket.priority.toUpperCase()}
+                                                    {(ticket.priority || '').toUpperCase()}
                                                 </span>
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">{ticket.description}</p>
                                             <div className="flex items-center space-x-4 text-xs text-gray-500">
                                                 <span className="flex items-center space-x-1">
                                                     <Clock className="w-3 h-3" />
-                                                    <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                                                    <span>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : '—'}</span>
                                                 </span>
                                                 <span className="flex items-center space-x-1">
                                                     <MessageSquare className="w-3 h-3" />
-                                                    <span>{ticket.replies} replies</span>
+                                                    <span>{ticket.replies ?? 0} replies</span>
                                                 </span>
                                             </div>
                                         </div>
@@ -425,41 +473,59 @@ export default function SupportPage() {
                     <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-6">Send us a Message</h2>
                         <div className="space-y-4">
-                            <Input
-                                type="text"
-                                value={contactForm.name}
-                                onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
-                                placeholder="Your Name"
-                                className="w-full"
-                            />
-                            <Input
-                                type="email"
-                                value={contactForm.email}
-                                onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
-                                placeholder="Your Email"
-                                className="w-full"
-                            />
-                            <Input
-                                type="tel"
-                                value={contactForm.phone}
-                                onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
-                                placeholder="Your Phone (Optional)"
-                                className="w-full"
-                            />
-                            <Input
-                                type="text"
-                                value={contactForm.subject}
-                                onChange={(e) => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
-                                placeholder="Subject"
-                                className="w-full"
-                            />
-                            <textarea
-                                value={contactForm.message}
-                                onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
-                                placeholder="Your Message"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                                rows={6}
-                            />
+                            <div>
+                                <Input
+                                    type="text"
+                                    value={contactForm.name}
+                                    onKeyDown={filterNameInput}
+                                    onChange={(e) => setContactForm(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="Your Name"
+                                    className="w-full"
+                                />
+                                {contactErrors.name && <p className="text-xs text-red-600 mt-1">{contactErrors.name}</p>}
+                            </div>
+                            <div>
+                                <Input
+                                    type="email"
+                                    value={contactForm.email}
+                                    onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+                                    placeholder="Your Email"
+                                    className="w-full"
+                                />
+                                {contactErrors.email && <p className="text-xs text-red-600 mt-1">{contactErrors.email}</p>}
+                            </div>
+                            <div>
+                                <Input
+                                    type="tel"
+                                    value={contactForm.phone}
+                                    onKeyDown={filterPhoneInput}
+                                    onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+                                    placeholder="Your Phone (Optional)"
+                                    className="w-full"
+                                />
+                                {contactErrors.phone && <p className="text-xs text-red-600 mt-1">{contactErrors.phone}</p>}
+                            </div>
+                            <div>
+                                <Input
+                                    type="text"
+                                    value={contactForm.subject}
+                                    onChange={(e) => setContactForm(prev => ({ ...prev, subject: e.target.value }))}
+                                    placeholder="Subject"
+                                    className="w-full"
+                                />
+                                {contactErrors.subject && <p className="text-xs text-red-600 mt-1">{contactErrors.subject}</p>}
+                            </div>
+                            <div>
+                                <textarea
+                                    value={contactForm.message}
+                                    onChange={(e) => setContactForm(prev => ({ ...prev, message: e.target.value }))}
+                                    placeholder="Your Message"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                                    rows={6}
+                                    maxLength={2000}
+                                />
+                                {contactErrors.message && <p className="text-xs text-red-600 mt-1">{contactErrors.message}</p>}
+                            </div>
                             <Button
                                 onClick={handleContactSubmit}
                                 disabled={submitting}
@@ -520,6 +586,108 @@ export default function SupportPage() {
                     </div>
                 </motion.div>
             )}
+
+            {/* Create Ticket Drawer */}
+            <SlideInDrawer
+                isOpen={isTicketDrawerOpen}
+                onClose={() => {
+                    if (!submitting) {
+                        setIsTicketDrawerOpen(false)
+                        setTicketErrors({})
+                    }
+                }}
+                title="Create Support Ticket"
+                description="Tell us what's going on and we'll get back to you."
+                size="lg"
+                footer={
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsTicketDrawerOpen(false)
+                                setTicketErrors({})
+                            }}
+                            disabled={submitting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleCreateTicket}
+                            disabled={submitting}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                            <Send className="w-4 h-4 mr-2" />
+                            {submitting ? 'Creating...' : 'Submit Ticket'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject <span className="text-red-500">*</span></label>
+                        <Input
+                            type="text"
+                            value={newTicket.subject}
+                            onChange={(e) => setNewTicket(prev => ({ ...prev, subject: e.target.value }))}
+                            placeholder="Brief summary (5-100 chars)"
+                            maxLength={100}
+                            className="w-full"
+                        />
+                        {ticketErrors.subject && <p className="text-xs text-red-600 mt-1">{ticketErrors.subject}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
+                            <select
+                                value={newTicket.category}
+                                onChange={(e) => setNewTicket(prev => ({ ...prev, category: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            >
+                                <option value="">Select category</option>
+                                <option value="technical">Technical</option>
+                                <option value="billing">Billing</option>
+                                <option value="account">Account</option>
+                                <option value="general">General</option>
+                                <option value="other">Other</option>
+                            </select>
+                            {ticketErrors.category && <p className="text-xs text-red-600 mt-1">{ticketErrors.category}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Priority <span className="text-red-500">*</span></label>
+                            <select
+                                value={newTicket.priority}
+                                onChange={(e) => setNewTicket(prev => ({ ...prev, priority: e.target.value as TicketFormState['priority'] }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                            {ticketErrors.priority && <p className="text-xs text-red-600 mt-1">{ticketErrors.priority}</p>}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                        <textarea
+                            value={newTicket.description}
+                            onChange={(e) => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Describe your issue in detail (10-2000 chars)..."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                            rows={6}
+                            maxLength={2000}
+                        />
+                        <div className="flex justify-between mt-1">
+                            {ticketErrors.description ? (
+                                <p className="text-xs text-red-600">{ticketErrors.description}</p>
+                            ) : <span />}
+                            <p className="text-xs text-gray-400">{newTicket.description.length}/2000</p>
+                        </div>
+                    </div>
+                </div>
+            </SlideInDrawer>
         </div>
     )
 }

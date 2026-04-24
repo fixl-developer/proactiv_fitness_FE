@@ -10,7 +10,7 @@ import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 export interface FieldConfig {
     name: string
     label: string
-    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'richtext' | 'email' | 'url' | 'slug' | 'tel'
+    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'richtext' | 'email' | 'url' | 'slug' | 'tel' | 'name'
     required?: boolean
     options?: { label: string; value: string }[]
     placeholder?: string
@@ -46,6 +46,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const PHONE_REGEX = /^[+]?[\d\s()-]{7,20}$/
+const NAME_REGEX = /^[A-Za-z\s'-]+$/
 
 function validateField(field: FieldConfig, value: any): string | null {
     const isEmpty =
@@ -100,6 +101,9 @@ function validateField(field: FieldConfig, value: any): string | null {
     }
     if (field.type === 'tel' && !PHONE_REGEX.test(str)) {
         return `${field.label} must be a valid phone number`
+    }
+    if (field.type === 'name' && !NAME_REGEX.test(str)) {
+        return `${field.label} can only contain letters, spaces, hyphens and apostrophes`
     }
     if (field.type === 'image' && field.required && !str) {
         return `${field.label} is required`
@@ -243,7 +247,7 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
             if (field.type === 'array' && Array.isArray(value)) {
                 payload[field.name] = value.filter(v => typeof v === 'string' ? v.trim() !== '' : v != null)
             }
-            if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel') && typeof value === 'string') {
+            if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name') && typeof value === 'string') {
                 payload[field.name] = value.trim()
             }
         })
@@ -535,12 +539,21 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                         label=""
                                     />
                                 </div>
-                            ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' ? (
+                            ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name' ? (
                                 <input
                                     type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : field.type === 'tel' ? 'tel' : 'text'}
                                     value={formData[field.name] || ''}
                                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
                                     onBlur={() => handleFieldBlur(field)}
+                                    onKeyDown={(e) => {
+                                        if (field.type === 'name') {
+                                            const allowed = /^[A-Za-z\s'-]$/
+                                            if (e.key.length === 1 && !allowed.test(e.key)) e.preventDefault()
+                                        } else if (field.type === 'tel') {
+                                            const allowed = /^[0-9+\-() ]$/
+                                            if (e.key.length === 1 && !allowed.test(e.key)) e.preventDefault()
+                                        }
+                                    }}
                                     placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                                     maxLength={field.maxLength}
                                     className={inputClass(field.name)}

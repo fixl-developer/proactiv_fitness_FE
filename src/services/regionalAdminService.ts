@@ -112,9 +112,10 @@ export class RegionalAdminService {
     // =============================================
     // DASHBOARD
     // =============================================
-    static async getDashboardOverview(): Promise<any> {
+    static async getDashboardOverview(timeRange?: string): Promise<any> {
         try {
-            const response = await apiClient.get('/admin/regional/dashboard')
+            const params = timeRange ? `?timeRange=${timeRange}` : ''
+            const response = await apiClient.get(`/admin/regional/dashboard${params}`)
             return response.data?.data || response.data
         } catch (error: any) {
             console.error('Failed to fetch dashboard overview:', error)
@@ -133,7 +134,13 @@ export class RegionalAdminService {
             if (search) params.append('search', search)
             if (status && status !== 'all') params.append('status', status)
             const response = await apiClient.get(`/admin/regional/locations?${params.toString()}`)
-            return response.data
+            return {
+                data: Array.isArray(response?.data) ? response.data : [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 1,
+            }
         } catch (error: any) {
             console.error('Failed to fetch locations:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch locations')
@@ -187,7 +194,13 @@ export class RegionalAdminService {
             if (role && role !== 'all') params.append('role', role)
             if (status && status !== 'all') params.append('status', status)
             const response = await apiClient.get(`/admin/regional/staff?${params.toString()}`)
-            return response.data
+            return {
+                data: Array.isArray(response?.data) ? response.data : [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 1,
+            }
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to fetch staff')
         }
@@ -251,7 +264,13 @@ export class RegionalAdminService {
             params.append('pageSize', pageSize.toString())
             if (type) params.append('type', type)
             const response = await apiClient.get(`/admin/regional/reports?${params.toString()}`)
-            return response.data
+            return {
+                data: Array.isArray(response?.data) ? response.data : [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 1,
+            }
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to fetch reports')
         }
@@ -286,7 +305,13 @@ export class RegionalAdminService {
             if (status && status !== 'all') params.append('status', status)
             if (type && type !== 'all') params.append('type', type)
             const response = await apiClient.get(`/admin/regional/approvals?${params.toString()}`)
-            return response.data
+            return {
+                data: Array.isArray(response?.data) ? response.data : [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 1,
+            }
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to fetch approvals')
         }
@@ -349,6 +374,15 @@ export class RegionalAdminService {
         }
     }
 
+    static async createApprovalRequest(data: { type: string; title: string; description?: string; priority?: string; location?: string; details?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/regional/approvals', data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create approval request')
+        }
+    }
+
     // =============================================
     // BUDGET
     // =============================================
@@ -359,6 +393,32 @@ export class RegionalAdminService {
             return response.data?.data || response.data
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to fetch budget')
+        }
+    }
+
+    static async createBudgetItem(data: { category: string; allocated: number; period?: string; notes?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/regional/budget', data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create budget item')
+        }
+    }
+
+    static async updateBudgetItem(id: string, data: Partial<{ category: string; allocated: number; spent: number; notes: string }>): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/regional/budget/${id}`, data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update budget item')
+        }
+    }
+
+    static async deleteBudgetItem(id: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/regional/budget/${id}`)
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete budget item')
         }
     }
 
@@ -374,15 +434,68 @@ export class RegionalAdminService {
         }
     }
 
+    static async createComplianceItem(data: { category: string; title: string; dueDate?: string; completionRate?: number; notes?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/regional/compliance', data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create compliance item')
+        }
+    }
+
+    static async updateComplianceItem(id: string, data: Partial<{ category: string; title: string; dueDate: string; completionRate: number; status: string; notes: string }>): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/regional/compliance/${id}`, data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update compliance item')
+        }
+    }
+
+    static async deleteComplianceItem(id: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/regional/compliance/${id}`)
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete compliance item')
+        }
+    }
+
     // =============================================
     // BENCHMARKS
     // =============================================
-    static async getBenchmarks(): Promise<any> {
+    static async getBenchmarks(timeRange?: string): Promise<any> {
         try {
-            const response = await apiClient.get('/admin/regional/benchmarks')
+            const params = timeRange ? `?timeRange=${timeRange}` : ''
+            const response = await apiClient.get(`/admin/regional/benchmarks${params}`)
             return response.data?.data || response.data
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to fetch benchmarks')
+        }
+    }
+
+    static async createBenchmarkTarget(data: { metric: string; target: number; unit?: string; notes?: string }): Promise<any> {
+        try {
+            const response = await apiClient.post('/admin/regional/benchmarks', data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create benchmark target')
+        }
+    }
+
+    static async updateBenchmarkTarget(id: string, data: Partial<{ metric: string; target: number; unit: string; notes: string }>): Promise<any> {
+        try {
+            const response = await apiClient.put(`/admin/regional/benchmarks/${id}`, data)
+            return response.data?.data || response.data
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update benchmark target')
+        }
+    }
+
+    static async deleteBenchmarkTarget(id: string): Promise<void> {
+        try {
+            await apiClient.delete(`/admin/regional/benchmarks/${id}`)
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete benchmark target')
         }
     }
 }

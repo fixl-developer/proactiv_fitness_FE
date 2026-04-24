@@ -2,18 +2,46 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Bell, Trash2, Settings, Check, AlertCircle, Info, CheckCircle2, Filter } from 'lucide-react'
+import { Bell, Trash2, Settings, Check, AlertCircle, Info, CheckCircle2, CheckCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { notificationService } from '@/services/modules/notification.service'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { apiClient } from '@/services/api/client'
 
 interface Notification {
     _id: string
     title: string
     message: string
-    time: string
+    time?: string
+    createdAt?: string
     read: boolean
-    type: 'reminder' | 'payment' | 'achievement' | 'alert' | 'info'
+    type: 'reminder' | 'payment' | 'achievement' | 'alert' | 'info' | string
+}
+
+interface Preferences {
+    emailEnabled: boolean
+    pushEnabled: boolean
+    smsEnabled: boolean
+    bookings: boolean
+    payments: boolean
+    achievements: boolean
+    social: boolean
+    marketing: boolean
+    quietStart: string
+    quietEnd: string
+}
+
+const DEFAULT_PREFERENCES: Preferences = {
+    emailEnabled: true,
+    pushEnabled: true,
+    smsEnabled: false,
+    bookings: true,
+    payments: true,
+    achievements: true,
+    social: true,
+    marketing: false,
+    quietStart: '22:00',
+    quietEnd: '07:00',
 }
 
 export default function NotificationsPage() {
@@ -22,14 +50,9 @@ export default function NotificationsPage() {
     const [error, setError] = useState<string | null>(null)
     const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all')
     const [showPreferences, setShowPreferences] = useState(false)
-    const [preferences, setPreferences] = useState({
-        emailNotifications: true,
-        pushNotifications: true,
-        smsNotifications: false,
-        classReminders: true,
-        paymentAlerts: true,
-        achievementNotifications: true
-    })
+    const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES)
+    const [savingPrefs, setSavingPrefs] = useState(false)
+    const [prefsErrors, setPrefsErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         fetchNotifications()
@@ -39,14 +62,13 @@ export default function NotificationsPage() {
     const fetchNotifications = async () => {
         try {
             setLoading(true)
-            const res = await notificationService.getNotifications()
-            if (res.success) {
-                setNotifications(res.data || [])
-            } else {
-                setError(res.error || 'Failed to fetch notifications')
-            }
+            setError(null)
+            const res: any = await apiClient.get('/user/notifications')
+            const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
+            setNotifications(list)
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch notifications')
+            setError(err?.response?.data?.message || err?.message || 'Failed to fetch notifications')
+            setNotifications([])
         } finally {
             setLoading(false)
         }
@@ -54,51 +76,68 @@ export default function NotificationsPage() {
 
     const fetchPreferences = async () => {
         try {
-            const res = await notificationService.getPreferences()
-            if (res.success) {
-                setPreferences(res.data || preferences)
+            const res: any = await apiClient.get('/user/notifications/preferences')
+            const data = res?.data || res
+            if (data && typeof data === 'object') {
+                setPreferences({ ...DEFAULT_PREFERENCES, ...data })
             }
-        } catch (err: any) {
-            console.error('Failed to fetch preferences:', err)
+        } catch (err) {
+            // Keep defaults if preferences endpoint not available
         }
     }
 
     const handleMarkAsRead = async (id: string) => {
         try {
-            const res = await notificationService.markAsRead(id)
-            if (res.success) {
-                setNotifications(notifications.map(n => n._id === id ? { ...n, read: true } : n))
-            } else {
-                setError(res.error || 'Failed to mark as read')
-            }
+            await apiClient.put(`/user/notifications/${id}/read`, {})
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n))
         } catch (err: any) {
-            setError(err.message || 'Failed to mark as read')
+            setError(err?.response?.data?.message || err?.message || 'Failed to mark as read')
+        }
+    }
+
+    const handleMarkAllRead = async () => {
+        try {
+            await apiClient.put('/user/notifications/read-all', {})
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err?.message || 'Failed to mark all as read')
         }
     }
 
     const handleDelete = async (id: string) => {
+        if (!window.confirm('Delete this notification? This cannot be undone.')) return
         try {
-            const res = await notificationService.deleteNotification(id)
-            if (res.success) {
-                setNotifications(notifications.filter(n => n._id !== id))
-            } else {
-                setError(res.error || 'Failed to delete notification')
-            }
+            await apiClient.delete(`/user/notifications/${id}`)
+            setNotifications(prev => prev.filter(n => n._id !== id))
         } catch (err: any) {
-            setError(err.message || 'Failed to delete notification')
+            setError(err?.response?.data?.message || err?.message || 'Failed to delete notification')
         }
     }
 
+    const validatePreferences = (): boolean => {
+        const errs: Record<string, string> = {}
+        if (!preferences.quietStart) errs.quietStart = 'Quiet hours start is required'
+        if (!preferences.quietEnd) errs.quietEnd = 'Quiet hours end is required'
+        setPrefsErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
     const handleUpdatePreferences = async () => {
+        if (!validatePreferences()) return
         try {
-            const res = await notificationService.updatePreferences(preferences)
-            if (res.success) {
-                setShowPreferences(false)
-            } else {
-                setError(res.error || 'Failed to update preferences')
-            }
+            setSavingPrefs(true)
+            await apiClient.put('/user/notifications/preferences', preferences)
+            setShowPreferences(false)
         } catch (err: any) {
-            setError(err.message || 'Failed to update preferences')
+            setError(err?.response?.data?.message || err?.message || 'Failed to update preferences')
+        } finally {
+            setSavingPrefs(false)
+        }
+    }
+
+    const handleRowClick = (notif: Notification) => {
+        if (!notif.read) {
+            handleMarkAsRead(notif._id)
         }
     }
 
@@ -154,19 +193,31 @@ export default function NotificationsPage() {
     return (
         <div className="space-y-6">
             {/* Page Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
                     <p className="text-gray-600 mt-2 text-sm font-medium">Stay updated with your activities</p>
                 </div>
-                <Button
-                    onClick={() => setShowPreferences(!showPreferences)}
-                    variant="outline"
-                    className="border-gray-200 hover:bg-gray-50"
-                >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Preferences
-                </Button>
+                <div className="flex gap-2">
+                    {unreadCount > 0 && (
+                        <Button
+                            onClick={handleMarkAllRead}
+                            variant="outline"
+                            className="border-gray-200 hover:bg-gray-50"
+                        >
+                            <CheckCheck className="w-4 h-4 mr-2" />
+                            Mark all read
+                        </Button>
+                    )}
+                    <Button
+                        onClick={() => setShowPreferences(true)}
+                        variant="outline"
+                        className="border-gray-200 hover:bg-gray-50"
+                    >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Preferences
+                    </Button>
+                </div>
             </div>
 
             {/* Error Alert */}
@@ -184,56 +235,6 @@ export default function NotificationsPage() {
                 </motion.div>
             )}
 
-            {/* Preferences Panel */}
-            {showPreferences && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                >
-                    <Card className="p-6 border-emerald-200/50 bg-emerald-50/50">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Notification Preferences</h3>
-                        <div className="space-y-4">
-                            {[
-                                { key: 'emailNotifications', label: 'Email Notifications' },
-                                { key: 'pushNotifications', label: 'Push Notifications' },
-                                { key: 'smsNotifications', label: 'SMS Notifications' },
-                                { key: 'classReminders', label: 'Class Reminders' },
-                                { key: 'paymentAlerts', label: 'Payment Alerts' },
-                                { key: 'achievementNotifications', label: 'Achievement Notifications' }
-                            ].map(pref => (
-                                <label key={pref.key} className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={preferences[pref.key as keyof typeof preferences]}
-                                        onChange={(e) => setPreferences({
-                                            ...preferences,
-                                            [pref.key]: e.target.checked
-                                        })}
-                                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                                    />
-                                    <span className="text-gray-700 font-medium">{pref.label}</span>
-                                </label>
-                            ))}
-                        </div>
-                        <div className="flex gap-3 mt-6">
-                            <Button
-                                onClick={handleUpdatePreferences}
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                            >
-                                Save Preferences
-                            </Button>
-                            <Button
-                                onClick={() => setShowPreferences(false)}
-                                variant="outline"
-                                className="flex-1 border-gray-200 hover:bg-gray-50"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </Card>
-                </motion.div>
-            )}
-
             {/* Filter Buttons */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -245,7 +246,7 @@ export default function NotificationsPage() {
                     variant={filterType === 'all' ? 'default' : 'outline'}
                     className={filterType === 'all' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-gray-200 hover:bg-gray-50'}
                 >
-                    All
+                    All ({notifications.length})
                 </Button>
                 <Button
                     onClick={() => setFilterType('unread')}
@@ -259,7 +260,7 @@ export default function NotificationsPage() {
                     variant={filterType === 'read' ? 'default' : 'outline'}
                     className={filterType === 'read' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-gray-200 hover:bg-gray-50'}
                 >
-                    Read
+                    Read ({notifications.length - unreadCount})
                 </Button>
             </motion.div>
 
@@ -278,7 +279,10 @@ export default function NotificationsPage() {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                             >
-                                <Card className={`p-4 border-l-4 ${getNotificationColor(notif.type)} ${notif.read ? 'opacity-75' : ''}`}>
+                                <Card
+                                    onClick={() => handleRowClick(notif)}
+                                    className={`p-4 border-l-4 cursor-pointer ${getNotificationColor(notif.type)} ${notif.read ? 'opacity-75' : ''}`}
+                                >
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-start gap-3 flex-1">
                                             <div className="mt-1">
@@ -287,10 +291,12 @@ export default function NotificationsPage() {
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-gray-900">{notif.title}</h3>
                                                 <p className="text-gray-600 text-sm mt-1">{notif.message}</p>
-                                                <p className="text-xs text-gray-500 mt-2">{notif.time}</p>
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    {notif.time || (notif.createdAt ? new Date(notif.createdAt).toLocaleString() : '')}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2 ml-4">
+                                        <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                                             {!notif.read && (
                                                 <button
                                                     onClick={() => handleMarkAsRead(notif._id)}
@@ -320,6 +326,113 @@ export default function NotificationsPage() {
                     </Card>
                 )}
             </motion.div>
+
+            {/* Preferences Drawer */}
+            <SlideInDrawer
+                isOpen={showPreferences}
+                onClose={() => setShowPreferences(false)}
+                title="Notification Preferences"
+                description="Control how and when you receive notifications"
+                size="md"
+                footer={
+                    <div className="flex gap-3 justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowPreferences(false)}
+                            disabled={savingPrefs}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleUpdatePreferences}
+                            disabled={savingPrefs}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                            {savingPrefs ? 'Saving...' : 'Save Preferences'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-6">
+                    {/* Channels */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Channels</h4>
+                        <div className="space-y-3">
+                            {([
+                                { key: 'emailEnabled', label: 'Email Notifications' },
+                                { key: 'pushEnabled', label: 'Push Notifications' },
+                                { key: 'smsEnabled', label: 'SMS Notifications' },
+                            ] as const).map(pref => (
+                                <label key={pref.key} className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={preferences[pref.key]}
+                                        onChange={(e) => setPreferences({ ...preferences, [pref.key]: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span className="text-gray-700 font-medium">{pref.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Categories */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Categories</h4>
+                        <div className="space-y-3">
+                            {([
+                                { key: 'bookings', label: 'Class Bookings & Reminders' },
+                                { key: 'payments', label: 'Payments & Billing' },
+                                { key: 'achievements', label: 'Achievements & Milestones' },
+                                { key: 'social', label: 'Social Activity' },
+                                { key: 'marketing', label: 'Marketing & Promotions' },
+                            ] as const).map(pref => (
+                                <label key={pref.key} className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={preferences[pref.key]}
+                                        onChange={(e) => setPreferences({ ...preferences, [pref.key]: e.target.checked })}
+                                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                    <span className="text-gray-700 font-medium">{pref.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Quiet hours */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Quiet Hours</h4>
+                        <p className="text-xs text-gray-500 mb-3">No notifications will be sent during these hours.</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Start</label>
+                                <input
+                                    type="time"
+                                    value={preferences.quietStart}
+                                    onChange={(e) => setPreferences({ ...preferences, quietStart: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                                {prefsErrors.quietStart && (
+                                    <p className="text-xs text-red-600 mt-1">{prefsErrors.quietStart}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">End</label>
+                                <input
+                                    type="time"
+                                    value={preferences.quietEnd}
+                                    onChange={(e) => setPreferences({ ...preferences, quietEnd: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                                {prefsErrors.quietEnd && (
+                                    <p className="text-xs text-red-600 mt-1">{prefsErrors.quietEnd}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </SlideInDrawer>
         </div>
     )
 }

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalLocation, PaginatedResponse } from '@/services/regionalAdminService'
 import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
 // ─── Form Data Type ──────────────────────────────────────────────────
 interface LocationFormData {
@@ -35,8 +36,8 @@ const emptyForm: LocationFormData = {
     capacity: '',
 }
 
-// ─── Location Form Modal ─────────────────────────────────────────────
-function LocationFormModal({
+// ─── Location Form Drawer (slides in from right) ─────────────────────
+function LocationFormDrawer({
     open,
     onClose,
     onSubmit,
@@ -55,11 +56,11 @@ function LocationFormModal({
     const [errors, setErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
-        setForm(initialData)
-        setErrors({})
-    }, [initialData])
-
-    if (!open) return null
+        if (open) {
+            setForm(initialData)
+            setErrors({})
+        }
+    }, [initialData, open])
 
     const handleChange = (field: keyof LocationFormData, value: string) => {
         setForm(prev => ({ ...prev, [field]: value }))
@@ -78,106 +79,96 @@ function LocationFormModal({
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         const newErrors: Record<string, string> = {}
-        const v = (fn: (v: string, l?: string) => string | null, val: string, key: string, label?: string) => { const e = fn(val, label); if (e) newErrors[key] = e }
-        v(validateName, form.name, 'name', 'Name')
-        v(validateAddress, form.address, 'address', 'Address')
-        v(validateName, form.city, 'city', 'City')
-        v(validateName, form.state, 'state', 'State')
-        v(validateZipCode, form.zipCode, 'zipCode')
-        v(validatePhone, form.phone, 'phone')
-        v(validateEmail, form.email, 'email')
+        const nameErr = validateName(form.name, 'Name'); if (nameErr) newErrors.name = nameErr
+        const addrErr = validateAddress(form.address, 'Address'); if (addrErr) newErrors.address = addrErr
+        const cityErr = validateName(form.city, 'City'); if (cityErr) newErrors.city = cityErr
+        const stateErr = validateName(form.state, 'State'); if (stateErr) newErrors.state = stateErr
+        const zipErr = validateZipCode(form.zipCode); if (zipErr) newErrors.zipCode = zipErr
+        const phoneErr = validatePhone(form.phone); if (phoneErr) newErrors.phone = phoneErr
+        const emailErr = validateEmail(form.email); if (emailErr) newErrors.email = emailErr
         if (form.capacity) { const ce = validateNumber(form.capacity, 'Capacity', 1, 10000); if (ce) newErrors.capacity = ce }
+        if (!form.code || !form.code.trim()) newErrors.code = 'Code is required (e.g. LOC-001)'
         setErrors(newErrors)
         if (Object.keys(newErrors).length > 0) return
         onSubmit(form)
     }
 
     return (
-        <div id="admin-regional-locations-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div id="admin-regional-locations-div-clickable-2" className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-                    <button id="admin-regional-locations-btn" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                </div>
-                <form
-                    onSubmit={handleFormSubmit}
-                    className="p-6 space-y-4"
-                >
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                            <Input value={form.name} onChange={e => handleChange('name', e.target.value)} onKeyDown={filterNameInput} required placeholder="Location name" className={errors.name ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.name} />
-                        </div>
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                            <Input value={form.code} onChange={e => handleChange('code', e.target.value)} placeholder="LOC-001" />
-                        </div>
+        <SlideInDrawer isOpen={open} onClose={onClose} title={title} description="Fill in the location details below" size="lg">
+            <form onSubmit={handleFormSubmit} className="space-y-4" id="location-form">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        <Input value={form.name} onChange={e => handleChange('name', e.target.value)} onKeyDown={filterNameInput} placeholder="Location name" className={errors.name ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={errors.name} />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
-                        <Input value={form.address} onChange={e => handleChange('address', e.target.value)} required placeholder="123 Main St" className={errors.address ? 'border-red-500' : ''} />
-                        <FormFieldHint hint={FORMAT_HINTS.address} error={errors.address} />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                        <Input value={form.code} onChange={e => handleChange('code', e.target.value.toUpperCase())} placeholder="LOC-001" className={errors.code ? 'border-red-500' : ''} />
+                        <FormFieldHint hint="Unique code (letters/numbers/hyphen)" error={errors.code} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                            <Input value={form.city} onChange={e => handleChange('city', e.target.value)} onKeyDown={filterNameInput} required placeholder="Boston" className={errors.city ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.city} error={errors.city} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
-                            <Input value={form.state} onChange={e => handleChange('state', e.target.value)} onKeyDown={filterNameInput} required placeholder="MA" className={errors.state ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.state} error={errors.state} />
-                        </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                    <Input value={form.address} onChange={e => handleChange('address', e.target.value)} placeholder="123 Main St" className={errors.address ? 'border-red-500' : ''} />
+                    <FormFieldHint hint={FORMAT_HINTS.address} error={errors.address} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                        <Input value={form.city} onChange={e => handleChange('city', e.target.value)} onKeyDown={filterNameInput} placeholder="Boston" className={errors.city ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.city} error={errors.city} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
-                            <Input value={form.zipCode} onChange={e => handleChange('zipCode', e.target.value)} required placeholder="02101" className={errors.zipCode ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.zipCode} error={errors.zipCode} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                            <Input type="number" value={form.capacity} onChange={e => handleChange('capacity', e.target.value)} onKeyDown={filterNumberInput} placeholder="500" className={errors.capacity ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.capacity} error={errors.capacity} />
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
+                        <Input value={form.state} onChange={e => handleChange('state', e.target.value)} onKeyDown={filterNameInput} placeholder="MA" className={errors.state ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.state} error={errors.state} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                            <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} onKeyDown={filterPhoneInput} required placeholder="(555) 123-4567" className={errors.phone ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                            <Input type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} required placeholder="location@example.com" className={errors.email ? 'border-red-500' : ''} />
-                            <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
-                        </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                        <Input value={form.zipCode} onChange={e => handleChange('zipCode', e.target.value)} placeholder="02101" className={errors.zipCode ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.zipCode} error={errors.zipCode} />
                     </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <button id="admin-regional-locations-btn-cancel" type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                            Cancel
-                        </button>
-                        <button id="admin-regional-locations-btn-2"
-                            type="submit"
-                            disabled={submitting}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {submitting ? 'Saving...' : 'Save'}
-                        </button>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                        <Input type="number" value={form.capacity} onChange={e => handleChange('capacity', e.target.value)} onKeyDown={filterNumberInput} placeholder="500" className={errors.capacity ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={errors.capacity} />
                     </div>
-                </form>
-            </div>
-        </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                        <Input value={form.phone} onChange={e => handleChange('phone', e.target.value)} onKeyDown={filterPhoneInput} placeholder="(555) 123-4567" className={errors.phone ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <Input type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} placeholder="location@example.com" className={errors.email ? 'border-red-500' : ''} />
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={errors.email} />
+                    </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+                    <button id="admin-regional-locations-btn-cancel" type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="admin-regional-locations-btn-submit"
+                        type="submit"
+                        disabled={submitting}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {submitting ? 'Saving...' : 'Save Location'}
+                    </button>
+                </div>
+            </form>
+        </SlideInDrawer>
     )
 }
 
-// ─── View Detail Modal ───────────────────────────────────────────────
-function LocationDetailModal({
+// ─── View Detail Drawer (slides in from right) ───────────────────────
+function LocationDetailDrawer({
     open,
     onClose,
     location,
@@ -186,8 +177,6 @@ function LocationDetailModal({
     onClose: () => void
     location: RegionalLocation | null
 }) {
-    if (!open || !location) return null
-
     const infoRow = (label: string, value: string | number | undefined | null) => (
         <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
             <span className="text-sm text-gray-500">{label}</span>
@@ -196,15 +185,9 @@ function LocationDetailModal({
     )
 
     return (
-        <div id="admin-regional-locations-div-clickable-3" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div id="admin-regional-locations-div-clickable-4" className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto m-4" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-900">Location Details</h2>
-                    <button id="admin-regional-locations-btn-3" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                </div>
-                <div className="p-6 space-y-1">
+        <SlideInDrawer isOpen={open} onClose={onClose} title="Location Details" description={location?.name || ''} size="lg">
+            {location && (
+                <div className="space-y-1">
                     {infoRow('Name', location.name)}
                     {infoRow('Code', location.code)}
                     {infoRow('Address', location.address)}
@@ -225,17 +208,12 @@ function LocationDetailModal({
                     {location.amenities && location.amenities.length > 0 && infoRow('Amenities', location.amenities.join(', '))}
                     {infoRow('Created', location.createdAt ? new Date(location.createdAt).toLocaleDateString() : undefined)}
                 </div>
-                <div className="flex justify-end p-6 border-t">
-                    <button id="admin-regional-locations-btn-close" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
+            )}
+        </SlideInDrawer>
     )
 }
 
-// ─── Delete Confirmation Modal ───────────────────────────────────────
+// ─── Delete Confirmation (small centered modal — not a drawer) ──────
 function DeleteConfirmModal({
     open,
     onClose,
@@ -311,6 +289,14 @@ export default function RegionalLocationsPage() {
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [deletingLocation, setDeletingLocation] = useState<RegionalLocation | null>(null)
     const [deleting, setDeleting] = useState(false)
+
+    // Toast state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+    useEffect(() => {
+        if (!toast) return
+        const t = setTimeout(() => setToast(null), 4000)
+        return () => clearTimeout(t)
+    }, [toast])
 
     // Debounce ref
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -396,28 +382,37 @@ export default function RegionalLocationsPage() {
     const handleFormSubmit = async (data: LocationFormData) => {
         setSubmitting(true)
         try {
-            const payload: Partial<RegionalLocation> = {
-                name: data.name,
-                code: data.code || undefined,
-                address: data.address,
-                city: data.city,
-                state: data.state,
-                zipCode: data.zipCode,
-                phone: data.phone,
-                email: data.email,
-                capacity: data.capacity ? Number(data.capacity) : undefined,
+            // Backend expects nested address + contactInfo on create
+            const payload: any = {
+                name: data.name.trim(),
+                code: data.code.trim().toUpperCase(),
+                address: {
+                    street: data.address.trim(),
+                    city: data.city.trim(),
+                    state: data.state.trim(),
+                    postalCode: data.zipCode.trim(),
+                    country: 'USA',
+                },
+                contactInfo: {
+                    phone: data.phone.trim(),
+                    email: data.email.trim(),
+                },
+                capacity: data.capacity ? Number(data.capacity) : 100,
             }
 
             if (editingId) {
                 await RegionalAdminService.updateLocation(editingId, payload)
+                setToast({ message: 'Location updated successfully', type: 'success' })
             } else {
                 await RegionalAdminService.createLocation(payload)
+                setToast({ message: 'Location created successfully', type: 'success' })
             }
 
             setFormOpen(false)
+            setEditingId(null)
             fetchLocations(editingId ? page : 1, searchTerm, filterStatus)
         } catch (err: any) {
-            alert(err.message || 'Operation failed')
+            setToast({ message: err.message || 'Operation failed', type: 'error' })
         } finally {
             setSubmitting(false)
         }
@@ -442,9 +437,10 @@ export default function RegionalLocationsPage() {
             await RegionalAdminService.deleteLocation(deletingLocation.id)
             setDeleteOpen(false)
             setDeletingLocation(null)
+            setToast({ message: 'Location deleted successfully', type: 'success' })
             fetchLocations(page, searchTerm, filterStatus)
         } catch (err: any) {
-            alert(err.message || 'Failed to delete location')
+            setToast({ message: err.message || 'Failed to delete location', type: 'error' })
         } finally {
             setDeleting(false)
         }
@@ -681,17 +677,32 @@ export default function RegionalLocationsPage() {
                 </div>
             )}
 
-            {/* Modals */}
-            <LocationFormModal
+            {/* Toast */}
+            {toast && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg ${
+                        toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+                    }`}
+                >
+                    <span className="text-sm font-medium">{toast.message}</span>
+                    <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70"><X className="w-4 h-4" /></button>
+                </motion.div>
+            )}
+
+            {/* Drawers / Modals */}
+            <LocationFormDrawer
                 open={formOpen}
-                onClose={() => setFormOpen(false)}
+                onClose={() => { setFormOpen(false); setEditingId(null) }}
                 onSubmit={handleFormSubmit}
                 initialData={formData}
                 submitting={submitting}
                 title={formTitle}
             />
 
-            <LocationDetailModal
+            <LocationDetailDrawer
                 open={viewOpen}
                 onClose={() => { setViewOpen(false); setViewLocation(null) }}
                 location={viewLocation}

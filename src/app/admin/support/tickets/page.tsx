@@ -33,11 +33,17 @@ export default function SupportTicketsPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        title: string
+        description: string
+        priority: SupportTicket['priority']
+        status: SupportTicket['status']
+        assignedTo: string
+    }>({
         title: '',
         description: '',
-        priority: 'medium' as const,
-        status: 'open' as const,
+        priority: 'medium',
+        status: 'open',
         assignedTo: '',
     })
 

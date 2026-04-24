@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { TrendingUp, Users, DollarSign, Activity, Calendar, ChevronLeft, ChevronRight, AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { apiClient } from '@/services/api/client'
 
 interface DashboardMetrics {
     totalRevenue: number
@@ -54,22 +55,25 @@ export default function AdminDashboard() {
             if (startDate) params.append('startDate', startDate)
             if (endDate) params.append('endDate', endDate)
 
-            const metricsResponse = await fetch(`/api/v1/admin/dashboard/metrics?${params}`)
-            if (metricsResponse.ok) {
-                const metricsData = await metricsResponse.json()
-                setMetrics(metricsData.data || metricsData)
-            }
+            const qs = params.toString() ? `?${params.toString()}` : ''
 
-            const revenueResponse = await fetch(`/api/v1/admin/dashboard/revenue-trend?${params}`)
-            if (revenueResponse.ok) {
-                const revenueDataResponse = await revenueResponse.json()
-                setRevenueData(revenueDataResponse.data || [])
-            }
+            const [metricsRes, revenueRes, activitiesRes] = await Promise.allSettled([
+                apiClient.get(`/admin/dashboard/metrics${qs}`),
+                apiClient.get(`/admin/dashboard/revenue-trend${qs}`),
+                apiClient.get(`/admin/dashboard/activities${qs}`),
+            ])
 
-            const activitiesResponse = await fetch(`/api/v1/admin/dashboard/activities?${params}`)
-            if (activitiesResponse.ok) {
-                const activitiesDataResponse = await activitiesResponse.json()
-                setActivities(activitiesDataResponse.data || [])
+            if (metricsRes.status === 'fulfilled') {
+                const body: any = metricsRes.value
+                setMetrics(body?.data || body)
+            }
+            if (revenueRes.status === 'fulfilled') {
+                const body: any = revenueRes.value
+                setRevenueData(body?.data || [])
+            }
+            if (activitiesRes.status === 'fulfilled') {
+                const body: any = activitiesRes.value
+                setActivities(body?.data || [])
             }
 
             toast.success('Dashboard data loaded')

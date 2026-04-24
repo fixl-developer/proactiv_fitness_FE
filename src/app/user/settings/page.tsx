@@ -4,21 +4,29 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import {
     Lock,
     Mail,
     Phone,
     MapPin,
-    Bell,
-    Eye,
-    EyeOff,
     Save,
     AlertCircle,
     CheckCircle2,
-    Loader
+    Loader,
+    Eye,
+    EyeOff,
+    KeyRound
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import settingsService from '@/services/modules/settings.service'
+import {
+    validateEmail,
+    validatePhone,
+    validatePassword,
+    validateConfirmPassword,
+    validateRequired
+} from '@/utils/validation'
 
 interface SettingsData {
     email: string
@@ -50,100 +58,126 @@ interface PasswordData {
     confirmPassword: string
 }
 
+const EMPTY_SETTINGS: SettingsData = {
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    notifications: {
+        emailNotifications: false,
+        smsNotifications: false,
+        pushNotifications: false,
+        classReminders: false,
+        paymentAlerts: false,
+        promotionalEmails: false,
+    },
+    privacy: {
+        profileVisibility: 'private',
+        showAchievements: false,
+        showProgress: false,
+        allowMessaging: false,
+    },
+}
+
 export default function SettingsPage() {
     const { user } = useAuth()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [activeTab, setActiveTab] = useState<'account' | 'notifications' | 'privacy' | 'password'>('account')
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-    const [showPassword, setShowPassword] = useState(false)
-    const [showNewPassword, setShowNewPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [passwordDrawerOpen, setPasswordDrawerOpen] = useState(false)
+    const [showCurrent, setShowCurrent] = useState(false)
+    const [showNew, setShowNew] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
 
     const [settings, setSettings] = useState<SettingsData>({
+        ...EMPTY_SETTINGS,
         email: user?.email || '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: '',
-        notifications: {
-            emailNotifications: true,
-            smsNotifications: false,
-            pushNotifications: true,
-            classReminders: true,
-            paymentAlerts: true,
-            promotionalEmails: false,
-        },
-        privacy: {
-            profileVisibility: 'private',
-            showAchievements: true,
-            showProgress: true,
-            allowMessaging: true,
-        },
     })
+    const [accountErrors, setAccountErrors] = useState<Record<string, string>>({})
 
     const [passwordData, setPasswordData] = useState<PasswordData>({
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
     })
+    const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         loadSettings()
     }, [])
 
+    const showMessage = (type: 'success' | 'error', text: string) => {
+        setMessage({ type, text })
+        setTimeout(() => setMessage(null), 3500)
+    }
+
     const loadSettings = async () => {
         try {
             setLoading(true)
             const data = await settingsService.getSettings()
-            if (data) {
-                setSettings(prev => ({ ...prev, ...data }))
+            if (data && typeof data === 'object') {
+                setSettings(prev => ({
+                    ...prev,
+                    ...data,
+                    email: data.email || user?.email || '',
+                    notifications: { ...prev.notifications, ...(data.notifications || {}) },
+                    privacy: { ...prev.privacy, ...(data.privacy || {}) },
+                }))
             }
         } catch (error) {
             console.error('Failed to load settings:', error)
-            setMessage({ type: 'error', text: 'Failed to load settings' })
+            showMessage('error', 'Failed to load settings')
         } finally {
             setLoading(false)
         }
     }
 
     const handleAccountChange = (field: string, value: string) => {
-        setSettings(prev => ({
-            ...prev,
-            [field]: value
-        }))
+        setSettings(prev => ({ ...prev, [field]: value }))
+        if (accountErrors[field]) {
+            setAccountErrors(prev => ({ ...prev, [field]: '' }))
+        }
     }
 
     const handleNotificationChange = (field: string, value: boolean) => {
         setSettings(prev => ({
             ...prev,
-            notifications: {
-                ...prev.notifications,
-                [field]: value
-            }
+            notifications: { ...prev.notifications, [field]: value }
         }))
     }
 
     const handlePrivacyChange = (field: string, value: string | boolean) => {
         setSettings(prev => ({
             ...prev,
-            privacy: {
-                ...prev.privacy,
-                [field]: value
-            }
+            privacy: { ...prev.privacy, [field]: value }
         }))
     }
 
-    const handlePasswordChange = (field: string, value: string) => {
-        setPasswordData(prev => ({
-            ...prev,
-            [field]: value
-        }))
+    const handlePasswordFieldChange = (field: keyof PasswordData, value: string) => {
+        setPasswordData(prev => ({ ...prev, [field]: value }))
+        if (passwordErrors[field]) {
+            setPasswordErrors(prev => ({ ...prev, [field]: '' }))
+        }
+    }
+
+    const validateAccount = (): boolean => {
+        const errors: Record<string, string> = {}
+        const emailErr = validateEmail(settings.email)
+        if (emailErr) errors.email = emailErr
+        if (settings.phone) {
+            const phoneErr = validatePhone(settings.phone, false)
+            if (phoneErr) errors.phone = phoneErr
+        }
+        setAccountErrors(errors)
+        return Object.keys(errors).length === 0
     }
 
     const saveAccountSettings = async () => {
+        if (!validateAccount()) return
         try {
             setSaving(true)
             await settingsService.updateSettings({
@@ -155,10 +189,9 @@ export default function SettingsPage() {
                 zipCode: settings.zipCode,
                 country: settings.country,
             })
-            setMessage({ type: 'success', text: 'Account settings updated successfully' })
-            setTimeout(() => setMessage(null), 3000)
+            showMessage('success', 'Account settings updated successfully')
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to update account settings' })
+            showMessage('error', 'Failed to update account settings')
         } finally {
             setSaving(false)
         }
@@ -168,10 +201,9 @@ export default function SettingsPage() {
         try {
             setSaving(true)
             await settingsService.updateNotificationPreferences(settings.notifications)
-            setMessage({ type: 'success', text: 'Notification preferences updated' })
-            setTimeout(() => setMessage(null), 3000)
+            showMessage('success', 'Notification preferences updated')
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to update notification preferences' })
+            showMessage('error', 'Failed to update notification preferences')
         } finally {
             setSaving(false)
         }
@@ -181,37 +213,40 @@ export default function SettingsPage() {
         try {
             setSaving(true)
             await settingsService.updatePrivacySettings(settings.privacy)
-            setMessage({ type: 'success', text: 'Privacy settings updated' })
-            setTimeout(() => setMessage(null), 3000)
+            showMessage('success', 'Privacy settings updated')
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to update privacy settings' })
+            showMessage('error', 'Failed to update privacy settings')
         } finally {
             setSaving(false)
         }
     }
 
+    const validatePasswordForm = (): boolean => {
+        const errors: Record<string, string> = {}
+        const curErr = validateRequired(passwordData.currentPassword, 'Current password')
+        if (curErr) errors.currentPassword = curErr
+        const newErr = validatePassword(passwordData.newPassword)
+        if (newErr) errors.newPassword = newErr
+        const confirmErr = validateConfirmPassword(passwordData.newPassword, passwordData.confirmPassword)
+        if (confirmErr) errors.confirmPassword = confirmErr
+        setPasswordErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
     const changePassword = async () => {
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setMessage({ type: 'error', text: 'Passwords do not match' })
-            return
-        }
-
-        if (passwordData.newPassword.length < 8) {
-            setMessage({ type: 'error', text: 'Password must be at least 8 characters' })
-            return
-        }
-
+        if (!validatePasswordForm()) return
         try {
             setSaving(true)
             await settingsService.changePassword(
                 passwordData.currentPassword,
                 passwordData.newPassword
             )
-            setMessage({ type: 'success', text: 'Password changed successfully' })
+            showMessage('success', 'Password changed successfully')
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
-            setTimeout(() => setMessage(null), 3000)
+            setPasswordErrors({})
+            setPasswordDrawerOpen(false)
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to change password' })
+            showMessage('error', 'Failed to change password')
         } finally {
             setSaving(false)
         }
@@ -243,8 +278,8 @@ export default function SettingsPage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${message.type === 'success'
-                            ? 'bg-emerald-50 border border-emerald-200'
-                            : 'bg-red-50 border border-red-200'
+                        ? 'bg-emerald-50 border border-emerald-200'
+                        : 'bg-red-50 border border-red-200'
                         }`}
                 >
                     {message.type === 'success' ? (
@@ -265,8 +300,8 @@ export default function SettingsPage() {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === tab
-                                ? 'border-emerald-600 text-emerald-600'
-                                : 'border-transparent text-gray-600 hover:text-gray-900'
+                            ? 'border-emerald-600 text-emerald-600'
+                            : 'border-transparent text-gray-600 hover:text-gray-900'
                             }`}
                     >
                         {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -285,7 +320,6 @@ export default function SettingsPage() {
                         <h2 className="text-lg font-semibold text-gray-900 mb-6">Account Information</h2>
 
                         <div className="space-y-4">
-                            {/* Email */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <Mail className="w-4 h-4 inline mr-2" />
@@ -298,9 +332,9 @@ export default function SettingsPage() {
                                     className="w-full"
                                     placeholder="your@email.com"
                                 />
+                                {accountErrors.email && <p className="text-xs text-red-600 mt-1">{accountErrors.email}</p>}
                             </div>
 
-                            {/* Phone */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <Phone className="w-4 h-4 inline mr-2" />
@@ -313,9 +347,9 @@ export default function SettingsPage() {
                                     className="w-full"
                                     placeholder="+1 (555) 000-0000"
                                 />
+                                {accountErrors.phone && <p className="text-xs text-red-600 mt-1">{accountErrors.phone}</p>}
                             </div>
 
-                            {/* Address */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <MapPin className="w-4 h-4 inline mr-2" />
@@ -330,7 +364,6 @@ export default function SettingsPage() {
                                 />
                             </div>
 
-                            {/* City, State, Zip */}
                             <div className="grid grid-cols-3 gap-4">
                                 <Input
                                     type="text"
@@ -352,7 +385,6 @@ export default function SettingsPage() {
                                 />
                             </div>
 
-                            {/* Country */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
                                 <Input
@@ -437,7 +469,6 @@ export default function SettingsPage() {
                         <h2 className="text-lg font-semibold text-gray-900 mb-6">Privacy Settings</h2>
 
                         <div className="space-y-4">
-                            {/* Profile Visibility */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Profile Visibility</label>
                                 <select
@@ -451,7 +482,6 @@ export default function SettingsPage() {
                                 </select>
                             </div>
 
-                            {/* Show Achievements */}
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                 <div>
                                     <p className="font-medium text-gray-900">Show Achievements</p>
@@ -468,7 +498,6 @@ export default function SettingsPage() {
                                 </label>
                             </div>
 
-                            {/* Show Progress */}
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                 <div>
                                     <p className="font-medium text-gray-900">Show Progress</p>
@@ -485,7 +514,6 @@ export default function SettingsPage() {
                                 </label>
                             </div>
 
-                            {/* Allow Messaging */}
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                                 <div>
                                     <p className="font-medium text-gray-900">Allow Messaging</p>
@@ -515,7 +543,7 @@ export default function SettingsPage() {
                 </motion.div>
             )}
 
-            {/* Password Tab */}
+            {/* Password Tab - opens drawer */}
             {activeTab === 'password' && (
                 <motion.div
                     initial={{ opacity: 0 }}
@@ -523,91 +551,147 @@ export default function SettingsPage() {
                     className="space-y-6"
                 >
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-6">Change Password</h2>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Password & Security</h2>
+                        <p className="text-sm text-gray-600 mb-6">
+                            Keep your account secure by using a strong password and changing it regularly.
+                        </p>
 
-                        <div className="space-y-4">
-                            {/* Current Password */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Lock className="w-4 h-4 inline mr-2" />
-                                    Current Password
-                                </label>
-                                <div className="relative">
-                                    <Input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={passwordData.currentPassword}
-                                        onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                                        className="w-full pr-10"
-                                        placeholder="Enter current password"
-                                    />
-                                    <button
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-                                    >
-                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
+                        <div className="flex items-start gap-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
+                            <div className="bg-emerald-100 p-3 rounded-lg">
+                                <Lock className="w-5 h-5 text-emerald-600" />
                             </div>
-
-                            {/* New Password */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Lock className="w-4 h-4 inline mr-2" />
-                                    New Password
-                                </label>
-                                <div className="relative">
-                                    <Input
-                                        type={showNewPassword ? 'text' : 'password'}
-                                        value={passwordData.newPassword}
-                                        onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                                        className="w-full pr-10"
-                                        placeholder="Enter new password"
-                                    />
-                                    <button
-                                        onClick={() => setShowNewPassword(!showNewPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-                                    >
-                                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-900">Change your password</p>
+                                <p className="text-sm text-gray-600">
+                                    Minimum 8 characters with uppercase, lowercase, number and special character.
+                                </p>
                             </div>
-
-                            {/* Confirm Password */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Lock className="w-4 h-4 inline mr-2" />
-                                    Confirm Password
-                                </label>
-                                <div className="relative">
-                                    <Input
-                                        type={showConfirmPassword ? 'text' : 'password'}
-                                        value={passwordData.confirmPassword}
-                                        onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                                        className="w-full pr-10"
-                                        placeholder="Confirm new password"
-                                    />
-                                    <button
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
-                                    >
-                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                            </div>
+                            <Button
+                                onClick={() => setPasswordDrawerOpen(true)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                                <KeyRound className="w-4 h-4 mr-2" />
+                                Change Password
+                            </Button>
                         </div>
+                    </div>
+                </motion.div>
+            )}
 
+            {/* Password Change Drawer */}
+            <SlideInDrawer
+                isOpen={passwordDrawerOpen}
+                onClose={() => {
+                    setPasswordDrawerOpen(false)
+                    setPasswordErrors({})
+                }}
+                title="Change Password"
+                description="Set a new password for your account"
+                size="md"
+                footer={
+                    <div className="flex items-center justify-end gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setPasswordDrawerOpen(false)
+                                setPasswordErrors({})
+                            }}
+                            disabled={saving}
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             onClick={changePassword}
                             disabled={saving}
-                            className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
                             <Lock className="w-4 h-4 mr-2" />
                             {saving ? 'Changing...' : 'Change Password'}
                         </Button>
                     </div>
-                </motion.div>
-            )}
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Current Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type={showCurrent ? 'text' : 'password'}
+                                value={passwordData.currentPassword}
+                                onChange={(e) => handlePasswordFieldChange('currentPassword', e.target.value)}
+                                className="w-full pr-10"
+                                placeholder="Enter current password"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowCurrent(!showCurrent)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                            >
+                                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {passwordErrors.currentPassword && (
+                            <p className="text-xs text-red-600 mt-1">{passwordErrors.currentPassword}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            New Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type={showNew ? 'text' : 'password'}
+                                value={passwordData.newPassword}
+                                onChange={(e) => handlePasswordFieldChange('newPassword', e.target.value)}
+                                className="w-full pr-10"
+                                placeholder="Enter new password"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNew(!showNew)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                            >
+                                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {passwordErrors.newPassword ? (
+                            <p className="text-xs text-red-600 mt-1">{passwordErrors.newPassword}</p>
+                        ) : (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Min 8 chars: 1 uppercase, 1 lowercase, 1 number, 1 special character
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Confirm New Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                            <Input
+                                type={showConfirm ? 'text' : 'password'}
+                                value={passwordData.confirmPassword}
+                                onChange={(e) => handlePasswordFieldChange('confirmPassword', e.target.value)}
+                                className="w-full pr-10"
+                                placeholder="Re-enter new password"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirm(!showConfirm)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                            >
+                                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                        {passwordErrors.confirmPassword && (
+                            <p className="text-xs text-red-600 mt-1">{passwordErrors.confirmPassword}</p>
+                        )}
+                    </div>
+                </div>
+            </SlideInDrawer>
         </div>
     )
 }

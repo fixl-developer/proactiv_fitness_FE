@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Building2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Building2, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { BusinessUnitService, CountryService } from '@/services/businessConfigService'
@@ -19,9 +20,24 @@ interface BusinessUnit {
   createdAt?: string
 }
 
+interface Country {
+  id: string
+  name: string
+  code: string
+}
+
+// Valid business unit name: letters, digits, spaces, and &.'- (covers real-world
+// names like "5th Ave Gym", "St. Mary's Academy", "Proactiv - HQ").
+const NAME_ALLOWED_RE = /^[A-Za-z0-9\s&'.\-]+$/
+const NAME_ALLOWED_KEY_RE = /^[A-Za-z0-9\s&'.\-]$/
+const CODE_ALLOWED_KEY_RE = /^[A-Za-z0-9]$/
+const MANAGER_ID_ALLOWED_KEY_RE = /^[A-Za-z0-9]$/
+const OBJECT_ID_RE = /^[a-f0-9]{24}$/i
+
 export default function BusinessUnitsPage() {
   const [units, setUnits] = useState<BusinessUnit[]>([])
-  const [countries, setCountries] = useState<any[]>([])
+  const [countries, setCountries] = useState<Country[]>([])
+  const [countriesLoading, setCountriesLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -34,7 +50,7 @@ export default function BusinessUnitsPage() {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    type: 'franchise',
+    type: 'GYM',
     countryId: '',
     managerId: '',
     isActive: true,
@@ -42,12 +58,14 @@ export default function BusinessUnitsPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Business unit types
+  // Business unit types — must match backend enum BusinessUnitType
   const unitTypes = [
-    { value: 'franchise', label: 'Franchise' },
-    { value: 'corporate', label: 'Corporate' },
-    { value: 'partner', label: 'Partner' },
-    { value: 'regional', label: 'Regional Office' },
+    { value: 'GYM', label: 'Gym' },
+    { value: 'SCHOOL', label: 'School' },
+    { value: 'CAMP', label: 'Camp' },
+    { value: 'EVENT', label: 'Event' },
+    { value: 'PARTY', label: 'Party' },
+    { value: 'ELITE_ACADEMY', label: 'Elite Academy' },
   ]
 
   // Load business units
@@ -69,13 +87,16 @@ export default function BusinessUnitsPage() {
     }
   }
 
-  // Load countries for dropdown
+  // Load countries for dropdown (backend-only — source of truth is Countries & Regions page)
   const loadCountries = async () => {
     try {
-      const response = await CountryService.getAll({ limit: 100 })
-      setCountries(response.data || [])
+      setCountriesLoading(true)
+      const response = await CountryService.getAll({ limit: 500 })
+      setCountries((response.data as Country[]) || [])
     } catch (error) {
       console.error('Error loading countries:', error)
+    } finally {
+      setCountriesLoading(false)
     }
   }
 
@@ -87,18 +108,35 @@ export default function BusinessUnitsPage() {
     loadCountries()
   }, [])
 
-  // Validate form
+  // ── Field validators ─────────────────────────────────────────
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) newErrors.name = 'Business unit name is required'
-    else if (formData.name.length < 2) newErrors.name = 'Name must be at least 2 characters'
+    // Name
+    const name = formData.name.trim()
+    if (!name) newErrors.name = 'Business unit name is required'
+    else if (name.length < 2) newErrors.name = 'Name must be at least 2 characters'
+    else if (name.length > 80) newErrors.name = 'Name must be at most 80 characters'
+    else if (!NAME_ALLOWED_RE.test(name)) newErrors.name = "Name can only contain letters, numbers, spaces, and & . ' -"
 
-    if (!formData.code) newErrors.code = 'Business unit code is required'
-    else if (!/^[A-Z0-9]{2,10}$/.test(formData.code)) newErrors.code = 'Code must be 2-10 uppercase letters/numbers'
+    // Code
+    const code = formData.code.trim()
+    if (!code) newErrors.code = 'Business unit code is required'
+    else if (!/^[A-Z0-9]{2,10}$/.test(code)) newErrors.code = 'Code must be 2-10 uppercase letters/numbers'
 
+    // Type
     if (!formData.type) newErrors.type = 'Business unit type is required'
+    else if (!unitTypes.some((t) => t.value === formData.type)) newErrors.type = 'Invalid business unit type'
+
+    // Country — must match an existing backend-added country
     if (!formData.countryId) newErrors.countryId = 'Country is required'
+    else if (!countries.some((c) => c.id === formData.countryId)) newErrors.countryId = 'Please pick a valid country'
+
+    // Manager ID — optional, but if provided must be a Mongo ObjectId
+    const managerId = formData.managerId.trim()
+    if (managerId && !OBJECT_ID_RE.test(managerId)) {
+      newErrors.managerId = 'Manager ID must be a 24-character hex ID (or leave empty)'
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -116,11 +154,21 @@ export default function BusinessUnitsPage() {
     try {
       setSubmitting(true)
 
+      // Backend BusinessUnit schema: name, code, type, countryId, regionId (opt),
+      // description, isActive, settings. managerId is UI-only — backend ignores it.
+      const payload: any = {
+        name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase(),
+        type: formData.type,
+        countryId: formData.countryId,
+        isActive: formData.isActive,
+      }
+
       if (editingId) {
-        await BusinessUnitService.update(editingId, formData)
+        await BusinessUnitService.update(editingId, payload)
         toast.success('Business unit updated successfully')
       } else {
-        await BusinessUnitService.create(formData)
+        await BusinessUnitService.create(payload)
         toast.success('Business unit created successfully')
       }
 
@@ -146,6 +194,7 @@ export default function BusinessUnitsPage() {
       isActive: unit.isActive,
     })
     setEditingId(unit.id)
+    setErrors({})
     setShowForm(true)
   }
 
@@ -167,7 +216,7 @@ export default function BusinessUnitsPage() {
     setFormData({
       name: '',
       code: '',
-      type: 'franchise',
+      type: 'GYM',
       countryId: '',
       managerId: '',
       isActive: true,
@@ -182,11 +231,23 @@ export default function BusinessUnitsPage() {
     resetForm()
   }
 
-  // Get country name by ID
+  // Open form — block if no countries have been added yet.
+  const handleOpenAddForm = () => {
+    if (countries.length === 0 && !countriesLoading) {
+      toast.error('No countries added yet. Please add a country in Countries & Regions first.')
+      return
+    }
+    resetForm()
+    setShowForm(true)
+  }
+
+  // Get country name by ID (for table display)
   const getCountryName = (countryId: string) => {
     const country = countries.find((c) => c.id === countryId)
     return country?.name || countryId
   }
+
+  const noCountriesYet = !countriesLoading && countries.length === 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
@@ -203,6 +264,30 @@ export default function BusinessUnitsPage() {
           </div>
           <p className="text-slate-600">Manage franchises, corporate offices, and regional units</p>
         </motion.div>
+
+        {/* No countries banner */}
+        {noCountriesYet && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 border border-amber-300 bg-amber-50 rounded-lg flex items-start gap-3"
+          >
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-900">No countries added yet</p>
+              <p className="text-sm text-amber-800 mt-1">
+                Business units need a parent country. Add at least one country first, then come back here.
+              </p>
+              <Link
+                href="/admin/business-config/regions"
+                className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-amber-900 underline hover:text-amber-700"
+              >
+                Go to Countries &amp; Regions
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </motion.div>
+        )}
 
         {/* Controls */}
         <motion.div
@@ -224,11 +309,10 @@ export default function BusinessUnitsPage() {
             />
           </div>
           <button
-            onClick={() => {
-              resetForm()
-              setShowForm(true)
-            }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            onClick={handleOpenAddForm}
+            disabled={noCountriesYet}
+            title={noCountriesYet ? 'Add a country first in Countries & Regions' : undefined}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />
             Add Business Unit
@@ -283,8 +367,8 @@ export default function BusinessUnitsPage() {
                         <td className="px-6 py-4 text-sm">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${unit.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
                               }`}
                           >
                             {unit.isActive ? 'Active' : 'Inactive'}
@@ -345,7 +429,7 @@ export default function BusinessUnitsPage() {
           title={editingId ? 'Edit Business Unit' : 'Add New Business Unit'}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
@@ -354,6 +438,10 @@ export default function BusinessUnitsPage() {
               <input
                 type="text"
                 value={formData.name}
+                maxLength={80}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !NAME_ALLOWED_KEY_RE.test(e.key)) e.preventDefault()
+                }}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value })
                   if (errors.name) setErrors({ ...errors, name: '' })
@@ -363,6 +451,7 @@ export default function BusinessUnitsPage() {
                   }`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {!errors.name && <p className="mt-1 text-xs text-slate-500">2-80 characters. Letters, numbers, spaces and & . ' -</p>}
             </div>
 
             {/* Code */}
@@ -373,17 +462,21 @@ export default function BusinessUnitsPage() {
               <input
                 type="text"
                 value={formData.code}
+                maxLength={10}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !CODE_ALLOWED_KEY_RE.test(e.key)) e.preventDefault()
+                }}
                 onChange={(e) => {
-                  setFormData({ ...formData, code: e.target.value.toUpperCase() })
+                  const cleaned = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+                  setFormData({ ...formData, code: cleaned })
                   if (errors.code) setErrors({ ...errors, code: '' })
                 }}
                 placeholder="e.g., DXB01"
-                maxLength={10}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code}</p>}
-              <p className="mt-1 text-xs text-slate-500">2-10 uppercase letters/numbers (e.g., DXB01, HQ001)</p>
+              {!errors.code && <p className="mt-1 text-xs text-slate-500">2-10 uppercase letters/numbers (e.g., DXB01, HQ001)</p>}
             </div>
 
             {/* Type */}
@@ -420,17 +513,38 @@ export default function BusinessUnitsPage() {
                   setFormData({ ...formData, countryId: e.target.value })
                   if (errors.countryId) setErrors({ ...errors, countryId: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.countryId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                disabled={countries.length === 0}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 disabled:bg-slate-100 disabled:cursor-not-allowed ${errors.countryId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               >
-                <option value="">Select Country</option>
+                <option value="">
+                  {countriesLoading
+                    ? 'Loading countries...'
+                    : countries.length === 0
+                      ? 'No countries added yet'
+                      : 'Select Country'}
+                </option>
                 {countries.map((country) => (
                   <option key={country.id} value={country.id}>
-                    {country.name}
+                    {country.name} ({country.code})
                   </option>
                 ))}
               </select>
               {errors.countryId && <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>}
+              {!errors.countryId && countries.length === 0 && !countriesLoading && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Add a country first in{' '}
+                  <Link href="/admin/business-config/regions" className="underline font-medium">
+                    Countries &amp; Regions
+                  </Link>
+                  .
+                </p>
+              )}
+              {!errors.countryId && countries.length > 0 && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Only countries added in Countries &amp; Regions are shown here.
+                </p>
+              )}
             </div>
 
             {/* Manager ID (Optional) */}
@@ -439,11 +553,25 @@ export default function BusinessUnitsPage() {
               <input
                 type="text"
                 value={formData.managerId}
-                onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-                placeholder="e.g., MGR001"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                maxLength={24}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !MANAGER_ID_ALLOWED_KEY_RE.test(e.key)) e.preventDefault()
+                }}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/[^A-Za-z0-9]/g, '')
+                  setFormData({ ...formData, managerId: cleaned })
+                  if (errors.managerId) setErrors({ ...errors, managerId: '' })
+                }}
+                placeholder="e.g., 65a1b2c3d4e5f6a7b8c9d0e1"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.managerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
-              <p className="mt-1 text-xs text-slate-500">Leave empty if no manager assigned yet</p>
+              {errors.managerId && <p className="mt-1 text-sm text-red-600">{errors.managerId}</p>}
+              {!errors.managerId && (
+                <p className="mt-1 text-xs text-slate-500">
+                  24-character hex ID of an existing user. Leave empty if no manager is assigned yet.
+                </p>
+              )}
             </div>
 
             {/* Active Status */}

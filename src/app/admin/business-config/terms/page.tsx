@@ -5,12 +5,14 @@ import { motion } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { TermService, LocationService } from '@/services/businessConfigService'
+import { TermService, LocationService, BusinessUnitService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface Term {
   id: string
   name: string
+  code?: string
+  businessUnitId?: string
   startDate: string
   endDate: string
   locationId?: string
@@ -27,6 +29,7 @@ interface Holiday {
 export default function TermsPage() {
   const [terms, setTerms] = useState<Term[]>([])
   const [locations, setLocations] = useState<any[]>([])
+  const [businessUnits, setBusinessUnits] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -38,6 +41,8 @@ export default function TermsPage() {
 
   const [formData, setFormData] = useState({
     name: '',
+    code: '',
+    businessUnitId: '',
     startDate: '',
     endDate: '',
     locationId: '',
@@ -47,6 +52,7 @@ export default function TermsPage() {
 
   const [newHoliday, setNewHoliday] = useState({ name: '', date: '', type: 'Public Holiday' })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [holidayError, setHolidayError] = useState<string>('')
 
   const holidayTypes = ['Public Holiday', 'School Holiday', 'Company Holiday', 'Observance']
 
@@ -77,26 +83,68 @@ export default function TermsPage() {
     }
   }
 
+  const loadBusinessUnits = async () => {
+    try {
+      const response = await BusinessUnitService.getAll({ limit: 100 })
+      setBusinessUnits(response.data || [])
+    } catch (error) {
+      console.error('Error loading business units:', error)
+    }
+  }
+
   useEffect(() => {
     loadTerms()
   }, [currentPage, searchTerm])
 
   useEffect(() => {
     loadLocations()
+    loadBusinessUnits()
   }, [])
 
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) newErrors.name = 'Term name is required'
+    if (!formData.name || !formData.name.trim()) newErrors.name = 'Term name is required'
+    else if (formData.name.trim().length < 2) newErrors.name = 'Term name must be at least 2 characters'
+    else if (formData.name.trim().length > 80) newErrors.name = 'Term name must be 80 characters or fewer'
+
+    if (formData.code && formData.code.trim() && !/^[A-Z0-9-]{2,20}$/.test(formData.code.trim())) {
+      newErrors.code = 'Code must be 2-20 chars: uppercase letters, digits and hyphens only'
+    }
+
+    if (!formData.businessUnitId) newErrors.businessUnitId = 'Business unit is required'
+
     if (!formData.startDate) newErrors.startDate = 'Start date is required'
     if (!formData.endDate) newErrors.endDate = 'End date is required'
 
     if (formData.startDate && formData.endDate) {
       const start = new Date(formData.startDate)
       const end = new Date(formData.endDate)
-      if (end <= start) {
+      if (isNaN(start.getTime())) newErrors.startDate = 'Invalid start date'
+      if (isNaN(end.getTime())) newErrors.endDate = 'Invalid end date'
+      if (!newErrors.startDate && !newErrors.endDate && end <= start) {
         newErrors.endDate = 'End date must be after start date'
+      }
+    }
+
+    // Validate any holidays already added
+    for (const [i, h] of formData.holidays.entries()) {
+      if (!h.name || !h.name.trim()) {
+        newErrors.holidays = `Holiday #${i + 1} is missing a name`
+        break
+      }
+      if (!h.date || isNaN(new Date(h.date).getTime())) {
+        newErrors.holidays = `Holiday #${i + 1} has an invalid date`
+        break
+      }
+      if (formData.startDate && formData.endDate) {
+        const hd = new Date(h.date)
+        const start = new Date(formData.startDate)
+        const end = new Date(formData.endDate)
+        if (hd < start || hd > end) {
+          newErrors.holidays = `Holiday "${h.name}" falls outside the term range`
+          break
+        }
       }
     }
 
@@ -137,10 +185,15 @@ export default function TermsPage() {
   const handleEdit = (term: Term) => {
     setFormData({
       name: term.name,
+      code: term.code || '',
+      businessUnitId: term.businessUnitId || '',
       startDate: term.startDate?.split('T')[0] || '',
       endDate: term.endDate?.split('T')[0] || '',
       locationId: term.locationId || '',
-      holidays: term.holidays || [],
+      holidays: (term.holidays || []).map((h) => ({
+        ...h,
+        date: h.date?.split('T')[0] || h.date || '',
+      })),
       isActive: term.isActive,
     })
     setEditingId(term.id)
@@ -162,6 +215,8 @@ export default function TermsPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      code: '',
+      businessUnitId: '',
       startDate: '',
       endDate: '',
       locationId: '',
@@ -170,6 +225,7 @@ export default function TermsPage() {
     })
     setNewHoliday({ name: '', date: '', type: 'Public Holiday' })
     setErrors({})
+    setHolidayError('')
     setEditingId(null)
   }
 
@@ -179,13 +235,43 @@ export default function TermsPage() {
   }
 
   const addHoliday = () => {
-    if (newHoliday.name.trim() && newHoliday.date) {
-      setFormData({
-        ...formData,
-        holidays: [...formData.holidays, { ...newHoliday }],
-      })
-      setNewHoliday({ name: '', date: '', type: 'Public Holiday' })
+    const name = newHoliday.name.trim()
+    if (!name) {
+      setHolidayError('Holiday name is required')
+      return
     }
+    if (name.length < 2) {
+      setHolidayError('Holiday name must be at least 2 characters')
+      return
+    }
+    if (!newHoliday.date) {
+      setHolidayError('Holiday date is required')
+      return
+    }
+    const hd = new Date(newHoliday.date)
+    if (isNaN(hd.getTime())) {
+      setHolidayError('Holiday date is invalid')
+      return
+    }
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate)
+      const end = new Date(formData.endDate)
+      if (hd < start || hd > end) {
+        setHolidayError('Holiday date must fall within the term range')
+        return
+      }
+    }
+    if (formData.holidays.some((h) => h.date === newHoliday.date && h.name.toLowerCase() === name.toLowerCase())) {
+      setHolidayError('This holiday is already added')
+      return
+    }
+    setFormData({
+      ...formData,
+      holidays: [...formData.holidays, { ...newHoliday, name }],
+    })
+    setNewHoliday({ name: '', date: '', type: 'Public Holiday' })
+    setHolidayError('')
+    if (errors.holidays) setErrors({ ...errors, holidays: '' })
   }
 
   const removeHoliday = (index: number) => {
@@ -345,15 +431,69 @@ export default function TermsPage() {
               <input
                 type="text"
                 value={formData.name}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/^[A-Za-z0-9\s'&().,-]$/.test(e.key)) e.preventDefault()
+                }}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value })
                   if (errors.name) setErrors({ ...errors, name: '' })
                 }}
                 placeholder="e.g., Spring Term 2025"
+                maxLength={80}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {!errors.name && <p className="mt-1 text-xs text-slate-500">2-80 chars; letters, digits, spaces and basic punctuation</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Business Unit <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.businessUnitId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, businessUnitId: e.target.value })
+                    if (errors.businessUnitId) setErrors({ ...errors, businessUnitId: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.businessUnitId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                >
+                  <option value="">Select Business Unit</option>
+                  {businessUnits.map((unit) => (
+                    <option key={unit.id || unit._id} value={unit.id || unit._id}>
+                      {unit.name}{unit.code ? ` (${unit.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {errors.businessUnitId && <p className="mt-1 text-sm text-red-600">{errors.businessUnitId}</p>}
+                {!errors.businessUnitId && businessUnits.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-600">No business units yet — create one under Business Units first.</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">Term Code</label>
+                <input
+                  type="text"
+                  value={formData.code}
+                  onKeyDown={(e) => {
+                    if (e.key.length === 1 && !/^[A-Za-z0-9-]$/.test(e.key)) e.preventDefault()
+                  }}
+                  onChange={(e) => {
+                    setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })
+                    if (errors.code) setErrors({ ...errors, code: '' })
+                  }}
+                  placeholder="Auto-generated if empty (e.g., SPR-2025)"
+                  maxLength={20}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
+                />
+                {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code}</p>}
+                {!errors.code && <p className="mt-1 text-xs text-slate-500">Unique code for the term (A-Z, 0-9, hyphens)</p>}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -381,6 +521,7 @@ export default function TermsPage() {
                 <input
                   type="date"
                   value={formData.endDate}
+                  min={formData.startDate || undefined}
                   onChange={(e) => {
                     setFormData({ ...formData, endDate: e.target.value })
                     if (errors.endDate) setErrors({ ...errors, endDate: '' })
@@ -406,6 +547,7 @@ export default function TermsPage() {
                   </option>
                 ))}
               </select>
+              <p className="mt-1 text-xs text-slate-500">Leave blank to apply this term to all locations under the business unit</p>
             </div>
 
             <div>
@@ -415,14 +557,26 @@ export default function TermsPage() {
                   <input
                     type="text"
                     value={newHoliday.name}
-                    onChange={(e) => setNewHoliday({ ...newHoliday, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key.length === 1 && !/^[A-Za-z0-9\s'&().,-]$/.test(e.key)) e.preventDefault()
+                    }}
+                    onChange={(e) => {
+                      setNewHoliday({ ...newHoliday, name: e.target.value })
+                      if (holidayError) setHolidayError('')
+                    }}
                     placeholder="Holiday name"
+                    maxLength={60}
                     className="col-span-5 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                   <input
                     type="date"
                     value={newHoliday.date}
-                    onChange={(e) => setNewHoliday({ ...newHoliday, date: e.target.value })}
+                    min={formData.startDate || undefined}
+                    max={formData.endDate || undefined}
+                    onChange={(e) => {
+                      setNewHoliday({ ...newHoliday, date: e.target.value })
+                      if (holidayError) setHolidayError('')
+                    }}
                     className="col-span-4 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                   <select
@@ -444,6 +598,8 @@ export default function TermsPage() {
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
+                {holidayError && <p className="text-sm text-red-600">{holidayError}</p>}
+                {errors.holidays && <p className="text-sm text-red-600">{errors.holidays}</p>}
               </div>
 
               <div className="space-y-2">

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useRealtimeRefresh } from '@/hooks/useRealtime'
 import {
     Calendar, Clock, TrendingUp, Award, BookOpen, CreditCard, ArrowRight, RefreshCw,
     Target, Flame, Brain, Sparkles, Loader2, AlertTriangle, CheckCircle, Trophy,
-    Zap, Apple, ArrowUp, ArrowDown, Shield, Star
+    Zap, Apple, ArrowUp, ArrowDown, Shield, Star, Filter
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -86,13 +86,53 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     )
 }
 
+type DateRangePreset = 'today' | 'week' | 'month' | 'last30' | 'custom'
+
+function computeRange(preset: DateRangePreset, customFrom: string, customTo: string): { from: string; to: string } {
+    const today = new Date()
+    const toIso = (d: Date) => d.toISOString().split('T')[0]
+    const end = new Date(today)
+
+    switch (preset) {
+        case 'today': {
+            return { from: toIso(today), to: toIso(today) }
+        }
+        case 'week': {
+            const start = new Date(today)
+            const day = start.getDay() // 0 = Sun
+            const diff = (day === 0 ? 6 : day - 1) // make Monday the start of week
+            start.setDate(start.getDate() - diff)
+            return { from: toIso(start), to: toIso(end) }
+        }
+        case 'month': {
+            const start = new Date(today.getFullYear(), today.getMonth(), 1)
+            return { from: toIso(start), to: toIso(end) }
+        }
+        case 'last30': {
+            const start = new Date(today)
+            start.setDate(start.getDate() - 29)
+            return { from: toIso(start), to: toIso(end) }
+        }
+        case 'custom': {
+            return { from: customFrom, to: customTo }
+        }
+    }
+}
+
 export default function UserDashboardPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [hasError, setHasError] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
+    const [isRangeReloading, setIsRangeReloading] = useState(false)
+    const hasLoadedOnceRef = useRef(false)
     const [stats, setStats] = useState<DashboardStats>(DEFAULT_STATS)
     const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
     const [progressData, setProgressData] = useState<any>(null)
+
+    // Date-range filter state
+    const [rangePreset, setRangePreset] = useState<DateRangePreset>('month')
+    const [customFrom, setCustomFrom] = useState<string>('')
+    const [customTo, setCustomTo] = useState<string>('')
 
     // AI States
     const [aiRecommendations, setAiRecommendations] = useState<any>(null)
@@ -112,12 +152,25 @@ export default function UserDashboardPage() {
 
     const loadDashboard = useCallback(async () => {
         try {
-            setIsLoading(true)
+            if (hasLoadedOnceRef.current) {
+                setIsRangeReloading(true)
+            } else {
+                setIsLoading(true)
+            }
             setHasError(false)
+
+            // Compute the active date range (skip when custom is picked but incomplete)
+            const { from, to } = computeRange(rangePreset, customFrom, customTo)
+            const hasRange = !!from && !!to
+            const params: Record<string, string> = {}
+            if (hasRange) {
+                params.from = from
+                params.to = to
+            }
 
             let dashboardData: any = null
             try {
-                const dashboardRes = await apiClient.get<any>('/user/dashboard')
+                const dashboardRes = await apiClient.get<any>('/user/dashboard', hasRange ? { params } : undefined)
                 dashboardData = dashboardRes?.data ?? dashboardRes
             } catch { /* fall back to individual calls */ }
 
@@ -161,8 +214,10 @@ export default function UserDashboardPage() {
             setHasError(true)
         } finally {
             setIsLoading(false)
+            setIsRangeReloading(false)
+            hasLoadedOnceRef.current = true
         }
-    }, [])
+    }, [rangePreset, customFrom, customTo])
 
     const loadAiRecommendations = useCallback(async () => {
         setAiLoading(true)
@@ -277,9 +332,54 @@ export default function UserDashboardPage() {
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back, {displayName}!</h1>
                     <p className="text-sm md:text-base text-gray-600 mt-2">Here&apos;s your fitness overview</p>
                 </div>
-                <Button id="user-dashboard-refresh-btn" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                    <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
-                </Button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-gray-500" />
+                        <select
+                            id="user-dashboard-range-preset"
+                            aria-label="Date range"
+                            value={rangePreset}
+                            onChange={(e) => setRangePreset(e.target.value as DateRangePreset)}
+                            disabled={isRangeReloading || refreshing}
+                            className="text-sm border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:border-emerald-500"
+                        >
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="last30">Last 30 Days</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        {isRangeReloading && (
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" aria-label="Reloading" />
+                        )}
+                    </div>
+                    {rangePreset === 'custom' && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="user-dashboard-range-from"
+                                type="date"
+                                aria-label="From date"
+                                value={customFrom}
+                                onChange={(e) => setCustomFrom(e.target.value)}
+                                max={customTo || undefined}
+                                className="text-sm border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <span className="text-xs text-gray-500">to</span>
+                            <input
+                                id="user-dashboard-range-to"
+                                type="date"
+                                aria-label="To date"
+                                value={customTo}
+                                onChange={(e) => setCustomTo(e.target.value)}
+                                min={customFrom || undefined}
+                                className="text-sm border border-gray-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:border-emerald-500"
+                            />
+                        </div>
+                    )}
+                    <Button id="user-dashboard-refresh-btn" variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                        <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}

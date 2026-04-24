@@ -86,7 +86,7 @@ export default function RegionalAdminDashboard() {
             setError(null)
 
             const [overview, approvalsResp] = await Promise.allSettled([
-                RegionalAdminService.getDashboardOverview(),
+                RegionalAdminService.getDashboardOverview(timeRange),
                 RegionalAdminService.getPendingApprovals(1, 10)
             ])
 

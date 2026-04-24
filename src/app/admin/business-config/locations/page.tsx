@@ -5,8 +5,9 @@ import { motion } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, MapPin, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { LocationService, BusinessUnitService } from '@/services/businessConfigService'
+import { LocationService, BusinessUnitService, CountryService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateEmail, validatePhone, validateName, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput } from '@/utils/validation'
 
 interface Location {
   id: string
@@ -38,18 +39,21 @@ export default function LocationsPage() {
 
   const [formData, setFormData] = useState({
     name: '',
+    code: '',
     address: '',
     city: '',
     state: '',
     country: '',
+    countryId: '',
     postalCode: '',
     phone: '',
     email: '',
     businessUnitId: '',
-    capacity: 0,
+    capacity: 1,
     facilities: [] as string[],
     isActive: true,
   })
+  const [countries, setCountries] = useState<any[]>([])
 
   const [newFacility, setNewFacility] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -81,29 +85,67 @@ export default function LocationsPage() {
     }
   }
 
+  const loadCountries = async () => {
+    try {
+      const response = await CountryService.getAll({ limit: 100 })
+      setCountries(response.data || [])
+    } catch (error) {
+      console.error('Error loading countries:', error)
+    }
+  }
+
   useEffect(() => {
     loadLocations()
   }, [currentPage, searchTerm])
 
   useEffect(() => {
     loadBusinessUnits()
+    loadCountries()
   }, [])
 
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) newErrors.name = 'Location name is required'
-    if (!formData.address) newErrors.address = 'Address is required'
-    if (!formData.city) newErrors.city = 'City is required'
-    if (!formData.country) newErrors.country = 'Country is required'
+    if (!formData.name || !formData.name.trim()) newErrors.name = 'Location name is required'
+    else if (formData.name.trim().length < 2) newErrors.name = 'Location name must be at least 2 characters'
+    else if (formData.name.trim().length > 100) newErrors.name = 'Location name must be 100 characters or fewer'
 
-    if (formData.phone && !/^[+]?[\d\s()-]{7,20}$/.test(formData.phone)) {
-      newErrors.phone = 'Invalid phone format'
+    const addressErr = validateAddress(formData.address, 'Address')
+    if (addressErr) newErrors.address = addressErr
+
+    const cityErr = validateName(formData.city, 'City')
+    if (cityErr) newErrors.city = cityErr
+
+    if (formData.state && formData.state.trim()) {
+      const stateErr = validateName(formData.state, 'State/Province')
+      if (stateErr) newErrors.state = stateErr
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format'
+    if (!formData.country || !formData.country.trim()) {
+      newErrors.country = 'Country is required'
+    } else {
+      const countryErr = validateName(formData.country, 'Country')
+      if (countryErr) newErrors.country = countryErr
     }
+
+    const zipErr = validateZipCode(formData.postalCode, true)
+    if (zipErr) newErrors.postalCode = zipErr
+
+    if (!formData.businessUnitId) newErrors.businessUnitId = 'Business unit is required'
+    if (!formData.countryId) newErrors.countryId = 'Country (ref) is required'
+
+    const emailErr = validateEmail(formData.email)
+    if (emailErr) newErrors.email = emailErr
+
+    const phoneErr = validatePhone(formData.phone, true)
+    if (phoneErr) newErrors.phone = phoneErr
+
+    if (formData.code && formData.code.trim() && !/^[A-Z0-9-]{2,20}$/.test(formData.code.trim())) {
+      newErrors.code = 'Code must be 2-20 chars: uppercase letters, digits and hyphens only'
+    }
+
+    const capErr = validateNumber(String(formData.capacity ?? ''), 'Capacity', 1, 100000)
+    if (capErr) newErrors.capacity = capErr
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -150,6 +192,8 @@ export default function LocationsPage() {
       phone: location.phone || '',
       email: location.email || '',
       businessUnitId: location.businessUnitId || '',
+      countryId: (location as any).countryId || '',
+      code: (location as any).code || '',
       capacity: location.capacity || 0,
       facilities: location.facilities || [],
       isActive: location.isActive,
@@ -173,15 +217,17 @@ export default function LocationsPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      code: '',
       address: '',
       city: '',
       state: '',
       country: '',
+      countryId: '',
       postalCode: '',
       phone: '',
       email: '',
       businessUnitId: '',
-      capacity: 0,
+      capacity: 1,
       facilities: [],
       isActive: true,
     })
@@ -342,15 +388,21 @@ export default function LocationsPage() {
               <input
                 type="text"
                 value={formData.name}
+                onKeyDown={(e) => {
+                  // Allow letters, digits, spaces, common punctuation in venue names
+                  if (e.key.length === 1 && !/^[A-Za-z0-9\s'&().,-]$/.test(e.key)) e.preventDefault()
+                }}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value })
                   if (errors.name) setErrors({ ...errors, name: '' })
                 }}
                 placeholder="e.g., Dubai Marina Center"
+                maxLength={100}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              {!errors.name && <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces and basic punctuation (max 100 chars)</p>}
             </div>
 
             <div>
@@ -365,6 +417,7 @@ export default function LocationsPage() {
                 }}
                 placeholder="Full address"
                 rows={2}
+                maxLength={255}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.address ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
@@ -379,10 +432,13 @@ export default function LocationsPage() {
                 <input
                   type="text"
                   value={formData.city}
+                  onKeyDown={filterNameInput}
                   onChange={(e) => {
                     setFormData({ ...formData, city: e.target.value })
                     if (errors.city) setErrors({ ...errors, city: '' })
                   }}
+                  placeholder="City"
+                  maxLength={80}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.city ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
@@ -394,9 +450,16 @@ export default function LocationsPage() {
                 <input
                   type="text"
                   value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={filterNameInput}
+                  onChange={(e) => {
+                    setFormData({ ...formData, state: e.target.value })
+                    if (errors.state) setErrors({ ...errors, state: '' })
+                  }}
+                  maxLength={80}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.state ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 />
+                {errors.state && <p className="mt-1 text-sm text-red-600">{errors.state}</p>}
               </div>
             </div>
 
@@ -408,10 +471,13 @@ export default function LocationsPage() {
                 <input
                   type="text"
                   value={formData.country}
+                  onKeyDown={filterNameInput}
                   onChange={(e) => {
                     setFormData({ ...formData, country: e.target.value })
                     if (errors.country) setErrors({ ...errors, country: '' })
                   }}
+                  placeholder="Country"
+                  maxLength={80}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.country ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
@@ -419,34 +485,55 @@ export default function LocationsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-2">Postal Code</label>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Postal Code <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.postalCode}
-                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key.length === 1 && !/^[A-Za-z0-9\s-]$/.test(e.key)) e.preventDefault()
+                  }}
+                  onChange={(e) => {
+                    setFormData({ ...formData, postalCode: e.target.value.toUpperCase() })
+                    if (errors.postalCode) setErrors({ ...errors, postalCode: '' })
+                  }}
+                  placeholder="e.g., 10001"
+                  maxLength={10}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.postalCode ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 />
+                {errors.postalCode && <p className="mt-1 text-sm text-red-600">{errors.postalCode}</p>}
+                {!errors.postalCode && <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces and hyphens (3-10 chars)</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-2">Phone</label>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Phone <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="tel"
                   value={formData.phone}
+                  onKeyDown={filterPhoneInput}
                   onChange={(e) => {
                     setFormData({ ...formData, phone: e.target.value })
                     if (errors.phone) setErrors({ ...errors, phone: '' })
                   }}
+                  placeholder="+1 555 123 4567"
+                  maxLength={20}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
                 {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
+                {!errors.phone && <p className="mt-1 text-xs text-slate-500">Digits, +, -, spaces (7-15 digits)</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-900 mb-2">Email</label>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="email"
                   value={formData.email}
@@ -454,6 +541,8 @@ export default function LocationsPage() {
                     setFormData({ ...formData, email: e.target.value })
                     if (errors.email) setErrors({ ...errors, email: '' })
                   }}
+                  placeholder="venue@example.com"
+                  maxLength={120}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
                 />
@@ -461,31 +550,93 @@ export default function LocationsPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Business Unit</label>
-              <select
-                value={formData.businessUnitId}
-                onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Business Unit</option>
-                {businessUnits.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Business Unit <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.businessUnitId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, businessUnitId: e.target.value })
+                    if (errors.businessUnitId) setErrors({ ...errors, businessUnitId: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.businessUnitId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+                >
+                  <option value="">Select Business Unit</option>
+                  {businessUnits.map((unit) => (
+                    <option key={unit.id || unit._id} value={unit.id || unit._id}>
+                      {unit.name} {unit.code ? `(${unit.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {errors.businessUnitId && <p className="mt-1 text-sm text-red-600">{errors.businessUnitId}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Country (ref) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.countryId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, countryId: e.target.value })
+                    if (errors.countryId) setErrors({ ...errors, countryId: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.countryId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+                >
+                  <option value="">Select Country</option>
+                  {countries.map((c) => (
+                    <option key={c.id || c._id} value={c.id || c._id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+                {errors.countryId && <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>}
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Capacity</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Location Code</label>
+              <input
+                type="text"
+                value={formData.code}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/^[A-Za-z0-9-]$/.test(e.key)) e.preventDefault()
+                }}
+                onChange={(e) => {
+                  setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') })
+                  if (errors.code) setErrors({ ...errors, code: '' })
+                }}
+                placeholder="Auto-generated from name if empty (e.g., NYC-01)"
+                maxLength={20}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+              />
+              {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code}</p>}
+              {!errors.code && <p className="mt-1 text-xs text-slate-500">Uppercase letters, digits and hyphens only (leave blank to auto-generate)</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Capacity <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                min="0"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  const v = e.target.value
+                  setFormData({ ...formData, capacity: v === '' ? 0 : Number(v) })
+                  if (errors.capacity) setErrors({ ...errors, capacity: '' })
+                }}
+                min={1}
+                max={100000}
+                step={1}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.capacity ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
+              {errors.capacity && <p className="mt-1 text-sm text-red-600">{errors.capacity}</p>}
+              {!errors.capacity && <p className="mt-1 text-xs text-slate-500">Number of people the venue holds (minimum 1)</p>}
             </div>
 
             <div>

@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import Link from 'next/link'
 import { FiPlay, FiArrowRight, FiChevronLeft, FiChevronRight } from 'react-icons/fi'
-import { useCMSData } from '@/hooks/useCMSData'
-import { CMSService, HeroSlide, SiteStat } from '@/services/cmsService'
 
 // Animated Counter Component
 const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) => {
@@ -98,28 +96,9 @@ const Hero = () => {
 
     const rotatingWords = ['Strength', 'Confidence', 'Character', 'Excellence', 'Champions']
 
-    // Dynamic hero slides
-    const { data: heroSlides } = useCMSData<HeroSlide[]>(
-        () => CMSService.getHeroSlides(),
-        [],
-        []
-    )
-
-    // Dynamic stats
-    const { data: stats } = useCMSData<SiteStat[]>(
-        () => CMSService.getSiteStats(),
-        staticStats,
-        []
-    )
-
-    // Use API data if available, otherwise fallback
-    const heroImages = heroSlides.length > 0
-        ? heroSlides.map(slide => ({
-            src: slide.image,
-            alt: slide.title,
-            fallback: slide.fallbackGradient || 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800'
-        }))
-        : staticHeroImages
+    // Use static hero images and stats to keep deployed UI consistent with local
+    const heroImages = staticHeroImages
+    const stats = staticStats
 
     // Typewriter effect
     useEffect(() => {

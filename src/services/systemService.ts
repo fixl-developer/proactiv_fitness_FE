@@ -1,6 +1,8 @@
 /**
  * System Service
  * Handles all system-related API calls for admin dashboard
+ *
+ * Response shape normalization — list endpoints return { data, pagination }, singles return unwrapped T.
  */
 
 import { apiClient } from '@/services/api/client'
@@ -59,7 +61,7 @@ export interface FeatureFlag {
 export interface Integration {
     id: string
     name: string
-    type: 'webhook' | 'api' | 'service'
+    type: 'payment' | 'email' | 'sms' | 'analytics' | 'webhook' | 'api' | 'service'
     url: string
     apiKey?: string
     status: 'active' | 'inactive' | 'error'
@@ -79,64 +81,88 @@ export interface SystemLog {
     updatedAt?: string
 }
 
+export interface ListResponse<T> {
+    data: T[]
+    pagination: { page: number; limit: number; total: number; totalPages: number }
+}
+
+// =============================================
+// HELPERS
+// =============================================
+
+function normalizeItem<T extends { id?: string; _id?: string }>(item: any): T {
+    if (!item || typeof item !== 'object') return item
+    if (!item.id && item._id) return { ...item, id: String(item._id) } as T
+    return item as T
+}
+
+function normalizeList<T extends { id?: string; _id?: string }>(items: any): T[] {
+    if (!Array.isArray(items)) return []
+    return items.map(normalizeItem) as T[]
+}
+
+function unwrapListResponse<T extends { id?: string; _id?: string }>(body: any, params?: { page?: number; limit?: number }): ListResponse<T> {
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const payload = body?.data !== undefined ? body.data : body
+
+    if (Array.isArray(payload)) {
+        const total = payload.length
+        const start = (page - 1) * limit
+        return {
+            data: normalizeList<T>(payload.slice(start, start + limit)),
+            pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+        }
+    }
+
+    if (payload && typeof payload === 'object') {
+        const items = payload.items || payload.data || payload.results || []
+        return {
+            data: normalizeList<T>(items),
+            pagination: {
+                page: payload.page ?? page,
+                limit: payload.limit ?? limit,
+                total: payload.total ?? items.length,
+                totalPages: payload.totalPages ?? Math.max(1, Math.ceil((payload.total ?? items.length) / limit)),
+            },
+        }
+    }
+
+    return { data: [], pagination: { page, limit, total: 0, totalPages: 1 } }
+}
+
+function unwrapItemResponse<T extends { id?: string; _id?: string }>(body: any): T {
+    const payload = body?.data !== undefined ? body.data : body
+    return normalizeItem<T>(payload)
+}
+
 // =============================================
 // SECURITY SETTINGS SERVICE
 // =============================================
 
 export const SecuritySettingsService = {
-    // Get all security settings
-    getAll: async (params?: { page?: number; limit?: number; search?: string; category?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/admin/settings/security', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching security settings:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; category?: string }): Promise<ListResponse<SecuritySetting>> => {
+        const body = await apiClient.get('/admin/settings/security', { params })
+        return unwrapListResponse<SecuritySetting>(body, params)
     },
 
-    // Get security setting by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/admin/settings/security/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching security setting:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<SecuritySetting> => {
+        const body = await apiClient.get(`/admin/settings/security/${id}`)
+        return unwrapItemResponse<SecuritySetting>(body)
     },
 
-    // Create security setting
-    create: async (data: Partial<SecuritySetting>) => {
-        try {
-            const response = await apiClient.post('/api/v1/admin/settings/security', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating security setting:', error)
-            throw error
-        }
+    create: async (data: Partial<SecuritySetting>): Promise<SecuritySetting> => {
+        const body = await apiClient.post('/admin/settings/security', data)
+        return unwrapItemResponse<SecuritySetting>(body)
     },
 
-    // Update security setting
-    update: async (id: string, data: Partial<SecuritySetting>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/admin/settings/security/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating security setting:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<SecuritySetting>): Promise<SecuritySetting> => {
+        const body = await apiClient.put(`/admin/settings/security/${id}`, data)
+        return unwrapItemResponse<SecuritySetting>(body)
     },
 
-    // Delete security setting
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/admin/settings/security/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting security setting:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/admin/settings/security/${id}`)
     },
 }
 
@@ -145,59 +171,28 @@ export const SecuritySettingsService = {
 // =============================================
 
 export const ApiMonitoringService = {
-    // Get all API integrations
-    getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/admin/system/integrations', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching API integrations:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string }): Promise<ListResponse<ApiIntegration>> => {
+        const body = await apiClient.get('/admin/system/integrations', { params })
+        return unwrapListResponse<ApiIntegration>(body, params)
     },
 
-    // Get API integration by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/admin/system/integrations/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching API integration:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<ApiIntegration> => {
+        const body = await apiClient.get(`/admin/system/integrations/${id}`)
+        return unwrapItemResponse<ApiIntegration>(body)
     },
 
-    // Create API integration
-    create: async (data: Partial<ApiIntegration>) => {
-        try {
-            const response = await apiClient.post('/api/v1/admin/system/integrations', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating API integration:', error)
-            throw error
-        }
+    create: async (data: Partial<ApiIntegration>): Promise<ApiIntegration> => {
+        const body = await apiClient.post('/admin/system/integrations', data)
+        return unwrapItemResponse<ApiIntegration>(body)
     },
 
-    // Update API integration
-    update: async (id: string, data: Partial<ApiIntegration>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/admin/system/integrations/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating API integration:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<ApiIntegration>): Promise<ApiIntegration> => {
+        const body = await apiClient.put(`/admin/system/integrations/${id}`, data)
+        return unwrapItemResponse<ApiIntegration>(body)
     },
 
-    // Delete API integration
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/admin/system/integrations/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting API integration:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/admin/system/integrations/${id}`)
     },
 }
 
@@ -206,59 +201,28 @@ export const ApiMonitoringService = {
 // =============================================
 
 export const DatabaseHealthService = {
-    // Get all database health records
-    getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/admin/system/database', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching database health:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string }): Promise<ListResponse<DatabaseHealth>> => {
+        const body = await apiClient.get('/admin/system/database', { params })
+        return unwrapListResponse<DatabaseHealth>(body, params)
     },
 
-    // Get database health by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/admin/system/database/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching database health:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<DatabaseHealth> => {
+        const body = await apiClient.get(`/admin/system/database/${id}`)
+        return unwrapItemResponse<DatabaseHealth>(body)
     },
 
-    // Create database health record
-    create: async (data: Partial<DatabaseHealth>) => {
-        try {
-            const response = await apiClient.post('/api/v1/admin/system/database', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating database health record:', error)
-            throw error
-        }
+    create: async (data: Partial<DatabaseHealth>): Promise<DatabaseHealth> => {
+        const body = await apiClient.post('/admin/system/database', data)
+        return unwrapItemResponse<DatabaseHealth>(body)
     },
 
-    // Update database health record
-    update: async (id: string, data: Partial<DatabaseHealth>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/admin/system/database/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating database health record:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<DatabaseHealth>): Promise<DatabaseHealth> => {
+        const body = await apiClient.put(`/admin/system/database/${id}`, data)
+        return unwrapItemResponse<DatabaseHealth>(body)
     },
 
-    // Delete database health record
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/admin/system/database/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting database health record:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/admin/system/database/${id}`)
     },
 }
 
@@ -267,59 +231,28 @@ export const DatabaseHealthService = {
 // =============================================
 
 export const FeatureFlagsService = {
-    // Get all feature flags
-    getAll: async (params?: { page?: number; limit?: number; search?: string; enabled?: boolean }) => {
-        try {
-            const response = await apiClient.get('/api/v1/feature-flags', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching feature flags:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; enabled?: boolean }): Promise<ListResponse<FeatureFlag>> => {
+        const body = await apiClient.get('/feature-flags', { params })
+        return unwrapListResponse<FeatureFlag>(body, params)
     },
 
-    // Get feature flag by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/feature-flags/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching feature flag:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<FeatureFlag> => {
+        const body = await apiClient.get(`/feature-flags/${id}`)
+        return unwrapItemResponse<FeatureFlag>(body)
     },
 
-    // Create feature flag
-    create: async (data: Partial<FeatureFlag>) => {
-        try {
-            const response = await apiClient.post('/api/v1/feature-flags', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating feature flag:', error)
-            throw error
-        }
+    create: async (data: Partial<FeatureFlag>): Promise<FeatureFlag> => {
+        const body = await apiClient.post('/feature-flags', data)
+        return unwrapItemResponse<FeatureFlag>(body)
     },
 
-    // Update feature flag
-    update: async (id: string, data: Partial<FeatureFlag>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/feature-flags/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating feature flag:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<FeatureFlag>): Promise<FeatureFlag> => {
+        const body = await apiClient.put(`/feature-flags/${id}`, data)
+        return unwrapItemResponse<FeatureFlag>(body)
     },
 
-    // Delete feature flag
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/feature-flags/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting feature flag:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/feature-flags/${id}`)
     },
 }
 
@@ -328,59 +261,28 @@ export const FeatureFlagsService = {
 // =============================================
 
 export const IntegrationGatewayService = {
-    // Get all integrations
-    getAll: async (params?: { page?: number; limit?: number; search?: string; type?: string; status?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/integration-gateway/integrations', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching integrations:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; type?: string; status?: string }): Promise<ListResponse<Integration>> => {
+        const body = await apiClient.get('/integration-gateway/integrations', { params })
+        return unwrapListResponse<Integration>(body, params)
     },
 
-    // Get integration by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/integration-gateway/integrations/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching integration:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<Integration> => {
+        const body = await apiClient.get(`/integration-gateway/integrations/${id}`)
+        return unwrapItemResponse<Integration>(body)
     },
 
-    // Create integration
-    create: async (data: Partial<Integration>) => {
-        try {
-            const response = await apiClient.post('/api/v1/integration-gateway/integrations', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating integration:', error)
-            throw error
-        }
+    create: async (data: Partial<Integration>): Promise<Integration> => {
+        const body = await apiClient.post('/integration-gateway/integrations', data)
+        return unwrapItemResponse<Integration>(body)
     },
 
-    // Update integration
-    update: async (id: string, data: Partial<Integration>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/integration-gateway/integrations/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating integration:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<Integration>): Promise<Integration> => {
+        const body = await apiClient.put(`/integration-gateway/integrations/${id}`, data)
+        return unwrapItemResponse<Integration>(body)
     },
 
-    // Delete integration
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/integration-gateway/integrations/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting integration:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/integration-gateway/integrations/${id}`)
     },
 }
 
@@ -389,58 +291,27 @@ export const IntegrationGatewayService = {
 // =============================================
 
 export const SystemLogsService = {
-    // Get all system logs
-    getAll: async (params?: { page?: number; limit?: number; search?: string; level?: string; service?: string }) => {
-        try {
-            const response = await apiClient.get('/api/v1/admin/system/logs', { params })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching system logs:', error)
-            throw error
-        }
+    getAll: async (params?: { page?: number; limit?: number; search?: string; level?: string; service?: string }): Promise<ListResponse<SystemLog>> => {
+        const body = await apiClient.get('/admin/system/logs', { params })
+        return unwrapListResponse<SystemLog>(body, params)
     },
 
-    // Get system log by ID
-    getById: async (id: string) => {
-        try {
-            const response = await apiClient.get(`/api/v1/admin/system/logs/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching system log:', error)
-            throw error
-        }
+    getById: async (id: string): Promise<SystemLog> => {
+        const body = await apiClient.get(`/admin/system/logs/${id}`)
+        return unwrapItemResponse<SystemLog>(body)
     },
 
-    // Create system log
-    create: async (data: Partial<SystemLog>) => {
-        try {
-            const response = await apiClient.post('/api/v1/admin/system/logs', data)
-            return response.data
-        } catch (error) {
-            console.error('Error creating system log:', error)
-            throw error
-        }
+    create: async (data: Partial<SystemLog>): Promise<SystemLog> => {
+        const body = await apiClient.post('/admin/system/logs', data)
+        return unwrapItemResponse<SystemLog>(body)
     },
 
-    // Update system log
-    update: async (id: string, data: Partial<SystemLog>) => {
-        try {
-            const response = await apiClient.put(`/api/v1/admin/system/logs/${id}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating system log:', error)
-            throw error
-        }
+    update: async (id: string, data: Partial<SystemLog>): Promise<SystemLog> => {
+        const body = await apiClient.put(`/admin/system/logs/${id}`, data)
+        return unwrapItemResponse<SystemLog>(body)
     },
 
-    // Delete system log
-    delete: async (id: string) => {
-        try {
-            const response = await apiClient.delete(`/api/v1/admin/system/logs/${id}`)
-            return response.data
-        } catch (error) {
-            console.error('Error deleting system log:', error)
-            throw error
-        }
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/admin/system/logs/${id}`)
     },
 }
