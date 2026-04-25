@@ -66,6 +66,18 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         triggerLogout()
     }
 
+    const getDashboardPath = (userObj: any) => {
+        const role = String(userObj?.role || '').toLowerCase()
+        switch (role) {
+            case 'admin': return '/admin/dashboard'
+            case 'parent': return '/parent/dashboard'
+            case 'coach': return '/coach/dashboard'
+            case 'manager': return '/manager/dashboard'
+            case 'staff': return '/staff/dashboard'
+            default: return '/user/dashboard'
+        }
+    }
+
     const getInitials = (userObj: any) => {
         if (!userObj) return 'U'
         // Use firstName + lastName if available
@@ -209,7 +221,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button id="header-btn-my-dashboard" onClick={() => { setIsProfileOpen(false); router.push('/user/dashboard'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                            <button id="header-btn-my-dashboard" onClick={() => { setIsProfileOpen(false); router.push(getDashboardPath(loggedInUser)); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                                                 <FiGrid className="w-4 h-4 text-blue-600" />
                                                 <span className="font-medium">My Dashboard</span>
                                             </button>
@@ -331,7 +343,7 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                                                         <p className="text-xs text-gray-500">{loggedInUser.email}</p>
                                                     </div>
                                                 </div>
-                                                <button id="header-mobile-btn-dashboard" onClick={() => { router.push('/user/dashboard'); setIsMenuOpen(false); }} className="block w-full text-center bg-blue-50 text-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-blue-100">
+                                                <button id="header-mobile-btn-dashboard" onClick={() => { router.push(getDashboardPath(loggedInUser)); setIsMenuOpen(false); }} className="block w-full text-center bg-blue-50 text-blue-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-blue-100">
                                                     My Dashboard
                                                 </button>
                                                 <button id="header-mobile-btn-logout" onClick={() => { handleLogoutClick(); setIsMenuOpen(false); }} className="block w-full text-center bg-red-50 text-red-600 px-4 py-3 rounded-lg font-semibold transition-all duration-300 hover:bg-red-100">

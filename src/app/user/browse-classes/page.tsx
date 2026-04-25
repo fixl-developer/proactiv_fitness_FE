@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { Loader, AlertCircle, Search, Filter, MapPin, Clock, User, DollarSign, RefreshCw, RotateCcw, Calendar, BookOpen } from 'lucide-react'
+import {
+    Loader, AlertCircle, Search, Filter, MapPin, Clock, User,
+    DollarSign, RefreshCw, RotateCcw, Calendar, BookOpen, Tag,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +30,7 @@ interface ClassItem {
     category?: string
 }
 
-const BrowseClassesPage = () => {
+const UserBrowseClassesPage = () => {
     const router = useRouter()
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -36,16 +39,17 @@ const BrowseClassesPage = () => {
         location: '',
         program: '',
         level: '',
-        date: ''
+        date: '',
     })
-    const { user, isAuthenticated } = useAuth()
+    const { isAuthenticated } = useAuth()
 
     useEffect(() => {
         if (!isAuthenticated) {
-            router.push('/login')
+            router.push(`/login?redirectTo=${encodeURIComponent('/user/browse-classes')}`)
             return
         }
         fetchClasses()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, router])
 
     const buildQueryString = useCallback((filters: typeof searchFilters) => {
@@ -63,63 +67,43 @@ const BrowseClassesPage = () => {
             setIsLoading(true)
             setError('')
             const qs = buildQueryString(filters || searchFilters)
-            const response = await apiClient.get<any>(`/parent/browse-classes${qs}`)
+            // /bookings/browse is auth-required but role-agnostic (PARENT or USER both allowed)
+            const response = await apiClient.get<any>(`/bookings/browse${qs}`)
             const result = response?.data || response || []
             const classArray = Array.isArray(result) ? result : []
             setClasses(classArray)
         } catch (err: any) {
             console.error('Error loading classes:', err)
-            setError(err.message || 'Failed to load classes')
+            setError(err?.response?.data?.message || err.message || 'Failed to load classes')
             setClasses([])
         } finally {
             setIsLoading(false)
         }
     }
 
-    const handleSearch = () => {
-        fetchClasses(searchFilters)
-    }
-
+    const handleSearch = () => fetchClasses(searchFilters)
     const handleReset = () => {
-        const emptyFilters = { location: '', program: '', level: '', date: '' }
-        setSearchFilters(emptyFilters)
-        fetchClasses(emptyFilters)
+        const empty = { location: '', program: '', level: '', date: '' }
+        setSearchFilters(empty)
+        fetchClasses(empty)
     }
+    const handleRetry = () => fetchClasses(searchFilters)
 
     const handleBook = (cls: ClassItem) => {
-        // Sessions go through the existing per-session detail page (which calls
-        // /parent/book-class). Admin Programs (no session yet) book directly via
-        // the generic /bookings/class endpoint — we pass the program id and let
-        // the backend treat it as a class booking.
-        if (cls.source === 'program') {
-            router.push(`/parent/book-class/${cls.id}?source=program`)
-        } else {
-            router.push(`/parent/book-class/${cls.id}`)
-        }
-    }
-
-    const handleRetry = () => {
-        fetchClasses(searchFilters)
+        // User books via /user/book-class/<id> — that page calls /bookings/class
+        const qs = cls.source === 'program' ? '?source=program' : ''
+        router.push(`/user/book-class/${cls.id}${qs}`)
     }
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-            >
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
                 <h1 className="text-3xl font-bold text-gray-900">Browse Classes</h1>
-                <p className="text-gray-600 mt-2">Find and book the perfect class for your child</p>
+                <p className="text-gray-600 mt-2">Find and book a class, program or assessment</p>
             </motion.div>
 
-            {/* Search Filters */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-            >
+            {/* Filters */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -138,7 +122,7 @@ const BrowseClassesPage = () => {
                                     onChange={(e) => setSearchFilters({ ...searchFilters, location: e.target.value })}
                                     onKeyDown={filterAlphanumericInput}
                                     maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
                                 <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
                             </div>
@@ -151,7 +135,7 @@ const BrowseClassesPage = () => {
                                     onChange={(e) => setSearchFilters({ ...searchFilters, program: e.target.value })}
                                     onKeyDown={filterAlphanumericInput}
                                     maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
                                 <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
                             </div>
@@ -160,12 +144,12 @@ const BrowseClassesPage = () => {
                                 <select
                                     value={searchFilters.level}
                                     onChange={(e) => setSearchFilters({ ...searchFilters, level: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                                 >
                                     <option value="">All levels</option>
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
                                 </select>
                             </div>
                             <div>
@@ -174,16 +158,16 @@ const BrowseClassesPage = () => {
                                     type="date"
                                     value={searchFilters.date}
                                     onChange={(e) => setSearchFilters({ ...searchFilters, date: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                 />
                             </div>
                         </div>
                         <div className="flex gap-3 mt-4">
-                            <Button id="btn-search-parent-browse-classes" onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
+                            <Button id="btn-search-user-browse-classes" onClick={handleSearch} className="bg-emerald-600 hover:bg-emerald-700">
                                 <Search className="w-4 h-4 mr-2" />
                                 Search
                             </Button>
-                            <Button id="btn-reset-parent-browse-classes" onClick={handleReset} variant="outline">
+                            <Button id="btn-reset-user-browse-classes" onClick={handleReset} variant="outline">
                                 <RotateCcw className="w-4 h-4 mr-2" />
                                 Reset Filters
                             </Button>
@@ -192,25 +176,17 @@ const BrowseClassesPage = () => {
                 </Card>
             </motion.div>
 
-            {/* Loading State */}
+            {/* Loading */}
             {isLoading && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-16"
-                >
-                    <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16">
+                    <Loader className="w-12 h-12 text-emerald-600 animate-spin mb-4" />
                     <p className="text-gray-600 font-medium">Loading available classes...</p>
                 </motion.div>
             )}
 
-            {/* Error State */}
+            {/* Error */}
             {!isLoading && error && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-6 bg-red-50 border border-red-200 rounded-lg flex flex-col items-center text-center"
-                >
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-red-50 border border-red-200 rounded-lg flex flex-col items-center text-center">
                     <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
                     <p className="text-red-700 font-medium mb-1">Something went wrong</p>
                     <p className="text-red-600 text-sm mb-4">{error}</p>
@@ -221,13 +197,9 @@ const BrowseClassesPage = () => {
                 </motion.div>
             )}
 
-            {/* Empty State */}
+            {/* Empty */}
             {!isLoading && !error && classes.length === 0 && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                >
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
                     <Card>
                         <CardContent className="p-12 text-center">
                             <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -247,11 +219,7 @@ const BrowseClassesPage = () => {
             {/* Results */}
             {!isLoading && !error && classes.length > 0 && (
                 <>
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-sm text-gray-500"
-                    >
+                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-gray-500">
                         Showing {classes.length} class{classes.length !== 1 ? 'es' : ''}
                     </motion.p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -264,27 +232,36 @@ const BrowseClassesPage = () => {
                             >
                                 <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
                                     <CardHeader>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <CardTitle className="text-lg">{cls.program || 'Class'}</CardTitle>
-                                                <p className="text-sm text-gray-600 mt-1">with {cls.coach || 'Coach'}</p>
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <CardTitle className="text-lg truncate">{cls.program || 'Class'}</CardTitle>
+                                                {cls.coach && <p className="text-sm text-gray-600 mt-1">with {cls.coach}</p>}
                                             </div>
-                                            <Badge className="bg-blue-100 text-blue-800">{cls.level || 'All Levels'}</Badge>
+                                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                                <Badge className="bg-emerald-100 text-emerald-800 capitalize">{cls.level || 'All Levels'}</Badge>
+                                                {cls.source === 'program' && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        <Tag className="w-3 h-3 mr-1" /> Program
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="space-y-3 flex-1 flex flex-col">
                                         {cls.description && (
                                             <p className="text-sm text-gray-500 line-clamp-2">{cls.description}</p>
                                         )}
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">{cls.location || 'Location TBD'}</span>
-                                        </div>
+                                        {cls.location && (
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                <span className="text-sm">{cls.location}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Calendar className="w-4 h-4 flex-shrink-0" />
                                             <span className="text-sm">
                                                 {(() => {
-                                                    if (!cls.date) return 'Date TBD'
+                                                    if (!cls.date) return cls.source === 'program' ? 'Schedule TBA' : 'Date TBD'
                                                     try {
                                                         const d = new Date(cls.date)
                                                         if (isNaN(d.getTime())) return 'Date TBD'
@@ -293,26 +270,28 @@ const BrowseClassesPage = () => {
                                                 })()}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Clock className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">
-                                                {cls.time || 'Time TBD'}
-                                                {cls.duration ? ` (${cls.duration} min)` : ''}
-                                            </span>
-                                        </div>
+                                        {cls.time && (
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Clock className="w-4 h-4 flex-shrink-0" />
+                                                <span className="text-sm">
+                                                    {cls.time}
+                                                    {cls.duration ? ` (${cls.duration}${typeof cls.duration === 'number' ? ' min' : ''})` : ''}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <User className="w-4 h-4 flex-shrink-0" />
                                             <span className="text-sm">{cls.availableSpots ?? 0} spots available</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm font-semibold">{cls.price ?? 'Free'}</span>
+                                            <span className="text-sm font-semibold">{cls.price || 'Free'}</span>
                                         </div>
                                         <div className="mt-auto pt-4">
                                             <Button
-                                                id={`parent-browse-classes-book-${cls.id}-btn`}
+                                                id={`user-browse-classes-book-${cls.id}-btn`}
                                                 onClick={() => handleBook(cls)}
-                                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700"
                                                 disabled={cls.availableSpots === 0}
                                             >
                                                 {cls.availableSpots === 0 ? 'Class Full' : 'Book Now'}
@@ -329,4 +308,4 @@ const BrowseClassesPage = () => {
     )
 }
 
-export default BrowseClassesPage
+export default UserBrowseClassesPage

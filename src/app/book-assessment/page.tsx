@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Shield, Users, Clock } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import BookingHeader from '@/components/layout/BookingHeader';
@@ -11,6 +12,7 @@ import AssessmentListing from '@/components/assessment/AssessmentListing';
 import BookingFlow from '@/components/booking/BookingFlow';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/services/api/client';
 
 // Import dashboard components
 import ParentBookingsPage from '@/app/parent/bookings/page'
@@ -24,7 +26,8 @@ function BookAssessmentContent() {
     const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null);
     const [showBookingFlow, setShowBookingFlow] = useState(false);
     const [bookingComplete, setBookingComplete] = useState(false);
-    const [bookingData, setBookingData] = useState(null);
+    const [bookingData, setBookingData] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { isAuthenticated, user } = useAuth()
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -48,9 +51,56 @@ function BookAssessmentContent() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleBookingComplete = (data: any) => {
-        setBookingData(data);
-        setBookingComplete(true);
+    const handleBookingComplete = async (data: any) => {
+        // POST to real backend — auth is required (login redirect already enforced in handleBookAssessment)
+        if (!isAuthenticated) {
+            router.push(`/login?redirectTo=${encodeURIComponent('/book-assessment')}`)
+            return
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                program: data.program,
+                childName: data.childName,
+                childAge: Number(data.childAge) || 0,
+                childGender: data.childGender || undefined,
+                location: data.location,
+                date: data.date,
+                timeSlot: data.timeSlot,
+                parentName: data.parentName,
+                parentEmail: data.parentEmail,
+                parentPhone: data.parentPhone,
+            };
+
+            const res: any = await apiClient.post('/bookings/assessment', payload);
+            const created = res?.data ?? res;
+
+            // Merge real bookingId from backend into confirmation data
+            setBookingData({
+                ...data,
+                bookingId: created?.confirmationNumber || created?.bookingId || '',
+                _serverData: created,
+            });
+            setBookingComplete(true);
+            toast.success('Assessment booked successfully!');
+        } catch (err: any) {
+            // 401 means refresh failed — kick the user back to login with a return-to.
+            if (err?.response?.status === 401) {
+                toast.error('Your session expired — please log in again.');
+                router.push(`/login?redirectTo=${encodeURIComponent('/book-assessment')}`);
+                return;
+            }
+            const msg =
+                err?.response?.data?.message ||
+                (Array.isArray(err?.response?.data?.errors) && err.response.data.errors.join(', ')) ||
+                err?.message ||
+                'Failed to create booking. Please try again.';
+            toast.error(msg);
+            console.error('Assessment booking failed:', err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleBackToAssessments = () => {
@@ -197,6 +247,17 @@ function BookAssessmentContent() {
                                 onComplete={handleBookingComplete}
                                 onBack={handleBackToAssessments}
                             />
+                        )}
+
+                        {/* Submit overlay — shown while POST /bookings/assessment is in flight */}
+                        {isSubmitting && (
+                            <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center">
+                                <div className="bg-white rounded-2xl shadow-2xl px-8 py-6 text-center">
+                                    <div className="mx-auto mb-4 w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-gray-800 font-semibold">Confirming your booking...</p>
+                                    <p className="text-sm text-gray-500 mt-1">Please don't close this window.</p>
+                                </div>
+                            </div>
                         )}
                     </main>
                     <Footer />

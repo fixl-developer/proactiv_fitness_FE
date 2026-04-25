@@ -19,6 +19,10 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { apiClient } from '@/services/api/client';
+import { toast } from 'sonner';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TimeSlot {
     id: string;
@@ -71,6 +75,9 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     onCancel,
     existingChildren = []
 }) => {
+    const router = useRouter();
+    const pathname = usePathname();
+    const { isAuthenticated } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
     const [bookingData, setBookingData] = useState<Partial<BookingData>>({
         slot: selectedSlot
@@ -122,42 +129,79 @@ const BookingFlow: React.FC<BookingFlowProps> = ({
     const handleSubmit = async () => {
         if (!validateStep(3)) return;
 
+        // Hard auth gate — even though entry points already check, we double-check
+        // here in case the token expired while the user was filling the form.
+        if (!isAuthenticated) {
+            const back = encodeURIComponent(pathname || '/book-now');
+            router.push(`/login?redirectTo=${back}`);
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            // Use real API for booking
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/bookings`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(localStorage.getItem('authToken') && {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                    })
-                },
-                body: JSON.stringify({
-                    slotId: selectedSlot.id,
-                    childInfo: bookingData.child,
-                    parentInfo: bookingData.parentInfo,
-                    paymentMethod: bookingData.paymentMethod,
-                    specialRequests: bookingData.specialRequests
-                })
-            })
+            // Build the payload backend's createClassBooking expects.
+            // The slot may be class/trial/assessment — route accordingly.
+            const slot = selectedSlot;
+            const isAssessment = slot.programType === 'assessment';
 
-            const result = await response.json()
+            const notesParts: string[] = [];
+            if (bookingData.parentInfo?.name) notesParts.push(`parentName:${bookingData.parentInfo.name}`);
+            if (bookingData.parentInfo?.email) notesParts.push(`parentEmail:${bookingData.parentInfo.email}`);
+            if (bookingData.parentInfo?.phone) notesParts.push(`parentPhone:${bookingData.parentInfo.phone}`);
+            if (bookingData.parentInfo?.emergencyContact) notesParts.push(`emergencyContact:${bookingData.parentInfo.emergencyContact}`);
+            if (bookingData.paymentMethod) notesParts.push(`payment:${bookingData.paymentMethod}`);
+            if (bookingData.specialRequests) notesParts.push(`requests:${bookingData.specialRequests}`);
 
-            if (result.success) {
-                onComplete(bookingData as BookingData);
-                setCurrentStep(4);
+            let res: any;
+            if (isAssessment) {
+                // Backend expects: program, childName, childAge, location, date, timeSlot, parentName, parentEmail, parentPhone
+                res = await apiClient.post('/bookings/assessment', {
+                    program: slot.programName,
+                    childName: bookingData.child!.name,
+                    childAge: Number(bookingData.child!.age) || 0,
+                    location: slot.location,
+                    date: slot.date,
+                    timeSlot: slot.startTime,
+                    parentName: bookingData.parentInfo!.name,
+                    parentEmail: bookingData.parentInfo!.email,
+                    parentPhone: bookingData.parentInfo!.phone,
+                });
             } else {
-                console.error('Booking failed:', result.message)
-                // For now, still proceed to show success (fallback behavior)
-                onComplete(bookingData as BookingData);
-                setCurrentStep(4);
+                // Class/trial/party/private — use /bookings/class endpoint
+                res = await apiClient.post('/bookings/class', {
+                    classId: slot.id,
+                    className: slot.programName,
+                    classDate: slot.date,
+                    classTime: slot.startTime,
+                    location: slot.location,
+                    price: slot.price || 0,
+                    childName: bookingData.child!.name,
+                    childAge: Number(bookingData.child!.age) || undefined,
+                    notes: notesParts.join(' | '),
+                });
             }
-        } catch (error) {
-            console.error('Booking failed:', error);
-            // For now, still proceed to show success (fallback behavior)
-            onComplete(bookingData as BookingData);
+
+            const data = res?.data ?? res;
+            const merged = { ...(bookingData as BookingData), bookingId: data?.confirmationNumber || data?.bookingId } as BookingData;
+            onComplete(merged);
             setCurrentStep(4);
+            toast.success('Booking confirmed!');
+        } catch (error: any) {
+            const msg =
+                error?.response?.data?.message ||
+                (Array.isArray(error?.response?.data?.errors) && error.response.data.errors.join(', ')) ||
+                error?.message ||
+                'Failed to create booking. Please try again.';
+            // If unauthenticated, point user to login. apiClient already handles 401 refresh,
+            // so a hard 401 here means refresh failed — bounce them to /login with redirectTo.
+            if (error?.response?.status === 401) {
+                const back = encodeURIComponent(pathname || '/book-now');
+                toast.error('Your session expired — please log in again.');
+                router.push(`/login?redirectTo=${back}`);
+            } else {
+                toast.error(msg);
+            }
+            console.error('Booking failed:', error);
         } finally {
             setIsSubmitting(false);
         }

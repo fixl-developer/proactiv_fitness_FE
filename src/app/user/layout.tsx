@@ -20,11 +20,12 @@ import {
     HelpCircle,
     MessageSquare,
     Download,
-    ChevronDown
+    ChevronDown,
+    Globe
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
@@ -43,6 +44,7 @@ const navigationSections = [
     {
         title: 'Learning & Classes',
         items: [
+            { name: 'Browse Classes', href: '/user/browse-classes', icon: Calendar },
             { name: 'My Classes', href: '/user/my-classes', icon: Calendar },
             { name: 'Bookings', href: '/user/bookings', icon: Calendar },
         ]
@@ -110,6 +112,8 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         'Support'
     ])
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: '/login' })
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+    const profileMenuRef = useRef<HTMLDivElement>(null)
 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 
@@ -119,8 +123,29 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         }
     }, [isAuthenticated, isLoading, router])
 
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+                setProfileMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
     const displayName = user?.name || (user as any)?.firstName || 'User'
     const userEmail = user?.email || ''
+
+    const getInitials = () => {
+        const first = (user as any)?.firstName || ''
+        const last = (user as any)?.lastName || ''
+        if (first && last) return (first[0] + last[0]).toUpperCase()
+        const name = displayName.trim()
+        if (!name || name === 'User') return 'U'
+        const parts = name.split(' ')
+        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        return name[0].toUpperCase()
+    }
 
     const toggleSection = (sectionTitle: string) => {
         setExpandedSections(prev =>
@@ -338,10 +363,57 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
                         <div className="flex items-center space-x-3">
                             <NotificationBell />
-                            <Button id="user-layout-settings-btn" variant="outline" size="sm" onClick={() => router.push('/user/profile')}>
-                                <Settings className="w-4 h-4 mr-2" />
-                                Profile
-                            </Button>
+                            <div className="relative" ref={profileMenuRef}>
+                                <button
+                                    id="user-layout-profile-toggle-btn"
+                                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                                    className="flex items-center p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                    title="Profile menu"
+                                >
+                                    <div className={`w-9 h-9 bg-gradient-to-br ${colors.gradient} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md`}>
+                                        {getInitials()}
+                                    </div>
+                                </button>
+                                <AnimatePresence>
+                                    {profileMenuOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-2xl border border-gray-100 py-1 z-50 overflow-hidden"
+                                        >
+                                            <div className="px-4 py-3 border-b border-gray-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 bg-gradient-to-br ${colors.gradient} rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+                                                        {getInitials()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                id="user-layout-visit-website-btn"
+                                                onClick={() => { setProfileMenuOpen(false); router.push('/') }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Globe className={`w-4 h-4 ${colors.text}`} />
+                                                <span className="font-medium">Visit Website</span>
+                                            </button>
+                                            <button
+                                                id="user-layout-logout-dropdown-btn"
+                                                onClick={() => { setProfileMenuOpen(false); handleLogoutClick() }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                <span className="font-medium">Logout</span>
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
                 </motion.header>
