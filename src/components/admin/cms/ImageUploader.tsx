@@ -50,11 +50,13 @@ export default function ImageUploader({
             formData.append('image', file)
             formData.append('folder', folder)
 
+            // IMPORTANT: Do NOT set Content-Type header here. Axios needs to auto-generate
+            // `multipart/form-data; boundary=...` from the FormData body. Setting it
+            // manually without a boundary breaks the backend multer parser.
             const response = await apiClient.post<any>(
                 '/admin/cms/media/upload-image',
                 formData,
                 {
-                    headers: { 'Content-Type': 'multipart/form-data' },
                     timeout: 60000, // 60s timeout for uploads
                 }
             )
@@ -69,13 +71,21 @@ export default function ImageUploader({
         } catch (err: any) {
             console.error('Upload failed:', err)
 
-            // Check if it's a Cloudinary config error
-            if (err?.response?.status === 503) {
-                setError('Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to your environment variables.')
-            } else if (err?.response?.status === 401 || err?.response?.status === 403) {
+            const serverMsg: string | undefined = err?.response?.data?.message
+            const status = err?.response?.status
+
+            if (status === 503) {
+                setError(serverMsg || 'Cloudinary is not configured on the server. Ask the admin to set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET on Render / .env. Meanwhile you can paste an image URL above.')
+            } else if (status === 401 || status === 403) {
                 setError('You do not have permission to upload images. Admin access required.')
+            } else if (status === 413) {
+                setError(`File too large. Max size is ${maxSizeMB}MB.`)
+            } else if (status === 400) {
+                setError(serverMsg || 'Upload rejected. Make sure the file is a valid image.')
+            } else if (!err?.response) {
+                setError('Cannot reach the server. Check your network or backend URL.')
             } else {
-                setError('Upload failed. You can also paste an image URL directly in the text field above.')
+                setError(serverMsg || 'Upload failed. You can also paste an image URL directly in the text field above.')
             }
         } finally {
             setUploading(false)

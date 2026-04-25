@@ -5,10 +5,14 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, Loader, Clock, MapPin, User, Trash2, RefreshCw, BookOpen, Calendar, Hash } from 'lucide-react'
+import { AlertCircle, Loader, Clock, MapPin, User, Trash2, RefreshCw, BookOpen, Calendar, Hash, Plus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
+import { validateName, validateSelect, filterNameInput } from '@/utils/validation'
 
 interface WaitlistEntry {
     id: string
@@ -27,6 +31,15 @@ const WaitlistPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState('')
     const [removingId, setRemovingId] = useState<string | null>(null)
+
+    const [joinOpen, setJoinOpen] = useState(false)
+    const [joinSessions, setJoinSessions] = useState<any[]>([])
+    const [joinSessionId, setJoinSessionId] = useState('')
+    const [joinChildName, setJoinChildName] = useState('')
+    const [joinNotes, setJoinNotes] = useState('')
+    const [joinErrors, setJoinErrors] = useState<Record<string, string>>({})
+    const [joinSubmitting, setJoinSubmitting] = useState(false)
+
     const { user, isAuthenticated } = useAuth()
 
     useEffect(() => {
@@ -75,6 +88,48 @@ const WaitlistPage = () => {
         loadWaitlist()
     }
 
+    const openJoinDrawer = async () => {
+        setJoinSessionId('')
+        setJoinChildName('')
+        setJoinNotes('')
+        setJoinErrors({})
+        setJoinOpen(true)
+        try {
+            const resp = await apiClient.get<any>('/parent/browse-classes')
+            setJoinSessions(resp?.data || [])
+        } catch (err) {
+            console.error('Load classes error:', err)
+            setJoinSessions([])
+        }
+    }
+
+    const handleJoinSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        const errs: Record<string, string> = {}
+        const sessionErr = validateSelect(joinSessionId, 'Class')
+        if (sessionErr) errs.sessionId = sessionErr
+        const nameErr = validateName(joinChildName, 'Child name')
+        if (nameErr) errs.childName = nameErr
+        if (Object.keys(errs).length) { setJoinErrors(errs); return }
+
+        setJoinSubmitting(true)
+        try {
+            await apiClient.post('/parent/waitlist', {
+                sessionId: joinSessionId,
+                childName: joinChildName,
+                notes: joinNotes,
+            })
+            toast.success('Added to waitlist')
+            setJoinOpen(false)
+            await loadWaitlist()
+        } catch (err: any) {
+            console.error('Join waitlist error:', err)
+            toast.error(err?.response?.data?.message || 'Failed to join waitlist')
+        } finally {
+            setJoinSubmitting(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -82,9 +137,22 @@ const WaitlistPage = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
-                <h1 className="text-3xl font-bold text-gray-900">My Waitlist</h1>
-                <p className="text-gray-600 mt-2">Classes you're waiting to join</p>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">My Waitlist</h1>
+                    <p className="text-gray-600 mt-2">Classes you're waiting to join</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button id="parent-waitlist-refresh-btn" variant="outline" size="sm" onClick={loadWaitlist}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Refresh
+                    </Button>
+                    <Button id="parent-waitlist-join-btn" size="sm" onClick={openJoinDrawer}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Join Waitlist
+                    </Button>
+                </div>
             </motion.div>
 
             {/* Loading State */}
@@ -259,6 +327,72 @@ const WaitlistPage = () => {
                     ))}
                 </div>
             )}
+
+            {/* Join Waitlist Drawer */}
+            <SlideInDrawer
+                isOpen={joinOpen}
+                onClose={() => { setJoinOpen(false); setJoinErrors({}) }}
+                title="Join Waitlist"
+                description="Queue up for a class that's currently full"
+                size="md"
+            >
+                <form onSubmit={handleJoinSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                        <select
+                            value={joinSessionId}
+                            onChange={(e) => {
+                                setJoinSessionId(e.target.value)
+                                if (joinErrors.sessionId) setJoinErrors(prev => { const n = { ...prev }; delete n.sessionId; return n })
+                            }}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${joinErrors.sessionId ? 'border-red-500' : 'border-gray-300'}`}
+                        >
+                            <option value="">{joinSessions.length ? 'Select a class' : 'No classes available'}</option>
+                            {joinSessions.map((s: any) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.program} - {s.coach || 'TBD'} ({s.date ? new Date(s.date).toLocaleDateString() : ''} {s.time})
+                                </option>
+                            ))}
+                        </select>
+                        <FormFieldHint error={joinErrors.sessionId} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Child Name</label>
+                        <input
+                            type="text"
+                            value={joinChildName}
+                            onChange={(e) => {
+                                setJoinChildName(e.target.value)
+                                if (joinErrors.childName) setJoinErrors(prev => { const n = { ...prev }; delete n.childName; return n })
+                            }}
+                            onKeyDown={filterNameInput}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${joinErrors.childName ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="Child's full name"
+                        />
+                        <FormFieldHint hint="Letters, spaces, hyphens, apostrophes only" error={joinErrors.childName} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                        <textarea
+                            rows={3}
+                            value={joinNotes}
+                            onChange={(e) => setJoinNotes(e.target.value)}
+                            maxLength={300}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Preferred time / coach..."
+                        />
+                        <FormFieldHint hint="Up to 300 characters" />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button type="button" variant="outline" onClick={() => { setJoinOpen(false); setJoinErrors({}) }}>Cancel</Button>
+                        <Button type="submit" disabled={joinSubmitting}>
+                            {joinSubmitting ? (<><Loader className="w-4 h-4 mr-2 animate-spin" /> Joining...</>) : 'Join Waitlist'}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
         </div>
     )
 }

@@ -5,6 +5,11 @@
 
 import { apiClient } from '@/services/api/client'
 
+// apiClient.get/post/etc already return the response body.
+// Backend shape: { success, data, pagination?, message? }
+// Pages consume: response.data (array) and response.pagination?.totalPages
+// So services must return the FULL body, not body.data.
+
 // =============================================
 // INTERFACES
 // =============================================
@@ -39,11 +44,11 @@ export interface KnowledgeBase {
 // =============================================
 
 export const SupportTicketService = {
-    // Get all support tickets
+    // Get all support tickets — returns the full body { success, data, pagination }
     getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
         try {
-            const response = await apiClient.get('/support/tickets', { params })
-            return response.data
+            const body = await apiClient.get('/support/tickets', { params })
+            return body
         } catch (error) {
             console.error('Error fetching support tickets:', error)
             throw error
@@ -53,8 +58,8 @@ export const SupportTicketService = {
     // Get support ticket by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/support/tickets/${id}`)
-            return response.data
+            const body = await apiClient.get(`/support/tickets/${id}`)
+            return body
         } catch (error) {
             console.error('Error fetching support ticket:', error)
             throw error
@@ -64,8 +69,8 @@ export const SupportTicketService = {
     // Create support ticket
     create: async (data: Partial<SupportTicket>) => {
         try {
-            const response = await apiClient.post('/support/tickets', data)
-            return response.data
+            const body = await apiClient.post('/support/tickets', data)
+            return body
         } catch (error) {
             console.error('Error creating support ticket:', error)
             throw error
@@ -75,8 +80,8 @@ export const SupportTicketService = {
     // Update support ticket
     update: async (id: string, data: Partial<SupportTicket>) => {
         try {
-            const response = await apiClient.put(`/support/tickets/${id}`, data)
-            return response.data
+            const body = await apiClient.put(`/support/tickets/${id}`, data)
+            return body
         } catch (error) {
             console.error('Error updating support ticket:', error)
             throw error
@@ -86,8 +91,8 @@ export const SupportTicketService = {
     // Delete support ticket
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/support/tickets/${id}`)
-            return response.data
+            const body = await apiClient.delete(`/support/tickets/${id}`)
+            return body
         } catch (error) {
             console.error('Error deleting support ticket:', error)
             throw error
@@ -100,11 +105,11 @@ export const SupportTicketService = {
 // =============================================
 
 export const KnowledgeBaseService = {
-    // Get all knowledge base articles
+    // Get all knowledge base articles — returns the full body { success, data, pagination }
     getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
         try {
-            const response = await apiClient.get('/support/knowledge', { params })
-            return response.data
+            const body = await apiClient.get('/support/knowledge', { params })
+            return body
         } catch (error) {
             console.error('Error fetching knowledge base articles:', error)
             throw error
@@ -114,8 +119,8 @@ export const KnowledgeBaseService = {
     // Get knowledge base article by ID
     getById: async (id: string) => {
         try {
-            const response = await apiClient.get(`/support/knowledge/${id}`)
-            return response.data
+            const body = await apiClient.get(`/support/knowledge/${id}`)
+            return body
         } catch (error) {
             console.error('Error fetching knowledge base article:', error)
             throw error
@@ -125,8 +130,8 @@ export const KnowledgeBaseService = {
     // Create knowledge base article
     create: async (data: Partial<KnowledgeBase>) => {
         try {
-            const response = await apiClient.post('/support/knowledge', data)
-            return response.data
+            const body = await apiClient.post('/support/knowledge', data)
+            return body
         } catch (error) {
             console.error('Error creating knowledge base article:', error)
             throw error
@@ -136,8 +141,8 @@ export const KnowledgeBaseService = {
     // Update knowledge base article
     update: async (id: string, data: Partial<KnowledgeBase>) => {
         try {
-            const response = await apiClient.put(`/support/knowledge/${id}`, data)
-            return response.data
+            const body = await apiClient.put(`/support/knowledge/${id}`, data)
+            return body
         } catch (error) {
             console.error('Error updating knowledge base article:', error)
             throw error
@@ -147,8 +152,8 @@ export const KnowledgeBaseService = {
     // Delete knowledge base article
     delete: async (id: string) => {
         try {
-            const response = await apiClient.delete(`/support/knowledge/${id}`)
-            return response.data
+            const body = await apiClient.delete(`/support/knowledge/${id}`)
+            return body
         } catch (error) {
             console.error('Error deleting knowledge base article:', error)
             throw error

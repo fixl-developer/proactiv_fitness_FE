@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, MapPin, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, MapPin, X, DoorOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { LocationService, BusinessUnitService, CountryService } from '@/services/businessConfigService'
+import RoomsTab from '@/components/admin/business-config/RoomsTab'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import { validateEmail, validatePhone, validateName, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput } from '@/utils/validation'
 
@@ -26,6 +27,7 @@ interface Location {
 }
 
 export default function LocationsPage() {
+  const [activeTab, setActiveTab] = useState<'locations' | 'rooms'>('locations')
   const [locations, setLocations] = useState<Location[]>([])
   const [businessUnits, setBusinessUnits] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -172,7 +174,8 @@ export default function LocationsPage() {
 
       setShowForm(false)
       resetForm()
-      loadLocations()
+      setCurrentPage(1)
+      await loadLocations()
     } catch (error) {
       console.error('Error saving location:', error)
       toast.error(getErrorMessage(error))
@@ -207,7 +210,7 @@ export default function LocationsPage() {
       await LocationService.delete(id)
       toast.success('Location deleted successfully')
       setDeleteConfirm(null)
-      loadLocations()
+      await loadLocations()
     } catch (error) {
       console.error('Error deleting location:', error)
       toast.error(getErrorMessage(error))
@@ -263,8 +266,28 @@ export default function LocationsPage() {
             <MapPin className="w-8 h-8 text-blue-600" />
             <h1 className="text-4xl font-bold text-slate-900">Locations</h1>
           </div>
-          <p className="text-slate-600">Manage physical locations, facilities, and capacity</p>
+          <p className="text-slate-600">Manage physical locations, facilities, capacity, and individual rooms</p>
         </motion.div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('locations')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'locations' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><MapPin className="w-4 h-4" /> Locations</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('rooms')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'rooms' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><DoorOpen className="w-4 h-4" /> Rooms</span>
+          </button>
+        </div>
+
+        {activeTab === 'rooms' && <RoomsTab />}
+
+        {activeTab === 'locations' && (<>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
           <div className="flex-1 relative">
@@ -708,6 +731,7 @@ export default function LocationsPage() {
             </motion.div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   )

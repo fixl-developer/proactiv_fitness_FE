@@ -10,10 +10,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { validateRequired, validateTextArea } from '@/utils/validation'
 
 interface BookingStats {
     total: number
@@ -43,6 +46,17 @@ const ParentBookingsPage = () => {
     const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const [error, setError] = useState<string | null>(null)
+    const [editOpen, setEditOpen] = useState(false)
+    const [editBooking, setEditBooking] = useState<Booking | null>(null)
+    const [editNotes, setEditNotes] = useState('')
+    const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+    const [rescheduleOpen, setRescheduleOpen] = useState(false)
+    const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(null)
+    const [rescheduleDate, setRescheduleDate] = useState('')
+    const [rescheduleTime, setRescheduleTime] = useState('')
+    const [rescheduleReason, setRescheduleReason] = useState('')
+    const [rescheduleErrors, setRescheduleErrors] = useState<Record<string, string>>({})
+    const [formSubmitting, setFormSubmitting] = useState(false)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
@@ -137,6 +151,73 @@ const ParentBookingsPage = () => {
         } catch (err) {
             console.error('Error cancelling booking:', err)
             toast.error('Failed to cancel booking. Please try again.')
+        }
+    }
+
+    const openEditDrawer = (b: Booking) => {
+        setEditBooking(b)
+        setEditNotes('')
+        setEditErrors({})
+        setEditOpen(true)
+    }
+
+    const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        if (!editBooking) return
+        const errs: Record<string, string> = {}
+        const notesErr = validateTextArea(editNotes, 'Notes', 1, 500)
+        if (notesErr) errs.notes = notesErr
+        if (Object.keys(errs).length) { setEditErrors(errs); return }
+        setFormSubmitting(true)
+        try {
+            await apiClient.put(`/parent/bookings/${editBooking.id}`, { notes: editNotes })
+            toast.success('Booking updated')
+            setEditOpen(false)
+            setEditBooking(null)
+            await loadBookings()
+        } catch (err) {
+            console.error('Edit booking error:', err)
+            toast.error('Failed to update booking')
+        } finally {
+            setFormSubmitting(false)
+        }
+    }
+
+    const openRescheduleDrawer = (b: Booking) => {
+        setRescheduleBooking(b)
+        setRescheduleDate('')
+        setRescheduleTime('')
+        setRescheduleReason('')
+        setRescheduleErrors({})
+        setRescheduleOpen(true)
+    }
+
+    const handleRescheduleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        if (!rescheduleBooking) return
+        const errs: Record<string, string> = {}
+        const dateErr = validateRequired(rescheduleDate, 'New date')
+        if (dateErr) errs.newDate = dateErr
+        else if (new Date(rescheduleDate) < new Date(new Date().toDateString())) errs.newDate = 'New date cannot be in the past'
+        const timeErr = validateRequired(rescheduleTime, 'New time')
+        if (timeErr) errs.newTime = timeErr
+        if (Object.keys(errs).length) { setRescheduleErrors(errs); return }
+        setFormSubmitting(true)
+        try {
+            await apiClient.put(`/parent/bookings/${rescheduleBooking.id}/reschedule`, {
+                newDate: rescheduleDate,
+                newTime: rescheduleTime,
+                reason: rescheduleReason,
+            })
+            toast.success('Booking rescheduled')
+            setRescheduleOpen(false)
+            setRescheduleBooking(null)
+            await loadBookings()
+        } catch (err) {
+            console.error('Reschedule error:', err)
+            toast.error('Failed to reschedule booking')
+        } finally {
+            setFormSubmitting(false)
         }
     }
 
@@ -421,14 +502,26 @@ const ParentBookingsPage = () => {
                                             <Eye className="w-4 h-4" />
                                         </Button>
                                         {booking.status === 'confirmed' && (
-                                            <Button
-                                                id={`parent-bookings-edit-${booking.id}-btn`}
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => alert('Feature coming soon')}
-                                            >
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    id={`parent-bookings-edit-${booking.id}-btn`}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => openEditDrawer(booking)}
+                                                    title="Edit notes"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    id={`parent-bookings-reschedule-${booking.id}-btn`}
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => openRescheduleDrawer(booking)}
+                                                    title="Reschedule"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                </Button>
+                                            </>
                                         )}
                                         {(booking.status === 'confirmed' || booking.status === 'pending') && (
                                             <Button
@@ -479,7 +572,7 @@ const ParentBookingsPage = () => {
                             id="parent-bookings-quick-assessment-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Assessment booking coming soon')}
+                            onClick={() => router.push('/parent/browse-classes?type=assessment')}
                         >
                             <User className="w-6 h-6" />
                             <span>Assessment</span>
@@ -488,7 +581,11 @@ const ParentBookingsPage = () => {
                             id="parent-bookings-quick-reschedule-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Reschedule feature coming soon')}
+                            onClick={() => {
+                                const upcomingBooking = filteredBookings.find(b => b.status === 'confirmed')
+                                if (upcomingBooking) openRescheduleDrawer(upcomingBooking)
+                                else toast.info('No confirmed bookings to reschedule')
+                            }}
                         >
                             <RefreshCw className="w-6 h-6" />
                             <span>Reschedule</span>
@@ -496,6 +593,100 @@ const ParentBookingsPage = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Edit Booking Drawer */}
+            <SlideInDrawer
+                isOpen={editOpen}
+                onClose={() => { setEditOpen(false); setEditBooking(null); setEditErrors({}) }}
+                title="Edit Booking"
+                description={editBooking ? `${editBooking.program} - ${editBooking.child}` : ''}
+                size="md"
+            >
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Special Requests</label>
+                        <textarea
+                            name="notes"
+                            rows={5}
+                            value={editNotes}
+                            onChange={(e) => {
+                                setEditNotes(e.target.value)
+                                if (editErrors.notes) setEditErrors(prev => { const n = { ...prev }; delete n.notes; return n })
+                            }}
+                            maxLength={500}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${editErrors.notes ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="Anything the coach or facility should know"
+                        />
+                        <FormFieldHint hint="1-500 characters" error={editErrors.notes} />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button type="button" variant="outline" onClick={() => { setEditOpen(false); setEditBooking(null); setEditErrors({}) }}>Cancel</Button>
+                        <Button type="submit" disabled={formSubmitting}>
+                            {formSubmitting ? (<><Loader className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : 'Save Changes'}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
+
+            {/* Reschedule Booking Drawer */}
+            <SlideInDrawer
+                isOpen={rescheduleOpen}
+                onClose={() => { setRescheduleOpen(false); setRescheduleBooking(null); setRescheduleErrors({}) }}
+                title="Reschedule Booking"
+                description={rescheduleBooking ? `${rescheduleBooking.program} - ${rescheduleBooking.child}` : ''}
+                size="md"
+            >
+                <form onSubmit={handleRescheduleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Date</label>
+                        <input
+                            type="date"
+                            value={rescheduleDate}
+                            onChange={(e) => {
+                                setRescheduleDate(e.target.value)
+                                if (rescheduleErrors.newDate) setRescheduleErrors(prev => { const n = { ...prev }; delete n.newDate; return n })
+                            }}
+                            min={new Date().toISOString().split('T')[0]}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${rescheduleErrors.newDate ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint="Select a date on or after today" error={rescheduleErrors.newDate} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">New Time</label>
+                        <input
+                            type="time"
+                            value={rescheduleTime}
+                            onChange={(e) => {
+                                setRescheduleTime(e.target.value)
+                                if (rescheduleErrors.newTime) setRescheduleErrors(prev => { const n = { ...prev }; delete n.newTime; return n })
+                            }}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${rescheduleErrors.newTime ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint="e.g. 09:30" error={rescheduleErrors.newTime} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+                        <textarea
+                            rows={3}
+                            value={rescheduleReason}
+                            onChange={(e) => setRescheduleReason(e.target.value)}
+                            maxLength={300}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Why are you rescheduling?"
+                        />
+                        <FormFieldHint hint="Up to 300 characters" />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button type="button" variant="outline" onClick={() => { setRescheduleOpen(false); setRescheduleBooking(null); setRescheduleErrors({}) }}>Cancel</Button>
+                        <Button type="submit" disabled={formSubmitting}>
+                            {formSubmitting ? (<><Loader className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : 'Reschedule'}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
         </div>
     )
 }

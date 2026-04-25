@@ -44,6 +44,51 @@ export interface BusinessUnit {
     updatedAt?: string
 }
 
+export interface Region {
+    id: string
+    name: string
+    code: string
+    countryId: string
+    countryName?: string
+    isActive: boolean
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface Room {
+    id: string
+    name: string
+    code: string
+    locationId: string
+    locationName?: string
+    type: string
+    capacity: number
+    area?: number
+    floor?: number
+    isActive: boolean
+    equipment?: string[]
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface HolidayCalendarItem {
+    id: string
+    name: string
+    countryId: string
+    countryName?: string
+    year: number
+    holidays: Array<{
+        name: string
+        date: string
+        type: string
+        isRecurring: boolean
+        affectsScheduling: boolean
+    }>
+    isActive?: boolean
+    createdAt?: string
+    updatedAt?: string
+}
+
 export interface Location {
     id: string
     name: string
@@ -141,8 +186,15 @@ function unwrapListResponse<T extends { id?: string; _id?: string }>(
     const page = params?.page || 1
     const limit = params?.limit || 10
 
-    // Body can be the array directly (if backend is bare) or { data: [...] }
-    const payload = body?.data !== undefined ? body.data : body
+    // Body can be the array directly, or { success, data, ... }, or { data: { items: [...] } }
+    // Unwrap up to 2 layers of `.data` to tolerate either apiClient shape.
+    let payload: any = body
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+        payload = payload.data
+    }
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload && Array.isArray((payload as any).data)) {
+        payload = payload.data
+    }
 
     if (Array.isArray(payload)) {
         // Client-side pagination over full list
@@ -430,25 +482,54 @@ export const TermService = {
 // PAYMENT GATEWAYS SERVICE
 // =============================================
 
+/**
+ * Backend payment gateway uses `status: 'active'|'inactive'` + `_id`. Pages expect
+ * `isActive: boolean` + `id`. Translate both directions.
+ */
+function flattenGateway(g: any): any {
+    if (!g || typeof g !== 'object') return g
+    const normalized = (g.id || g._id) ? g : g
+    const status = g.status ?? (g.isActive ? 'active' : 'inactive')
+    const isActive = g.isActive ?? (status === 'active')
+    return {
+        ...normalized,
+        id: g.id || (g._id ? String(g._id) : undefined),
+        status,
+        isActive,
+    }
+}
+
+function buildGatewayPayload(data: Partial<PaymentGateway> & { isActive?: boolean; status?: string }): any {
+    const payload: any = { ...data }
+    // Backend expects `status`, not `isActive`
+    if (payload.isActive !== undefined && payload.status === undefined) {
+        payload.status = payload.isActive ? 'active' : 'inactive'
+    }
+    delete payload.isActive
+    return payload
+}
+
 export const PaymentGatewayService = {
     getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<ListResponse<PaymentGateway>> => {
         const body = await apiClient.get('/payment-gateways', { params })
-        return unwrapListResponse<PaymentGateway>(body, params)
+        const list = unwrapListResponse<PaymentGateway>(body, params)
+        list.data = list.data.map(flattenGateway) as PaymentGateway[]
+        return list
     },
 
     getById: async (id: string): Promise<PaymentGateway> => {
         const body = await apiClient.get(`/payment-gateways/${id}`)
-        return unwrapItemResponse<PaymentGateway>(body)
+        return flattenGateway(unwrapItemResponse<PaymentGateway>(body)) as PaymentGateway
     },
 
     create: async (data: Partial<PaymentGateway>): Promise<PaymentGateway> => {
-        const body = await apiClient.post('/payment-gateways', data)
-        return unwrapItemResponse<PaymentGateway>(body)
+        const body = await apiClient.post('/payment-gateways', buildGatewayPayload(data))
+        return flattenGateway(unwrapItemResponse<PaymentGateway>(body)) as PaymentGateway
     },
 
     update: async (id: string, data: Partial<PaymentGateway>): Promise<PaymentGateway> => {
-        const body = await apiClient.put(`/payment-gateways/${id}`, data)
-        return unwrapItemResponse<PaymentGateway>(body)
+        const body = await apiClient.put(`/payment-gateways/${id}`, buildGatewayPayload(data))
+        return flattenGateway(unwrapItemResponse<PaymentGateway>(body)) as PaymentGateway
     },
 
     delete: async (id: string): Promise<void> => {
@@ -461,10 +542,122 @@ export const PaymentGatewayService = {
     },
 }
 
+// =============================================
+// REGIONS SERVICE  (regions belong to a Country)
+// =============================================
+
+export const RegionService = {
+    getAll: async (params?: { page?: number; limit?: number; search?: string; countryId?: string }): Promise<ListResponse<Region>> => {
+        const body = await apiClient.get('/regions', { params })
+        return unwrapListResponse<Region>(body, params)
+    },
+    getById: async (id: string): Promise<Region> => {
+        const body = await apiClient.get(`/regions/${id}`)
+        return unwrapItemResponse<Region>(body)
+    },
+    create: async (data: Partial<Region>): Promise<Region> => {
+        const body = await apiClient.post('/regions', data)
+        return unwrapItemResponse<Region>(body)
+    },
+    update: async (id: string, data: Partial<Region>): Promise<Region> => {
+        const body = await apiClient.put(`/regions/${id}`, data)
+        return unwrapItemResponse<Region>(body)
+    },
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/regions/${id}`)
+    },
+}
+
+// =============================================
+// ROOMS SERVICE  (rooms belong to a Location)
+// =============================================
+
+export const RoomService = {
+    getAll: async (params?: { page?: number; limit?: number; search?: string; locationId?: string }): Promise<ListResponse<Room>> => {
+        const body = await apiClient.get('/rooms', { params })
+        return unwrapListResponse<Room>(body, params)
+    },
+    getById: async (id: string): Promise<Room> => {
+        const body = await apiClient.get(`/rooms/${id}`)
+        return unwrapItemResponse<Room>(body)
+    },
+    create: async (data: Partial<Room>): Promise<Room> => {
+        const payload: any = { ...data }
+        if (payload.capacity !== undefined) payload.capacity = Number(payload.capacity)
+        if (payload.area !== undefined) payload.area = Number(payload.area)
+        if (payload.floor !== undefined) payload.floor = Number(payload.floor)
+        const body = await apiClient.post('/rooms', payload)
+        return unwrapItemResponse<Room>(body)
+    },
+    update: async (id: string, data: Partial<Room>): Promise<Room> => {
+        const payload: any = { ...data }
+        if (payload.capacity !== undefined) payload.capacity = Number(payload.capacity)
+        if (payload.area !== undefined) payload.area = Number(payload.area)
+        if (payload.floor !== undefined) payload.floor = Number(payload.floor)
+        const body = await apiClient.put(`/rooms/${id}`, payload)
+        return unwrapItemResponse<Room>(body)
+    },
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/rooms/${id}`)
+    },
+}
+
+// =============================================
+// HOLIDAY CALENDARS SERVICE
+// =============================================
+
+export const HolidayCalendarService = {
+    getAll: async (params?: { page?: number; limit?: number; search?: string; countryId?: string; year?: number }): Promise<ListResponse<HolidayCalendarItem>> => {
+        const body = await apiClient.get('/holiday-calendars', { params })
+        return unwrapListResponse<HolidayCalendarItem>(body, params)
+    },
+    getById: async (id: string): Promise<HolidayCalendarItem> => {
+        const body = await apiClient.get(`/holiday-calendars/${id}`)
+        return unwrapItemResponse<HolidayCalendarItem>(body)
+    },
+    create: async (data: Partial<HolidayCalendarItem>): Promise<HolidayCalendarItem> => {
+        const payload: any = { ...data }
+        if (payload.year !== undefined) payload.year = Number(payload.year)
+        // Backend requires isRecurring + affectsScheduling on each holiday — default if missing
+        if (Array.isArray(payload.holidays)) {
+            payload.holidays = payload.holidays.map((h: any) => ({
+                name: h.name,
+                date: h.date,
+                type: h.type || 'PUBLIC',
+                isRecurring: !!h.isRecurring,
+                affectsScheduling: h.affectsScheduling !== undefined ? !!h.affectsScheduling : true,
+            }))
+        }
+        const body = await apiClient.post('/holiday-calendars', payload)
+        return unwrapItemResponse<HolidayCalendarItem>(body)
+    },
+    update: async (id: string, data: Partial<HolidayCalendarItem>): Promise<HolidayCalendarItem> => {
+        const payload: any = { ...data }
+        if (payload.year !== undefined) payload.year = Number(payload.year)
+        if (Array.isArray(payload.holidays)) {
+            payload.holidays = payload.holidays.map((h: any) => ({
+                name: h.name,
+                date: h.date,
+                type: h.type || 'PUBLIC',
+                isRecurring: !!h.isRecurring,
+                affectsScheduling: h.affectsScheduling !== undefined ? !!h.affectsScheduling : true,
+            }))
+        }
+        const body = await apiClient.put(`/holiday-calendars/${id}`, payload)
+        return unwrapItemResponse<HolidayCalendarItem>(body)
+    },
+    delete: async (id: string): Promise<void> => {
+        await apiClient.delete(`/holiday-calendars/${id}`)
+    },
+}
+
 export default {
     CountryService,
     BusinessUnitService,
     LocationService,
     TermService,
     PaymentGatewayService,
+    RegionService,
+    RoomService,
+    HolidayCalendarService,
 }

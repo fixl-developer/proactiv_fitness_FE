@@ -1,0 +1,301 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Map } from 'lucide-react'
+import { toast } from 'sonner'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { RegionService, CountryService, type Region, type Country } from '@/services/businessConfigService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateName, filterNameInput } from '@/utils/validation'
+
+export default function RegionsTab() {
+    const [regions, setRegions] = useState<Region[]>([])
+    const [countries, setCountries] = useState<Country[]>([])
+    const [loading, setLoading] = useState(true)
+    const [showForm, setShowForm] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [submitting, setSubmitting] = useState(false)
+    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+    const [formData, setFormData] = useState({
+        name: '',
+        code: '',
+        countryId: '',
+        isActive: true,
+    })
+    const [errors, setErrors] = useState<Record<string, string>>({})
+
+    const loadRegions = async () => {
+        try {
+            setLoading(true)
+            const response = await RegionService.getAll({ page: currentPage, limit: 10, search: searchTerm })
+            setRegions(response.data || [])
+            setTotalPages(response.pagination?.totalPages || 1)
+        } catch (error) {
+            console.error('Failed to load regions:', error)
+            toast.error('Failed to load regions')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const loadCountries = async () => {
+        try {
+            const response = await CountryService.getAll({ limit: 500 })
+            setCountries(response.data || [])
+        } catch (error) {
+            console.error('Failed to load countries:', error)
+        }
+    }
+
+    useEffect(() => { loadRegions() }, [currentPage, searchTerm])
+    useEffect(() => { loadCountries() }, [])
+
+    const validateFormData = () => {
+        const next: Record<string, string> = {}
+        const nameErr = validateName(formData.name, 'Region name')
+        if (nameErr) next.name = nameErr
+        if (!formData.code) next.code = 'Region code is required'
+        else if (!/^[A-Z0-9-]{2,10}$/.test(formData.code)) next.code = '2-10 uppercase letters/digits/hyphens (e.g., NA-EAST)'
+        if (!formData.countryId) next.countryId = 'Country is required'
+        setErrors(next)
+        return Object.keys(next).length === 0
+    }
+
+    const resetForm = () => {
+        setFormData({ name: '', code: '', countryId: '', isActive: true })
+        setErrors({})
+        setEditingId(null)
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!validateFormData()) {
+            toast.error('Please fix the highlighted fields')
+            return
+        }
+        try {
+            setSubmitting(true)
+            if (editingId) {
+                await RegionService.update(editingId, formData)
+                toast.success('Region updated successfully')
+            } else {
+                await RegionService.create(formData)
+                toast.success('Region created successfully')
+            }
+            setShowForm(false)
+            resetForm()
+            setCurrentPage(1)
+            await loadRegions()
+        } catch (error) {
+            toast.error(getErrorMessage(error))
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleEdit = (r: Region) => {
+        setFormData({
+            name: r.name,
+            code: r.code,
+            countryId: typeof r.countryId === 'string' ? r.countryId : (r.countryId as any)?._id || '',
+            isActive: r.isActive,
+        })
+        setEditingId(r.id)
+        setShowForm(true)
+    }
+
+    const handleDelete = async (id: string) => {
+        try {
+            await RegionService.delete(id)
+            toast.success('Region deleted successfully')
+            setDeleteConfirm(null)
+            await loadRegions()
+        } catch (error) {
+            toast.error(getErrorMessage(error))
+        }
+    }
+
+    const countryName = (countryId: any): string => {
+        const id = typeof countryId === 'string' ? countryId : countryId?._id
+        const c = countries.find(x => x.id === id)
+        return c ? `${c.name} (${c.code})` : '—'
+    }
+
+    return (
+        <div>
+            {/* Controls */}
+            <div className="mb-6 flex gap-4 items-center">
+                <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Search regions..."
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <button
+                    onClick={() => { resetForm(); setShowForm(true) }}
+                    disabled={countries.length === 0}
+                    title={countries.length === 0 ? 'Create at least one country first' : 'Add region'}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Plus className="w-5 h-5" />
+                    Add Region
+                </button>
+            </div>
+
+            {countries.length === 0 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm text-amber-900">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>No countries exist yet. Create one in the <strong>Countries</strong> tab before adding regions.</span>
+                </div>
+            )}
+
+            {/* Table */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                {loading ? (
+                    <div className="p-8 text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <p className="mt-4 text-slate-600">Loading regions...</p>
+                    </div>
+                ) : regions.length === 0 ? (
+                    <div className="p-8 text-center">
+                        <Map className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <p className="text-slate-600">No regions found</p>
+                        <p className="text-sm text-slate-500 mt-1">Click "Add Region" to create one</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Region</th>
+                                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Code</th>
+                                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Country</th>
+                                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                                        <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                    {regions.map((r) => (
+                                        <tr key={r.id} className="hover:bg-slate-50 transition">
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-900">{r.name}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">{r.code}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">{countryName(r.countryId)}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${r.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                    {r.isActive ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleEdit(r)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"><Pencil className="w-4 h-4" /></button>
+                                                    <button onClick={() => setDeleteConfirm(r.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                            <p className="text-sm text-slate-600">Page {currentPage} of {totalPages}</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronLeft className="w-5 h-5" /></button>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronRight className="w-5 h-5" /></button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </motion.div>
+
+            {/* Form Drawer */}
+            <SlideInDrawer isOpen={showForm} onClose={() => { setShowForm(false); resetForm() }} title={editingId ? 'Edit Region' : 'Add New Region'} size="lg">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-900 mb-2">Region Name <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onKeyDown={filterNameInput}
+                            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: '' }) }}
+                            placeholder="e.g., North America East"
+                            maxLength={80}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+                        />
+                        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-900 mb-2">Region Code <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            value={formData.code}
+                            onChange={(e) => { setFormData({ ...formData, code: e.target.value.toUpperCase() }); if (errors.code) setErrors({ ...errors, code: '' }) }}
+                            placeholder="e.g., NA-EAST"
+                            maxLength={10}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.code ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+                        />
+                        {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code}</p>}
+                        <p className="mt-1 text-xs text-slate-500">2-10 uppercase letters / digits / hyphens</p>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-900 mb-2">Country <span className="text-red-500">*</span></label>
+                        <select
+                            value={formData.countryId}
+                            onChange={(e) => { setFormData({ ...formData, countryId: e.target.value }); if (errors.countryId) setErrors({ ...errors, countryId: '' }) }}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.countryId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+                        >
+                            <option value="">Select Country</option>
+                            {countries.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                        </select>
+                        {errors.countryId && <p className="mt-1 text-sm text-red-600">{errors.countryId}</p>}
+                    </div>
+
+                    <div>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <div className="relative">
+                                <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="sr-only" />
+                                <div className={`w-11 h-6 rounded-full transition-colors ${formData.isActive ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData.isActive ? 'translate-x-5.5 ml-[22px]' : 'translate-x-0.5 ml-0.5'}`} />
+                                </div>
+                            </div>
+                            <span className="text-sm font-medium text-slate-900">Active</span>
+                        </label>
+                    </div>
+
+                    <div className="flex gap-3 pt-6 border-t border-slate-200">
+                        <button type="button" onClick={() => { setShowForm(false); resetForm() }} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                        <button type="submit" disabled={submitting} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
+                            {submitting ? 'Saving...' : editingId ? 'Update Region' : 'Create Region'}
+                        </button>
+                    </div>
+                </form>
+            </SlideInDrawer>
+
+            {deleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
+                        <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Region?</h3>
+                        <p className="text-slate-600 mb-6">This action cannot be undone.</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setDeleteConfirm(null)} className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                            <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </div>
+    )
+}

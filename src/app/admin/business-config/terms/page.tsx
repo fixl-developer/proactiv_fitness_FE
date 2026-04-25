@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, X, CalendarDays } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { TermService, LocationService, BusinessUnitService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import HolidaysTab from '@/components/admin/business-config/HolidaysTab'
 
 interface Term {
   id: string
@@ -27,6 +28,7 @@ interface Holiday {
 }
 
 export default function TermsPage() {
+  const [activeTab, setActiveTab] = useState<'terms' | 'holidays'>('terms')
   const [terms, setTerms] = useState<Term[]>([])
   const [locations, setLocations] = useState<any[]>([])
   const [businessUnits, setBusinessUnits] = useState<any[]>([])
@@ -173,7 +175,8 @@ export default function TermsPage() {
 
       setShowForm(false)
       resetForm()
-      loadTerms()
+      setCurrentPage(1)
+      await loadTerms()
     } catch (error) {
       console.error('Error saving term:', error)
       toast.error(getErrorMessage(error))
@@ -205,7 +208,7 @@ export default function TermsPage() {
       await TermService.delete(id)
       toast.success('Term deleted successfully')
       setDeleteConfirm(null)
-      loadTerms()
+      await loadTerms()
     } catch (error) {
       console.error('Error deleting term:', error)
       toast.error(getErrorMessage(error))
@@ -306,6 +309,26 @@ export default function TermsPage() {
           </div>
           <p className="text-slate-600">Manage academic terms, schedules, and holiday calendars</p>
         </motion.div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('terms')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'terms' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><Calendar className="w-4 h-4" /> Terms</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('holidays')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'holidays' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" /> Holiday Calendars</span>
+          </button>
+        </div>
+
+        {activeTab === 'holidays' && <HolidaysTab />}
+
+        {activeTab === 'terms' && (<>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
           <div className="flex-1 relative">
@@ -665,6 +688,7 @@ export default function TermsPage() {
             </motion.div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   )

@@ -41,14 +41,15 @@ const ParentDashboard = () => {
             return
         }
         loadDashboardData()
-    }, [isAuthenticated, router])
+        // Re-fetch when date-range filter changes so the view actually updates
+    }, [isAuthenticated, router, selectedTimeRange])
 
     const loadDashboardData = async () => {
         try {
             setIsLoading(true)
             setError(null)
 
-            const response = await apiClient.get<any>('/parent/dashboard')
+            const response = await apiClient.get<any>(`/parent/dashboard?timeRange=${selectedTimeRange}`)
             const data = response?.data || response
             setDashboardData(data)
         } catch (err) {
@@ -109,30 +110,20 @@ const ParentDashboard = () => {
     const myChildren = dashboardData?.children || []
     const upcomingClasses = dashboardData?.upcomingClasses || []
     const recentPayments = dashboardData?.recentPayments || []
+    const alerts: any[] = Array.isArray(dashboardData?.alerts) ? dashboardData.alerts : []
 
-    const alerts = [
-        {
-            type: 'success',
-            title: 'Class Completed',
-            message: 'Your child completed a class successfully',
-            time: '2h ago',
-            priority: 'low'
-        },
-        {
-            type: 'info',
-            title: 'New Achievement',
-            message: 'Your child earned a new badge',
-            time: '4h ago',
-            priority: 'low'
-        },
-        {
-            type: 'info',
-            title: 'Coach Feedback',
-            message: 'A coach left feedback on your child\'s progress',
-            time: '1d ago',
-            priority: 'low'
-        }
-    ]
+    const formatAlertTime = (iso: string) => {
+        if (!iso) return ''
+        try {
+            const d = new Date(iso)
+            const diffMs = Date.now() - d.getTime()
+            const diffHr = Math.floor(diffMs / (1000 * 60 * 60))
+            if (diffHr < 1) return 'just now'
+            if (diffHr < 24) return `${diffHr}h ago`
+            const diffDays = Math.floor(diffHr / 24)
+            return `${diffDays}d ago`
+        } catch { return '' }
+    }
 
     const getStatusColor = (status: string) => {
         const colors = {
@@ -544,23 +535,31 @@ const ParentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-3">
-                        {alerts.map((alert, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className={`p-4 rounded-lg ${getAlertColor(alert.type)}`}
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-gray-900">{alert.title}</h4>
-                                        <p className="text-sm text-gray-700 mt-1">{alert.message}</p>
-                                        <p className="text-xs text-gray-500 mt-1">{alert.time}</p>
+                        {alerts.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm font-medium">No alerts right now</p>
+                                <p className="text-xs text-gray-400 mt-1">You'll see attendance, payment, and class notifications here.</p>
+                            </div>
+                        ) : (
+                            alerts.map((alert: any, index: number) => (
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className={`p-4 rounded-lg ${getAlertColor(alert.type)}`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900">{alert.title}</h4>
+                                            <p className="text-sm text-gray-700 mt-1">{alert.message}</p>
+                                            <p className="text-xs text-gray-500 mt-1">{formatAlertTime(alert.time)}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>

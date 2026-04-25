@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
@@ -147,6 +148,8 @@ const ProfilePage = () => {
 
     const handleEdit = () => {
         setSuccessMessage(null)
+        setEditedProfile(profile)
+        setFieldErrors({})
         setIsEditing(true)
     }
 
@@ -182,12 +185,14 @@ const ProfilePage = () => {
             })
             setProfile(editedProfile)
             setIsEditing(false)
+            setFieldErrors({})
             setSuccessMessage('Profile updated successfully!')
             toast.success('Profile updated successfully!')
             setTimeout(() => setSuccessMessage(null), 5000)
         } catch (err) {
             console.error('Error saving profile:', err)
             setError('Failed to save profile')
+            toast.error('Failed to save profile')
         } finally {
             setIsSaving(false)
         }
@@ -196,6 +201,7 @@ const ProfilePage = () => {
     const handleCancel = () => {
         setEditedProfile(profile)
         setIsEditing(false)
+        setFieldErrors({})
         setError(null)
     }
 
@@ -271,22 +277,10 @@ const ProfilePage = () => {
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Profile</h1>
                     <p className="text-sm md:text-base text-gray-600">Manage your account information and preferences</p>
                 </div>
-                {!isEditing ? (
-                    <Button id="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">
-                        <Edit className="w-4 h-4" />
-                        Edit Profile
-                    </Button>
-                ) : (
-                    <div className="flex gap-2">
-                        <Button id="btn-cancel-parent-profile" variant="outline" onClick={handleCancel} className="flex items-center gap-2">
-                            <X className="w-4 h-4" /> Cancel
-                        </Button>
-                        <Button id="btn-save-parent-profile" onClick={handleSave} disabled={isSaving} className="flex items-center gap-2">
-                            {isSaving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </Button>
-                    </div>
-                )}
+                <Button id="btn-edit-parent-profile" onClick={handleEdit} className="flex items-center gap-2">
+                    <Edit className="w-4 h-4" />
+                    Edit Profile
+                </Button>
             </div>
 
             {error && (
@@ -317,27 +311,11 @@ const ProfilePage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                    {isEditing ? (
-                                        <>
-                                            <input type="text" value={editedProfile?.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} onKeyDown={filterNameInput}
-                                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.firstName ? 'border-red-500' : 'border-gray-300'}`} />
-                                            <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-900">{profile.firstName}</p>
-                                    )}
+                                    <p className="text-gray-900">{profile.firstName}</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                    {isEditing ? (
-                                        <>
-                                            <input type="text" value={editedProfile?.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} onKeyDown={filterNameInput}
-                                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.lastName ? 'border-red-500' : 'border-gray-300'}`} />
-                                            <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-900">{profile.lastName}</p>
-                                    )}
+                                    <p className="text-gray-900">{profile.lastName}</p>
                                 </div>
                             </div>
 
@@ -352,50 +330,26 @@ const ProfilePage = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                {isEditing ? (
-                                    <>
-                                        <input type="tel" value={editedProfile?.phone || ''} onChange={(e) => handleInputChange('phone', e.target.value)} onKeyDown={filterPhoneInput}
-                                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.phone ? 'border-red-500' : 'border-gray-300'}`} />
-                                        <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-gray-400" />
-                                        <p className="text-gray-900">{profile.phone || 'Not set'}</p>
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    <Phone className="w-4 h-4 text-gray-400" />
+                                    <p className="text-gray-900">{profile.phone || 'Not set'}</p>
+                                </div>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                {isEditing ? (
-                                    <>
-                                        <textarea value={editedProfile?.address || ''} onChange={(e) => handleInputChange('address', e.target.value)} rows={3}
-                                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.address ? 'border-red-500' : 'border-gray-300'}`} />
-                                        <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
-                                    </>
-                                ) : (
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="w-4 h-4 text-gray-400 mt-1" />
-                                        <p className="text-gray-900">{profile.address || 'Not set'}</p>
-                                    </div>
-                                )}
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+                                    <p className="text-gray-900">{profile.address || 'Not set'}</p>
+                                </div>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                                {isEditing ? (
-                                    <>
-                                        <input type="date" value={editedProfile?.dateOfBirth || ''} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.dateOfBirth ? 'border-red-500' : 'border-gray-300'}`} />
-                                        <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors.dateOfBirth} />
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-4 h-4 text-gray-400" />
-                                        <p className="text-gray-900">{profile.dateOfBirth ? formatDate(profile.dateOfBirth) : 'Not set'}</p>
-                                    </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                    <p className="text-gray-900">{profile.dateOfBirth ? formatDate(profile.dateOfBirth) : 'Not set'}</p>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -411,40 +365,16 @@ const ProfilePage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                                    {isEditing ? (
-                                        <>
-                                            <input type="text" value={editedProfile?.emergencyContact.name || ''} onChange={(e) => handleInputChange('emergencyContact.name', e.target.value)} onKeyDown={filterNameInput}
-                                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.name'] ? 'border-red-500' : 'border-gray-300'}`} />
-                                            <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors['emergencyContact.name']} />
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-900">{profile.emergencyContact.name || 'Not set'}</p>
-                                    )}
+                                    <p className="text-gray-900">{profile.emergencyContact.name || 'Not set'}</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                    {isEditing ? (
-                                        <>
-                                            <input type="text" value={editedProfile?.emergencyContact.relationship || ''} onChange={(e) => handleInputChange('emergencyContact.relationship', e.target.value)} onKeyDown={filterNameInput}
-                                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.relationship'] ? 'border-red-500' : 'border-gray-300'}`} />
-                                            <FormFieldHint hint={FORMAT_HINTS.relationship} error={fieldErrors['emergencyContact.relationship']} />
-                                        </>
-                                    ) : (
-                                        <p className="text-gray-900">{profile.emergencyContact.relationship || 'Not set'}</p>
-                                    )}
+                                    <p className="text-gray-900">{profile.emergencyContact.relationship || 'Not set'}</p>
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                {isEditing ? (
-                                    <>
-                                        <input type="tel" value={editedProfile?.emergencyContact.phone || ''} onChange={(e) => handleInputChange('emergencyContact.phone', e.target.value)} onKeyDown={filterPhoneInput}
-                                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.phone'] ? 'border-red-500' : 'border-gray-300'}`} />
-                                        <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors['emergencyContact.phone']} />
-                                    </>
-                                ) : (
-                                    <p className="text-gray-900">{profile.emergencyContact.phone || 'Not set'}</p>
-                                )}
+                                <p className="text-gray-900">{profile.emergencyContact.phone || 'Not set'}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -467,18 +397,9 @@ const ProfilePage = () => {
                                         <p className="font-medium text-gray-900">{pref.label}</p>
                                         <p className="text-sm text-gray-600">{pref.desc}</p>
                                     </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={isEditing
-                                                ? (editedProfile?.preferences as any)?.[pref.key]
-                                                : (profile.preferences as any)?.[pref.key]}
-                                            onChange={(e) => handleInputChange(`preferences.${pref.key}`, e.target.checked)}
-                                            disabled={!isEditing}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
+                                    <span className={`text-xs px-2 py-1 rounded ${(profile.preferences as any)?.[pref.key] ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                        {(profile.preferences as any)?.[pref.key] ? 'On' : 'Off'}
+                                    </span>
                                 </div>
                             ))}
                         </CardContent>
@@ -498,7 +419,7 @@ const ProfilePage = () => {
                             </h3>
                             <p className="text-sm text-gray-600 mb-4">Parent Account</p>
                             <Button id="parent-profile-change-photo-btn" variant="outline" size="sm" className="flex items-center gap-2 mx-auto"
-                                onClick={() => alert('Photo upload coming soon')}>
+                                onClick={handleEdit}>
                                 <Camera className="w-4 h-4" /> Change Photo
                             </Button>
                         </CardContent>
@@ -549,6 +470,111 @@ const ProfilePage = () => {
                     </Card>
                 </div>
             </div>
+
+            {/* Edit Profile Drawer */}
+            <SlideInDrawer
+                isOpen={isEditing}
+                onClose={handleCancel}
+                title="Edit Profile"
+                description="Update your personal information, emergency contact, and preferences"
+                size="lg"
+            >
+                <form
+                    onSubmit={(e) => { e.preventDefault(); handleSave() }}
+                    className="space-y-5"
+                >
+                    <div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Basic Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <input type="text" value={editedProfile?.firstName || ''} onChange={(e) => handleInputChange('firstName', e.target.value)} onKeyDown={filterNameInput} required
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.firstName ? 'border-red-500' : 'border-gray-300'}`} />
+                                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <input type="text" value={editedProfile?.lastName || ''} onChange={(e) => handleInputChange('lastName', e.target.value)} onKeyDown={filterNameInput} required
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.lastName ? 'border-red-500' : 'border-gray-300'}`} />
+                                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                        <input type="tel" value={editedProfile?.phone || ''} onChange={(e) => handleInputChange('phone', e.target.value)} onKeyDown={filterPhoneInput}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.phone ? 'border-red-500' : 'border-gray-300'}`} />
+                        <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                        <textarea value={editedProfile?.address || ''} onChange={(e) => handleInputChange('address', e.target.value)} rows={3}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.address ? 'border-red-500' : 'border-gray-300'}`} />
+                        <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                        <input type="date" value={editedProfile?.dateOfBirth || ''} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors.dateOfBirth ? 'border-red-500' : 'border-gray-300'}`} />
+                        <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors.dateOfBirth} />
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Emergency Contact</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input type="text" value={editedProfile?.emergencyContact.name || ''} onChange={(e) => handleInputChange('emergencyContact.name', e.target.value)} onKeyDown={filterNameInput}
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.name'] ? 'border-red-500' : 'border-gray-300'}`} />
+                                <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors['emergencyContact.name']} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                                <input type="text" value={editedProfile?.emergencyContact.relationship || ''} onChange={(e) => handleInputChange('emergencyContact.relationship', e.target.value)} onKeyDown={filterNameInput}
+                                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.relationship'] ? 'border-red-500' : 'border-gray-300'}`} />
+                                <FormFieldHint hint={FORMAT_HINTS.relationship} error={fieldErrors['emergencyContact.relationship']} />
+                            </div>
+                        </div>
+                        <div className="mt-3">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <input type="tel" value={editedProfile?.emergencyContact.phone || ''} onChange={(e) => handleInputChange('emergencyContact.phone', e.target.value)} onKeyDown={filterPhoneInput}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${fieldErrors['emergencyContact.phone'] ? 'border-red-500' : 'border-gray-300'}`} />
+                            <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors['emergencyContact.phone']} />
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Preferences</h4>
+                        <div className="space-y-3">
+                            {[
+                                { key: 'notifications', label: 'Push Notifications' },
+                                { key: 'emailUpdates', label: 'Email Updates' },
+                                { key: 'smsUpdates', label: 'SMS Updates' },
+                            ].map(pref => (
+                                <label key={pref.key} className="flex items-center justify-between cursor-pointer">
+                                    <span className="text-sm text-gray-700">{pref.label}</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={(editedProfile?.preferences as any)?.[pref.key] || false}
+                                        onChange={(e) => handleInputChange(`preferences.${pref.key}`, e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <Button type="button" variant="outline" onClick={handleCancel} disabled={isSaving}>
+                            <X className="w-4 h-4 mr-2" /> Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? (<><Loader className="w-4 h-4 mr-2 animate-spin" /> Saving...</>) : (<><Save className="w-4 h-4 mr-2" /> Save Changes</>)}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
         </div>
     )
 }

@@ -174,7 +174,8 @@ export default function BusinessUnitsPage() {
 
       setShowForm(false)
       resetForm()
-      loadUnits()
+      setCurrentPage(1)
+      await loadUnits()
     } catch (error) {
       console.error('Error saving business unit:', error)
       toast.error(getErrorMessage(error))
@@ -204,7 +205,7 @@ export default function BusinessUnitsPage() {
       await BusinessUnitService.delete(id)
       toast.success('Business unit deleted successfully')
       setDeleteConfirm(null)
-      loadUnits()
+      await loadUnits()
     } catch (error) {
       console.error('Error deleting business unit:', error)
       toast.error(getErrorMessage(error))
