@@ -1,9 +1,25 @@
 'use client'
 
 import Link from 'next/link';
-import { Users, Calendar, Zap, PartyPopper, ArrowRight } from 'lucide-react';
+import { Users, Calendar, Zap, PartyPopper, ArrowRight, BookOpen, MapPin, DollarSign } from 'lucide-react';
 import { useCMSData } from '@/hooks/useCMSData';
 import { CMSService, ServiceCardData } from '@/services/cmsService';
+import { apiClient } from '@/services/api/client';
+
+// Shape returned by the public Programs endpoint (subset of the full Program doc)
+interface AdminProgram {
+    _id: string
+    name: string
+    description?: string
+    shortDescription?: string
+    category?: string
+    programType?: string
+    skillLevels?: string[]
+    ageGroups?: Array<{ minAge?: number; maxAge?: number; ageType?: string; description?: string }>
+    pricingModel?: { basePrice?: number; currency?: string }
+    isActive?: boolean
+    isPublic?: boolean
+}
 
 interface Program {
     id: number;
@@ -132,6 +148,20 @@ export default function ProgramsPage() {
         ? services.map(mapServiceToProgram)
         : staticPrograms;
 
+    // Real bookable programs created by admin in /admin/programs/catalog.
+    // Public listing returns only isActive=true && isPublic=true programs.
+    const { data: adminPrograms } = useCMSData<AdminProgram[]>(
+        async () => {
+            const res: any = await apiClient.get('/programs/public', { params: { limit: 50 } });
+            const raw = res?.data ?? res;
+            // Server may return { programs: [...], pagination: {...} } or just an array
+            const list = Array.isArray(raw) ? raw : (raw?.programs ?? raw?.data ?? []);
+            return Array.isArray(list) ? list : [];
+        },
+        [],
+        []
+    );
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Hero Section */}
@@ -209,6 +239,89 @@ export default function ProgramsPage() {
                     </div>
                 </div>
             </section>
+
+            {/* Admin-managed Programs (real bookable programs) */}
+            {adminPrograms.length > 0 && (
+                <section className="py-16 bg-white border-t border-gray-200">
+                    <div className="container mx-auto px-4">
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-semibold mb-3">
+                                <BookOpen className="w-4 h-4" />
+                                Currently Available
+                            </div>
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">Bookable Programs</h2>
+                            <p className="text-gray-600 max-w-2xl mx-auto">
+                                Live programs you can enrol in right now. Pricing and details are managed by our admin team.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {adminPrograms.map((p) => {
+                                const ag = (p.ageGroups && p.ageGroups[0]) || null
+                                const ageLabel = ag?.description
+                                    ? ag.description
+                                    : (ag?.minAge !== undefined && ag?.maxAge !== undefined
+                                        ? `Ages ${ag.minAge}–${ag.maxAge}${ag.ageType ? ' ' + ag.ageType : ''}`
+                                        : '')
+                                const price = p.pricingModel?.basePrice
+                                const currency = p.pricingModel?.currency || ''
+                                const skill = (p.skillLevels && p.skillLevels[0]) || ''
+                                return (
+                                    <div
+                                        key={p._id}
+                                        className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all overflow-hidden"
+                                    >
+                                        <div className="p-6">
+                                            <div className="flex items-start justify-between gap-2 mb-3">
+                                                <h3 className="text-xl font-bold text-gray-900 line-clamp-2">{p.name}</h3>
+                                                {skill && (
+                                                    <span className="inline-block px-2.5 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-semibold capitalize whitespace-nowrap">
+                                                        {skill}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {(p.shortDescription || p.description) && (
+                                                <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                                                    {p.shortDescription || p.description}
+                                                </p>
+                                            )}
+
+                                            <div className="space-y-2 mb-4 text-sm">
+                                                {ageLabel && (
+                                                    <div className="flex items-center gap-2 text-gray-700">
+                                                        <Users className="w-4 h-4 text-gray-400" />
+                                                        <span>{ageLabel}</span>
+                                                    </div>
+                                                )}
+                                                {p.category && (
+                                                    <div className="flex items-center gap-2 text-gray-700">
+                                                        <MapPin className="w-4 h-4 text-gray-400" />
+                                                        <span className="capitalize">{p.category}</span>
+                                                    </div>
+                                                )}
+                                                {price !== undefined && price !== null && (
+                                                    <div className="flex items-center gap-2 text-gray-900 font-semibold">
+                                                        <DollarSign className="w-4 h-4 text-gray-400" />
+                                                        <span>{currency} {price}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <Link
+                                                id={`programs-bookable-${p._id}-link`}
+                                                href="/book-now"
+                                                className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:gap-3 transition-all"
+                                            >
+                                                Book Now <ArrowRight className="w-4 h-4" />
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {/* CTA Section */}
             <section className="py-20 bg-primary text-white">

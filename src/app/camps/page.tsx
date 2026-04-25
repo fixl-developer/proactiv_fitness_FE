@@ -11,6 +11,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { responsiveClasses } from '@/lib/responsiveClasses'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, CampProgramData } from '@/services/cmsService'
+
+// Map a CMS camp title to a sensible icon + color + slug for the cards.
+const ICON_VARIANTS = [
+    { icon: Trophy, color: 'bg-blue-500' },
+    { icon: Activity, color: 'bg-green-500' },
+    { icon: Award, color: 'bg-purple-500' },
+    { icon: Star, color: 'bg-orange-500' },
+]
+
+function slugify(s: string): string {
+    return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
 
 const CampsHomePage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -19,39 +33,34 @@ const CampsHomePage = () => {
         setTimeout(() => setIsLoading(false), 1000)
     }, [])
 
-    // Camp Programs
-    const campPrograms = [
-        {
-            title: 'Gymnastics Camps',
-            description: 'Intensive gymnastics training camps for all skill levels',
-            icon: Trophy,
-            href: '/camps/gymnastics',
-            color: 'bg-blue-500',
-            duration: '1-2 weeks',
-            ages: '4-16 years',
-            featured: true
-        },
-        {
-            title: 'Multi-Activity Camps',
-            description: 'Fun-filled camps with various sports and activities',
-            icon: Activity,
-            href: '/camps/multi-activity',
-            color: 'bg-green-500',
-            duration: '1 week',
-            ages: '5-12 years',
-            featured: false
-        },
-        {
-            title: 'Shenzhen Competitive',
-            description: 'Elite competitive training in Shenzhen facility',
-            icon: Award,
-            href: '/camps/shenzhen-competitive',
-            color: 'bg-purple-500',
-            duration: '2-4 weeks',
-            ages: '8-18 years',
-            featured: false
-        }
+    // CMS-driven camp programs with static fallback
+    const { data: cmsCamps } = useCMSData<CampProgramData[]>(
+        () => CMSService.getCampPrograms(),
+        [],
+        []
+    )
+
+    const fallbackPrograms = [
+        { title: 'Gymnastics Camps', description: 'Intensive gymnastics training camps for all skill levels', icon: Trophy, href: '/camps/gymnastics', color: 'bg-blue-500', duration: '1-2 weeks', ages: '4-16 years', featured: true },
+        { title: 'Multi-Activity Camps', description: 'Fun-filled camps with various sports and activities', icon: Activity, href: '/camps/multi-activity', color: 'bg-green-500', duration: '1 week', ages: '5-12 years', featured: false },
+        { title: 'Shenzhen Competitive', description: 'Elite competitive training in Shenzhen facility', icon: Award, href: '/camps/shenzhen-competitive', color: 'bg-purple-500', duration: '2-4 weeks', ages: '8-18 years', featured: false },
     ]
+
+    const campPrograms = cmsCamps.length > 0
+        ? cmsCamps.map((c, idx) => {
+            const variant = ICON_VARIANTS[idx % ICON_VARIANTS.length]
+            return {
+                title: c.title || '',
+                description: c.description || '',
+                icon: variant.icon,
+                href: `/camps/${slugify(c.title)}`,
+                color: variant.color,
+                duration: c.dates || 'Schedule TBA',
+                ages: c.ageGroup || 'All ages',
+                featured: idx === 0,
+            }
+        })
+        : fallbackPrograms
 
     // Camp Features
     const campFeatures = [
@@ -207,7 +216,7 @@ const CampsHomePage = () => {
                             Join our exciting summer gymnastics camps with outdoor activities,
                             swimming, and intensive skill development programs.
                         </p>
-                        <Button id={`btn-window-camps-${index}`} variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
+                        <Button id="btn-window-camps-summer" variant="outline" onClick={() => window.location.href = '/camps/gymnastics'}>
                             View Summer Programs
                         </Button>
                     </CardContent>

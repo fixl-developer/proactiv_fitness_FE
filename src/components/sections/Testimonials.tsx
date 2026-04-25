@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
-import { FiStar, FiChevronLeft, FiChevronRight, FiMessageCircle } from 'react-icons/fi'
+import { FiStar, FiChevronLeft, FiChevronRight, FiMessageCircle, FiHeart, FiUsers, FiAward } from 'react-icons/fi'
+import type { IconType } from 'react-icons'
 import { getRandomPersonImage } from '@/utils/imageUtils'
 import { useCMSData } from '@/hooks/useCMSData'
 import { CMSService, TestimonialData } from '@/services/cmsService'
@@ -453,11 +454,11 @@ const Testimonials = () => {
                             viewport={{ once: true }}
                             className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-12 max-w-3xl mx-auto"
                         >
-                            {[
-                                { number: "4.9/5", label: "Average Rating", sublabel: "Based on reviews", color: "from-blue-500 to-cyan-500", bg: "from-blue-50 to-cyan-50", icon: "?" },
-                                { number: "98%", label: "Satisfaction Rate", sublabel: "Based on parent feedback", color: "from-green-500 to-emerald-500", bg: "from-green-50 to-emerald-50", icon: "??" },
-                                { number: "200+", label: "Happy Families", sublabel: "Across both locations", color: "from-purple-500 to-pink-500", bg: "from-purple-50 to-pink-50", icon: "???????????" }
-                            ].map((stat, index) => (
+                            {([
+                                { number: "4.9/5", label: "Average Rating", sublabel: "Based on reviews", color: "from-blue-500 to-cyan-500", bg: "from-blue-50 to-cyan-50", Icon: FiAward, iconColor: "text-blue-500" },
+                                { number: "98%", label: "Satisfaction Rate", sublabel: "Based on parent feedback", color: "from-green-500 to-emerald-500", bg: "from-green-50 to-emerald-50", Icon: FiHeart, iconColor: "text-green-500" },
+                                { number: "200+", label: "Happy Families", sublabel: "Across both locations", color: "from-purple-500 to-pink-500", bg: "from-purple-50 to-pink-50", Icon: FiUsers, iconColor: "text-purple-500" }
+                            ] as Array<{ number: string; label: string; sublabel: string; color: string; bg: string; Icon: IconType; iconColor: string }>).map((stat, index) => (
                                 <motion.div
                                     key={stat.label}
                                     initial={{ opacity: 0, scale: 0.5, rotateY: 45 }}
@@ -476,11 +477,11 @@ const Testimonials = () => {
                                         whileHover={{ scale: 1.05, y: -8 }}
                                     >
                                         <motion.div
-                                            className="text-4xl mb-2"
+                                            className={`mb-2 ${stat.iconColor}`}
                                             animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
                                             transition={{ duration: 3, repeat: Infinity, delay: index * 0.5 }}
                                         >
-                                            {stat.icon}
+                                            <stat.Icon className="w-10 h-10" />
                                         </motion.div>
                                         <motion.div
                                             className={`text-3xl font-black mb-2 bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}
@@ -584,8 +585,8 @@ const Testimonials = () => {
                                                 href="/book-trial"
                                                 className="group relative overflow-hidden bg-white text-blue-600 hover:bg-gray-50 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center space-x-2 border-2 border-white"
                                             >
-                                                <span>?? Book Free Trial</span>
-                                                <FiStar className="w-5 h-5 group-hover:rotate-180 group-hover:scale-125 transition-all duration-500" />
+                                                <FiStar className="w-5 h-5 text-blue-600 group-hover:rotate-180 group-hover:scale-125 transition-all duration-500" />
+                                                <span>Book Free Trial</span>
                                                 <motion.div
                                                     className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-purple-100/50"
                                                     initial={{ x: '-100%' }}
@@ -599,8 +600,8 @@ const Testimonials = () => {
                                                 href="/contact"
                                                 className="group border-2 border-white text-white hover:bg-white hover:text-blue-600 px-10 py-4 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center space-x-2 hover:shadow-2xl"
                                             >
-                                                <span>?? Contact Us</span>
                                                 <FiMessageCircle className="w-5 h-5 group-hover:scale-125 group-hover:rotate-12 transition-all duration-300" />
+                                                <span>Contact Us</span>
                                             </a>
                                         </motion.div>
                                     </motion.div>

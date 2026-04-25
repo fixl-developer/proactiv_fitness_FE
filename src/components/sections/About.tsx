@@ -3,6 +3,39 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { FiTarget, FiHeart, FiAward, FiUsers, FiStar, FiChevronLeft, FiChevronRight, FiCheck } from 'react-icons/fi'
+import type { IconType } from 'react-icons'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, AboutContentData } from '@/services/cmsService'
+
+// Map CMS-provided icon name (string) to a react-icons component for the values cards.
+const ICON_MAP: Record<string, IconType> = {
+    target: FiTarget,
+    heart: FiHeart,
+    award: FiAward,
+    users: FiUsers,
+    star: FiStar,
+    check: FiCheck,
+    FiTarget, FiHeart, FiAward, FiUsers, FiStar, FiCheck,
+}
+
+// Visual variants used in rotation when CMS values come without colors.
+const VALUE_VARIANTS = [
+    { color: 'from-blue-500 to-cyan-500', bgColor: 'bg-gradient-to-br from-blue-50 to-cyan-50', cardBg: 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10', hoverBg: 'group-hover:from-blue-600 group-hover:to-cyan-600', borderColor: 'border-blue-200', iconBg: 'bg-blue-500', slideFrom: 'left' as const },
+    { color: 'from-red-500 to-pink-500', bgColor: 'bg-gradient-to-br from-red-50 to-pink-50', cardBg: 'bg-gradient-to-br from-red-500/10 to-pink-500/10', hoverBg: 'group-hover:from-red-600 group-hover:to-pink-600', borderColor: 'border-red-200', iconBg: 'bg-red-500', slideFrom: 'top' as const },
+    { color: 'from-yellow-500 to-orange-500', bgColor: 'bg-gradient-to-br from-yellow-50 to-orange-50', cardBg: 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10', hoverBg: 'group-hover:from-yellow-600 group-hover:to-orange-600', borderColor: 'border-yellow-200', iconBg: 'bg-yellow-500', slideFrom: 'top' as const },
+    { color: 'from-green-500 to-emerald-500', bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50', cardBg: 'bg-gradient-to-br from-green-500/10 to-emerald-500/10', hoverBg: 'group-hover:from-green-600 group-hover:to-emerald-600', borderColor: 'border-green-200', iconBg: 'bg-green-500', slideFrom: 'right' as const },
+]
+
+const STAT_GRADIENTS = ['from-blue-500 to-cyan-500', 'from-purple-500 to-pink-500', 'from-yellow-500 to-orange-500', 'from-green-500 to-emerald-500']
+
+// Parse a stat value like "10+", "1000+", "98%", "5" into number + suffix for AnimatedCounter.
+function splitStatValue(raw: string): { number: number; suffix: string } {
+    const s = String(raw || '').trim()
+    const match = s.match(/^([\d,.]+)\s*(.*)$/)
+    if (!match) return { number: 0, suffix: s }
+    const numeric = Number(match[1].replace(/,/g, '')) || 0
+    return { number: numeric, suffix: match[2] || '' }
+}
 
 // Animated Counter Component (same as Hero)
 const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; duration?: number; suffix?: string }) => {
@@ -38,76 +71,74 @@ const About = () => {
     const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([])
     const [confetti, setConfetti] = useState<Array<{ x: number; y: number; id: number; color: string }>>([])
 
-    // Image carousel - Using images from about folder
-    const images = [
-        '/images/about/img3.jpg',
-        '/images/about/img5.jpg',
-        '/images/about/img6.jpg',
-        '/images/about/img7.jpg'
-    ]
+    // CMS-driven About content with static fallback
+    const { data: about } = useCMSData<AboutContentData | null>(
+        () => CMSService.getAbout(),
+        null,
+        []
+    )
+
+    // Image carousel — CMS images first, otherwise static fallbacks
+    const fallbackImages = ['/images/about/img3.jpg', '/images/about/img5.jpg', '/images/about/img6.jpg', '/images/about/img7.jpg']
+    const images = about?.images && about.images.length > 0 ? about.images : fallbackImages
 
     // Auto-rotate images
     useEffect(() => {
+        if (images.length <= 1) return
         const timer = setInterval(() => {
             setCurrentImageIndex((prev) => (prev + 1) % images.length)
         }, 5000)
         return () => clearInterval(timer)
     }, [images.length])
 
-    const values = [
-        {
-            icon: FiTarget,
-            title: 'Excellence',
-            description: 'We strive for the highest standards in coaching and training methodologies.',
-            details: 'Our coaches undergo continuous training and certification to ensure world-class instruction quality. We maintain state-of-the-art equipment and follow international safety standards.',
-            color: 'from-blue-500 to-cyan-500',
-            bgColor: 'bg-gradient-to-br from-blue-50 to-cyan-50',
-            cardBg: 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10',
-            hoverBg: 'group-hover:from-blue-600 group-hover:to-cyan-600',
-            borderColor: 'border-blue-200',
-            iconBg: 'bg-blue-500',
-            slideFrom: 'left'
-        },
-        {
-            icon: FiHeart,
-            title: 'Passion',
-            description: 'Our love for gymnastics drives us to inspire and nurture every student.',
-            details: 'We create an environment where students develop a genuine love for movement and sport. Every coach brings enthusiasm and dedication to each session.',
-            color: 'from-red-500 to-pink-500',
-            bgColor: 'bg-gradient-to-br from-red-50 to-pink-50',
-            cardBg: 'bg-gradient-to-br from-red-500/10 to-pink-500/10',
-            hoverBg: 'group-hover:from-red-600 group-hover:to-pink-600',
-            borderColor: 'border-red-200',
-            iconBg: 'bg-red-500',
-            slideFrom: 'top'
-        },
-        {
-            icon: FiAward,
-            title: 'Achievement',
-            description: 'Celebrating every milestone and building confidence through success.',
-            details: 'From first cartwheel to competitive medals, we celebrate every step of the journey. Our structured programs ensure consistent progress and achievement.',
-            color: 'from-yellow-500 to-orange-500',
-            bgColor: 'bg-gradient-to-br from-yellow-50 to-orange-50',
-            cardBg: 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10',
-            hoverBg: 'group-hover:from-yellow-600 group-hover:to-orange-600',
-            borderColor: 'border-yellow-200',
-            iconBg: 'bg-yellow-500',
-            slideFrom: 'top'
-        },
-        {
-            icon: FiUsers,
-            title: 'Community',
-            description: 'Creating a supportive environment where everyone feels welcome and valued.',
-            details: 'Our gym is more than a training facility - it\'s a family where lifelong friendships are formed. We foster a culture of support and encouragement.',
-            color: 'from-green-500 to-emerald-500',
-            bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
-            cardBg: 'bg-gradient-to-br from-green-500/10 to-emerald-500/10',
-            hoverBg: 'group-hover:from-green-600 group-hover:to-emerald-600',
-            borderColor: 'border-green-200',
-            iconBg: 'bg-green-500',
-            slideFrom: 'right'
-        }
+    // Reset image index when image list changes (e.g., after CMS load)
+    useEffect(() => {
+        setCurrentImageIndex(0)
+    }, [images.length])
+
+    // Values: CMS first, then 4 sensible static defaults. Visuals (color, gradient, etc.)
+    // are layered onto each value from VALUE_VARIANTS in rotation.
+    const fallbackValues = [
+        { title: 'Excellence', description: 'We strive for the highest standards in coaching and training methodologies.', details: 'Our coaches undergo continuous training and certification to ensure world-class instruction quality. We maintain state-of-the-art equipment and follow international safety standards.', icon: 'target' },
+        { title: 'Passion', description: 'Our love for gymnastics drives us to inspire and nurture every student.', details: 'We create an environment where students develop a genuine love for movement and sport. Every coach brings enthusiasm and dedication to each session.', icon: 'heart' },
+        { title: 'Achievement', description: 'Celebrating every milestone and building confidence through success.', details: 'From first cartwheel to competitive medals, we celebrate every step of the journey. Our structured programs ensure consistent progress and achievement.', icon: 'award' },
+        { title: 'Community', description: 'Creating a supportive environment where everyone feels welcome and valued.', details: "Our gym is more than a training facility - it's a family where lifelong friendships are formed. We foster a culture of support and encouragement.", icon: 'users' },
     ]
+    const valuesSource = about?.values && about.values.length > 0 ? about.values : fallbackValues
+    const values = valuesSource.map((v: any, idx: number) => {
+        const variant = VALUE_VARIANTS[idx % VALUE_VARIANTS.length]
+        return {
+            icon: ICON_MAP[String(v.icon || '').toLowerCase()] || ICON_MAP[v.icon as string] || FiStar,
+            title: v.title || '',
+            description: v.description || '',
+            details: (v as any).details || v.description || '',
+            ...variant,
+        }
+    })
+
+    // Intro paragraphs — prefer CMS mission + history; fallback to static copy.
+    const introParagraphs = (() => {
+        const out: string[] = []
+        if (about?.mission) out.push(about.mission)
+        if (about?.history) out.push(about.history)
+        if (out.length === 0) {
+            out.push("ProActive Sports has been Hong Kong's premier gymnastics training center for over a decade. We believe that gymnastics is more than just physical training – it's about building character, confidence, and life skills that extend far beyond the gym.")
+            out.push('Our experienced team of certified coaches provides personalized instruction for students of all ages and abilities.')
+        }
+        return out
+    })()
+
+    // Hero stats — from CMS about.stats (label/value/icon), or static fallback.
+    const fallbackStats = [
+        { number: 10, suffix: '+', label: 'Years of Excellence' },
+        { number: 1000, suffix: '+', label: 'Students Trained' },
+    ]
+    const heroStats = about?.stats && about.stats.length > 0
+        ? about.stats.slice(0, 4).map((s, idx) => {
+            const parsed = splitStatValue(s.value)
+            return { number: parsed.number, suffix: parsed.suffix, label: s.label, color: STAT_GRADIENTS[idx % STAT_GRADIENTS.length] }
+        })
+        : fallbackStats.map((s, idx) => ({ ...s, color: STAT_GRADIENTS[idx % STAT_GRADIENTS.length] }))
 
     // Certifications/Awards
     const certifications = [
@@ -270,15 +301,9 @@ const About = () => {
                             viewport={{ once: true }}
                             className="space-y-4 text-gray-600 leading-relaxed text-base sm:text-lg"
                         >
-                            <p>
-                                ProActive Sports has been Hong Kong's premier gymnastics training center for over a decade.
-                                We believe that gymnastics is more than just physical training – it's about building character,
-                                confidence, and life skills that extend far beyond the gym.
-                            </p>
-                            <p>
-                                Our experienced team of certified coaches provides personalized instruction for students of all
-                                ages and abilities.
-                            </p>
+                            {introParagraphs.map((para, i) => (
+                                <p key={i}>{para}</p>
+                            ))}
                         </motion.div>
 
                         {/* Animated Stats with Counter */}
@@ -289,10 +314,7 @@ const About = () => {
                             viewport={{ once: true }}
                             className="grid grid-cols-2 gap-4 sm:gap-6"
                         >
-                            {[
-                                { number: 10, suffix: "+", label: "Years of Excellence", color: "from-blue-500 to-cyan-500" },
-                                { number: 1000, suffix: "+", label: "Students Trained", color: "from-purple-500 to-pink-500" }
-                            ].map((stat, index) => (
+                            {heroStats.map((stat, index) => (
                                 <motion.div
                                     key={stat.label}
                                     initial={{ opacity: 0, scale: 0.5 }}

@@ -46,7 +46,9 @@ export default function BookingConfirmation({ bookingData, onBackToStart }: Book
         });
     };
 
-    const bookingId = `PA${Date.now().toString().slice(-6)}`;
+    // Prefer the real bookingId returned from the backend; fall back to a transient
+    // local ID only when the parent didn't supply one (shouldn't happen in real flow).
+    const bookingId = bookingData?.bookingId || `PA${Date.now().toString().slice(-6)}`;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 py-12">

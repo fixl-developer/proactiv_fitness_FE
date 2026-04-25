@@ -5,9 +5,22 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FiCalendar, FiClock, FiUsers, FiStar, FiMapPin } from 'react-icons/fi'
 import { getRandomImage } from '@/utils/imageUtils'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, CampProgramData } from '@/services/cmsService'
+
+function slugify(s: string): string {
+    return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
 
 const HolidayCampsPage = () => {
-    const campTypes = [
+    // CMS-driven camp programs with static fallback
+    const { data: cmsCamps } = useCMSData<CampProgramData[]>(
+        () => CMSService.getCampPrograms(),
+        [],
+        []
+    )
+
+    const fallbackCampTypes = [
         {
             id: 'gymnastics',
             title: 'Gymnastics Camps',
@@ -16,13 +29,7 @@ const HolidayCampsPage = () => {
             ages: '4-12 years',
             duration: 'Half Day (9am-1pm) or Full Day (9am-4pm)',
             price: 'From HK$400/day',
-            features: [
-                'Professional gymnastics coaching',
-                'Skill development focus',
-                'Equipment training',
-                'Progress assessment',
-                'Certificate of participation'
-            ]
+            features: ['Professional gymnastics coaching', 'Skill development focus', 'Equipment training', 'Progress assessment', 'Certificate of participation'],
         },
         {
             id: 'multi-activity',
@@ -32,13 +39,7 @@ const HolidayCampsPage = () => {
             ages: '5-10 years',
             duration: 'Full Day (9am-4pm)',
             price: 'From HK$500/day',
-            features: [
-                'Various sports activities',
-                'Team building games',
-                'Creative arts & crafts',
-                'Swimming (selected venues)',
-                'Lunch included'
-            ]
+            features: ['Various sports activities', 'Team building games', 'Creative arts & crafts', 'Swimming (selected venues)', 'Lunch included'],
         },
         {
             id: 'elite',
@@ -48,15 +49,22 @@ const HolidayCampsPage = () => {
             ages: '8+ years',
             duration: 'Extended Day (9am-5pm)',
             price: 'From HK$600/day',
-            features: [
-                'Elite level coaching',
-                'Competition preparation',
-                'Advanced skill training',
-                'Video analysis',
-                'Nutrition guidance'
-            ]
-        }
+            features: ['Elite level coaching', 'Competition preparation', 'Advanced skill training', 'Video analysis', 'Nutrition guidance'],
+        },
     ]
+
+    const campTypes = cmsCamps.length > 0
+        ? cmsCamps.map((c) => ({
+            id: slugify(c.title),
+            title: c.title || '',
+            description: c.description || '',
+            image: c.image || '/images/camps/gymnastics-camp.jpg',
+            ages: c.ageGroup || 'All ages',
+            duration: c.dates || 'Schedule TBA',
+            price: c.price || 'Contact for pricing',
+            features: Array.isArray(c.features) && c.features.length > 0 ? c.features : (Array.isArray(c.activities) ? c.activities : []),
+        }))
+        : fallbackCampTypes
 
     const upcomingCamps = [
         {
