@@ -5,12 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Save, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUploader from './ImageUploader'
+import ImageArrayUploader from './ImageArrayUploader'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
 export interface FieldConfig {
     name: string
     label: string
-    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'richtext' | 'email' | 'url' | 'slug' | 'tel' | 'name'
+    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'image-array' | 'richtext' | 'email' | 'url' | 'slug' | 'tel' | 'name'
     required?: boolean
     options?: { label: string; value: string }[]
     placeholder?: string
@@ -23,6 +24,19 @@ export interface FieldConfig {
     pattern?: RegExp
     patternMessage?: string
     helpText?: string
+    /** Auto-fill this field from another field (e.g. slug from title) while this field is empty or untouched */
+    deriveFrom?: string
+}
+
+// Convert any string to a URL-safe slug
+function toSlug(input: string): string {
+    return String(input || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')   // drop non word/space/hyphen
+        .replace(/\s+/g, '-')       // spaces -> hyphens
+        .replace(/-+/g, '-')        // collapse multiple hyphens
+        .replace(/^-+|-+$/g, '')    // trim hyphens
 }
 
 interface CMSCrudTableProps {
@@ -63,7 +77,7 @@ function validateField(field: FieldConfig, value: any): string | null {
     if (isEmpty) return null
 
     // Array fields: strip empty strings, require at least one if required
-    if (field.type === 'array') {
+    if (field.type === 'array' || field.type === 'image-array') {
         const cleaned = (value as string[]).filter(v => typeof v === 'string' && v.trim() !== '')
         if (field.required && cleaned.length === 0) {
             return `${field.label} must have at least one non-empty item`
@@ -163,6 +177,8 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [submitError, setSubmitError] = useState<string>('')
+    // Tracks which fields the user has edited directly, so auto-derived fields stop overriding them
+    const [touched, setTouched] = useState<Record<string, boolean>>({})
 
     const loadData = useCallback(async () => {
         try {
@@ -202,6 +218,7 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
     const resetFormState = () => {
         setErrors({})
         setSubmitError('')
+        setTouched({})
     }
 
     const openCreate = () => {
@@ -210,7 +227,7 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         fields.forEach(f => {
             if (f.type === 'boolean') defaults[f.name] = true
             else if (f.type === 'number') defaults[f.name] = f.min ?? 0
-            else if (f.type === 'array') defaults[f.name] = []
+            else if (f.type === 'array' || f.type === 'image-array') defaults[f.name] = []
             else defaults[f.name] = ''
         })
         setFormData(defaults)
@@ -244,10 +261,12 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         const payload: any = { ...data }
         fields.forEach(field => {
             const value = payload[field.name]
-            if (field.type === 'array' && Array.isArray(value)) {
-                payload[field.name] = value.filter(v => typeof v === 'string' ? v.trim() !== '' : v != null)
+            if ((field.type === 'array' || field.type === 'image-array') && Array.isArray(value)) {
+                payload[field.name] = value
+                    .map(v => typeof v === 'string' ? v.trim() : v)
+                    .filter(v => v != null && v !== '')
             }
-            if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name') && typeof value === 'string') {
+            if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name' || field.type === 'image') && typeof value === 'string') {
                 payload[field.name] = value.trim()
             }
         })
@@ -298,8 +317,29 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
         }
     }
 
-    const handleFieldChange = (name: string, value: any) => {
-        setFormData((prev: any) => ({ ...prev, [name]: value }))
+    // Internal setter that updates value + auto-derives any dependent fields (e.g. slug from title)
+    const applyChange = (name: string, value: any, markTouched: boolean) => {
+        setFormData((prev: any) => {
+            const next = { ...prev, [name]: value }
+            // Auto-derive any field configured with deriveFrom === name ONLY while the derived
+            // field is empty AND the user hasn't typed into it. Once the derived field has a
+            // value (existing record or user-typed), stop overriding it.
+            fields.forEach(f => {
+                if (f.deriveFrom === name) {
+                    const currentDerived = prev[f.name]
+                    const isEmpty = currentDerived === undefined || currentDerived === null || currentDerived === ''
+                    const userTouched = !!touched[f.name]
+                    if (isEmpty && !userTouched) {
+                        if (f.type === 'slug') next[f.name] = toSlug(String(value ?? ''))
+                        else next[f.name] = String(value ?? '')
+                    }
+                }
+            })
+            return next
+        })
+        if (markTouched) {
+            setTouched(prev => ({ ...prev, [name]: true }))
+        }
         if (errors[name]) {
             setErrors(prev => {
                 const next = { ...prev }
@@ -307,6 +347,15 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                 return next
             })
         }
+    }
+
+    const handleFieldChange = (name: string, value: any) => {
+        // Direct user edits: auto-normalize slug inputs while typing
+        const field = fields.find(f => f.name === name)
+        const sanitized = field?.type === 'slug' && typeof value === 'string'
+            ? value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-')
+            : value
+        applyChange(name, sanitized, true)
     }
 
     const handleFieldBlur = (field: FieldConfig) => {
@@ -537,6 +586,14 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                         onChange={(url) => handleFieldChange(field.name, url)}
                                         folder={title.toLowerCase().replace(/\s+/g, '-')}
                                         label=""
+                                    />
+                                </div>
+                            ) : field.type === 'image-array' ? (
+                                <div className={errors[field.name] ? 'ring-2 ring-red-400 rounded-lg' : ''}>
+                                    <ImageArrayUploader
+                                        value={Array.isArray(formData[field.name]) ? formData[field.name] : []}
+                                        onChange={(urls) => handleFieldChange(field.name, urls)}
+                                        folder={title.toLowerCase().replace(/\s+/g, '-')}
                                     />
                                 </div>
                             ) : field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name' ? (

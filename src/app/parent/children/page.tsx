@@ -4,18 +4,19 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, Plus, RefreshCw, Eye, Edit, Calendar, Star, TrendingUp,
-    BookOpen, Award, Activity, Loader, AlertCircle, Trophy, X,
+    BookOpen, Activity, Loader, AlertCircle, Trophy,
     Brain, Sparkles, Zap, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { formatAIResponse } from '@/utils/formatAIResponse'
-import { validateName, validateDateOfBirth, validateSelect, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateName, validateDateOfBirth, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { toast } from 'sonner'
 
@@ -394,43 +395,33 @@ const ParentChildrenPage = () => {
 
     return (
         <div className="space-y-6">
-            {/* Add Child Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 relative">
-                        <button
-                            onClick={() => setShowAddModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Add Child</h2>
-                        {renderChildForm(handleAddChild)}
-                    </div>
-                </div>
-            )}
+            {/* Add Child Drawer */}
+            <SlideInDrawer
+                isOpen={showAddModal}
+                onClose={() => { setShowAddModal(false); setChildFormErrors({}) }}
+                title="Add Child"
+                description="Link a new child to your account"
+                size="md"
+            >
+                {renderChildForm(handleAddChild)}
+            </SlideInDrawer>
 
-            {/* Edit Child Modal */}
-            {showEditModal && editingChild && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 relative">
-                        <button
-                            onClick={() => { setShowEditModal(false); setEditingChild(null) }}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Child</h2>
-                        {renderChildForm(handleEditChild, {
-                            firstName: getChildFirstName(editingChild),
-                            lastName: getChildLastName(editingChild),
-                            dateOfBirth: editingChild.dateOfBirth || '',
-                            gender: editingChild.gender || '',
-                            allergies: getChildAllergies(editingChild),
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* Edit Child Drawer */}
+            <SlideInDrawer
+                isOpen={showEditModal && !!editingChild}
+                onClose={() => { setShowEditModal(false); setEditingChild(null); setChildFormErrors({}) }}
+                title="Edit Child"
+                description={editingChild ? `Update ${editingChild.name}'s profile` : ''}
+                size="md"
+            >
+                {editingChild && renderChildForm(handleEditChild, {
+                    firstName: getChildFirstName(editingChild),
+                    lastName: getChildLastName(editingChild),
+                    dateOfBirth: editingChild.dateOfBirth || '',
+                    gender: editingChild.gender || '',
+                    allergies: getChildAllergies(editingChild),
+                })}
+            </SlideInDrawer>
 
             {/* Header */}
             <div className="flex justify-between items-center">

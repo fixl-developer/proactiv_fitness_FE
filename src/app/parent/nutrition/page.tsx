@@ -9,8 +9,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api/client'
+import { validateSelect, validateNumber, filterNumberInput } from '@/utils/validation'
+import { toast } from 'sonner'
 
 interface Recipe {
     id?: string
@@ -35,6 +39,15 @@ export default function ParentNutritionPage() {
     const [recipesError, setRecipesError] = useState<string | null>(null)
     const [children, setChildren] = useState<any[]>([])
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+
+    // Meal plan drawer state
+    const [planOpen, setPlanOpen] = useState(false)
+    const [planAge, setPlanAge] = useState('')
+    const [planDuration, setPlanDuration] = useState('7')
+    const [planActivityLevel, setPlanActivityLevel] = useState('moderate')
+    const [planGoals, setPlanGoals] = useState<string[]>(['health'])
+    const [planAllergies, setPlanAllergies] = useState('')
+    const [planErrors, setPlanErrors] = useState<Record<string, string>>({})
 
     const loadData = useCallback(async () => {
         setIsLoading(true)
@@ -109,16 +122,41 @@ export default function ParentNutritionPage() {
         setIsLoading(false)
     }, [selectedChildId])
 
-    const handleGeneratePlan = async () => {
+    const openPlanDrawer = () => {
+        if (!selectedChildId) { toast.info('Select a child first'); return }
+        const child = children.find((c: any) => (c._id || c.id) === selectedChildId)
+        const derivedAge = child?.age ? String(child.age) : ''
+        setPlanAge(derivedAge)
+        setPlanDuration('7')
+        setPlanActivityLevel('moderate')
+        setPlanGoals(['health'])
+        setPlanAllergies((child?.medicalInfo?.allergies || []).join(', '))
+        setPlanErrors({})
+        setPlanOpen(true)
+    }
+
+    const handleGeneratePlan = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
         if (!selectedChildId) return
+        const errs: Record<string, string> = {}
+        const ageErr = validateNumber(planAge, 'Age', 1, 18)
+        if (ageErr) errs.age = ageErr
+        const durErr = validateNumber(planDuration, 'Duration', 1, 30)
+        if (durErr) errs.duration = durErr
+        const actErr = validateSelect(planActivityLevel, 'Activity level')
+        if (actErr) errs.activityLevel = actErr
+        if (!planGoals.length) errs.goals = 'Select at least one goal'
+        if (Object.keys(errs).length) { setPlanErrors(errs); return }
+
         setGenerating(true)
         try {
             const response = await apiClient.post('/nutrition/meal-plans', {
                 childId: selectedChildId,
-                age: 10,
-                duration: 7,
-                activityLevel: 'moderate',
-                goals: ['health', 'athletic'],
+                age: Number(planAge),
+                duration: Number(planDuration),
+                activityLevel: planActivityLevel,
+                goals: planGoals,
+                allergies: planAllergies.split(',').map(s => s.trim()).filter(Boolean),
             })
             const planData = response?.data || response || {}
             const newPlan = planData.mealPlan || planData.plan || planData
@@ -127,30 +165,32 @@ export default function ParentNutritionPage() {
             } else {
                 setMealPlans(prev => [{
                     _id: `plan-${Date.now()}`,
-                    duration: 7,
+                    duration: Number(planDuration),
                     status: 'active',
                     aiPowered: true,
                     createdAt: new Date().toISOString(),
-                    notes: 'AI-generated balanced meal plan for young athletes focusing on nutrition and hydration.',
+                    notes: `AI-generated ${planDuration}-day meal plan (${planActivityLevel} activity, goals: ${planGoals.join(', ')}).`,
                     macros: { protein: 65, carbs: 200, fats: 50 },
                     ...newPlan,
                 }, ...prev])
             }
+            toast.success('Meal plan generated')
+            setPlanOpen(false)
         } catch (err) {
-            console.error('Failed to generate plan via AI, creating local placeholder:', err)
-            const newPlan = {
-                _id: `plan-${Date.now()}`,
-                duration: 7,
-                status: 'active',
-                aiPowered: true,
-                createdAt: new Date().toISOString(),
-                notes: 'AI-generated balanced meal plan for young athletes focusing on nutrition and hydration.',
-                macros: { protein: 65, carbs: 200, fats: 50 },
-            }
-            setMealPlans(prev => [newPlan, ...prev])
+            console.error('Failed to generate plan:', err)
+            toast.error('Failed to generate meal plan')
         } finally {
             setGenerating(false)
         }
+    }
+
+    const formatPlanDate = (iso: any) => {
+        if (!iso) return ''
+        try {
+            const d = new Date(iso)
+            if (isNaN(d.getTime())) return ''
+            return d.toLocaleDateString()
+        } catch { return '' }
     }
 
     const handleGetRecipes = async () => {
@@ -224,7 +264,7 @@ export default function ParentNutritionPage() {
                         {loadingRecipes ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <ChefHat className="w-4 h-4 mr-1" />}
                         Get AI Recipe Ideas
                     </Button>
-                    <Button size="sm" onClick={handleGeneratePlan} disabled={generating} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Button size="sm" onClick={openPlanDrawer} disabled={generating} className="bg-emerald-600 hover:bg-emerald-700">
                         {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Brain className="w-4 h-4 mr-1" />}
                         Generate Meal Plan
                     </Button>
@@ -359,7 +399,7 @@ export default function ParentNutritionPage() {
                             <Utensils className="w-5 h-5 text-emerald-600" />
                             Meal Plans
                         </CardTitle>
-                        <Button size="sm" variant="outline" onClick={handleGeneratePlan} disabled={generating}>
+                        <Button size="sm" variant="outline" onClick={openPlanDrawer} disabled={generating}>
                             {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
                             New Plan
                         </Button>
@@ -383,7 +423,7 @@ export default function ParentNutritionPage() {
                                                 {plan.status || 'active'}
                                             </Badge>
                                         </div>
-                                        <span className="text-xs text-gray-500">{new Date(plan.createdAt).toLocaleDateString()}</span>
+                                        <span className="text-xs text-gray-500">{formatPlanDate(plan.createdAt)}</span>
                                     </div>
                                     {plan.notes && <p className="text-sm text-gray-600 mb-2">{plan.notes}</p>}
                                     {plan.macros && (
@@ -400,13 +440,142 @@ export default function ParentNutritionPage() {
                         <div className="text-center py-8">
                             <Utensils className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                             <p className="text-gray-500 text-sm">No meal plans yet</p>
-                            <Button size="sm" className="mt-3 bg-emerald-600 hover:bg-emerald-700" onClick={handleGeneratePlan} disabled={generating}>
+                            <Button size="sm" className="mt-3 bg-emerald-600 hover:bg-emerald-700" onClick={openPlanDrawer} disabled={generating}>
                                 <Brain className="w-4 h-4 mr-1" /> Generate AI Meal Plan
                             </Button>
                         </div>
                     )}
                 </CardContent>
             </Card>
+
+            {/* Generate Meal Plan Drawer */}
+            <SlideInDrawer
+                isOpen={planOpen}
+                onClose={() => { setPlanOpen(false); setPlanErrors({}) }}
+                title="Generate AI Meal Plan"
+                description="Personalise nutrition for your child"
+                size="md"
+            >
+                <form onSubmit={handleGeneratePlan} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
+                        <select
+                            value={selectedChildId || ''}
+                            onChange={(e) => setSelectedChildId(e.target.value)}
+                            required
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        >
+                            {children.length === 0 ? (
+                                <option value="">No children linked to account</option>
+                            ) : (
+                                children.map((c: any) => (
+                                    <option key={c._id || c.id} value={c._id || c.id}>
+                                        {c.firstName || c.name} {c.lastName || ''}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Age (years)</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={planAge}
+                            onChange={(e) => {
+                                setPlanAge(e.target.value)
+                                if (planErrors.age) setPlanErrors(prev => { const n = { ...prev }; delete n.age; return n })
+                            }}
+                            onKeyDown={filterNumberInput}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${planErrors.age ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="e.g. 10"
+                        />
+                        <FormFieldHint hint="Numbers only, 1-18" error={planErrors.age} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (days)</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={planDuration}
+                            onChange={(e) => {
+                                setPlanDuration(e.target.value)
+                                if (planErrors.duration) setPlanErrors(prev => { const n = { ...prev }; delete n.duration; return n })
+                            }}
+                            onKeyDown={filterNumberInput}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${planErrors.duration ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="7"
+                        />
+                        <FormFieldHint hint="Numbers only, 1-30" error={planErrors.duration} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Activity Level</label>
+                        <select
+                            value={planActivityLevel}
+                            onChange={(e) => {
+                                setPlanActivityLevel(e.target.value)
+                                if (planErrors.activityLevel) setPlanErrors(prev => { const n = { ...prev }; delete n.activityLevel; return n })
+                            }}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${planErrors.activityLevel ? 'border-red-500' : 'border-gray-300'}`}
+                        >
+                            <option value="">Select</option>
+                            <option value="low">Low</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="high">High</option>
+                            <option value="athletic">Athletic</option>
+                        </select>
+                        <FormFieldHint error={planErrors.activityLevel} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Goals</label>
+                        <div className="space-y-2">
+                            {[
+                                { v: 'health', l: 'General health' },
+                                { v: 'athletic', l: 'Athletic performance' },
+                                { v: 'weight_gain', l: 'Weight gain' },
+                                { v: 'weight_loss', l: 'Weight management' },
+                                { v: 'muscle', l: 'Muscle building' },
+                            ].map(g => (
+                                <label key={g.v} className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={planGoals.includes(g.v)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) setPlanGoals(prev => [...prev, g.v])
+                                            else setPlanGoals(prev => prev.filter(x => x !== g.v))
+                                            if (planErrors.goals) setPlanErrors(prev => { const n = { ...prev }; delete n.goals; return n })
+                                        }}
+                                        className="rounded border-gray-300"
+                                    />
+                                    {g.l}
+                                </label>
+                            ))}
+                        </div>
+                        <FormFieldHint hint="Pick at least one" error={planErrors.goals} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Allergies (optional)</label>
+                        <textarea
+                            rows={2}
+                            value={planAllergies}
+                            onChange={(e) => setPlanAllergies(e.target.value)}
+                            maxLength={300}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            placeholder="Comma-separated (e.g. peanuts, dairy)"
+                        />
+                        <FormFieldHint hint="Comma-separated list" />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button type="button" variant="outline" onClick={() => { setPlanOpen(false); setPlanErrors({}) }}>Cancel</Button>
+                        <Button type="submit" disabled={generating} className="bg-emerald-600 hover:bg-emerald-700">
+                            {generating ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>) : 'Generate Plan'}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
         </div>
     )
 }

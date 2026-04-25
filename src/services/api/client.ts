@@ -12,16 +12,17 @@ class ApiClient {
         this.client = axios.create({
             baseURL: BASE_URL,
             timeout: 30000,
-            headers: {
-                'Content-Type': 'application/json'
-            }
         })
 
         this.setupInterceptors()
     }
 
+    private isFormData(body: any): boolean {
+        return typeof FormData !== 'undefined' && body instanceof FormData
+    }
+
     private setupInterceptors() {
-        // Request interceptor - add auth token
+        // Request interceptor - add auth token + correct Content-Type for JSON vs FormData
         this.client.interceptors.request.use(
             (config) => {
                 if (typeof window !== 'undefined') {
@@ -30,6 +31,19 @@ class ApiClient {
                         config.headers.Authorization = `Bearer ${token}`
                     }
                 }
+
+                // CRITICAL: For FormData (file uploads) do NOT set Content-Type.
+                // Axios/browser needs to auto-generate `multipart/form-data; boundary=...`.
+                // For regular JSON, set application/json explicitly.
+                if (config.headers) {
+                    if (this.isFormData(config.data)) {
+                        delete (config.headers as any)['Content-Type']
+                        delete (config.headers as any)['content-type']
+                    } else if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+                        config.headers['Content-Type'] = 'application/json'
+                    }
+                }
+
                 return config
             },
             (error) => Promise.reject(error)

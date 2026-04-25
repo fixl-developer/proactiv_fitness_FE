@@ -41,8 +41,7 @@ const PaymentPage = () => {
         const loadBooking = async () => {
             try {
                 setIsLoading(true)
-                const bookingService = new EnhancedBookingService()
-                const bookingData = await bookingService.getBookingById(bookingId)
+                const bookingData = await enhancedBookingService.getBookingById(bookingId)
                 setBooking(bookingData)
             } catch (err: any) {
                 setError(err.message || 'Failed to load booking details')
@@ -57,20 +56,12 @@ const PaymentPage = () => {
     const handlePaymentSubmit = async (paymentData: any) => {
         try {
             setError('')
-            const paymentService = new PaymentService()
-
-            // Process payment
+            // Process payment — service accepts bookingId, paymentMethodId, amount, savePaymentMethod
             const result = await paymentService.processPayment({
                 bookingId,
                 amount: booking?.payment.amount || 0,
-                currency: booking?.payment.currency || 'USD',
                 paymentMethodId: paymentData.paymentMethodId,
-                cardNumber: paymentData.cardNumber,
-                expiryMonth: paymentData.expiryMonth,
-                expiryYear: paymentData.expiryYear,
-                cvv: paymentData.cvv,
-                cardholderName: paymentData.cardholderName,
-                saveCard: paymentData.saveCard
+                savePaymentMethod: paymentData.saveCard,
             })
 
             setPaymentSuccess(true)

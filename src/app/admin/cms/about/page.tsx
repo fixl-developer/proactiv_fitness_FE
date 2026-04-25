@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Save, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
+import ImageArrayUploader from '@/components/admin/cms/ImageArrayUploader'
 
 type FieldError = Record<string, string>
 
@@ -157,23 +158,6 @@ export default function AboutContentPage() {
             [field]: prev[field].map((item, i) => i === index ? { ...item, [key]: value } : item),
         }))
         clearError(`${field}.${index}.${key}`)
-    }
-
-    const addImageUrl = () => {
-        setFormData(prev => ({ ...prev, images: [...prev.images, ''] }))
-    }
-
-    const removeImageUrl = (index: number) => {
-        setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }))
-        clearError(`images.${index}`)
-    }
-
-    const updateImageUrl = (index: number, value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            images: prev.images.map((img, i) => i === index ? value : img),
-        }))
-        clearError(`images.${index}`)
     }
 
     if (loading) {
@@ -468,48 +452,22 @@ export default function AboutContentPage() {
 
             {/* Images */}
             <div className={sectionClass}>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">Images</h2>
-                    <button
-                        onClick={addImageUrl}
-                        className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        <Plus className="w-4 h-4" /> Add Image URL
-                    </button>
-                </div>
-                {formData.images.length === 0 && (
-                    <p className="text-gray-400 text-sm text-center py-4">No images added yet. Click &quot;Add Image URL&quot; to get started.</p>
-                )}
-                <div className="space-y-3">
-                    {formData.images.map((url, idx) => (
-                        <div key={idx}>
-                            <div className="flex gap-3 items-center">
-                                <input
-                                    type="url"
-                                    value={url}
-                                    onChange={(e) => updateImageUrl(idx, e.target.value)}
-                                    placeholder="https://example.com/image.jpg"
-                                    className={cn(`images.${idx}`) + ' flex-1'}
-                                />
-                                {url && (
-                                    <img
-                                        src={url}
-                                        alt={`Image ${idx + 1}`}
-                                        className="w-10 h-10 rounded-lg object-cover border border-gray-200"
-                                        onError={(e) => (e.currentTarget.style.display = 'none')}
-                                    />
-                                )}
-                                <button
-                                    onClick={() => removeImageUrl(idx)}
-                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-                            {errorMsg(`images.${idx}`)}
-                        </div>
-                    ))}
-                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Images</h2>
+                <p className="text-sm text-gray-500 mb-3">Upload images directly or paste image URLs. These appear on the About page.</p>
+                <ImageArrayUploader
+                    value={formData.images}
+                    onChange={(urls) => {
+                        setFormData(prev => ({ ...prev, images: urls }))
+                        // Clear any lingering image.{n} errors
+                        setErrors(prev => {
+                            const next: FieldError = {}
+                            Object.keys(prev).forEach(k => { if (!k.startsWith('images.')) next[k] = prev[k] })
+                            return next
+                        })
+                    }}
+                    folder="about-page"
+                    maxImages={12}
+                />
             </div>
 
             {/* Save Button (bottom) */}

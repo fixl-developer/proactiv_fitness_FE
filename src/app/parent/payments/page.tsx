@@ -9,10 +9,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { validateSelect, validateCurrency, filterNumberInput } from '@/utils/validation'
 
 const ParentPaymentsPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -25,6 +28,19 @@ const ParentPaymentsPage = () => {
     })
     const [selectedFilter, setSelectedFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
     const [error, setError] = useState<string | null>(null)
+
+    const [payOpen, setPayOpen] = useState(false)
+    const [pendingBookings, setPendingBookings] = useState<any[]>([])
+    const [payBookingId, setPayBookingId] = useState('')
+    const [payAmount, setPayAmount] = useState('')
+    const [payMethod, setPayMethod] = useState('')
+    const [payNotes, setPayNotes] = useState('')
+    const [payErrors, setPayErrors] = useState<Record<string, string>>({})
+    const [paySubmitting, setPaySubmitting] = useState(false)
+
+    const [viewOpen, setViewOpen] = useState(false)
+    const [viewPayment, setViewPayment] = useState<any>(null)
+
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
@@ -92,6 +108,52 @@ const ParentPaymentsPage = () => {
         return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     }
 
+    const openPayDrawer = async () => {
+        setPayBookingId('')
+        setPayAmount('')
+        setPayMethod('')
+        setPayNotes('')
+        setPayErrors({})
+        setPayOpen(true)
+        try {
+            const resp = await apiClient.get<any>('/parent/payments/pending')
+            setPendingBookings(resp?.data || [])
+        } catch (err) {
+            console.error('Pending bookings error:', err)
+            setPendingBookings([])
+        }
+    }
+
+    const handlePaySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        const errs: Record<string, string> = {}
+        const bookingErr = validateSelect(payBookingId, 'Booking')
+        if (bookingErr) errs.bookingId = bookingErr
+        const amtErr = validateCurrency(payAmount, 'Amount')
+        if (amtErr) errs.amount = amtErr
+        const methodErr = validateSelect(payMethod, 'Payment method')
+        if (methodErr) errs.method = methodErr
+        if (Object.keys(errs).length) { setPayErrors(errs); return }
+
+        setPaySubmitting(true)
+        try {
+            await apiClient.post('/parent/payments', {
+                bookingId: payBookingId,
+                amount: Number(payAmount),
+                method: payMethod,
+                notes: payNotes,
+            })
+            toast.success('Payment recorded successfully')
+            setPayOpen(false)
+            await loadPayments()
+        } catch (err: any) {
+            console.error('Payment error:', err)
+            toast.error(err?.response?.data?.message || 'Failed to record payment')
+        } finally {
+            setPaySubmitting(false)
+        }
+    }
+
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -120,7 +182,7 @@ const ParentPaymentsPage = () => {
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button id="parent-payments-make-payment-btn" size="sm" onClick={() => alert('Payment gateway coming soon')}>
+                    <Button id="parent-payments-make-payment-btn" size="sm" onClick={openPayDrawer}>
                         <Plus className="w-4 h-4 mr-2" />
                         Make Payment
                     </Button>
@@ -221,7 +283,25 @@ const ParentPaymentsPage = () => {
                                     </button>
                                 ))}
                             </div>
-                            <Button id="parent-payments-export-btn" variant="outline" size="sm" onClick={() => alert('Export feature coming soon')}>
+                            <Button
+                                id="parent-payments-export-btn"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    if (!payments.length) { toast.info('No payments to export'); return }
+                                    const header = 'Invoice,Date,Program,Child,Amount,Method,Status'
+                                    const rows = payments.map(p => [p.invoice, p.date, p.program, p.child, p.amount, p.method, p.status].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+                                    const csv = [header, ...rows].join('\n')
+                                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                                    const url = URL.createObjectURL(blob)
+                                    const a = document.createElement('a')
+                                    a.href = url
+                                    a.download = `payments-${new Date().toISOString().split('T')[0]}.csv`
+                                    a.click()
+                                    URL.revokeObjectURL(url)
+                                    toast.success('Exported payments.csv')
+                                }}
+                            >
                                 <Download className="w-4 h-4 mr-2" />
                                 Export
                             </Button>
@@ -265,10 +345,30 @@ const ParentPaymentsPage = () => {
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
                                     {getStatusIcon(payment.status)}
-                                    <Button id={`parent-payments-view-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert(`Payment Details:\n\nID: ${payment.id}\nProgram: ${payment.program}\nChild: ${payment.child}\nAmount: $${payment.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nDate: ${payment.date}\nStatus: ${payment.status}\nMethod: ${payment.method}\nInvoice: ${payment.invoice}\nDescription: ${payment.description}`)}>
+                                    <Button
+                                        id={`parent-payments-view-${payment.id}-btn`}
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => { setViewPayment(payment); setViewOpen(true) }}
+                                    >
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button id={`parent-payments-receipt-${payment.id}-btn`} variant="ghost" size="sm" onClick={() => alert('Receipt download coming soon')}>
+                                    <Button
+                                        id={`parent-payments-receipt-${payment.id}-btn`}
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            const receipt = `ProActiv Fitness\nReceipt\n\nInvoice: ${payment.invoice}\nDate: ${payment.date}\nProgram: ${payment.program}\nChild: ${payment.child}\nAmount: ${formatCurrency(payment.amount || 0)}\nMethod: ${payment.method}\nStatus: ${payment.status}\nDescription: ${payment.description || '-'}\n`
+                                            const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8;' })
+                                            const url = URL.createObjectURL(blob)
+                                            const a = document.createElement('a')
+                                            a.href = url
+                                            a.download = `receipt-${payment.invoice || payment.id}.txt`
+                                            a.click()
+                                            URL.revokeObjectURL(url)
+                                            toast.success('Receipt downloaded')
+                                        }}
+                                    >
                                         <Receipt className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -285,25 +385,156 @@ const ParentPaymentsPage = () => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <Button id="parent-payments-quick-pay-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment gateway coming soon')}>
+                        <Button id="parent-payments-quick-pay-btn" className="h-20 flex-col gap-2" variant="outline" onClick={openPayDrawer}>
                             <Plus className="w-6 h-6" />
                             <span>Make Payment</span>
                         </Button>
-                        <Button id="parent-payments-quick-receipt-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Receipt download coming soon')}>
+                        <Button
+                            id="parent-payments-quick-receipt-btn"
+                            className="h-20 flex-col gap-2"
+                            variant="outline"
+                            onClick={() => {
+                                const last = payments.find(p => p.status === 'completed' || p.status === 'paid')
+                                if (!last) { toast.info('No completed payment to download'); return }
+                                const receipt = `ProActiv Fitness\nReceipt\n\nInvoice: ${last.invoice}\nDate: ${last.date}\nProgram: ${last.program}\nChild: ${last.child}\nAmount: ${formatCurrency(last.amount || 0)}\nMethod: ${last.method}\nStatus: ${last.status}\n`
+                                const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8;' })
+                                const url = URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = `receipt-${last.invoice || last.id}.txt`
+                                a.click()
+                                URL.revokeObjectURL(url)
+                                toast.success('Latest receipt downloaded')
+                            }}
+                        >
                             <Download className="w-6 h-6" />
                             <span>Download Receipt</span>
                         </Button>
-                        <Button id="parent-payments-quick-methods-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment methods management coming soon')}>
+                        <Button id="parent-payments-quick-methods-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => router.push('/parent/profile')}>
                             <CreditCard className="w-6 h-6" />
                             <span>Payment Methods</span>
                         </Button>
-                        <Button id="parent-payments-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => alert('Payment schedule coming soon')}>
+                        <Button id="parent-payments-quick-schedule-btn" className="h-20 flex-col gap-2" variant="outline" onClick={() => router.push('/parent/bookings')}>
                             <Calendar className="w-6 h-6" />
                             <span>Payment Schedule</span>
                         </Button>
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Make Payment Drawer */}
+            <SlideInDrawer
+                isOpen={payOpen}
+                onClose={() => { setPayOpen(false); setPayErrors({}) }}
+                title="Make Payment"
+                description="Settle a pending booking"
+                size="md"
+            >
+                <form onSubmit={handlePaySubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Booking</label>
+                        <select
+                            value={payBookingId}
+                            onChange={(e) => {
+                                const id = e.target.value
+                                setPayBookingId(id)
+                                const b = pendingBookings.find(pb => pb.id === id)
+                                if (b) setPayAmount(String(b.amount || ''))
+                                if (payErrors.bookingId) setPayErrors(prev => { const n = { ...prev }; delete n.bookingId; return n })
+                            }}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${payErrors.bookingId ? 'border-red-500' : 'border-gray-300'}`}
+                        >
+                            <option value="">{pendingBookings.length ? 'Select a pending booking' : 'No pending bookings'}</option>
+                            {pendingBookings.map(b => (
+                                <option key={b.id} value={b.id}>{b.program} - {b.child} (${b.amount})</option>
+                            ))}
+                        </select>
+                        <FormFieldHint hint="Amount auto-fills when you pick a booking" error={payErrors.bookingId} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount (HKD)</label>
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            value={payAmount}
+                            onChange={(e) => {
+                                setPayAmount(e.target.value)
+                                if (payErrors.amount) setPayErrors(prev => { const n = { ...prev }; delete n.amount; return n })
+                            }}
+                            onKeyDown={filterNumberInput}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${payErrors.amount ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="99.99"
+                        />
+                        <FormFieldHint hint="Numbers only, up to 2 decimals" error={payErrors.amount} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select
+                            value={payMethod}
+                            onChange={(e) => {
+                                setPayMethod(e.target.value)
+                                if (payErrors.method) setPayErrors(prev => { const n = { ...prev }; delete n.method; return n })
+                            }}
+                            required
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${payErrors.method ? 'border-red-500' : 'border-gray-300'}`}
+                        >
+                            <option value="">Select method</option>
+                            <option value="card">Credit / Debit Card</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="wallet">Wallet Balance</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <FormFieldHint error={payErrors.method} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                        <textarea
+                            rows={3}
+                            value={payNotes}
+                            onChange={(e) => setPayNotes(e.target.value)}
+                            maxLength={300}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Reference number, purpose..."
+                        />
+                        <FormFieldHint hint="Up to 300 characters" />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button type="button" variant="outline" onClick={() => { setPayOpen(false); setPayErrors({}) }}>Cancel</Button>
+                        <Button type="submit" disabled={paySubmitting}>
+                            {paySubmitting ? (<><Loader className="w-4 h-4 mr-2 animate-spin" /> Processing...</>) : 'Pay Now'}
+                        </Button>
+                    </div>
+                </form>
+            </SlideInDrawer>
+
+            {/* Payment Details Drawer */}
+            <SlideInDrawer
+                isOpen={viewOpen}
+                onClose={() => { setViewOpen(false); setViewPayment(null) }}
+                title="Payment Details"
+                description={viewPayment?.invoice ? `Invoice ${viewPayment.invoice}` : ''}
+                size="md"
+            >
+                {viewPayment && (
+                    <div className="space-y-3 text-sm">
+                        <div className="flex justify-between"><span className="text-gray-500">Program</span><span className="font-medium text-gray-900">{viewPayment.program}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Child</span><span className="font-medium text-gray-900">{viewPayment.child}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Amount</span><span className="font-bold text-blue-600">{formatCurrency(viewPayment.amount || 0)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium text-gray-900">{viewPayment.date}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Status</span><Badge className={getStatusColor(viewPayment.status)}>{viewPayment.status?.toUpperCase()}</Badge></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Method</span><span className="font-medium text-gray-900">{viewPayment.method}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Invoice</span><span className="font-mono text-gray-900">{viewPayment.invoice}</span></div>
+                        {viewPayment.description && (
+                            <div>
+                                <p className="text-gray-500 mb-1">Description</p>
+                                <p className="text-gray-900">{viewPayment.description}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }
