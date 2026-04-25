@@ -4,7 +4,10 @@ import apiClient from '@/lib/apiClient'
 export const PaymentService = {
     getAll: (params?: any) => apiClient.get('/payments', { params }),
     getById: (id: string) => apiClient.get(`/payments/${id}`),
-    create: (data: any) => apiClient.post('/payments/process', data),
+    // Admin "Add Payment" creates a payment record (manual entry / reconciliation).
+    // /payments/process is the gateway-flow endpoint that auto-generates transactionId
+    // and ignores customerId — wrong shape for admin manual entry. Use plain /payments.
+    create: (data: any) => apiClient.post('/payments', data),
     update: (id: string, data: any) => apiClient.put(`/payments/${id}`, data),
     delete: (id: string) => apiClient.delete(`/payments/${id}`),
     refund: (transactionId: string, data: any) => apiClient.post(`/payments/refund/${transactionId}`, data),

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Globe } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Globe, Map } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { CountryService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import { validateName, filterNameInput } from '@/utils/validation'
 import { COUNTRIES, ALL_CURRENCIES } from '@/data/countries'
+import RegionsTab from '@/components/admin/business-config/RegionsTab'
 
 interface Country {
   id: string
@@ -21,6 +22,7 @@ interface Country {
 }
 
 export default function RegionsPage() {
+  const [activeTab, setActiveTab] = useState<'countries' | 'regions'>('countries')
   const [countries, setCountries] = useState<Country[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -89,8 +91,8 @@ export default function RegionsPage() {
         limit: 10,
         search: searchTerm,
       })
-      setCountries(response.data || [])
-      setTotalPages(response.pagination?.totalPages || 1)
+      setCountries(Array.isArray(response?.data) ? response.data : [])
+      setTotalPages(response?.pagination?.totalPages || 1)
     } catch (error) {
       console.error('Error loading countries:', error)
       toast.error('Failed to load countries')
@@ -146,7 +148,9 @@ export default function RegionsPage() {
 
       setShowForm(false)
       resetForm()
-      loadCountries()
+      // Go back to page 1 so newly created items on any page are visible
+      setCurrentPage(1)
+      await loadCountries()
     } catch (error) {
       console.error('Error saving country:', error)
       toast.error(getErrorMessage(error))
@@ -175,7 +179,7 @@ export default function RegionsPage() {
       await CountryService.delete(id)
       toast.success('Country deleted successfully')
       setDeleteConfirm(null)
-      loadCountries()
+      await loadCountries()
     } catch (error) {
       console.error('Error deleting country:', error)
       toast.error(getErrorMessage(error))
@@ -215,8 +219,28 @@ export default function RegionsPage() {
             <Globe className="w-8 h-8 text-blue-600" />
             <h1 className="text-4xl font-bold text-slate-900">Countries & Regions</h1>
           </div>
-          <p className="text-slate-600">Manage countries, currencies, and timezones for your business</p>
+          <p className="text-slate-600">Manage countries, currencies, timezones, and regional sub-divisions</p>
         </motion.div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('countries')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'countries' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><Globe className="w-4 h-4" /> Countries</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('regions')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 -mb-px ${activeTab === 'regions' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            <span className="inline-flex items-center gap-2"><Map className="w-4 h-4" /> Regions</span>
+          </button>
+        </div>
+
+        {activeTab === 'regions' && <RegionsTab />}
+
+        {activeTab === 'countries' && (<>
 
         {/* Controls */}
         <motion.div
@@ -574,6 +598,7 @@ export default function RegionsPage() {
             </motion.div>
           </div>
         )}
+        </>)}
       </div>
     </div>
   )

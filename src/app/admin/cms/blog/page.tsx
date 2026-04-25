@@ -9,7 +9,7 @@ export default function BlogPostsPage() {
             description="Create and manage blog articles for the website."
             fields={[
                 { name: 'title', label: 'Title', type: 'text', required: true, minLength: 3, maxLength: 200, showInTable: true },
-                { name: 'slug', label: 'Slug', type: 'slug', required: true, placeholder: 'my-blog-post', maxLength: 200, helpText: 'Lowercase letters, numbers and hyphens only. Must be unique.' },
+                { name: 'slug', label: 'Slug', type: 'slug', required: true, placeholder: 'my-blog-post', maxLength: 200, deriveFrom: 'title', helpText: 'Auto-generated from title. Lowercase letters, numbers and hyphens only. Must be unique.' },
                 { name: 'excerpt', label: 'Excerpt', type: 'textarea', required: true, minLength: 10, maxLength: 500 },
                 { name: 'content', label: 'Content', type: 'richtext', required: true, minLength: 20 },
                 { name: 'author', label: 'Author', type: 'text', required: true, minLength: 2, maxLength: 80, showInTable: true },

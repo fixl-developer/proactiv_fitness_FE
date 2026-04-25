@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api/client'
+import { filterAlphanumericInput } from '@/utils/validation'
 
 interface ClassItem {
     id: string
@@ -125,8 +126,11 @@ const BrowseClassesPage = () => {
                                     placeholder="Enter location"
                                     value={searchFilters.location}
                                     onChange={(e) => setSearchFilters({ ...searchFilters, location: e.target.value })}
+                                    onKeyDown={filterAlphanumericInput}
+                                    maxLength={60}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
@@ -135,18 +139,24 @@ const BrowseClassesPage = () => {
                                     placeholder="Enter program"
                                     value={searchFilters.program}
                                     onChange={(e) => setSearchFilters({ ...searchFilters, program: e.target.value })}
+                                    onKeyDown={filterAlphanumericInput}
+                                    maxLength={60}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter level"
+                                <select
                                     value={searchFilters.level}
                                     onChange={(e) => setSearchFilters({ ...searchFilters, level: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    <option value="">All levels</option>
+                                    <option value="Beginner">Beginner</option>
+                                    <option value="Intermediate">Intermediate</option>
+                                    <option value="Advanced">Advanced</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
@@ -263,7 +273,14 @@ const BrowseClassesPage = () => {
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Calendar className="w-4 h-4 flex-shrink-0" />
                                             <span className="text-sm">
-                                                {cls.date ? new Date(cls.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBD'}
+                                                {(() => {
+                                                    if (!cls.date) return 'Date TBD'
+                                                    try {
+                                                        const d = new Date(cls.date)
+                                                        if (isNaN(d.getTime())) return 'Date TBD'
+                                                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                                                    } catch { return 'Date TBD' }
+                                                })()}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">

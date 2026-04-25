@@ -82,10 +82,12 @@ export const StaffService = {
     // Admin can edit staff afterward to supply real values.
     create: async (data: Partial<StaffMember> & { businessUnitId?: string }) => {
         try {
+            // Map UI labels to backend StaffType enum values
+            // Backend enum: coach | instructor | manager | admin | receptionist | maintenance | security | cleaner
             const staffTypeMap: Record<string, string> = {
                 Coach: 'coach', Trainer: 'coach',
                 Manager: 'manager', Admin: 'admin',
-                Instructor: 'instructor', Assistant: 'assistant',
+                Instructor: 'instructor', Assistant: 'receptionist',
             }
             const empId = `EMP-${Date.now()}`
             const payload: any = {
@@ -145,7 +147,14 @@ export const StaffService = {
                 if (data.email) payload.contactInfo.email = data.email
                 if (data.phone) payload.contactInfo.phone = data.phone
             }
-            if (data.role) payload.staffType = data.role.toLowerCase()
+            if (data.role) {
+                const updateMap: Record<string, string> = {
+                    Coach: 'coach', Trainer: 'coach',
+                    Manager: 'manager', Admin: 'admin',
+                    Instructor: 'instructor', Assistant: 'receptionist',
+                }
+                payload.staffType = updateMap[data.role] || data.role.toLowerCase()
+            }
             if (data.locationId) {
                 payload.locationIds = [data.locationId]
                 payload.primaryLocationId = data.locationId
@@ -173,7 +182,7 @@ export const StaffService = {
     // Get staff statistics
     getStatistics: async () => {
         try {
-            const response = await apiClient.get('/staff/statistics')
+            const response = await apiClient.get('/staff/statistics/overview')
             return response.data
         } catch (error) {
             console.error('Error fetching staff statistics:', error)

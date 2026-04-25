@@ -176,7 +176,8 @@ export default function PaymentGatewaysPage() {
 
       setShowForm(false)
       resetForm()
-      loadGateways()
+      setCurrentPage(1)
+      await loadGateways()
     } catch (error) {
       console.error('Error saving payment gateway:', error)
       toast.error(getErrorMessage(error))
@@ -204,7 +205,7 @@ export default function PaymentGatewaysPage() {
       await PaymentGatewayService.delete(id)
       toast.success('Payment gateway deleted successfully')
       setDeleteConfirm(null)
-      loadGateways()
+      await loadGateways()
     } catch (error) {
       console.error('Error deleting payment gateway:', error)
       toast.error(getErrorMessage(error))
