@@ -3,9 +3,18 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { FiGift, FiUsers, FiClock, FiStar, FiHeart, FiCamera, FiMusic, FiAward } from 'react-icons/fi'
+import { useCMSData } from '@/hooks/useCMSData'
+import { CMSService, PartyPackageData } from '@/services/cmsService'
 
 const PartiesPage = () => {
-    const partyPackages = [
+    // CMS-driven packages with static fallback below
+    const { data: cmsPackages } = useCMSData<PartyPackageData[]>(
+        () => CMSService.getPartyPackages(),
+        [],
+        []
+    )
+
+    const fallbackPackages = [
         {
             name: 'Basic Party Package',
             duration: '1.5 hours',
@@ -61,6 +70,30 @@ const PartiesPage = () => {
             popular: false
         }
     ]
+
+    interface DisplayPackage {
+        name: string
+        duration: string
+        price: string
+        maxGuests: string
+        ageRange: string
+        includes: string[]
+        popular: boolean
+    }
+
+    // Map CMS packages onto the display shape the page already renders.
+    // The middle item in CMS list (or first if just one) is flagged "popular" to match the UI accent.
+    const partyPackages: DisplayPackage[] = cmsPackages.length > 0
+        ? cmsPackages.map((p, idx, arr) => ({
+            name: p.name || '',
+            duration: p.duration || '',
+            price: p.price || 'Contact for pricing',
+            maxGuests: typeof p.maxKids === 'number' ? `${p.maxKids} children` : 'See details',
+            ageRange: 'All ages',
+            includes: Array.isArray(p.features) ? p.features : [],
+            popular: arr.length > 1 ? idx === Math.floor(arr.length / 2) : idx === 0,
+        }))
+        : fallbackPackages
 
     const partyThemes = [
         {
@@ -282,7 +315,7 @@ const PartiesPage = () => {
                                 </div>
 
                                 <div className="space-y-3 mb-8">
-                                    {pkg.includes.map((item) => (
+                                    {pkg.includes.map((item: string) => (
                                         <div key={item} className="flex items-start space-x-2 text-sm text-gray-600">
                                             <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
                                             <span>{item}</span>

@@ -1,7 +1,7 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { ReactNode, useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import {
     MessageSquare,
     ChevronDown,
     ChevronRight,
+    Globe,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -229,7 +230,17 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [isMobile, setIsMobile] = useState(false)
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+    const profileMenuRef = useRef<HTMLDivElement>(null)
     const { showLogoutModal, unsavedPages, handleLogoutClick, handleSaveAndLogout, handlePermanentLogout, closeLogoutModal } = useLogout({ redirectTo: userRole === 'parent' ? '/login' : '/login/staff' })
+
+    const getInitials = () => {
+        const name = (userName || '').trim()
+        if (!name) return 'U'
+        const parts = name.split(' ')
+        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        return name[0].toUpperCase()
+    }
 
     const sidebarWidth = isMobile ? 0 : SIDEBAR_EXPANDED
 
@@ -250,6 +261,17 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
     useEffect(() => {
         setMobileMenuOpen(false)
     }, [pathname])
+
+    // Close profile dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+                setProfileMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     // Auto-expand menus based on current path
     useEffect(() => {
@@ -448,10 +470,57 @@ export default function DashboardLayout({ children, userRole, userName, userEmai
 
                         <div className="flex items-center space-x-2 md:space-x-3">
                             <NotificationBell />
-                            <Button id="dashboard-dashboard-layout-btn-5" variant="outline" size="sm" className="hidden sm:flex">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Settings
-                            </Button>
+                            <div className="relative" ref={profileMenuRef}>
+                                <button
+                                    id="dashboard-layout-profile-toggle-btn"
+                                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                                    className="flex items-center p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                    title="Profile menu"
+                                >
+                                    <div className={`w-9 h-9 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md`}>
+                                        {getInitials()}
+                                    </div>
+                                </button>
+                                <AnimatePresence>
+                                    {profileMenuOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-full right-0 mt-2 w-60 bg-white rounded-xl shadow-2xl border border-gray-100 py-1 z-50 overflow-hidden"
+                                        >
+                                            <div className="px-4 py-3 border-b border-gray-100">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 bg-gradient-to-r ${colors.gradient} rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+                                                        {getInitials()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate">{userName || 'User'}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{userEmail || ''}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                id="dashboard-layout-visit-website-btn"
+                                                onClick={() => { setProfileMenuOpen(false); router.push('/') }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <Globe className={`w-4 h-4 ${colors.text}`} />
+                                                <span className="font-medium">Visit Website</span>
+                                            </button>
+                                            <button
+                                                id="dashboard-layout-logout-dropdown-btn"
+                                                onClick={() => { setProfileMenuOpen(false); handleLogoutClick() }}
+                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                <span className="font-medium">Logout</span>
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
                 </motion.header>

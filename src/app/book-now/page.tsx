@@ -50,9 +50,9 @@ const BookNowContent = () => {
     const showDashboardContent = isAuthenticated && section && ['profile', 'bookings', 'children', 'payments', 'dashboard', 'settings'].includes(section)
 
     const handleSlotSelect = (slot: TimeSlot) => {
-        // Check authentication when user tries to book
+        // Auth gate — non-logged-in users get bounced to login and back here after.
         if (!isAuthenticated) {
-            router.push('/login')
+            router.push(`/login?redirectTo=${encodeURIComponent('/book-now')}`)
             return
         }
 
@@ -402,7 +402,7 @@ const BookNowContent = () => {
                                                         <button id={`book-now-program-${index}-btn`}
                                                             onClick={() => {
                                                                 if (!isAuthenticated) {
-                                                                    router.push('/login')
+                                                                    router.push(`/login?redirectTo=${encodeURIComponent('/book-now')}`)
                                                                     return
                                                                 }
                                                                 // Handle booking logic here
