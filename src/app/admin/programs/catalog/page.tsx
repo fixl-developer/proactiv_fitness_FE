@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '@/services/api/client'
+import { BusinessUnitService, LocationService } from '@/services/businessConfigService'
 import { toast } from 'sonner'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -26,7 +27,12 @@ interface ProgramStats {
   averageCapacity: number
 }
 
-const EMPTY_FORM: Omit<Program, '_id'> = {
+interface FormState extends Omit<Program, '_id'> {
+  businessUnitId: string
+  locationIds: string[]
+}
+
+const EMPTY_FORM: FormState = {
   name: '',
   type: 'gymnastics',
   level: 'beginner',
@@ -35,6 +41,8 @@ const EMPTY_FORM: Omit<Program, '_id'> = {
   capacity: 15,
   price: 0,
   status: 'active',
+  businessUnitId: '',
+  locationIds: [],
 }
 
 // ── Fallback mock data ─────────────────────────────────────────────────────
@@ -61,8 +69,13 @@ export default function ProgramCatalogPage() {
   // Form state
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState(EMPTY_FORM)
+  const [formData, setFormData] = useState<FormState>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+
+  // Dropdown data for Business Unit + Locations (required by backend)
+  const [businessUnits, setBusinessUnits] = useState<Array<{ id: string; name: string }>>([])
+  const [locationOptions, setLocationOptions] = useState<Array<{ id: string; name: string; businessUnitId?: string }>>([])
+  const [loadingDropdowns, setLoadingDropdowns] = useState(false)
 
   // Search / filter
   const [search, setSearch] = useState('')
@@ -112,10 +125,42 @@ export default function ProgramCatalogPage() {
     }
   }, [])
 
+  // Load Business Units and Locations for the form dropdowns.
+  // Backend requires both — see program.validation.ts (businessUnitId required, locationIds min 1).
+  const loadFormDropdowns = useCallback(async () => {
+    setLoadingDropdowns(true)
+    try {
+      const [buRes, locRes] = await Promise.allSettled([
+        BusinessUnitService.getAll({ page: 1, limit: 100 }),
+        LocationService.getAll({ page: 1, limit: 200 }),
+      ])
+      if (buRes.status === 'fulfilled') {
+        setBusinessUnits(buRes.value.data.map((b: any) => ({ id: b.id || b._id, name: b.name })).filter((b: any) => b.id))
+      }
+      if (locRes.status === 'fulfilled') {
+        setLocationOptions(locRes.value.data.map((l: any) => ({
+          id: l.id || l._id,
+          name: l.name,
+          businessUnitId: l.businessUnitId,
+        })).filter((l: any) => l.id))
+      }
+    } catch (err) {
+      console.error('Failed to load form dropdowns:', err)
+    } finally {
+      setLoadingDropdowns(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadPrograms()
     loadStats()
   }, [loadPrograms, loadStats])
+
+  useEffect(() => {
+    if (showForm && businessUnits.length === 0 && locationOptions.length === 0) {
+      loadFormDropdowns()
+    }
+  }, [showForm, businessUnits.length, locationOptions.length, loadFormDropdowns])
 
   // Transform minimal form data into the full payload the backend Joi schema expects.
   // The UI only collects top-level fields; nested rules/templates get safe defaults.
@@ -152,8 +197,8 @@ export default function ProgramCatalogPage() {
       shortDescription: description.slice(0, 200),
       programType: programTypeMap[formData.type] || 'regular',
       category: formData.type || 'general',
-      businessUnitId: (formData as any).businessUnitId,
-      locationIds: (formData as any).locationIds || [],
+      businessUnitId: formData.businessUnitId,
+      locationIds: formData.locationIds,
       ageGroups: [ageGroup],
       skillLevels: [skillLevelMap[formData.level] || 'beginner'],
       capacityRules: {
@@ -193,10 +238,25 @@ export default function ProgramCatalogPage() {
   // ── Create / Edit ──────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Backend requires businessUnitId and at least one locationId for create.
+    if (!editingId) {
+      if (!formData.businessUnitId) {
+        toast.error('Please select a Business Unit')
+        return
+      }
+      if (!formData.locationIds || formData.locationIds.length === 0) {
+        toast.error('Please select at least one Location')
+        return
+      }
+    }
+
     setSubmitting(true)
     try {
       if (editingId) {
-        await apiClient.put(`/programs/${editingId}`, formData)
+        // Strip dropdown fields from update payload — backend update schema doesn't expect them
+        const { businessUnitId: _bu, locationIds: _loc, ...updatePayload } = formData
+        await apiClient.put(`/programs/${editingId}`, updatePayload)
         toast.success('Program updated successfully')
       } else {
         await apiClient.post('/programs', buildCreatePayload())
@@ -206,7 +266,10 @@ export default function ProgramCatalogPage() {
       loadPrograms()
       loadStats()
     } catch (err: any) {
-      const msg = err?.response?.data?.message || (editingId ? 'Failed to update program' : 'Failed to create program')
+      const data = err?.response?.data
+      const msg = (Array.isArray(data?.errors) && data.errors.length > 0)
+        ? data.errors.join(', ')
+        : data?.message || (editingId ? 'Failed to update program' : 'Failed to create program')
       toast.error(msg)
     } finally {
       setSubmitting(false)
@@ -224,6 +287,8 @@ export default function ProgramCatalogPage() {
       capacity: p.capacity,
       price: p.price,
       status: p.status,
+      businessUnitId: (p as any).businessUnitId || '',
+      locationIds: Array.isArray((p as any).locationIds) ? (p as any).locationIds : [],
     })
     setShowForm(true)
   }
@@ -450,6 +515,81 @@ export default function ProgramCatalogPage() {
                 </select>
               </div>
             </div>
+
+            {/* Business Unit + Locations — required by backend */}
+            {!editingId && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Business Unit <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="select-admin-programs-catalog-bu"
+                    value={formData.businessUnitId}
+                    onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value, locationIds: [] })}
+                    className="w-full px-4 py-2 border rounded-lg disabled:bg-gray-100"
+                    disabled={loadingDropdowns || businessUnits.length === 0}
+                    required
+                  >
+                    <option value="">
+                      {loadingDropdowns
+                        ? 'Loading...'
+                        : businessUnits.length === 0
+                          ? 'No business units found — create one first'
+                          : 'Select a business unit'}
+                    </option>
+                    {businessUnits.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Locations <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-400 ml-2">({formData.locationIds.length} selected)</span>
+                  </label>
+                  {(() => {
+                    const filtered = formData.businessUnitId
+                      ? locationOptions.filter((l) => !l.businessUnitId || l.businessUnitId === formData.businessUnitId)
+                      : locationOptions
+                    if (loadingDropdowns) {
+                      return <p className="text-sm text-gray-400 border rounded-lg p-3">Loading...</p>
+                    }
+                    if (filtered.length === 0) {
+                      return (
+                        <p className="text-sm text-gray-400 border rounded-lg p-3">
+                          {formData.businessUnitId
+                            ? 'No locations for this business unit. Create one first.'
+                            : 'Select a business unit first.'}
+                        </p>
+                      )
+                    }
+                    return (
+                      <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-1">
+                        {filtered.map((l) => (
+                          <label key={l.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.locationIds.includes(l.id)}
+                              onChange={() => {
+                                const next = formData.locationIds.includes(l.id)
+                                  ? formData.locationIds.filter((id) => id !== l.id)
+                                  : [...formData.locationIds, l.id]
+                                setFormData({ ...formData, locationIds: next })
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">{l.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-2">Description</label>
               <textarea
