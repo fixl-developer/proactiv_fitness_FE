@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Package, Plus, Edit2, Trash2, Eye, AlertTriangle, CheckCircle,
-    TrendingDown, Zap, Search, Filter, Download, X, ChevronLeft, ChevronRight
+    TrendingDown, Zap, Search, Filter, Download, X, ChevronLeft, ChevronRight, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
 import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -538,217 +540,222 @@ export default function InventoryManagementPage() {
                 </Card>
             )}
 
-            {/* Delete Confirmation Modal */}
-            {deleteConfirmId && (
-                <div id="admin-franchise-inventory-div-clickable" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteConfirmId(null)}>
-                    <div id="admin-franchise-inventory-div-clickable-2" className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-red-100 p-2 rounded-lg">
-                                <Trash2 className="w-5 h-5 text-red-600" />
+            {/* View Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'view'}
+                onClose={closeModal}
+                title="Item Details"
+                description={selectedItem?.name}
+                size="md"
+                footer={
+                    <Button variant="outline" onClick={closeModal} className="w-full">
+                        Close
+                    </Button>
+                }
+            >
+                {selectedItem && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-500">Name</p>
+                                <p className="font-medium text-gray-900">{selectedItem.name}</p>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-900">Delete Item</h3>
+                            <div>
+                                <p className="text-sm text-gray-500">Category</p>
+                                <p className="font-medium text-gray-900">{selectedItem.category}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Quantity</p>
+                                <p className="font-medium text-gray-900">{selectedItem.quantity}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Status</p>
+                                <Badge variant={getStatusBadgeVariant(selectedItem.status) as any}>
+                                    {selectedItem.status}
+                                </Badge>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Min Stock</p>
+                                <p className="font-medium text-gray-900">{selectedItem.minStock}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Max Stock</p>
+                                <p className="font-medium text-gray-900">{selectedItem.maxStock}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Unit Cost</p>
+                                <p className="font-medium text-gray-900">${selectedItem.unitCost}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Total Value</p>
+                                <p className="font-medium text-gray-900">
+                                    ${selectedItem.totalValue || selectedItem.quantity * selectedItem.unitCost}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Supplier</p>
+                                <p className="font-medium text-gray-900">{selectedItem.supplier || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Last Restocked</p>
+                                <p className="font-medium text-gray-900">{selectedItem.lastRestocked || 'N/A'}</p>
+                            </div>
                         </div>
-                        <p className="text-gray-600 mb-6">Are you sure you want to delete this inventory item? This action cannot be undone.</p>
-                        <div className="flex justify-end gap-3">
-                            <button id="admin-franchise-inventory-btn-10"
-                                onClick={() => setDeleteConfirmId(null)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                disabled={isDeleting}
-                            >
-                                Cancel
-                            </button>
-                            <button id="admin-franchise-inventory-btn-11"
-                                onClick={() => handleDelete(deleteConfirmId)}
-                                disabled={isDeleting}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                            >
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                            </button>
+                    </div>
+                )}
+            </SlideInDrawer>
+
+            {/* Add / Edit Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'add' || modalMode === 'edit'}
+                onClose={closeModal}
+                title={modalMode === 'add' ? 'Add New Item' : 'Edit Item'}
+                description={modalMode === 'add' ? 'Create a new inventory item' : `Update ${selectedItem?.name || ''}`}
+                size="lg"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={isSaving} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSaving || !formData.name || !formData.category}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {modalMode === 'add' ? 'Add Item' : 'Save Changes'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        <Input
+                            value={formData.name}
+                            onChange={e => handleFormChange('name', e.target.value)}
+                            placeholder="Item name"
+                            className={fieldErrors.name ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint error={fieldErrors.name} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                        <Input
+                            value={formData.category}
+                            onChange={e => handleFormChange('category', e.target.value)}
+                            placeholder="e.g. Equipment, Supplies, Safety, Apparel"
+                            className={fieldErrors.category ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint error={fieldErrors.category} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                            <Input
+                                type="number"
+                                value={formData.quantity}
+                                onChange={e => handleFormChange('quantity', e.target.value)}
+                                onKeyDown={filterNumberInput}
+                                placeholder="0"
+                                min="0"
+                                className={fieldErrors.quantity ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.quantity} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost ($) *</label>
+                            <Input
+                                type="number"
+                                value={formData.unitCost}
+                                onChange={e => handleFormChange('unitCost', e.target.value)}
+                                onKeyDown={filterNumberInput}
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                                className={fieldErrors.unitCost ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.unitCost} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
+                            <Input
+                                type="number"
+                                value={formData.minStock}
+                                onChange={e => handleFormChange('minStock', e.target.value)}
+                                onKeyDown={filterNumberInput}
+                                placeholder="0"
+                                min="0"
+                                className={fieldErrors.minStock ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.minStock} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
+                            <Input
+                                type="number"
+                                value={formData.maxStock}
+                                onChange={e => handleFormChange('maxStock', e.target.value)}
+                                onKeyDown={filterNumberInput}
+                                placeholder="0"
+                                min="0"
+                                className={fieldErrors.maxStock ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.maxStock} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                        <Input
+                            value={formData.supplier}
+                            onChange={e => handleFormChange('supplier', e.target.value)}
+                            placeholder="Supplier name"
+                        />
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Delete Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={!!deleteConfirmId}
+                onClose={() => setDeleteConfirmId(null)}
+                title="Delete Item"
+                description="Permanently remove this inventory item"
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+                            disabled={isDeleting}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-red-100 rounded-full">
+                            <Trash2 className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                            <p className="font-medium text-gray-900">
+                                Are you sure you want to delete this inventory item?
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                This action cannot be undone.
+                            </p>
                         </div>
                     </div>
                 </div>
-            )}
-
-            {/* Add / Edit / View Modal */}
-            {modalMode && (
-                <div id="admin-franchise-inventory-div-clickable-3" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeModal}>
-                    <div id="admin-franchise-inventory-div-clickable-4" className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {modalMode === 'add' && 'Add New Item'}
-                                {modalMode === 'edit' && 'Edit Item'}
-                                {modalMode === 'view' && 'Item Details'}
-                            </h3>
-                            <button id="admin-franchise-inventory-btn-12" onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
-                        </div>
-
-                        {modalMode === 'view' && selectedItem ? (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-500">Name</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.name}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Category</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.category}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Quantity</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.quantity}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Status</p>
-                                        <Badge variant={getStatusBadgeVariant(selectedItem.status) as any}>
-                                            {selectedItem.status}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Min Stock</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.minStock}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Max Stock</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.maxStock}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Unit Cost</p>
-                                        <p className="font-medium text-gray-900">${selectedItem.unitCost}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Total Value</p>
-                                        <p className="font-medium text-gray-900">
-                                            ${selectedItem.totalValue || selectedItem.quantity * selectedItem.unitCost}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Supplier</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.supplier || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Last Restocked</p>
-                                        <p className="font-medium text-gray-900">{selectedItem.lastRestocked || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-4 border-t">
-                                    <button id="admin-franchise-inventory-btn-close"
-                                        onClick={closeModal}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={e => handleFormChange('name', e.target.value)}
-                                        placeholder="Item name"
-                                        className={fieldErrors.name ? 'border-red-500' : ''}
-                                    />
-                                    <FormFieldHint error={fieldErrors.name} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                                    <Input
-                                        value={formData.category}
-                                        onChange={e => handleFormChange('category', e.target.value)}
-                                        placeholder="e.g. Equipment, Supplies, Safety, Apparel"
-                                        className={fieldErrors.category ? 'border-red-500' : ''}
-                                    />
-                                    <FormFieldHint error={fieldErrors.category} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
-                                        <Input
-                                            type="number"
-                                            value={formData.quantity}
-                                            onChange={e => handleFormChange('quantity', e.target.value)}
-                                            onKeyDown={filterNumberInput}
-                                            placeholder="0"
-                                            min="0"
-                                            className={fieldErrors.quantity ? 'border-red-500' : ''}
-                                        />
-                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.quantity} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Unit Cost ($) *</label>
-                                        <Input
-                                            type="number"
-                                            value={formData.unitCost}
-                                            onChange={e => handleFormChange('unitCost', e.target.value)}
-                                            onKeyDown={filterNumberInput}
-                                            placeholder="0.00"
-                                            min="0"
-                                            step="0.01"
-                                            className={fieldErrors.unitCost ? 'border-red-500' : ''}
-                                        />
-                                        <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.unitCost} />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Min Stock</label>
-                                        <Input
-                                            type="number"
-                                            value={formData.minStock}
-                                            onChange={e => handleFormChange('minStock', e.target.value)}
-                                            onKeyDown={filterNumberInput}
-                                            placeholder="0"
-                                            min="0"
-                                            className={fieldErrors.minStock ? 'border-red-500' : ''}
-                                        />
-                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.minStock} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Max Stock</label>
-                                        <Input
-                                            type="number"
-                                            value={formData.maxStock}
-                                            onChange={e => handleFormChange('maxStock', e.target.value)}
-                                            onKeyDown={filterNumberInput}
-                                            placeholder="0"
-                                            min="0"
-                                            className={fieldErrors.maxStock ? 'border-red-500' : ''}
-                                        />
-                                        <FormFieldHint hint={FORMAT_HINTS.capacity} error={fieldErrors.maxStock} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                                    <Input
-                                        value={formData.supplier}
-                                        onChange={e => handleFormChange('supplier', e.target.value)}
-                                        placeholder="Supplier name"
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-3 pt-4 border-t">
-                                    <button id="admin-franchise-inventory-btn-cancel"
-                                        onClick={closeModal}
-                                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                        disabled={isSaving}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button id="admin-franchise-inventory-btn-13"
-                                        onClick={handleSave}
-                                        disabled={isSaving || !formData.name || !formData.category}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                    >
-                                        {isSaving ? 'Saving...' : modalMode === 'add' ? 'Add Item' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            </SlideInDrawer>
         </div>
     )
 }

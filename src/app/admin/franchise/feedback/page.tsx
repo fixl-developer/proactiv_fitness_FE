@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     MessageSquare, Star, ThumbsUp, ThumbsDown, Search,
-    TrendingUp, Users, Calendar, Reply, Trash2, Eye, CheckCircle
+    Users, Calendar, Reply, Trash2, Eye, CheckCircle, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
 
@@ -451,61 +453,82 @@ export default function CustomerFeedbackPage() {
                 </div>
             )}
 
-            {/* Reply Modal */}
-            {replyModal.open && (
-                <div id="admin-franchise-feedback-div-clickable" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
-                    <div id="admin-franchise-feedback-div-clickable-2" className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold text-gray-900 mb-1">Reply to Feedback</h2>
-                        <p className="text-sm text-gray-500 mb-4">{replyModal.feedbackTitle}</p>
-                        <textarea
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Type your reply here..."
-                            rows={5}
-                            className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                        />
-                        <div className="flex justify-end gap-3 mt-4">
-                            <button id="admin-franchise-feedback-btn-7"
-                                onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button id="admin-franchise-feedback-btn-8"
-                                onClick={handleReplySubmit}
-                                disabled={replyLoading || !replyText.trim()}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {replyLoading ? 'Sending...' : 'Send Reply'}
-                            </button>
-                        </div>
+            {/* Reply Drawer */}
+            <SlideInDrawer
+                isOpen={replyModal.open}
+                onClose={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}
+                title="Reply to Feedback"
+                description={replyModal.feedbackTitle}
+                size="md"
+                footer={
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => setReplyModal({ open: false, feedbackId: '', feedbackTitle: '' })}
+                            disabled={replyLoading}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleReplySubmit}
+                            disabled={replyLoading || !replyText.trim()}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {replyLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Send Reply
+                        </Button>
                     </div>
+                }
+            >
+                <div className="space-y-4">
+                    <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type your reply here..."
+                        rows={6}
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    />
                 </div>
-            )}
+            </SlideInDrawer>
 
-            {/* View Detail Modal */}
-            {viewModal.open && viewModal.item && (
-                <div id="admin-franchise-feedback-div-clickable-3" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setViewModal({ open: false, item: null })}>
-                    <div id="admin-franchise-feedback-div-clickable-4" className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold text-gray-900">Feedback Details</h2>
+            {/* View Detail Drawer */}
+            <SlideInDrawer
+                isOpen={viewModal.open && !!viewModal.item}
+                onClose={() => setViewModal({ open: false, item: null })}
+                title="Feedback Details"
+                description={viewModal.item?.title}
+                size="md"
+                footer={
+                    <Button
+                        variant="outline"
+                        onClick={() => setViewModal({ open: false, item: null })}
+                        className="w-full"
+                    >
+                        Close
+                    </Button>
+                }
+            >
+                {viewModal.item && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-800">{viewModal.item.title}</h3>
                             <Badge variant={viewModal.item.status === 'PUBLISHED' ? 'default' : 'secondary'}>
                                 {viewModal.item.status}
                             </Badge>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">{viewModal.item.title}</h3>
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2">
                             {renderStars(viewModal.item.rating)}
                             <span className="text-sm text-gray-600">{viewModal.item.rating}/5</span>
                         </div>
-                        <p className="text-gray-700 mb-4">{viewModal.item.comment}</p>
-                        <div className="space-y-2 text-sm text-gray-600 mb-4">
+                        <p className="text-gray-700">{viewModal.item.comment}</p>
+                        <div className="space-y-2 text-sm text-gray-600">
                             <p><span className="font-medium">Customer:</span> {viewModal.item.customerName}</p>
                             {viewModal.item.email && <p><span className="font-medium">Email:</span> {viewModal.item.email}</p>}
                             {viewModal.item.program && <p><span className="font-medium">Program:</span> {viewModal.item.program}</p>}
                             {viewModal.item.date && <p><span className="font-medium">Date:</span> {viewModal.item.date}</p>}
                         </div>
-                        <div className="flex gap-4 mb-4">
+                        <div className="flex gap-4">
                             <div className="flex items-center gap-1 text-sm">
                                 <ThumbsUp className="w-4 h-4 text-green-600" />
                                 <span>{viewModal.item.helpful || 0} helpful</span>
@@ -516,53 +539,62 @@ export default function CustomerFeedbackPage() {
                             </div>
                         </div>
                         {viewModal.item.reply && (
-                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
                                 <p className="text-sm font-semibold text-blue-800 mb-1">Admin Reply</p>
                                 <p className="text-sm text-blue-700">{viewModal.item.reply}</p>
                             </div>
                         )}
-                        <div className="flex justify-end">
-                            <button id="admin-franchise-feedback-btn-9"
-                                onClick={() => setViewModal({ open: false, item: null })}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </SlideInDrawer>
 
-            {/* Delete Confirmation Modal */}
-            {deleteModal.open && (
-                <div id="admin-franchise-feedback-div-clickable-5" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}>
-                    <div id="admin-franchise-feedback-div-clickable-6" className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-red-100 p-2 rounded-full">
-                                <Trash2 className="w-5 h-5 text-red-600" />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-900">Delete Feedback</h2>
+            {/* Delete Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={deleteModal.open}
+                onClose={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}
+                title="Delete Feedback"
+                description={`Permanently remove "${deleteModal.feedbackTitle}"`}
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}
+                            disabled={deleteLoading}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={deleteLoading}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-red-100 rounded-full">
+                            <Trash2 className="w-6 h-6 text-red-600" />
                         </div>
-                        <p className="text-gray-600 mb-1">Are you sure you want to delete this feedback?</p>
-                        <p className="text-sm text-gray-500 mb-6 font-medium">&quot;{deleteModal.feedbackTitle}&quot;</p>
-                        <div className="flex justify-end gap-3">
-                            <button id="admin-franchise-feedback-btn-10"
-                                onClick={() => setDeleteModal({ open: false, feedbackId: '', feedbackTitle: '' })}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button id="admin-franchise-feedback-btn-11"
-                                onClick={handleDelete}
-                                disabled={deleteLoading}
-                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                            >
-                                {deleteLoading ? 'Deleting...' : 'Delete'}
-                            </button>
+                        <div>
+                            <p className="font-medium text-gray-900">
+                                Are you sure you want to delete this feedback?
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1 font-medium">
+                                &quot;{deleteModal.feedbackTitle}&quot;
+                            </p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                This action cannot be undone.
+                            </p>
                         </div>
                     </div>
                 </div>
-            )}
+            </SlideInDrawer>
         </div>
     )
 }

@@ -116,10 +116,14 @@ export class FranchiseOwnerService {
             if (search) params.append('search', search)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<FranchiseLocation>>(
-                `/admin/franchise/locations?${params.toString()}`
-            )
-            return response.data
+            const response: any = await apiClient.get(`/admin/franchise/locations?${params.toString()}`)
+            return {
+                data: response?.data || [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
         } catch (error: any) {
             console.error('Failed to fetch locations:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch locations')
@@ -132,10 +136,8 @@ export class FranchiseOwnerService {
      */
     static async getLocation(locationId: string): Promise<FranchiseLocation> {
         try {
-            const response = await apiClient.get<FranchiseLocation>(
-                `/admin/franchise/locations/${locationId}`
-            )
-            return response.data
+            const response: any = await apiClient.get(`/admin/franchise/locations/${locationId}`)
+            return response?.data ?? response
         } catch (error: any) {
             console.error('Failed to fetch location:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch location')
@@ -161,17 +163,15 @@ export class FranchiseOwnerService {
             if (role) params.append('role', role)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get(
-                `/admin/franchise/staff?${params.toString()}`
-            )
+            const response: any = await apiClient.get(`/admin/franchise/staff?${params.toString()}`)
             // apiClient.get() already unwraps axios response.data, so response = { success, data, total, page, pageSize, totalPages }
             return {
-                data: response.data || [],
-                total: response.total ?? 0,
-                page: response.page ?? page,
-                pageSize: response.pageSize ?? pageSize,
-                totalPages: response.totalPages ?? 0,
-            } as PaginatedResponse<FranchiseStaff>
+                data: response?.data || [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
         } catch (error: any) {
             console.error('Failed to fetch staff:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch staff')
@@ -184,10 +184,8 @@ export class FranchiseOwnerService {
      */
     static async getStaffMember(staffId: string): Promise<FranchiseStaff> {
         try {
-            const response = await apiClient.get<FranchiseStaff>(
-                `/admin/franchise/staff/${staffId}`
-            )
-            return response.data
+            const response: any = await apiClient.get(`/admin/franchise/staff/${staffId}`)
+            return response?.data ?? response
         } catch (error: any) {
             console.error('Failed to fetch staff member:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch staff member')
@@ -234,8 +232,8 @@ export class FranchiseOwnerService {
      */
     static async getSettings(): Promise<FranchiseSettings> {
         try {
-            const response = await apiClient.get<FranchiseSettings>('/admin/franchise/settings')
-            return response.data
+            const response: any = await apiClient.get('/admin/franchise/settings')
+            return response?.data ?? response
         } catch (error: any) {
             console.error('Failed to fetch settings:', error)
             throw new Error(error.response?.data?.message || 'Failed to fetch settings')
@@ -248,11 +246,8 @@ export class FranchiseOwnerService {
      */
     static async updateSettings(settings: Partial<FranchiseSettings>): Promise<FranchiseSettings> {
         try {
-            const response = await apiClient.put<FranchiseSettings>(
-                '/admin/franchise/settings',
-                settings
-            )
-            return response.data
+            const response: any = await apiClient.put('/admin/franchise/settings', settings)
+            return response?.data ?? response
         } catch (error: any) {
             console.error('Failed to update settings:', error)
             throw new Error(error.response?.data?.message || 'Failed to update settings')
@@ -281,148 +276,160 @@ export class FranchiseOwnerService {
      * Backend: GET /admin/franchise/inventory
      */
     static async getInventory(
-    page: number = 1,
-    pageSize: number = 10,
-    search ?: string,
-    category ?: string,
-    status ?: string
-): Promise < PaginatedResponse < any >> {
-    try {
-        const params = new URLSearchParams()
+        page: number = 1,
+        pageSize: number = 10,
+        search?: string,
+        category?: string,
+        status?: string
+    ): Promise<PaginatedResponse<any>> {
+        try {
+            const params = new URLSearchParams()
             params.append('page', page.toString())
             params.append('pageSize', pageSize.toString())
-            if(search) params.append('search', search)
-            if(category) params.append('category', category)
-            if(status) params.append('status', status)
+            if (search) params.append('search', search)
+            if (category) params.append('category', category)
+            if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<any>>(
-            `/admin/franchise/inventory?${params.toString()}`
-        )
-            return response.data
-    } catch(error: any) {
-        console.error('Failed to fetch inventory:', error)
-        throw new Error(error.response?.data?.message || 'Failed to fetch inventory')
+            const response: any = await apiClient.get(`/admin/franchise/inventory?${params.toString()}`)
+            return {
+                data: response?.data || [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch inventory:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch inventory')
+        }
     }
-}
 
     /**
      * Get marketing campaigns
      * Backend: GET /admin/franchise/marketing/campaigns
      */
     static async getCampaigns(
-    page: number = 1,
-    pageSize: number = 10,
-    status ?: string
-): Promise < PaginatedResponse < any >> {
-    try {
-        const params = new URLSearchParams()
+        page: number = 1,
+        pageSize: number = 10,
+        status?: string
+    ): Promise<PaginatedResponse<any>> {
+        try {
+            const params = new URLSearchParams()
             params.append('page', page.toString())
             params.append('pageSize', pageSize.toString())
-            if(status) params.append('status', status)
+            if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<any>>(
-            `/admin/franchise/marketing/campaigns?${params.toString()}`
-        )
-            return response.data
-    } catch(error: any) {
-        console.error('Failed to fetch campaigns:', error)
-        throw new Error(error.response?.data?.message || 'Failed to fetch campaigns')
+            const response: any = await apiClient.get(`/admin/franchise/marketing/campaigns?${params.toString()}`)
+            return {
+                data: response?.data || [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch campaigns:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch campaigns')
+        }
     }
-}
 
     /**
      * Create new campaign
      * Backend: POST /admin/franchise/marketing/campaigns
      */
-    static async createCampaign(campaignData: any): Promise < any > {
-    try {
-        const response = await apiClient.post(
-            '/admin/franchise/marketing/campaigns',
-            campaignData
-        )
+    static async createCampaign(campaignData: any): Promise<any> {
+        try {
+            const response = await apiClient.post(
+                '/admin/franchise/marketing/campaigns',
+                campaignData
+            )
             return response.data
-    } catch(error: any) {
-        console.error('Failed to create campaign:', error)
-        throw new Error(error.response?.data?.message || 'Failed to create campaign')
+        } catch (error: any) {
+            console.error('Failed to create campaign:', error)
+            throw new Error(error.response?.data?.message || 'Failed to create campaign')
+        }
     }
-}
 
     /**
      * Get customer feedback
      * Backend: GET /admin/franchise/feedback
      */
     static async getFeedback(
-    page: number = 1,
-    pageSize: number = 10,
-    rating ?: string,
-    status ?: string
-): Promise < PaginatedResponse < any >> {
-    try {
-        const params = new URLSearchParams()
+        page: number = 1,
+        pageSize: number = 10,
+        rating?: string,
+        status?: string
+    ): Promise<PaginatedResponse<any>> {
+        try {
+            const params = new URLSearchParams()
             params.append('page', page.toString())
             params.append('pageSize', pageSize.toString())
-            if(rating) params.append('rating', rating)
-            if(status) params.append('status', status)
+            if (rating) params.append('rating', rating)
+            if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<any>>(
-            `/admin/franchise/feedback?${params.toString()}`
-        )
-            return response.data
-    } catch(error: any) {
-        console.error('Failed to fetch feedback:', error)
-        throw new Error(error.response?.data?.message || 'Failed to fetch feedback')
+            const response: any = await apiClient.get(`/admin/franchise/feedback?${params.toString()}`)
+            return {
+                data: response?.data || [],
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch feedback:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch feedback')
+        }
     }
-}
 
     /**
      * Publish feedback
      * Backend: POST /admin/franchise/feedback/:id/publish
      */
-    static async publishFeedback(feedbackId: string): Promise < any > {
-    try {
-        const response = await apiClient.post(
-            `/admin/franchise/feedback/${feedbackId}/publish`
-        )
+    static async publishFeedback(feedbackId: string): Promise<any> {
+        try {
+            const response = await apiClient.post(
+                `/admin/franchise/feedback/${feedbackId}/publish`
+            )
             return response.data
-    } catch(error: any) {
-        console.error('Failed to publish feedback:', error)
-        throw new Error(error.response?.data?.message || 'Failed to publish feedback')
+        } catch (error: any) {
+            console.error('Failed to publish feedback:', error)
+            throw new Error(error.response?.data?.message || 'Failed to publish feedback')
+        }
     }
-}
 
     /**
      * Get financial reports
      * Backend: GET /admin/franchise/financial-reports
      */
-    static async getFinancialReports(timeRange ?: string): Promise < any > {
-    try {
-        const params = timeRange ? `?timeRange=${timeRange}` : ''
+    static async getFinancialReports(timeRange?: string): Promise<any> {
+        try {
+            const params = timeRange ? `?timeRange=${timeRange}` : ''
             const response = await apiClient.get(
-            `/admin/franchise/financial-reports${params}`
-        )
+                `/admin/franchise/financial-reports${params}`
+            )
             return response.data
-    } catch(error: any) {
-        console.error('Failed to fetch financial reports:', error)
-        throw new Error(error.response?.data?.message || 'Failed to fetch financial reports')
+        } catch (error: any) {
+            console.error('Failed to fetch financial reports:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch financial reports')
+        }
     }
-}
 
     /**
      * Export financial report
      * Backend: GET /admin/franchise/financial-reports/export
      */
-    static async exportFinancialReport(format: 'pdf' | 'csv' | 'xlsx'): Promise < Blob > {
-    try {
-        const blob = await apiClient.get(
-            `/admin/franchise/financial-reports/export?format=${format}`,
-            { responseType: 'blob' }
-        )
+    static async exportFinancialReport(format: 'pdf' | 'csv' | 'xlsx'): Promise<Blob> {
+        try {
+            const blob = await apiClient.get(
+                `/admin/franchise/financial-reports/export?format=${format}`,
+                { responseType: 'blob' }
+            )
             return blob as unknown as Blob
-    } catch(error: any) {
-        console.error('Failed to export financial report:', error)
-        throw new Error(error.response?.data?.message || 'Failed to export financial report')
+        } catch (error: any) {
+            console.error('Failed to export financial report:', error)
+            throw new Error(error.response?.data?.message || 'Failed to export financial report')
+        }
     }
-}
 
     // =============================================
     // CRUD Operations
@@ -565,6 +572,82 @@ export class FranchiseOwnerService {
             return response.data
         } catch (error: any) {
             throw new Error(error.response?.data?.message || 'Failed to change password')
+        }
+    }
+
+    // =============================================
+    // EXPENSES (real expense tracking — feeds /financial-reports breakdown)
+    // =============================================
+
+    /** Get list of expense categories */
+    static async getExpenseCategories(): Promise<Array<{ value: string; label: string }>> {
+        try {
+            const response: any = await apiClient.get('/admin/franchise/expenses/categories')
+            return response?.data || []
+        } catch (error: any) {
+            console.error('Failed to fetch expense categories:', error)
+            return []
+        }
+    }
+
+    /** Get paginated expenses list */
+    static async getExpenses(
+        page: number = 1,
+        pageSize: number = 10,
+        filters?: { search?: string; category?: string; status?: string; startDate?: string; endDate?: string }
+    ): Promise<PaginatedResponse<any> & { totalAmount: number }> {
+        try {
+            const params = new URLSearchParams()
+            params.append('page', page.toString())
+            params.append('pageSize', pageSize.toString())
+            if (filters?.search) params.append('search', filters.search)
+            if (filters?.category) params.append('category', filters.category)
+            if (filters?.status) params.append('status', filters.status)
+            if (filters?.startDate) params.append('startDate', filters.startDate)
+            if (filters?.endDate) params.append('endDate', filters.endDate)
+
+            const response: any = await apiClient.get(`/admin/franchise/expenses?${params.toString()}`)
+            return {
+                data: response?.data || [],
+                totalAmount: response?.totalAmount ?? 0,
+                total: response?.total ?? 0,
+                page: response?.page ?? page,
+                pageSize: response?.pageSize ?? pageSize,
+                totalPages: response?.totalPages ?? 0,
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch expenses:', error)
+            throw new Error(error.response?.data?.message || 'Failed to fetch expenses')
+        }
+    }
+
+    /** Create new expense */
+    static async createExpense(data: any): Promise<any> {
+        try {
+            const response: any = await apiClient.post('/admin/franchise/expenses', data)
+            return response?.data ?? response
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to create expense')
+        }
+    }
+
+    /** Update expense */
+    static async updateExpense(expenseId: string, data: any): Promise<any> {
+        try {
+            const response: any = await apiClient.put(`/admin/franchise/expenses/${expenseId}`, data)
+            return response?.data ?? response
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to update expense')
+        }
+    }
+
+    /** Delete expense */
+    static async deleteExpense(expenseId: string): Promise<any> {
+        try {
+            const response: any = await apiClient.delete(`/admin/franchise/expenses/${expenseId}`)
+            return response?.data ?? response
+        } catch (error: any) {
+            throw new Error(error.response?.data?.message || 'Failed to delete expense')
         }
     }
 }
