@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Search, Plus, Edit2, Trash2, Eye, MapPin, Users, DollarSign,
-    TrendingUp, X, ChevronLeft, ChevronRight, Loader2, AlertCircle,
+    TrendingUp, ChevronLeft, ChevronRight, Loader2, AlertCircle,
     Phone, Mail, Building2
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FranchiseOwnerService, FranchiseLocation } from '@/services/franchiseOwnerService'
 import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -551,290 +553,259 @@ export default function FranchiseLocationsPage() {
                 </div>
             )}
 
-            {/* ─── MODALS ──────────────────────────────────────────────────────── */}
-            <AnimatePresence>
-                {modalMode && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                        onClick={closeModal}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-                        >
-                            {/* ── View Modal ── */}
-                            {modalMode === 'view' && selectedLocation && (
-                                <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                                        <h2 className="text-xl font-bold text-gray-900">Location Details</h2>
-                                        <button id="admin-franchise-locations-btn-7" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
-                                                <MapPin className="w-5 h-5 text-white" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold text-gray-900">{selectedLocation.name}</h3>
-                                                <Badge variant={selectedLocation.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                                                    {selectedLocation.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                                                </Badge>
-                                            </div>
-                                        </div>
+            {/* ─── DRAWERS ──────────────────────────────────────────────────────── */}
 
-                                        <div className="grid grid-cols-1 gap-3 text-sm">
-                                            <div className="flex items-start gap-2">
-                                                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                                <span className="text-gray-700">
-                                                    {selectedLocation.address}, {selectedLocation.city}, {selectedLocation.state} {selectedLocation.zipCode}
-                                                </span>
-                                            </div>
-                                            {selectedLocation.phone && (
-                                                <div className="flex items-center gap-2">
-                                                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                    <span className="text-gray-700">{selectedLocation.phone}</span>
-                                                </div>
-                                            )}
-                                            {selectedLocation.email && (
-                                                <div className="flex items-center gap-2">
-                                                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                    <span className="text-gray-700">{selectedLocation.email}</span>
-                                                </div>
-                                            )}
-                                            {selectedLocation.manager && (
-                                                <div className="flex items-center gap-2">
-                                                    <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                    <span className="text-gray-700">Manager: {selectedLocation.manager}</span>
-                                                </div>
-                                            )}
-                                        </div>
+            {/* View Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'view'}
+                onClose={closeModal}
+                title="Location Details"
+                description={selectedLocation?.name}
+                size="md"
+                footer={
+                    <Button variant="outline" onClick={closeModal} className="w-full">
+                        Close
+                    </Button>
+                }
+            >
+                {selectedLocation && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
+                                <MapPin className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">{selectedLocation.name}</h3>
+                                <Badge variant={selectedLocation.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                                    {selectedLocation.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                                </Badge>
+                            </div>
+                        </div>
 
-                                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                                            <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                                <p className="text-xs text-blue-600 font-medium">Students</p>
-                                                <p className="text-lg font-bold text-blue-900">{selectedLocation.students}</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-green-50 rounded-lg">
-                                                <p className="text-xs text-green-600 font-medium">Revenue</p>
-                                                <p className="text-lg font-bold text-green-900">${(selectedLocation.revenue / 1000).toFixed(0)}K</p>
-                                            </div>
-                                            <div className="text-center p-3 bg-purple-50 rounded-lg">
-                                                <p className="text-xs text-purple-600 font-medium">Occupancy</p>
-                                                <p className="text-lg font-bold text-purple-900">{selectedLocation.occupancyRate}%</p>
-                                            </div>
-                                        </div>
-
-                                        {selectedLocation.createdAt && (
-                                            <p className="text-xs text-gray-400 pt-2">
-                                                Created: {new Date(selectedLocation.createdAt).toLocaleDateString()}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="p-6 border-t border-gray-100">
-                                        <button id="admin-franchise-locations-btn-close"
-                                            onClick={closeModal}
-                                            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
+                        <div className="grid grid-cols-1 gap-3 text-sm">
+                            <div className="flex items-start gap-2">
+                                <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <span className="text-gray-700">
+                                    {selectedLocation.address}, {selectedLocation.city}, {selectedLocation.state} {selectedLocation.zipCode}
+                                </span>
+                            </div>
+                            {selectedLocation.phone && (
+                                <div className="flex items-center gap-2">
+                                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700">{selectedLocation.phone}</span>
                                 </div>
                             )}
-
-                            {/* ── Add / Edit Modal ── */}
-                            {(modalMode === 'add' || modalMode === 'edit') && (
-                                <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                                        <h2 className="text-xl font-bold text-gray-900">
-                                            {modalMode === 'add' ? 'Add New Location' : 'Edit Location'}
-                                        </h2>
-                                        <button id="admin-franchise-locations-btn-8" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        {formError && (
-                                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                                {formError}
-                                            </div>
-                                        )}
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                                            <Input
-                                                value={formData.name}
-                                                onChange={(e) => handleFormChange('name', e.target.value)}
-                                                onKeyDown={filterNameInput}
-                                                placeholder="Location name"
-                                                className={fieldErrors.name ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.name} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
-                                            <Input
-                                                value={formData.address}
-                                                onChange={(e) => handleFormChange('address', e.target.value)}
-                                                placeholder="Street address"
-                                                className={fieldErrors.address ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                                                <Input
-                                                    value={formData.city}
-                                                    onChange={(e) => handleFormChange('city', e.target.value)}
-                                                    onKeyDown={filterNameInput}
-                                                    placeholder="City"
-                                                    className={fieldErrors.city ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.city} error={fieldErrors.city} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                                                <Input
-                                                    value={formData.state}
-                                                    onChange={(e) => handleFormChange('state', e.target.value)}
-                                                    onKeyDown={filterNameInput}
-                                                    placeholder="State"
-                                                    className={fieldErrors.state ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.state} error={fieldErrors.state} />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-                                                <Input
-                                                    value={formData.zipCode}
-                                                    onChange={(e) => handleFormChange('zipCode', e.target.value)}
-                                                    placeholder="Zip code"
-                                                    className={fieldErrors.zipCode ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.zipCode} error={fieldErrors.zipCode} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                                                <Input
-                                                    type="number"
-                                                    value={formData.capacity || ''}
-                                                    onChange={(e) => handleFormChange('capacity', parseInt(e.target.value) || 0)}
-                                                    onKeyDown={filterNumberInput}
-                                                    placeholder="Max capacity"
-                                                    className={fieldErrors.capacity ? 'border-red-500' : ''}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                                <Input
-                                                    value={formData.phone}
-                                                    onChange={(e) => handleFormChange('phone', e.target.value)}
-                                                    onKeyDown={filterPhoneInput}
-                                                    placeholder="Phone number"
-                                                    className={fieldErrors.phone ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                                <Input
-                                                    type="email"
-                                                    value={formData.email}
-                                                    onChange={(e) => handleFormChange('email', e.target.value)}
-                                                    placeholder="Email address"
-                                                    className={fieldErrors.email ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 p-6 border-t border-gray-100">
-                                        <button id="admin-franchise-locations-btn-cancel"
-                                            onClick={closeModal}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button id="admin-franchise-locations-btn-9"
-                                            onClick={modalMode === 'add' ? handleCreate : handleUpdate}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            {modalMode === 'add' ? 'Create Location' : 'Save Changes'}
-                                        </button>
-                                    </div>
+                            {selectedLocation.email && (
+                                <div className="flex items-center gap-2">
+                                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700">{selectedLocation.email}</span>
                                 </div>
                             )}
-
-                            {/* ── Delete Confirmation Modal ── */}
-                            {modalMode === 'delete' && selectedLocation && (
-                                <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                                        <h2 className="text-xl font-bold text-gray-900">Delete Location</h2>
-                                        <button id="admin-franchise-locations-btn-10" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6">
-                                        {formError && (
-                                            <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                                {formError}
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-3 bg-red-100 rounded-full">
-                                                <Trash2 className="w-6 h-6 text-red-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900">
-                                                    Are you sure you want to delete &quot;{selectedLocation.name}&quot;?
-                                                </p>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    This action cannot be undone. All data associated with this location will be permanently removed.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 p-6 border-t border-gray-100">
-                                        <button id="admin-franchise-locations-btn-cancel-2"
-                                            onClick={closeModal}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button id="admin-franchise-locations-btn-11"
-                                            onClick={handleDelete}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            Delete Location
-                                        </button>
-                                    </div>
+                            {selectedLocation.manager && (
+                                <div className="flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-700">Manager: {selectedLocation.manager}</span>
                                 </div>
                             )}
-                        </motion.div>
-                    </motion.div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                            <div className="text-center p-3 bg-blue-50 rounded-lg">
+                                <p className="text-xs text-blue-600 font-medium">Students</p>
+                                <p className="text-lg font-bold text-blue-900">{selectedLocation.students}</p>
+                            </div>
+                            <div className="text-center p-3 bg-green-50 rounded-lg">
+                                <p className="text-xs text-green-600 font-medium">Revenue</p>
+                                <p className="text-lg font-bold text-green-900">${(selectedLocation.revenue / 1000).toFixed(0)}K</p>
+                            </div>
+                            <div className="text-center p-3 bg-purple-50 rounded-lg">
+                                <p className="text-xs text-purple-600 font-medium">Occupancy</p>
+                                <p className="text-lg font-bold text-purple-900">{selectedLocation.occupancyRate}%</p>
+                            </div>
+                        </div>
+
+                        {selectedLocation.createdAt && (
+                            <p className="text-xs text-gray-400 pt-2">
+                                Created: {new Date(selectedLocation.createdAt).toLocaleDateString()}
+                            </p>
+                        )}
+                    </div>
                 )}
-            </AnimatePresence>
+            </SlideInDrawer>
+
+            {/* Add / Edit Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'add' || modalMode === 'edit'}
+                onClose={closeModal}
+                title={modalMode === 'add' ? 'Add New Location' : 'Edit Location'}
+                description={modalMode === 'add' ? 'Create a new franchise location' : `Update ${selectedLocation?.name}`}
+                size="lg"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={submitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={modalMode === 'add' ? handleCreate : handleUpdate}
+                            disabled={submitting}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {modalMode === 'add' ? 'Create Location' : 'Save Changes'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    {formError && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {formError}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        <Input
+                            value={formData.name}
+                            onChange={(e) => handleFormChange('name', e.target.value)}
+                            onKeyDown={filterNameInput}
+                            placeholder="Location name"
+                            className={fieldErrors.name ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.name} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                        <Input
+                            value={formData.address}
+                            onChange={(e) => handleFormChange('address', e.target.value)}
+                            placeholder="Street address"
+                            className={fieldErrors.address ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.address} error={fieldErrors.address} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                            <Input
+                                value={formData.city}
+                                onChange={(e) => handleFormChange('city', e.target.value)}
+                                onKeyDown={filterNameInput}
+                                placeholder="City"
+                                className={fieldErrors.city ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.city} error={fieldErrors.city} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                            <Input
+                                value={formData.state}
+                                onChange={(e) => handleFormChange('state', e.target.value)}
+                                onKeyDown={filterNameInput}
+                                placeholder="State"
+                                className={fieldErrors.state ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.state} error={fieldErrors.state} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                            <Input
+                                value={formData.zipCode}
+                                onChange={(e) => handleFormChange('zipCode', e.target.value)}
+                                placeholder="Zip code"
+                                className={fieldErrors.zipCode ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.zipCode} error={fieldErrors.zipCode} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                            <Input
+                                type="number"
+                                value={formData.capacity || ''}
+                                onChange={(e) => handleFormChange('capacity', parseInt(e.target.value) || 0)}
+                                onKeyDown={filterNumberInput}
+                                placeholder="Max capacity"
+                                className={fieldErrors.capacity ? 'border-red-500' : ''}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <Input
+                                value={formData.phone}
+                                onChange={(e) => handleFormChange('phone', e.target.value)}
+                                onKeyDown={filterPhoneInput}
+                                placeholder="Phone number"
+                                className={fieldErrors.phone ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <Input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => handleFormChange('email', e.target.value)}
+                                placeholder="Email address"
+                                className={fieldErrors.email ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
+                        </div>
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Delete Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'delete'}
+                onClose={closeModal}
+                title="Delete Location"
+                description={`Permanently remove ${selectedLocation?.name}`}
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={submitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={submitting}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete Location
+                        </Button>
+                    </div>
+                }
+            >
+                {selectedLocation && (
+                    <div className="space-y-4">
+                        {formError && (
+                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                {formError}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-red-100 rounded-full">
+                                <Trash2 className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-900">
+                                    Are you sure you want to delete &quot;{selectedLocation.name}&quot;?
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    This action cannot be undone. All data associated with this location will be permanently removed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }

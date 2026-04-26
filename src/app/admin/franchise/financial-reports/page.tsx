@@ -4,10 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     BarChart3, DollarSign, TrendingUp, TrendingDown, Download,
-    PieChart, LineChart as LineChartIcon
+    PieChart, LineChart as LineChartIcon, Plus, Edit2, Trash2,
+    Loader2, AlertCircle, Receipt
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import {
     LineChart, Line, PieChart as RechartsPie, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -36,16 +40,65 @@ interface FinancialData {
     monthlyData: MonthlyDataItem[]
     revenueByProgram: BreakdownItem[]
     expenseBreakdown: BreakdownItem[]
+    hasRealExpenseData?: boolean
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+interface ExpenseItem {
+    id: string
+    category: string
+    categoryLabel: string
+    amount: number
+    date: string
+    description?: string
+    vendor?: string
+    paymentMethod?: string
+    referenceNumber?: string
+    status: string
+    notes?: string
+}
+
+interface ExpenseCategory {
+    value: string
+    label: string
+}
+
+const EMPTY_EXPENSE_FORM = {
+    category: 'OTHER',
+    amount: 0,
+    date: new Date().toISOString().slice(0, 10),
+    description: '',
+    vendor: '',
+    paymentMethod: '',
+    status: 'PENDING',
+    notes: '',
+}
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#a855f7']
 
 export default function FinancialReportsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [timeRange, setTimeRange] = useState('monthly')
     const [exporting, setExporting] = useState(false)
+    const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx' | 'pdf'>('csv')
     const [financialData, setFinancialData] = useState<FinancialData | null>(null)
+
+    // Expenses state
+    const [expenses, setExpenses] = useState<ExpenseItem[]>([])
+    const [expensesTotal, setExpensesTotal] = useState(0)
+    const [expensesTotalAmount, setExpensesTotalAmount] = useState(0)
+    const [expensesLoading, setExpensesLoading] = useState(false)
+    const [expensesPage, setExpensesPage] = useState(1)
+    const [categoryFilter, setCategoryFilter] = useState('')
+    const [categories, setCategories] = useState<ExpenseCategory[]>([])
+
+    // Expense drawer state
+    const [expenseMode, setExpenseMode] = useState<'add' | 'edit' | 'delete' | null>(null)
+    const [selectedExpense, setSelectedExpense] = useState<ExpenseItem | null>(null)
+    const [expenseForm, setExpenseForm] = useState<any>({ ...EMPTY_EXPENSE_FORM })
+    const [expenseSubmitting, setExpenseSubmitting] = useState(false)
+    const [expenseFormError, setExpenseFormError] = useState<string | null>(null)
+    const [expenseFieldErrors, setExpenseFieldErrors] = useState<Record<string, string>>({})
 
     const fetchData = useCallback(async (range: string) => {
         setIsLoading(true)
@@ -62,18 +115,40 @@ export default function FinancialReportsPage() {
         }
     }, [])
 
+    const fetchExpenses = useCallback(async (page = 1, category = '') => {
+        setExpensesLoading(true)
+        try {
+            const result = await FranchiseOwnerService.getExpenses(page, 10, { category: category || undefined })
+            setExpenses(result.data || [])
+            setExpensesTotal(result.total || 0)
+            setExpensesTotalAmount(result.totalAmount || 0)
+        } catch (err: any) {
+            console.error('Failed to load expenses:', err)
+        } finally {
+            setExpensesLoading(false)
+        }
+    }, [])
+
     useEffect(() => {
         fetchData(timeRange)
     }, [timeRange, fetchData])
 
+    useEffect(() => {
+        fetchExpenses(expensesPage, categoryFilter)
+    }, [expensesPage, categoryFilter, fetchExpenses])
+
+    useEffect(() => {
+        FranchiseOwnerService.getExpenseCategories().then(setCategories).catch(() => setCategories([]))
+    }, [])
+
     const handleExport = async () => {
         setExporting(true)
         try {
-            const blob = await FranchiseOwnerService.exportFinancialReport('csv')
+            const blob = await FranchiseOwnerService.exportFinancialReport(exportFormat)
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `financial-report-${timeRange}.csv`
+            a.download = `financial-report-${timeRange}.${exportFormat}`
             document.body.appendChild(a)
             a.click()
             a.remove()
@@ -88,6 +163,101 @@ export default function FinancialReportsPage() {
     const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setTimeRange(e.target.value)
     }
+
+    // ─── Expense form helpers ────────────────────────────────────────────────
+    const openAddExpense = () => {
+        setSelectedExpense(null)
+        setExpenseForm({ ...EMPTY_EXPENSE_FORM })
+        setExpenseFormError(null)
+        setExpenseFieldErrors({})
+        setExpenseMode('add')
+    }
+
+    const openEditExpense = (e: ExpenseItem) => {
+        setSelectedExpense(e)
+        setExpenseForm({
+            category: e.category,
+            amount: e.amount,
+            date: e.date ? new Date(e.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            description: e.description || '',
+            vendor: e.vendor || '',
+            paymentMethod: e.paymentMethod || '',
+            status: e.status || 'PENDING',
+            notes: e.notes || '',
+        })
+        setExpenseFormError(null)
+        setExpenseFieldErrors({})
+        setExpenseMode('edit')
+    }
+
+    const openDeleteExpense = (e: ExpenseItem) => {
+        setSelectedExpense(e)
+        setExpenseFormError(null)
+        setExpenseMode('delete')
+    }
+
+    const closeExpenseDrawer = () => {
+        setExpenseMode(null)
+        setSelectedExpense(null)
+        setExpenseForm({ ...EMPTY_EXPENSE_FORM })
+        setExpenseFormError(null)
+        setExpenseFieldErrors({})
+    }
+
+    const validateExpenseForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        if (!expenseForm.category) errs.category = 'Category is required'
+        if (!expenseForm.amount || Number(expenseForm.amount) < 0) errs.amount = 'Amount must be 0 or greater'
+        if (!expenseForm.date) errs.date = 'Date is required'
+        setExpenseFieldErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
+    const handleExpenseFormChange = (field: string, value: any) => {
+        setExpenseForm((prev: any) => ({ ...prev, [field]: value }))
+        setExpenseFieldErrors((prev) => {
+            const n = { ...prev }
+            delete n[field]
+            return n
+        })
+    }
+
+    const handleSaveExpense = async () => {
+        if (!validateExpenseForm()) return
+        setExpenseSubmitting(true)
+        setExpenseFormError(null)
+        try {
+            const payload = { ...expenseForm, amount: Number(expenseForm.amount) }
+            if (expenseMode === 'edit' && selectedExpense) {
+                await FranchiseOwnerService.updateExpense(selectedExpense.id, payload)
+            } else {
+                await FranchiseOwnerService.createExpense(payload)
+            }
+            closeExpenseDrawer()
+            await Promise.all([fetchExpenses(expensesPage, categoryFilter), fetchData(timeRange)])
+        } catch (err: any) {
+            setExpenseFormError(err.message || 'Failed to save expense')
+        } finally {
+            setExpenseSubmitting(false)
+        }
+    }
+
+    const handleDeleteExpense = async () => {
+        if (!selectedExpense) return
+        setExpenseSubmitting(true)
+        setExpenseFormError(null)
+        try {
+            await FranchiseOwnerService.deleteExpense(selectedExpense.id)
+            closeExpenseDrawer()
+            await Promise.all([fetchExpenses(expensesPage, categoryFilter), fetchData(timeRange)])
+        } catch (err: any) {
+            setExpenseFormError(err.message || 'Failed to delete expense')
+        } finally {
+            setExpenseSubmitting(false)
+        }
+    }
+
+    const expensesTotalPages = Math.max(1, Math.ceil(expensesTotal / 10))
 
     if (isLoading) {
         return (
@@ -165,7 +335,7 @@ export default function FinancialReportsPage() {
                     <h1 className="text-3xl font-bold text-gray-900">Financial Reports</h1>
                     <p className="text-gray-600 mt-1">Detailed financial analysis and insights</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <select
                         id="select-admin-franchise-financial-reports-1"
                         value={timeRange}
@@ -175,6 +345,17 @@ export default function FinancialReportsPage() {
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
                         <option value="yearly">Yearly</option>
+                    </select>
+                    <select
+                        id="select-admin-franchise-financial-reports-format"
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value as 'csv' | 'xlsx' | 'pdf')}
+                        className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        title="Export format"
+                    >
+                        <option value="csv">CSV</option>
+                        <option value="xlsx">Excel (XLSX)</option>
+                        <option value="pdf">PDF</option>
                     </select>
                     <button id="admin-franchise-financial-reports-btn"
                         onClick={handleExport}
@@ -350,6 +531,137 @@ export default function FinancialReportsPage() {
                 </Card>
             </div>
 
+            {/* ─── Expense Tracking ─────────────────────────────────────────── */}
+            <Card>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <Receipt className="w-5 h-5 text-orange-600" />
+                            Expense Tracking
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Total tracked: <span className="font-semibold text-gray-900">${expensesTotalAmount.toLocaleString()}</span>
+                            {' '}across <span className="font-semibold text-gray-900">{expensesTotal}</span> entries
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => { setCategoryFilter(e.target.value); setExpensesPage(1) }}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map((c) => (
+                                <option key={c.value} value={c.value}>{c.label}</option>
+                            ))}
+                        </select>
+                        <Button onClick={openAddExpense} className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add Expense
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {expensesLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                        </div>
+                    ) : expenses.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">
+                                {categoryFilter ? 'No expenses in this category.' : 'No expenses tracked yet. Click "Add Expense" to start.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-3 font-semibold text-gray-700 text-sm">Date</th>
+                                        <th className="text-left py-3 px-3 font-semibold text-gray-700 text-sm">Category</th>
+                                        <th className="text-left py-3 px-3 font-semibold text-gray-700 text-sm">Description</th>
+                                        <th className="text-left py-3 px-3 font-semibold text-gray-700 text-sm">Vendor</th>
+                                        <th className="text-right py-3 px-3 font-semibold text-gray-700 text-sm">Amount</th>
+                                        <th className="text-center py-3 px-3 font-semibold text-gray-700 text-sm">Status</th>
+                                        <th className="text-right py-3 px-3 font-semibold text-gray-700 text-sm">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {expenses.map((e) => (
+                                        <tr key={e.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <td className="py-3 px-3 text-sm text-gray-700">
+                                                {new Date(e.date).toLocaleDateString()}
+                                            </td>
+                                            <td className="py-3 px-3 text-sm">
+                                                <Badge variant="outline" className="font-normal">{e.categoryLabel}</Badge>
+                                            </td>
+                                            <td className="py-3 px-3 text-sm text-gray-700">{e.description || '-'}</td>
+                                            <td className="py-3 px-3 text-sm text-gray-600">{e.vendor || '-'}</td>
+                                            <td className="py-3 px-3 text-sm font-semibold text-gray-900 text-right">
+                                                ${e.amount.toLocaleString()}
+                                            </td>
+                                            <td className="py-3 px-3 text-sm text-center">
+                                                <Badge
+                                                    variant={e.status === 'PAID' ? 'default' : e.status === 'REJECTED' ? 'destructive' : 'secondary'}
+                                                    className="text-xs"
+                                                >
+                                                    {e.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="py-3 px-3 text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <button
+                                                        onClick={() => openEditExpense(e)}
+                                                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openDeleteExpense(e)}
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {expensesTotalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">
+                            <p className="text-sm text-gray-600">
+                                Page {expensesPage} of {expensesTotalPages}
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setExpensesPage((p) => Math.max(1, p - 1))}
+                                    disabled={expensesPage <= 1}
+                                >
+                                    Previous
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setExpensesPage((p) => Math.min(expensesTotalPages, p + 1))}
+                                    disabled={expensesPage >= expensesTotalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Monthly Summary Table */}
             <Card>
                 <CardHeader>
@@ -386,6 +698,201 @@ export default function FinancialReportsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* ─── Expense Drawers ──────────────────────────────────────────── */}
+            <SlideInDrawer
+                isOpen={expenseMode === 'add' || expenseMode === 'edit'}
+                onClose={closeExpenseDrawer}
+                title={expenseMode === 'add' ? 'Add Expense' : 'Edit Expense'}
+                description={expenseMode === 'add' ? 'Track a new expense' : `Update ${selectedExpense?.categoryLabel || ''}`}
+                size="lg"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeExpenseDrawer} disabled={expenseSubmitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSaveExpense}
+                            disabled={expenseSubmitting}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {expenseSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {expenseMode === 'add' ? 'Create Expense' : 'Save Changes'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    {expenseFormError && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {expenseFormError}
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                        <select
+                            value={expenseForm.category}
+                            onChange={(e) => handleExpenseFormChange('category', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${expenseFieldErrors.category ? 'border-red-500' : 'border-gray-300'}`}
+                        >
+                            {categories.length > 0 ? (
+                                categories.map((c) => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                ))
+                            ) : (
+                                <option value="OTHER">Other</option>
+                            )}
+                        </select>
+                        {expenseFieldErrors.category && (
+                            <p className="text-xs text-red-600 mt-1">{expenseFieldErrors.category}</p>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (USD) *</label>
+                            <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={expenseForm.amount || ''}
+                                onChange={(e) => handleExpenseFormChange('amount', e.target.value)}
+                                placeholder="0.00"
+                                className={expenseFieldErrors.amount ? 'border-red-500' : ''}
+                            />
+                            {expenseFieldErrors.amount && (
+                                <p className="text-xs text-red-600 mt-1">{expenseFieldErrors.amount}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                            <Input
+                                type="date"
+                                value={expenseForm.date}
+                                onChange={(e) => handleExpenseFormChange('date', e.target.value)}
+                                className={expenseFieldErrors.date ? 'border-red-500' : ''}
+                            />
+                            {expenseFieldErrors.date && (
+                                <p className="text-xs text-red-600 mt-1">{expenseFieldErrors.date}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <Input
+                            value={expenseForm.description}
+                            onChange={(e) => handleExpenseFormChange('description', e.target.value)}
+                            placeholder="e.g. April studio rent"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                            <Input
+                                value={expenseForm.vendor}
+                                onChange={(e) => handleExpenseFormChange('vendor', e.target.value)}
+                                placeholder="Vendor name"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                            <select
+                                value={expenseForm.paymentMethod}
+                                onChange={(e) => handleExpenseFormChange('paymentMethod', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">-- Select --</option>
+                                <option value="CASH">Cash</option>
+                                <option value="BANK_TRANSFER">Bank Transfer</option>
+                                <option value="CREDIT_CARD">Credit Card</option>
+                                <option value="DEBIT_CARD">Debit Card</option>
+                                <option value="CHECK">Check</option>
+                                <option value="ONLINE">Online</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select
+                            value={expenseForm.status}
+                            onChange={(e) => handleExpenseFormChange('status', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="PENDING">Pending</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="PAID">Paid</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <textarea
+                            value={expenseForm.notes}
+                            onChange={(e) => handleExpenseFormChange('notes', e.target.value)}
+                            placeholder="Additional context..."
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        />
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Delete Expense Drawer */}
+            <SlideInDrawer
+                isOpen={expenseMode === 'delete'}
+                onClose={closeExpenseDrawer}
+                title="Delete Expense"
+                description={selectedExpense ? `${selectedExpense.categoryLabel} • $${selectedExpense.amount.toLocaleString()}` : ''}
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeExpenseDrawer} disabled={expenseSubmitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDeleteExpense}
+                            disabled={expenseSubmitting}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {expenseSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete Expense
+                        </Button>
+                    </div>
+                }
+            >
+                {selectedExpense && (
+                    <div className="space-y-4">
+                        {expenseFormError && (
+                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                {expenseFormError}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-red-100 rounded-full">
+                                <Trash2 className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-900">
+                                    Delete this expense?
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {selectedExpense.description || selectedExpense.categoryLabel}
+                                    {' '}— ${selectedExpense.amount.toLocaleString()} on{' '}
+                                    {new Date(selectedExpense.date).toLocaleDateString()}.
+                                    This will affect financial reports and cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }

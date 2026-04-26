@@ -1,15 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
     Search, Plus, Edit2, Trash2, Eye, Users, Mail, Phone,
-    Shield, CheckCircle, AlertCircle, X, Activity, Star,
+    Shield, CheckCircle, AlertCircle, Activity, Star,
     UserCheck, Loader2
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FranchiseOwnerService, FranchiseStaff } from '@/services/franchiseOwnerService'
 import { validateName, validateEmail, validatePhone, validatePassword, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -555,292 +557,264 @@ export default function FranchiseStaffPage() {
                 </div>
             )}
 
-            {/* ===================== MODAL OVERLAY ===================== */}
-            <AnimatePresence>
-                {modalMode && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                        onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-                        >
-                            {/* ---- VIEW MODAL ---- */}
-                            {modalMode === 'view' && selectedStaff && (
-                                <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                        <h2 className="text-xl font-bold text-gray-900">Staff Details</h2>
-                                        <button id="admin-franchise-staff-btn-7" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        <div className="flex items-center gap-4 mb-6">
-                                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-14 h-14 rounded-full flex items-center justify-center shadow-md">
-                                                <span className="text-white text-xl font-bold">
-                                                    {selectedStaff.name.charAt(0).toUpperCase()}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-semibold text-gray-900">{selectedStaff.name}</h3>
-                                                <Badge variant={roleBadgeVariant(selectedStaff.role)}>
-                                                    {roleLabel(selectedStaff.role)}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <Mail className="w-4 h-4 text-gray-500" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Email</p>
-                                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.email}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <Phone className="w-4 h-4 text-gray-500" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Phone</p>
-                                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.phone || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <Shield className="w-4 h-4 text-gray-500" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Status</p>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        {selectedStaff.status === 'ACTIVE' ? (
-                                                            <CheckCircle className="w-3.5 h-3.5 text-green-600" />
-                                                        ) : (
-                                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400" />
-                                                        )}
-                                                        <span className="text-sm font-medium text-gray-900">{selectedStaff.status}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <Users className="w-4 h-4 text-gray-500" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Location</p>
-                                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.location || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                                            <div className="p-3 bg-purple-50 rounded-lg">
-                                                <p className="text-xs text-purple-600 mb-1">Utilization</p>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-1 h-2 bg-purple-200 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-purple-600 rounded-full"
-                                                            style={{ width: `${selectedStaff.utilization || 0}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-sm font-bold text-purple-900">{selectedStaff.utilization || 0}%</span>
-                                                </div>
-                                            </div>
-                                            <div className="p-3 bg-orange-50 rounded-lg">
-                                                <p className="text-xs text-orange-600 mb-1">Satisfaction</p>
-                                                <div className="flex items-center gap-2">
-                                                    <Star className="w-4 h-4 text-orange-500" />
-                                                    <span className="text-sm font-bold text-orange-900">{selectedStaff.satisfaction || 0}/5</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {selectedStaff.createdAt && (
-                                            <p className="text-xs text-gray-400 mt-4">
-                                                Member since {new Date(selectedStaff.createdAt).toLocaleDateString()}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="p-6 border-t border-gray-200">
-                                        <button id="admin-franchise-staff-btn-close"
-                                            onClick={closeModal}
-                                            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+            {/* ===================== DRAWERS ===================== */}
 
-                            {/* ---- ADD / EDIT MODAL ---- */}
-                            {(modalMode === 'add' || modalMode === 'edit') && (
+            {/* View Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'view'}
+                onClose={closeModal}
+                title="Staff Details"
+                description={selectedStaff?.name}
+                size="md"
+                footer={
+                    <Button variant="outline" onClick={closeModal} className="w-full">
+                        Close
+                    </Button>
+                }
+            >
+                {selectedStaff && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-14 h-14 rounded-full flex items-center justify-center shadow-md">
+                                <span className="text-white text-xl font-bold">
+                                    {selectedStaff.name.charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{selectedStaff.name}</h3>
+                                <Badge variant={roleBadgeVariant(selectedStaff.role)}>
+                                    {roleLabel(selectedStaff.role)}
+                                </Badge>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Mail className="w-4 h-4 text-gray-500" />
                                 <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                        <h2 className="text-xl font-bold text-gray-900">
-                                            {modalMode === 'add' ? 'Add New Staff' : 'Edit Staff'}
-                                        </h2>
-                                        <button id="admin-franchise-staff-btn-8" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6 space-y-4">
-                                        {modalError && (
-                                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
-                                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                                {modalError}
-                                            </div>
+                                    <p className="text-xs text-gray-500">Email</p>
+                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.email}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Phone className="w-4 h-4 text-gray-500" />
+                                <div>
+                                    <p className="text-xs text-gray-500">Phone</p>
+                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.phone || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Shield className="w-4 h-4 text-gray-500" />
+                                <div>
+                                    <p className="text-xs text-gray-500">Status</p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                        {selectedStaff.status === 'ACTIVE' ? (
+                                            <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                        ) : (
+                                            <AlertCircle className="w-3.5 h-3.5 text-gray-400" />
                                         )}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                                                <Input
-                                                    placeholder="e.g. Jane"
-                                                    value={formData.firstName}
-                                                    onChange={(e) => handleFormChange('firstName', e.target.value)}
-                                                    onKeyDown={filterNameInput}
-                                                    className={fieldErrors.firstName ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                                                <Input
-                                                    placeholder="e.g. Doe"
-                                                    value={formData.lastName}
-                                                    onChange={(e) => handleFormChange('lastName', e.target.value)}
-                                                    onKeyDown={filterNameInput}
-                                                    className={fieldErrors.lastName ? 'border-red-500' : ''}
-                                                />
-                                                <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                                            <Input
-                                                type="email"
-                                                placeholder="e.g. jane@franchise.com"
-                                                value={formData.email}
-                                                onChange={(e) => handleFormChange('email', e.target.value)}
-                                                className={fieldErrors.email ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                            <Input
-                                                type="tel"
-                                                placeholder="e.g. +1 (212) 555-0100"
-                                                value={formData.phone}
-                                                onChange={(e) => handleFormChange('phone', e.target.value)}
-                                                onKeyDown={filterPhoneInput}
-                                                className={fieldErrors.phone ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
-                                            <select
-                                                value={formData.role}
-                                                onChange={(e) => handleFormChange('role', e.target.value)}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                            >
-                                                {ROLES.map(role => (
-                                                    <option key={role} value={role}>{roleLabel(role)}</option>
-                                                ))}
-                                            </select>
-                                            <p className="text-xs text-gray-400 mt-1">Franchise Owners can create Location Manager and Coach roles</p>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                            <Input
-                                                placeholder="e.g. Main Location"
-                                                value={formData.location}
-                                                onChange={(e) => handleFormChange('location', e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Password {modalMode === 'edit' ? '(leave blank to keep current)' : '*'}
-                                            </label>
-                                            <Input
-                                                type="password"
-                                                placeholder={modalMode === 'edit' ? '********' : 'Enter password (min 8 chars)'}
-                                                value={formData.password}
-                                                onChange={(e) => handleFormChange('password', e.target.value)}
-                                                className={fieldErrors.password ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.password} error={fieldErrors.password} />
-                                        </div>
-                                    </div>
-                                    <div className="p-6 border-t border-gray-200 flex gap-3">
-                                        <button id="admin-franchise-staff-btn-cancel"
-                                            onClick={closeModal}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button id="admin-franchise-staff-btn-9"
-                                            onClick={modalMode === 'add' ? handleCreate : handleUpdate}
-                                            disabled={submitting || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()}
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            {modalMode === 'add' ? 'Create Staff' : 'Save Changes'}
-                                        </button>
+                                        <span className="text-sm font-medium text-gray-900">{selectedStaff.status}</span>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* ---- DELETE CONFIRMATION ---- */}
-                            {modalMode === 'delete' && selectedStaff && (
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Users className="w-4 h-4 text-gray-500" />
                                 <div>
-                                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                        <h2 className="text-xl font-bold text-gray-900">Delete Staff Member</h2>
-                                        <button id="admin-franchise-staff-btn-10" onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    </div>
-                                    <div className="p-6">
-                                        {modalError && (
-                                            <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                                                {modalError}
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-4 p-4 bg-red-50 rounded-lg mb-4">
-                                            <div className="bg-red-100 p-3 rounded-full">
-                                                <Trash2 className="w-6 h-6 text-red-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900">
-                                                    Are you sure you want to delete <span className="font-bold">{selectedStaff.name}</span>?
-                                                </p>
-                                                <p className="text-sm text-gray-600 mt-1">
-                                                    This action cannot be undone. All data associated with this staff member will be permanently removed.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 border-t border-gray-200 flex gap-3">
-                                        <button id="admin-franchise-staff-btn-cancel-2"
-                                            onClick={closeModal}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button id="admin-franchise-staff-btn-11"
-                                            onClick={handleDelete}
-                                            disabled={submitting}
-                                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            Delete Staff
-                                        </button>
-                                    </div>
+                                    <p className="text-xs text-gray-500">Location</p>
+                                    <p className="text-sm font-medium text-gray-900">{selectedStaff.location || 'N/A'}</p>
                                 </div>
-                            )}
-                        </motion.div>
-                    </motion.div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                            <div className="p-3 bg-purple-50 rounded-lg">
+                                <p className="text-xs text-purple-600 mb-1">Utilization</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-2 bg-purple-200 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-purple-600 rounded-full"
+                                            style={{ width: `${selectedStaff.utilization || 0}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-sm font-bold text-purple-900">{selectedStaff.utilization || 0}%</span>
+                                </div>
+                            </div>
+                            <div className="p-3 bg-orange-50 rounded-lg">
+                                <p className="text-xs text-orange-600 mb-1">Satisfaction</p>
+                                <div className="flex items-center gap-2">
+                                    <Star className="w-4 h-4 text-orange-500" />
+                                    <span className="text-sm font-bold text-orange-900">{selectedStaff.satisfaction || 0}/5</span>
+                                </div>
+                            </div>
+                        </div>
+                        {selectedStaff.createdAt && (
+                            <p className="text-xs text-gray-400 mt-4">
+                                Member since {new Date(selectedStaff.createdAt).toLocaleDateString()}
+                            </p>
+                        )}
+                    </div>
                 )}
-            </AnimatePresence>
+            </SlideInDrawer>
+
+            {/* Add / Edit Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'add' || modalMode === 'edit'}
+                onClose={closeModal}
+                title={modalMode === 'add' ? 'Add New Staff' : 'Edit Staff'}
+                description={modalMode === 'add' ? 'Create a new staff member' : `Update ${selectedStaff?.name ?? ''}`}
+                size="lg"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={submitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={modalMode === 'add' ? handleCreate : handleUpdate}
+                            disabled={submitting || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {modalMode === 'add' ? 'Create Staff' : 'Save Changes'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    {modalError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {modalError}
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                            <Input
+                                placeholder="e.g. Jane"
+                                value={formData.firstName}
+                                onChange={(e) => handleFormChange('firstName', e.target.value)}
+                                onKeyDown={filterNameInput}
+                                className={fieldErrors.firstName ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                            <Input
+                                placeholder="e.g. Doe"
+                                value={formData.lastName}
+                                onChange={(e) => handleFormChange('lastName', e.target.value)}
+                                onKeyDown={filterNameInput}
+                                className={fieldErrors.lastName ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <Input
+                            type="email"
+                            placeholder="e.g. jane@franchise.com"
+                            value={formData.email}
+                            onChange={(e) => handleFormChange('email', e.target.value)}
+                            className={fieldErrors.email ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <Input
+                            type="tel"
+                            placeholder="e.g. +1 (212) 555-0100"
+                            value={formData.phone}
+                            onChange={(e) => handleFormChange('phone', e.target.value)}
+                            onKeyDown={filterPhoneInput}
+                            className={fieldErrors.phone ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                        <select
+                            value={formData.role}
+                            onChange={(e) => handleFormChange('role', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                            {ROLES.map(role => (
+                                <option key={role} value={role}>{roleLabel(role)}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-gray-400 mt-1">Franchise Owners can create Location Manager and Coach roles</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <Input
+                            placeholder="e.g. Main Location"
+                            value={formData.location}
+                            onChange={(e) => handleFormChange('location', e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Password {modalMode === 'edit' ? '(leave blank to keep current)' : '*'}
+                        </label>
+                        <Input
+                            type="password"
+                            placeholder={modalMode === 'edit' ? '********' : 'Enter password (min 8 chars)'}
+                            value={formData.password}
+                            onChange={(e) => handleFormChange('password', e.target.value)}
+                            className={fieldErrors.password ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.password} error={fieldErrors.password} />
+                    </div>
+                </div>
+            </SlideInDrawer>
+
+            {/* Delete Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'delete'}
+                onClose={closeModal}
+                title="Delete Staff Member"
+                description={selectedStaff ? `Permanently remove ${selectedStaff.name}` : undefined}
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={submitting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            disabled={submitting}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete Staff
+                        </Button>
+                    </div>
+                }
+            >
+                {selectedStaff && (
+                    <div className="space-y-4">
+                        {modalError && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                {modalError}
+                            </div>
+                        )}
+                        <div className="flex items-center gap-4 p-4 bg-red-50 rounded-lg">
+                            <div className="bg-red-100 p-3 rounded-full flex-shrink-0">
+                                <Trash2 className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-900">
+                                    Are you sure you want to delete <span className="font-bold">{selectedStaff.name}</span>?
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    This action cannot be undone. All data associated with this staff member will be permanently removed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </SlideInDrawer>
         </div>
     )
 }

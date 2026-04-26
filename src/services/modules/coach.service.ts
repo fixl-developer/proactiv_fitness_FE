@@ -105,80 +105,26 @@ export interface CoachReportData {
 }
 
 // ==================== SERVICE ====================
+//
+// All endpoints hit the dedicated /coach/* backend routes (coach.routes.ts).
+// The previous version of this service tried to compose data from generic
+// /scheduling, /staff, /attendance endpoints which had path mismatches and
+// returned 404/500 for many calls. The new /coach/* routes give the coach
+// dashboard a stable, purpose-built API surface.
 
 class CoachService {
     private readonly MODULE_NAME = 'coach'
 
+    private unwrap<T>(response: any): T {
+        return (response?.data !== undefined ? response.data : response) as T
+    }
+
     // ==================== DASHBOARD ====================
 
-    async getDashboardData(coachId: string): Promise<CoachDashboardData> {
+    async getDashboardData(_coachId?: string): Promise<CoachDashboardData> {
         try {
-            // Fetch data from multiple endpoints in parallel
-            const [schedulesRes, programsRes, attendanceRes, performanceRes] = await Promise.allSettled([
-                apiClient.get<any>('/scheduling', {
-                    params: { coachId, date: new Date().toISOString().split('T')[0], limit: 20 }
-                }),
-                apiClient.get<any>('/admin/programs/catalog', { params: { status: 'active', limit: 10 } }),
-                apiClient.get<any>('/attendance/statistics'),
-                apiClient.get<any>(`/staff/${coachId}/performance`)
-            ])
-
-            const schedules = schedulesRes.status === 'fulfilled'
-                ? (schedulesRes.value as any)?.data?.schedules || (schedulesRes.value as any)?.schedules || []
-                : []
-
-            const programs = programsRes.status === 'fulfilled'
-                ? (programsRes.value as any)?.data || (programsRes.value as any) || []
-                : []
-
-            const attendanceStats = attendanceRes.status === 'fulfilled'
-                ? (attendanceRes.value as any)?.data || {}
-                : {}
-
-            const performance = performanceRes.status === 'fulfilled'
-                ? (performanceRes.value as any)?.data || {}
-                : {}
-
-            // Map schedules to today's schedule
-            const today = new Date().toISOString().split('T')[0]
-            const todaySchedule = Array.isArray(schedules)
-                ? schedules.filter((s: any) => s.date === today || s.dayOfWeek === new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase())
-                : []
-
-            return {
-                todayClasses: todaySchedule.length || schedules.length || 0,
-                totalStudents: performance?.totalStudents || attendanceStats?.totalRecords || 0,
-                attendanceRate: attendanceStats?.occupancyRate || performance?.attendanceRate || 0,
-                activePrograms: Array.isArray(programs) ? programs.filter((p: any) => p.status === 'active').length : 0,
-                todaySchedule: todaySchedule.map((s: any) => ({
-                    id: s._id || s.id,
-                    className: s.className || s.name || 'Class',
-                    date: s.date || today,
-                    time: s.startTime ? `${s.startTime} - ${s.endTime}` : '',
-                    startTime: s.startTime || '',
-                    endTime: s.endTime || '',
-                    location: s.location || s.roomId || 'TBD',
-                    level: s.level || 'beginner',
-                    enrolledStudents: s.enrolled || s.enrolledStudents || 0,
-                    capacity: s.capacity || 0,
-                    duration: s.duration || 60,
-                    status: s.status || 'active'
-                })),
-                programs: Array.isArray(programs) ? programs.slice(0, 5).map((p: any) => ({
-                    name: p.name || '',
-                    level: p.level || 'beginner',
-                    currentEnrollment: p.currentEnrollment || p.enrolled || 0,
-                    capacity: p.capacity || 0,
-                    duration: p.duration || 0
-                })) : [],
-                performanceMetrics: {
-                    studentSatisfaction: performance?.studentSatisfactionRating || 0,
-                    classCompletion: performance?.classesCompleted && performance?.classesAssigned
-                        ? Math.round((performance.classesCompleted / performance.classesAssigned) * 100) : 0,
-                    skillImprovement: performance?.skillAssessmentScore || 0,
-                    attendanceConsistency: performance?.attendanceRate || attendanceStats?.occupancyRate || 0
-                }
-            }
+            const response = await apiClient.get<any>('/coach/dashboard')
+            return this.unwrap<CoachDashboardData>(response)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -188,46 +134,11 @@ class CoachService {
 
     // ==================== STUDENTS ====================
 
-    async getMyStudents(coachId: string): Promise<CoachStudent[]> {
+    async getMyStudents(_coachId?: string): Promise<CoachStudent[]> {
         try {
-            // Try to get students enrolled in coach's classes
-            const [schedulesRes, attendanceRes] = await Promise.allSettled([
-                apiClient.get<any>('/scheduling', { params: { coachId, limit: 50 } }),
-                apiClient.get<any>('/attendance/records', { params: { limit: 100 } })
-            ])
-
-            // Get unique students from schedules and attendance
-            const schedules = schedulesRes.status === 'fulfilled'
-                ? (schedulesRes.value as any)?.data?.schedules || []
-                : []
-            const attendance = attendanceRes.status === 'fulfilled'
-                ? (attendanceRes.value as any)?.data || []
-                : []
-
-            // Extract student info from attendance records
-            const studentMap = new Map<string, CoachStudent>()
-
-            if (Array.isArray(attendance)) {
-                attendance.forEach((record: any) => {
-                    if (record.studentId && !studentMap.has(record.studentId)) {
-                        studentMap.set(record.studentId, {
-                            id: record.studentId,
-                            name: record.studentName || `Student ${record.studentId.slice(-4)}`,
-                            email: record.studentEmail || '',
-                            phone: record.studentPhone || '',
-                            level: record.level || 'beginner',
-                            joinDate: record.enrollmentDate || record.createdAt || new Date().toISOString(),
-                            classes: 0,
-                            attendance: 0,
-                            progress: 0,
-                            skills: record.skills || [],
-                            rating: record.rating || 0
-                        })
-                    }
-                })
-            }
-
-            return Array.from(studentMap.values())
+            const response = await apiClient.get<any>('/coach/students')
+            const data = this.unwrap<any>(response)
+            return Array.isArray(data) ? data : []
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -237,26 +148,11 @@ class CoachService {
 
     // ==================== SCHEDULE ====================
 
-    async getSchedules(coachId: string, params?: { dateFrom?: string; dateTo?: string }): Promise<CoachScheduleItem[]> {
+    async getSchedules(_coachId?: string, params?: { dateFrom?: string; dateTo?: string }): Promise<CoachScheduleItem[]> {
         try {
-            const response = await apiClient.get<any>('/scheduling', {
-                params: { coachId, ...params, limit: 50 }
-            })
-            const schedules = response?.data?.schedules || response?.schedules || []
-            return Array.isArray(schedules) ? schedules.map((s: any) => ({
-                id: s._id || s.id,
-                className: s.className || s.name || 'Class',
-                date: s.date || '',
-                time: s.startTime ? `${s.startTime} - ${s.endTime}` : '',
-                startTime: s.startTime || '',
-                endTime: s.endTime || '',
-                location: s.location || s.roomId || 'TBD',
-                level: s.level || 'beginner',
-                enrolledStudents: s.enrolled || s.enrolledStudents || 0,
-                capacity: s.capacity || 0,
-                duration: s.duration || 60,
-                status: s.status || 'active'
-            })) : []
+            const response = await apiClient.get<any>('/coach/schedule', { params })
+            const data = this.unwrap<any>(response)
+            return Array.isArray(data) ? data : []
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -266,8 +162,7 @@ class CoachService {
 
     async createSchedule(data: any): Promise<any> {
         try {
-            const response = await apiClient.post<any>('/scheduling', data)
-            return response
+            return await apiClient.post<any>('/coach/schedule', data)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -277,8 +172,7 @@ class CoachService {
 
     async updateSchedule(id: string, data: any): Promise<any> {
         try {
-            const response = await apiClient.put<any>(`/scheduling/${id}`, data)
-            return response
+            return await apiClient.put<any>(`/coach/schedule/${id}`, data)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -288,8 +182,7 @@ class CoachService {
 
     async deleteSchedule(id: string): Promise<any> {
         try {
-            const response = await apiClient.delete<any>(`/scheduling/${id}`)
-            return response
+            return await apiClient.delete<any>(`/coach/schedule/${id}`)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -299,36 +192,10 @@ class CoachService {
 
     // ==================== AVAILABILITY ====================
 
-    async getAvailability(coachId: string): Promise<CoachAvailability> {
+    async getAvailability(_coachId?: string): Promise<CoachAvailability> {
         try {
-            const response = await apiClient.get<any>(`/staff/${coachId}`)
-            const staff = response?.data || response
-            const availability: CoachAvailability = {}
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-
-            if (staff?.weeklyAvailability && Array.isArray(staff.weeklyAvailability)) {
-                staff.weeklyAvailability.forEach((slot: any) => {
-                    const dayName = days[slot.dayOfWeek] || days[0]
-                    availability[dayName] = {
-                        start: slot.startTime || '09:00',
-                        end: slot.endTime || '17:00',
-                        available: slot.isAvailable !== false
-                    }
-                })
-            }
-
-            // Fill in missing days with defaults
-            days.forEach(day => {
-                if (!availability[day]) {
-                    availability[day] = {
-                        start: day === 'sunday' ? '' : '09:00',
-                        end: day === 'sunday' ? '' : '17:00',
-                        available: day !== 'sunday'
-                    }
-                }
-            })
-
-            return availability
+            const response = await apiClient.get<any>('/coach/availability')
+            return this.unwrap<CoachAvailability>(response)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -336,21 +203,9 @@ class CoachService {
         }
     }
 
-    async saveAvailability(coachId: string, availability: CoachAvailability): Promise<any> {
+    async saveAvailability(_coachId: string | undefined, availability: CoachAvailability): Promise<any> {
         try {
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-            const weeklyAvailability = days.map((day, index) => ({
-                dayOfWeek: index,
-                startTime: availability[day]?.start || '',
-                endTime: availability[day]?.end || '',
-                isAvailable: availability[day]?.available || false
-            }))
-
-            const response = await apiClient.put<any>(`/staff/availability`, {
-                staffId: coachId,
-                weeklyAvailability
-            })
-            return response
+            return await apiClient.put<any>('/coach/availability', availability)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -360,22 +215,11 @@ class CoachService {
 
     // ==================== FEEDBACK ====================
 
-    async getFeedbackHistory(coachId: string): Promise<CoachFeedback[]> {
+    async getFeedbackHistory(_coachId?: string): Promise<CoachFeedback[]> {
         try {
-            const response = await apiClient.get<any>('/staff/reports/feedback', {
-                params: { coachId, limit: 50 }
-            })
-            const feedbacks = response?.data || response || []
-            return Array.isArray(feedbacks) ? feedbacks.map((f: any) => ({
-                id: f._id || f.id,
-                studentId: f.studentId || '',
-                studentName: f.studentName || '',
-                coachId: f.coachId || coachId,
-                date: f.date || f.createdAt || new Date().toISOString(),
-                rating: f.rating || 0,
-                text: f.text || f.message || f.feedback || '',
-                type: (f.rating >= 4 ? 'positive' : 'constructive') as 'positive' | 'constructive'
-            })) : []
+            const response = await apiClient.get<any>('/coach/feedback')
+            const data = this.unwrap<any>(response)
+            return Array.isArray(data) ? data : []
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -385,14 +229,14 @@ class CoachService {
 
     async sendFeedback(data: {
         studentId: string
-        coachId: string
+        studentName?: string
+        coachId?: string
         rating: number
         text: string
-        type: string
+        type?: string
     }): Promise<any> {
         try {
-            const response = await apiClient.post<any>('/staff/reports/feedback', data)
-            return response
+            return await apiClient.post<any>('/coach/feedback', data)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -402,8 +246,7 @@ class CoachService {
 
     async deleteFeedback(feedbackId: string): Promise<any> {
         try {
-            const response = await apiClient.delete<any>(`/staff/reports/feedback/${feedbackId}`)
-            return response
+            return await apiClient.delete<any>(`/coach/feedback/${feedbackId}`)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -413,39 +256,10 @@ class CoachService {
 
     // ==================== PROFILE ====================
 
-    async getProfile(coachId: string): Promise<CoachProfile> {
+    async getProfile(_coachId?: string): Promise<CoachProfile> {
         try {
-            const response = await apiClient.get<any>(`/staff/${coachId}`)
-            const staff = response?.data || response
-
-            return {
-                id: staff?._id || staff?.id || coachId,
-                staffId: staff?.staffId || '',
-                name: staff?.personalInfo
-                    ? `${staff.personalInfo.firstName || ''} ${staff.personalInfo.lastName || ''}`.trim()
-                    : staff?.name || '',
-                firstName: staff?.personalInfo?.firstName || '',
-                lastName: staff?.personalInfo?.lastName || '',
-                email: staff?.contactInfo?.email || staff?.email || '',
-                phone: staff?.contactInfo?.phone || staff?.phone || '',
-                location: staff?.contactInfo?.address
-                    ? `${staff.contactInfo.address.city || ''}, ${staff.contactInfo.address.country || ''}`.trim()
-                    : staff?.location || '',
-                bio: staff?.notes || staff?.bio || '',
-                specializations: staff?.specializations || [],
-                certifications: (staff?.certifications || []).map((c: any) => ({
-                    name: c.name || '',
-                    status: c.status || 'valid',
-                    issuingOrganization: c.issuingOrganization || '',
-                    expiryDate: c.expiryDate || ''
-                })),
-                skills: staff?.skills || [],
-                experienceYears: staff?.experienceYears || 0,
-                rating: staff?.performanceMetrics?.[0]?.studentSatisfactionRating || 0,
-                totalStudents: staff?.performanceMetrics?.[0]?.classesAssigned || 0,
-                totalClasses: staff?.performanceMetrics?.[0]?.classesCompleted || 0,
-                status: staff?.status || 'active'
-            }
+            const response = await apiClient.get<any>('/coach/profile')
+            return this.unwrap<CoachProfile>(response)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -453,16 +267,16 @@ class CoachService {
         }
     }
 
-    async updateProfile(coachId: string, data: Partial<{
-        personalInfo: { firstName: string; lastName: string }
-        contactInfo: { email: string; phone: string; address: any }
-        notes: string
+    async updateProfile(_coachId: string | undefined, data: Partial<{
+        firstName: string
+        lastName: string
+        phone: string
+        bio: string
         specializations: string[]
         skills: string[]
     }>): Promise<any> {
         try {
-            const response = await apiClient.put<any>(`/staff/${coachId}`, data)
-            return response
+            return await apiClient.put<any>('/coach/profile', data)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -472,57 +286,10 @@ class CoachService {
 
     // ==================== REPORTS ====================
 
-    async getReportData(coachId: string, type: string, dateRange: string): Promise<CoachReportData> {
+    async getReportData(_coachId?: string, _type?: string, _dateRange?: string): Promise<CoachReportData> {
         try {
-            const [schedulesRes, attendanceRes, performanceRes] = await Promise.allSettled([
-                apiClient.get<any>('/scheduling', { params: { coachId, limit: 100 } }),
-                apiClient.get<any>('/attendance/statistics'),
-                apiClient.get<any>(`/staff/${coachId}/performance`)
-            ])
-
-            const schedules = schedulesRes.status === 'fulfilled'
-                ? (schedulesRes.value as any)?.data?.schedules || []
-                : []
-            const attendance = attendanceRes.status === 'fulfilled'
-                ? (attendanceRes.value as any)?.data || {}
-                : {}
-            const performance = performanceRes.status === 'fulfilled'
-                ? (performanceRes.value as any)?.data || {}
-                : {}
-
-            const totalClasses = Array.isArray(schedules) ? schedules.length : 0
-
-            // Calculate class distribution
-            const levelCounts: Record<string, number> = {}
-            if (Array.isArray(schedules)) {
-                schedules.forEach((s: any) => {
-                    const level = s.level || 'unknown'
-                    levelCounts[level] = (levelCounts[level] || 0) + 1
-                })
-            }
-
-            const classDistribution = Object.entries(levelCounts).map(([name, count]) => ({
-                name: name.charAt(0).toUpperCase() + name.slice(1),
-                count,
-                percentage: totalClasses > 0 ? Math.round((count / totalClasses) * 100) : 0
-            }))
-
-            return {
-                totalClasses,
-                totalStudents: performance?.totalStudents || attendance?.totalRecords || 0,
-                avgAttendance: attendance?.occupancyRate || performance?.attendanceRate || 0,
-                avgRating: performance?.studentSatisfactionRating || 0,
-                classDistribution,
-                studentProgress: [],
-                attendanceByDay: [],
-                performanceMetrics: [
-                    { metric: 'Student Satisfaction', value: performance?.studentSatisfactionRating || 0 },
-                    { metric: 'Class Completion Rate', value: performance?.classesCompleted && performance?.classesAssigned
-                        ? Math.round((performance.classesCompleted / performance.classesAssigned) * 100) : 0 },
-                    { metric: 'Skill Improvement', value: performance?.skillAssessmentScore || 0 },
-                    { metric: 'Attendance Consistency', value: performance?.attendanceRate || attendance?.occupancyRate || 0 }
-                ]
-            }
+            const response = await apiClient.get<any>('/coach/reports')
+            return this.unwrap<CoachReportData>(response)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -540,8 +307,7 @@ class CoachService {
         notes?: string
     }): Promise<any> {
         try {
-            const response = await apiClient.post<any>('/attendance/record', data)
-            return response
+            return await apiClient.post<any>('/coach/attendance', data)
         } catch (error) {
             const appError = ErrorHandler.classifyError(error)
             ErrorHandler.logError(appError, this.MODULE_NAME)
@@ -550,5 +316,196 @@ class CoachService {
     }
 }
 
-export const coachService = new CoachService()
+// =============================================
+// EXTENDED INTERFACES for 6 additional Coach pages
+// =============================================
+
+export interface AttendanceRosterItem {
+    sessionId: string
+    sessionTime: string
+    studentId: string
+    studentName: string
+    status: 'pending' | 'present' | 'absent' | 'late' | 'excused'
+    attendanceId: string | null
+}
+export interface AttendanceHistoryItem {
+    id: string
+    studentId: string
+    studentName: string
+    date: string
+    status: string
+    notes?: string
+    sessionId?: string | null
+}
+
+export interface ChatConversation {
+    conversationId: string
+    otherUserId: string
+    otherName: string
+    lastMessage: string
+    lastMessageAt: string
+    unreadCount: number
+    messages: { id: string; from: 'me' | 'other'; fromName: string; body: string; read: boolean; createdAt: string }[]
+}
+
+export interface LessonPlan {
+    _id?: string
+    id?: string
+    title: string
+    week: number
+    programId?: string
+    programName?: string
+    level: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    skills: string[]
+    drills: string[]
+    duration: number
+    objectives?: string
+    notes?: string
+    status: 'draft' | 'published' | 'completed' | 'archived'
+}
+
+export interface StudentProgressItem {
+    _id?: string
+    id?: string
+    studentId: string
+    studentName: string
+    skillName: string
+    level: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    masteryPercent: number
+    notes?: string
+    sessionDate: string
+}
+
+export interface CoachEquipmentItem {
+    _id?: string
+    id?: string
+    name: string
+    category: string
+    quantity: number
+    status: 'available' | 'in_use' | 'maintenance' | 'broken' | 'lost'
+    location?: string
+    purchaseDate?: string
+    lastMaintenanceDate?: string
+    notes?: string
+}
+
+export interface CoachGoalItem {
+    _id?: string
+    id?: string
+    title: string
+    description?: string
+    metric: string
+    targetValue: number
+    currentValue: number
+    unit?: string
+    deadline: string
+    priority: 'low' | 'medium' | 'high'
+    status: 'active' | 'achieved' | 'missed' | 'archived'
+}
+
+interface CoachServiceExt {
+    getAttendanceToday(): Promise<{ sessions: any[]; roster: AttendanceRosterItem[] }>
+    getAttendanceHistory(days?: number): Promise<AttendanceHistoryItem[]>
+    getMessages(): Promise<ChatConversation[]>
+    sendMessage(data: { toUserId: string; body: string; conversationId?: string }): Promise<any>
+    markConversationRead(conversationId: string): Promise<any>
+    deleteMessage(id: string): Promise<any>
+    getLessonPlans(params?: any): Promise<{ data: LessonPlan[]; pagination: any }>
+    createLessonPlan(data: Partial<LessonPlan>): Promise<any>
+    updateLessonPlan(id: string, data: Partial<LessonPlan>): Promise<any>
+    deleteLessonPlan(id: string): Promise<any>
+    getProgressEntries(params?: any): Promise<{ data: StudentProgressItem[]; pagination: any }>
+    createProgressEntry(data: Partial<StudentProgressItem>): Promise<any>
+    updateProgressEntry(id: string, data: Partial<StudentProgressItem>): Promise<any>
+    deleteProgressEntry(id: string): Promise<any>
+    getEquipment(params?: any): Promise<{ data: CoachEquipmentItem[]; pagination: any }>
+    createEquipment(data: Partial<CoachEquipmentItem>): Promise<any>
+    updateEquipment(id: string, data: Partial<CoachEquipmentItem>): Promise<any>
+    deleteEquipment(id: string): Promise<any>
+    getGoals(params?: any): Promise<{ data: CoachGoalItem[]; pagination: any }>
+    createGoal(data: Partial<CoachGoalItem>): Promise<any>
+    updateGoal(id: string, data: Partial<CoachGoalItem>): Promise<any>
+    deleteGoal(id: string): Promise<any>
+}
+
+;(CoachService.prototype as any).getAttendanceToday = async function () {
+    const r: any = await apiClient.get('/coach/attendance/today')
+    return r?.data || { sessions: [], roster: [] }
+}
+;(CoachService.prototype as any).getAttendanceHistory = async function (days = 30) {
+    const r: any = await apiClient.get('/coach/attendance/history', { params: { days } })
+    return r?.data || []
+}
+
+;(CoachService.prototype as any).getMessages = async function () {
+    const r: any = await apiClient.get('/coach/messages')
+    return r?.data || []
+}
+;(CoachService.prototype as any).sendMessage = async function (data: any) {
+    return apiClient.post('/coach/messages', data)
+}
+;(CoachService.prototype as any).markConversationRead = async function (cid: string) {
+    return apiClient.patch(`/coach/messages/${cid}/read`, {})
+}
+;(CoachService.prototype as any).deleteMessage = async function (id: string) {
+    return apiClient.delete(`/coach/messages/${id}`)
+}
+
+;(CoachService.prototype as any).getLessonPlans = async function (params?: any) {
+    const r: any = await apiClient.get('/coach/curriculum', { params })
+    return { data: r?.data || [], pagination: r?.pagination || {} }
+}
+;(CoachService.prototype as any).createLessonPlan = async function (data: any) {
+    return apiClient.post('/coach/curriculum', data)
+}
+;(CoachService.prototype as any).updateLessonPlan = async function (id: string, data: any) {
+    return apiClient.put(`/coach/curriculum/${id}`, data)
+}
+;(CoachService.prototype as any).deleteLessonPlan = async function (id: string) {
+    return apiClient.delete(`/coach/curriculum/${id}`)
+}
+
+;(CoachService.prototype as any).getProgressEntries = async function (params?: any) {
+    const r: any = await apiClient.get('/coach/progress', { params })
+    return { data: r?.data || [], pagination: r?.pagination || {} }
+}
+;(CoachService.prototype as any).createProgressEntry = async function (data: any) {
+    return apiClient.post('/coach/progress', data)
+}
+;(CoachService.prototype as any).updateProgressEntry = async function (id: string, data: any) {
+    return apiClient.put(`/coach/progress/${id}`, data)
+}
+;(CoachService.prototype as any).deleteProgressEntry = async function (id: string) {
+    return apiClient.delete(`/coach/progress/${id}`)
+}
+
+;(CoachService.prototype as any).getEquipment = async function (params?: any) {
+    const r: any = await apiClient.get('/coach/equipment', { params })
+    return { data: r?.data || [], pagination: r?.pagination || {} }
+}
+;(CoachService.prototype as any).createEquipment = async function (data: any) {
+    return apiClient.post('/coach/equipment', data)
+}
+;(CoachService.prototype as any).updateEquipment = async function (id: string, data: any) {
+    return apiClient.put(`/coach/equipment/${id}`, data)
+}
+;(CoachService.prototype as any).deleteEquipment = async function (id: string) {
+    return apiClient.delete(`/coach/equipment/${id}`)
+}
+
+;(CoachService.prototype as any).getGoals = async function (params?: any) {
+    const r: any = await apiClient.get('/coach/goals', { params })
+    return { data: r?.data || [], pagination: r?.pagination || {} }
+}
+;(CoachService.prototype as any).createGoal = async function (data: any) {
+    return apiClient.post('/coach/goals', data)
+}
+;(CoachService.prototype as any).updateGoal = async function (id: string, data: any) {
+    return apiClient.put(`/coach/goals/${id}`, data)
+}
+;(CoachService.prototype as any).deleteGoal = async function (id: string) {
+    return apiClient.delete(`/coach/goals/${id}`)
+}
+
+export const coachService = new CoachService() as CoachService & CoachServiceExt
 export default CoachService
