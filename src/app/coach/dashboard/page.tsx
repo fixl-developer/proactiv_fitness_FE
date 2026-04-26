@@ -20,28 +20,21 @@ import aiCoachService from '@/services/aiCoachService'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 
-// Fallback mock data when API fails
+// Empty defaults shown only if /coach/dashboard fails — per project standard
+// dashboards must show real dynamic data, never invented placeholder numbers
+// like "92% attendance" / "4 classes" that mislead the coach.
 const FALLBACK_DATA = {
-    todayClasses: 4,
-    totalStudents: 45,
-    attendanceRate: 92,
-    activePrograms: 3,
-    todaySchedule: [
-        { id: '1', className: 'Beginner Gymnastics', date: '', time: '09:00 AM - 10:00 AM', startTime: '09:00 AM', endTime: '10:00 AM', location: 'Studio A', level: 'Beginner', enrolledStudents: 12, capacity: 15, duration: 60, status: 'active' },
-        { id: '2', className: 'Intermediate Tumbling', date: '', time: '10:30 AM - 11:30 AM', startTime: '10:30 AM', endTime: '11:30 AM', location: 'Studio B', level: 'Intermediate', enrolledStudents: 15, capacity: 20, duration: 60, status: 'active' },
-        { id: '3', className: 'Advanced Acrobatics', date: '', time: '02:00 PM - 03:00 PM', startTime: '02:00 PM', endTime: '03:00 PM', location: 'Studio A', level: 'Advanced', enrolledStudents: 8, capacity: 10, duration: 60, status: 'active' },
-        { id: '4', className: 'Kids Fitness', date: '', time: '03:30 PM - 04:30 PM', startTime: '03:30 PM', endTime: '04:30 PM', location: 'Studio C', level: 'Beginner', enrolledStudents: 20, capacity: 25, duration: 60, status: 'active' },
-    ],
-    programs: [
-        { name: 'Beginner Gymnastics', level: 'Beginner', currentEnrollment: 12, capacity: 15, duration: 12 },
-        { name: 'Intermediate Tumbling', level: 'Intermediate', currentEnrollment: 10, capacity: 12, duration: 16 },
-        { name: 'Advanced Acrobatics', level: 'Advanced', currentEnrollment: 8, capacity: 10, duration: 20 },
-    ],
+    todayClasses: 0,
+    totalStudents: 0,
+    attendanceRate: 0,
+    activePrograms: 0,
+    todaySchedule: [] as any[],
+    programs: [] as any[],
     performanceMetrics: {
-        studentSatisfaction: 94,
-        classCompletion: 98,
-        skillImprovement: 87,
-        attendanceConsistency: 92,
+        studentSatisfaction: 0,
+        classCompletion: 0,
+        skillImprovement: 0,
+        attendanceConsistency: 0,
     },
 }
 

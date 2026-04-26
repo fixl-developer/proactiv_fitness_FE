@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import {
     Megaphone, Plus, Edit2, Trash2, Eye, TrendingUp,
-    Target, Search, BarChart3, CheckCircle, X
+    Target, Search, BarChart3, CheckCircle, Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
 import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
@@ -439,224 +441,233 @@ export default function MarketingPromotionsPage() {
                 ))}
             </div>
 
-            {/* Delete Confirmation Modal */}
-            {deleteConfirmId && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Campaign</h3>
-                        <p className="text-gray-600 text-sm mb-6">
-                            Are you sure you want to delete this campaign? This action cannot be undone.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button id="admin-franchise-marketing-btn-5"
-                                onClick={() => setDeleteConfirmId(null)}
-                                disabled={isDeleting}
-                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            {/* View Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'view'}
+                onClose={closeModal}
+                title="Campaign Details"
+                description={selectedCampaign?.name}
+                size="md"
+                footer={
+                    <Button variant="outline" onClick={closeModal} className="w-full">
+                        Close
+                    </Button>
+                }
+            >
+                {selectedCampaign && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Name</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.name}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Type</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.type}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
+                                <Badge variant={selectedCampaign.status === 'ACTIVE' ? 'default' : selectedCampaign.status === 'SCHEDULED' ? 'secondary' : 'outline'} className="mt-1">
+                                    {selectedCampaign.status}
+                                </Badge>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Discount</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.discount}%</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Start Date</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.startDate}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">End Date</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.endDate}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Budget</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">${selectedCampaign.budget}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Spent</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">${selectedCampaign.spent}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Reach</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.reach}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Conversions</p>
+                                <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.conversions}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">ROI</p>
+                                <p className="text-sm font-medium text-green-600 mt-1">{selectedCampaign.roi}%</p>
+                            </div>
+                        </div>
+                        {/* Budget progress */}
+                        <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Budget Usage</p>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-600"
+                                    style={{ width: `${selectedCampaign.budget > 0 ? (selectedCampaign.spent / selectedCampaign.budget) * 100 : 0}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                ${selectedCampaign.spent} of ${selectedCampaign.budget} ({selectedCampaign.budget > 0 ? ((selectedCampaign.spent / selectedCampaign.budget) * 100).toFixed(0) : 0}%)
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </SlideInDrawer>
+
+            {/* Create / Edit Drawer */}
+            <SlideInDrawer
+                isOpen={modalMode === 'create' || modalMode === 'edit'}
+                onClose={closeModal}
+                title={modalMode === 'create' ? 'New Campaign' : 'Edit Campaign'}
+                description={modalMode === 'create' ? 'Create a new marketing campaign' : `Update ${selectedCampaign?.name || ''}`}
+                size="lg"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={closeModal} disabled={isSaving} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSaving || !formData.name}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {modalMode === 'create' ? 'Create Campaign' : 'Update Campaign'}
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name *</label>
+                        <Input
+                            value={formData.name}
+                            onChange={(e) => handleFormChange('name', e.target.value)}
+                            placeholder="Enter campaign name"
+                            className={fieldErrors.name ? 'border-red-500' : ''}
+                        />
+                        <FormFieldHint error={fieldErrors.name} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                            <select
+                                value={formData.type}
+                                onChange={(e) => handleFormChange('type', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                Cancel
-                            </button>
-                            <button id="admin-franchise-marketing-btn-6"
-                                onClick={() => handleDelete(deleteConfirmId)}
-                                disabled={isDeleting}
-                                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                <option value="SEASONAL">Seasonal</option>
+                                <option value="REFERRAL">Referral</option>
+                                <option value="B2B">B2B</option>
+                                <option value="SOCIAL">Social</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => handleFormChange('status', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                            </button>
+                                <option value="ACTIVE">Active</option>
+                                <option value="SCHEDULED">Scheduled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                            <Input
+                                type="date"
+                                value={formData.startDate}
+                                onChange={(e) => handleFormChange('startDate', e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                            <Input
+                                type="date"
+                                value={formData.endDate}
+                                onChange={(e) => handleFormChange('endDate', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%) *</label>
+                            <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={formData.discount}
+                                onChange={(e) => handleFormChange('discount', Number(e.target.value))}
+                                onKeyDown={filterNumberInput}
+                                className={fieldErrors.discount ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint="0-100%" error={fieldErrors.discount} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($) *</label>
+                            <Input
+                                type="number"
+                                min={0}
+                                value={formData.budget}
+                                onChange={(e) => handleFormChange('budget', Number(e.target.value))}
+                                onKeyDown={filterNumberInput}
+                                className={fieldErrors.budget ? 'border-red-500' : ''}
+                            />
+                            <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.budget} />
                         </div>
                     </div>
                 </div>
-            )}
+            </SlideInDrawer>
 
-            {/* Create / Edit / View Modal */}
-            {modalMode && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-                        {/* Modal Header */}
-                        <div className="flex items-center justify-between p-6 border-b">
-                            <h2 className="text-xl font-semibold text-gray-900">
-                                {modalMode === 'create' && 'New Campaign'}
-                                {modalMode === 'edit' && 'Edit Campaign'}
-                                {modalMode === 'view' && 'Campaign Details'}
-                            </h2>
-                            <button id="admin-franchise-marketing-btn-7" onClick={closeModal} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-gray-500" />
-                            </button>
+            {/* Delete Confirmation Drawer */}
+            <SlideInDrawer
+                isOpen={!!deleteConfirmId}
+                onClose={() => setDeleteConfirmId(null)}
+                title="Delete Campaign"
+                description="Permanently remove this campaign"
+                size="sm"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="outline" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting} className="flex-1">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+                            disabled={isDeleting}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Delete
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-red-100 rounded-full">
+                            <Trash2 className="w-6 h-6 text-red-600" />
                         </div>
-
-                        {/* Modal Body */}
-                        <div className="p-6">
-                            {modalMode === 'view' && selectedCampaign ? (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Name</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.name}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Type</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.type}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Status</p>
-                                            <Badge variant={selectedCampaign.status === 'ACTIVE' ? 'default' : selectedCampaign.status === 'SCHEDULED' ? 'secondary' : 'outline'} className="mt-1">
-                                                {selectedCampaign.status}
-                                            </Badge>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Discount</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.discount}%</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Start Date</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.startDate}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">End Date</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.endDate}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Budget</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">${selectedCampaign.budget}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Spent</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">${selectedCampaign.spent}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Reach</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.reach}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">Conversions</p>
-                                            <p className="text-sm font-medium text-gray-900 mt-1">{selectedCampaign.conversions}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide">ROI</p>
-                                            <p className="text-sm font-medium text-green-600 mt-1">{selectedCampaign.roi}%</p>
-                                        </div>
-                                    </div>
-                                    {/* Budget progress */}
-                                    <div>
-                                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Budget Usage</p>
-                                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-blue-600"
-                                                style={{ width: `${selectedCampaign.budget > 0 ? (selectedCampaign.spent / selectedCampaign.budget) * 100 : 0}%` }}
-                                            ></div>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            ${selectedCampaign.spent} of ${selectedCampaign.budget} ({selectedCampaign.budget > 0 ? ((selectedCampaign.spent / selectedCampaign.budget) * 100).toFixed(0) : 0}%)
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Campaign Name *</label>
-                                        <Input
-                                            value={formData.name}
-                                            onChange={(e) => handleFormChange('name', e.target.value)}
-                                            placeholder="Enter campaign name"
-                                            className={fieldErrors.name ? 'border-red-500' : ''}
-                                        />
-                                        <FormFieldHint error={fieldErrors.name} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                                            <select
-                                                value={formData.type}
-                                                onChange={(e) => handleFormChange('type', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="SEASONAL">Seasonal</option>
-                                                <option value="REFERRAL">Referral</option>
-                                                <option value="B2B">B2B</option>
-                                                <option value="SOCIAL">Social</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                            <select
-                                                value={formData.status}
-                                                onChange={(e) => handleFormChange('status', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="ACTIVE">Active</option>
-                                                <option value="SCHEDULED">Scheduled</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                                            <Input
-                                                type="date"
-                                                value={formData.startDate}
-                                                onChange={(e) => handleFormChange('startDate', e.target.value)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                            <Input
-                                                type="date"
-                                                value={formData.endDate}
-                                                onChange={(e) => handleFormChange('endDate', e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%) *</label>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                max={100}
-                                                value={formData.discount}
-                                                onChange={(e) => handleFormChange('discount', Number(e.target.value))}
-                                                onKeyDown={filterNumberInput}
-                                                className={fieldErrors.discount ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint="0-100%" error={fieldErrors.discount} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($) *</label>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                value={formData.budget}
-                                                onChange={(e) => handleFormChange('budget', Number(e.target.value))}
-                                                onKeyDown={filterNumberInput}
-                                                className={fieldErrors.budget ? 'border-red-500' : ''}
-                                            />
-                                            <FormFieldHint hint={FORMAT_HINTS.amount} error={fieldErrors.budget} />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="flex justify-end gap-3 p-6 border-t">
-                            <button id="admin-franchise-marketing-btn-8"
-                                onClick={closeModal}
-                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                {modalMode === 'view' ? 'Close' : 'Cancel'}
-                            </button>
-                            {modalMode !== 'view' && (
-                                <button id="admin-franchise-marketing-btn-9"
-                                    onClick={handleSave}
-                                    disabled={isSaving || !formData.name}
-                                    className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                >
-                                    {isSaving ? 'Saving...' : modalMode === 'create' ? 'Create Campaign' : 'Update Campaign'}
-                                </button>
-                            )}
+                        <div>
+                            <p className="font-medium text-gray-900">
+                                Are you sure you want to delete this campaign?
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                This action cannot be undone.
+                            </p>
                         </div>
                     </div>
                 </div>
-            )}
+            </SlideInDrawer>
         </div>
     )
 }

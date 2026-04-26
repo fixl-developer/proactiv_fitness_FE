@@ -30,6 +30,11 @@ import {
     ChevronDown,
     ChevronRight,
     Globe,
+    ClipboardCheck,
+    MessageCircle,
+    TrendingUp,
+    Target,
+    Package,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -172,6 +177,12 @@ const roleMenuItems: Record<string, MenuItem[]> = {
         { icon: Home, label: 'Dashboard', href: '/coach/dashboard' },
         { icon: Calendar, label: 'My Schedule', href: '/coach/schedule' },
         { icon: Users, label: 'My Students', href: '/coach/students' },
+        { icon: ClipboardCheck, label: 'Attendance', href: '/coach/attendance' },
+        { icon: BookOpen, label: 'Curriculum', href: '/coach/curriculum' },
+        { icon: TrendingUp, label: 'Student Progress', href: '/coach/progress' },
+        { icon: MessageCircle, label: 'Messages', href: '/coach/messages' },
+        { icon: Target, label: 'Goals', href: '/coach/goals' },
+        { icon: Package, label: 'Equipment', href: '/coach/equipment' },
         { icon: Activity, label: 'Class Reports', href: '/coach/reports' },
         { icon: Clock, label: 'Availability', href: '/coach/availability' },
         { icon: Star, label: 'Feedback', href: '/coach/feedback' },
