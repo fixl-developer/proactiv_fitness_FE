@@ -13,7 +13,9 @@ import {
     validateName,
     validateDateOfBirth,
     validateSelect,
+    validateTextArea,
     filterNameInput,
+    filterSchoolInput,
     FORMAT_HINTS,
 } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
@@ -87,6 +89,14 @@ export function RegisterStep4({
                 break;
             case 'gender':
                 error = validateSelect(value, 'Gender');
+                break;
+            case 'school':
+                if (value && !/^[A-Za-z0-9\s.'-]+$/.test(value)) {
+                    error = 'School name can only contain letters, numbers and spaces';
+                }
+                break;
+            case 'medicalConditions':
+                error = validateTextArea(value, 'Medical conditions', 0, 500);
                 break;
         }
         setFieldErrors((prev) => {
@@ -271,12 +281,18 @@ export function RegisterStep4({
                                 <School className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    {...register(`students.${index}.school`)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    {...register(`students.${index}.school`, {
+                                        onChange: (e) => validateField(index, 'school', e.target.value),
+                                    })}
+                                    onKeyDown={filterSchoolInput}
+                                    maxLength={100}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        fieldErrors[`students.${index}.school`] ? 'border-red-500' : 'border-gray-300'
+                                    }`}
                                     placeholder="School name"
                                 />
                             </div>
-                            <FormFieldHint hint={FORMAT_HINTS.school} />
+                            <FormFieldHint hint={FORMAT_HINTS.school} error={fieldErrors[`students.${index}.school`]} />
                         </div>
 
                         {/* Medical Conditions */}
@@ -287,12 +303,18 @@ export function RegisterStep4({
                             <div className="relative">
                                 <Heart className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                                 <textarea
-                                    {...register(`students.${index}.medicalConditions`)}
+                                    {...register(`students.${index}.medicalConditions`, {
+                                        onChange: (e) => validateField(index, 'medicalConditions', e.target.value),
+                                    })}
                                     rows={3}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    maxLength={500}
+                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        fieldErrors[`students.${index}.medicalConditions`] ? 'border-red-500' : 'border-gray-300'
+                                    }`}
                                     placeholder="Any allergies, medical conditions, or special needs..."
                                 />
                             </div>
+                            <FormFieldHint hint="Max 500 characters" error={fieldErrors[`students.${index}.medicalConditions`]} />
                         </div>
                     </div>
                 ))}

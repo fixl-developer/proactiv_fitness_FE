@@ -4,7 +4,17 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { filterCardNumberInput, filterNumberInput, filterNameInput, FORMAT_HINTS } from '@/utils/validation';
+import { toast } from 'sonner';
+import {
+    filterCardNumberInput,
+    filterNumberInput,
+    filterNameInput,
+    validateCardNumber,
+    validateCardExpiry,
+    validateCVV,
+    validateName,
+    FORMAT_HINTS,
+} from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
 
 const paymentSchema = z.object({
@@ -25,22 +35,44 @@ interface BookingStep3Props {
 }
 
 export default function BookingStep3({ onNext, onBack, totalAmount }: BookingStep3Props) {
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash' | 'bank_transfer'>('card');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'cash' | 'bank_transfer'>('cash');
     const [discount, setDiscount] = useState(0);
+    const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
 
     const {
         register,
         handleSubmit,
+        getValues,
         formState: { errors },
     } = useForm<PaymentFormData>({
         resolver: zodResolver(paymentSchema),
         defaultValues: {
-            paymentMethod: 'card',
+            paymentMethod: 'cash',
         },
     });
 
     const onSubmit = (data: PaymentFormData) => {
-        onNext(data);
+        const submission = { ...data, paymentMethod };
+        // Strict validation only when card is selected — cash / bank transfer
+        // pass through directly so users can book without payment.
+        if (paymentMethod === 'card') {
+            const errs: Record<string, string> = {};
+            const numErr = validateCardNumber(submission.cardNumber || '');
+            if (numErr) errs.cardNumber = numErr;
+            const expErr = validateCardExpiry(submission.cardExpiry || '');
+            if (expErr) errs.cardExpiry = expErr;
+            const cvvErr = validateCVV(submission.cardCvv || '');
+            if (cvvErr) errs.cardCvv = cvvErr;
+            const nameErr = validateName(submission.cardName || '', 'Cardholder name');
+            if (nameErr) errs.cardName = nameErr;
+            if (Object.keys(errs).length) {
+                setCardErrors(errs);
+                toast.error(Object.values(errs)[0]);
+                return;
+            }
+        }
+        setCardErrors({});
+        onNext(submission);
     };
 
     const finalAmount = totalAmount - discount;
@@ -135,6 +167,18 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                     </div>
                 </div>
 
+                {/* Cash / Bank transfer info banner — payment collected later at the venue */}
+                {paymentMethod !== 'card' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                        <p className="font-medium mb-1">No payment required to confirm</p>
+                        <p>
+                            {paymentMethod === 'cash'
+                                ? "Pay at the venue when you arrive — your spot is held the moment you confirm."
+                                : "We'll share bank-transfer instructions by email after your booking is confirmed."}
+                        </p>
+                    </div>
+                )}
+
                 {/* Card Details (only for card payment) */}
                 {paymentMethod === 'card' && (
                     <div className="space-y-4">
@@ -146,10 +190,11 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                 type="text"
                                 {...register('cardNumber')}
                                 onKeyDown={filterCardNumberInput}
+                                maxLength={19}
                                 placeholder="1234 5678 9012 3456"
-                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardNumber ? 'border-red-500' : 'border-gray-300'}`}
+                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(errors.cardNumber || cardErrors.cardNumber) ? 'border-red-500' : 'border-gray-300'}`}
                             />
-                            <FormFieldHint hint={FORMAT_HINTS.cardNumber} error={errors.cardNumber?.message} />
+                            <FormFieldHint hint={FORMAT_HINTS.cardNumber} error={errors.cardNumber?.message || cardErrors.cardNumber} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -161,9 +206,10 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                     type="text"
                                     {...register('cardExpiry')}
                                     placeholder="MM/YY"
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardExpiry ? 'border-red-500' : 'border-gray-300'}`}
+                                    maxLength={5}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(errors.cardExpiry || cardErrors.cardExpiry) ? 'border-red-500' : 'border-gray-300'}`}
                                 />
-                                <FormFieldHint hint={FORMAT_HINTS.cardExpiry} error={errors.cardExpiry?.message} />
+                                <FormFieldHint hint={FORMAT_HINTS.cardExpiry} error={errors.cardExpiry?.message || cardErrors.cardExpiry} />
                             </div>
 
                             <div>
@@ -175,9 +221,10 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                     {...register('cardCvv')}
                                     onKeyDown={filterNumberInput}
                                     placeholder="123"
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardCvv ? 'border-red-500' : 'border-gray-300'}`}
+                                    maxLength={4}
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(errors.cardCvv || cardErrors.cardCvv) ? 'border-red-500' : 'border-gray-300'}`}
                                 />
-                                <FormFieldHint hint={FORMAT_HINTS.cvv} error={errors.cardCvv?.message} />
+                                <FormFieldHint hint={FORMAT_HINTS.cvv} error={errors.cardCvv?.message || cardErrors.cardCvv} />
                             </div>
                         </div>
 
@@ -190,9 +237,10 @@ export default function BookingStep3({ onNext, onBack, totalAmount }: BookingSte
                                 {...register('cardName')}
                                 onKeyDown={filterNameInput}
                                 placeholder="John Doe"
-                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.cardName ? 'border-red-500' : 'border-gray-300'}`}
+                                maxLength={80}
+                                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(errors.cardName || cardErrors.cardName) ? 'border-red-500' : 'border-gray-300'}`}
                             />
-                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.cardName?.message} />
+                            <FormFieldHint hint={FORMAT_HINTS.name} error={errors.cardName?.message || cardErrors.cardName} />
                         </div>
                     </div>
                 )}

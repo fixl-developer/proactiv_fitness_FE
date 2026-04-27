@@ -194,6 +194,27 @@ export function filterCardNumberInput(e: React.KeyboardEvent<HTMLInputElement>) 
   }
 }
 
+export function filterZipCodeInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  const allowed = /^[A-Za-z0-9\s-]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+export function filterStreetInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  const allowed = /^[A-Za-z0-9\s.,'#\/-]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+export function filterSchoolInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  const allowed = /^[A-Za-z0-9\s.'-]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
 // ─── Format Hints (shown below input fields) ────────────────
 export const FORMAT_HINTS: Record<string, string> = {
   name: 'Only letters, spaces, hyphens and apostrophes allowed',

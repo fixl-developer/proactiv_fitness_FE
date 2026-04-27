@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import StepIndicator from './StepIndicator';
 import SelectProgram from './steps/SelectProgram';
 import ChildDetails from './steps/ChildDetails';
@@ -10,15 +11,25 @@ import SelectDateTime from './steps/SelectDateTime';
 import ParentDetails from './steps/ParentDetails';
 import ReviewConfirm from './steps/ReviewConfirm';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+    validateName,
+    validateSelect,
+    validateEmail,
+    validatePhone,
+    validateRequired,
+} from '@/utils/validation';
 
 interface BookingFlowProps {
     onComplete: (data: any) => void;
     onBack: () => void;
 }
 
+type StepErrors = Record<string, string>;
+
 export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
     const { user, isAuthenticated } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
+    const [stepErrors, setStepErrors] = useState<StepErrors>({});
     const [bookingData, setBookingData] = useState({
         program: '',
         childName: '',
@@ -55,21 +66,108 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
 
     const updateBookingData = (data: Partial<typeof bookingData>) => {
         setBookingData(prev => ({ ...prev, ...data }));
+        // Clear errors for fields that were just updated
+        if (Object.keys(stepErrors).length) {
+            setStepErrors(prev => {
+                const next = { ...prev };
+                Object.keys(data).forEach(key => { delete next[key]; });
+                return next;
+            });
+        }
+    };
+
+    /**
+     * Validate the data for a specific step. Returns a map of fieldName -> errorMessage
+     * (empty object means valid).
+     */
+    const validateStep = (step: number): StepErrors => {
+        const errs: StepErrors = {};
+        switch (step) {
+            case 1: {
+                const e = validateSelect(bookingData.program, 'program');
+                if (e) errs.program = e;
+                break;
+            }
+            case 2: {
+                const nameErr = validateName(bookingData.childName, "Child's name");
+                if (nameErr) errs.childName = nameErr;
+                const ageErr = validateSelect(bookingData.childAge, "Child's age");
+                if (ageErr) errs.childAge = ageErr;
+                const genderErr = validateSelect(bookingData.childGender, 'Gender');
+                if (genderErr) errs.childGender = genderErr;
+                break;
+            }
+            case 3: {
+                const e = validateSelect(bookingData.location, 'location');
+                if (e) errs.location = e;
+                break;
+            }
+            case 4: {
+                const dateErr = validateRequired(bookingData.date, 'Date');
+                if (dateErr) errs.date = dateErr;
+                else {
+                    const picked = new Date(bookingData.date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (picked < today) errs.date = 'Date cannot be in the past';
+                }
+                const timeErr = validateRequired(bookingData.timeSlot, 'Time slot');
+                if (timeErr) errs.timeSlot = timeErr;
+                break;
+            }
+            case 5: {
+                const nameErr = validateName(bookingData.parentName, 'Parent name');
+                if (nameErr) errs.parentName = nameErr;
+                const emailErr = validateEmail(bookingData.parentEmail);
+                if (emailErr) errs.parentEmail = emailErr;
+                const phoneErr = validatePhone(bookingData.parentPhone, true);
+                if (phoneErr) errs.parentPhone = phoneErr;
+                break;
+            }
+            case 6:
+                // Review step — re-run all to be safe
+                return { ...validateStep(1), ...validateStep(2), ...validateStep(3), ...validateStep(4), ...validateStep(5) };
+            default:
+                break;
+        }
+        return errs;
+    };
+
+    const isStepValid = (step: number = currentStep): boolean => {
+        return Object.keys(validateStep(step)).length === 0;
     };
 
     const nextStep = () => {
+        const errs = validateStep(currentStep);
+        if (Object.keys(errs).length) {
+            setStepErrors(errs);
+            const firstError = Object.values(errs)[0];
+            toast.error(firstError || 'Please complete this step before continuing');
+            return;
+        }
+        setStepErrors({});
         if (currentStep < totalSteps) {
             setCurrentStep(currentStep + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
     const prevStep = () => {
         if (currentStep > 1) {
+            setStepErrors({});
             setCurrentStep(currentStep - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
     const handleComplete = () => {
+        const errs = validateStep(6);
+        if (Object.keys(errs).length) {
+            setStepErrors(errs);
+            const firstError = Object.values(errs)[0];
+            toast.error(firstError || 'Please complete all required fields');
+            return;
+        }
         onComplete(bookingData);
     };
 
@@ -89,6 +187,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         childAge={bookingData.childAge}
                         childGender={bookingData.childGender}
                         onUpdate={updateBookingData}
+                        errors={stepErrors}
                     />
                 );
             case 3:
@@ -113,6 +212,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         parentEmail={bookingData.parentEmail}
                         parentPhone={bookingData.parentPhone}
                         onUpdate={updateBookingData}
+                        errors={stepErrors}
                     />
                 );
             case 6:
@@ -127,17 +227,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
         }
     };
 
-    const isStepValid = () => {
-        switch (currentStep) {
-            case 1: return bookingData.program !== '';
-            case 2: return bookingData.childName !== '' && bookingData.childAge !== '';
-            case 3: return bookingData.location !== '';
-            case 4: return bookingData.date !== '' && bookingData.timeSlot !== '';
-            case 5: return bookingData.parentName !== '' && bookingData.parentEmail !== '' && bookingData.parentPhone !== '';
-            case 6: return true;
-            default: return false;
-        }
-    };
+    const stepValid = isStepValid();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
@@ -177,8 +267,8 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         onClick={prevStep}
                         disabled={currentStep === 1}
                         className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${currentStep === 1
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                             }`}
                     >
                         <ArrowLeft className="w-4 h-4" />
@@ -187,11 +277,11 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
 
                     {currentStep < totalSteps ? (
                         <button id="booking-booking-flow-btn-next-step"
+                            type="button"
                             onClick={nextStep}
-                            disabled={!isStepValid()}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${isStepValid()
-                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${stepValid
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
+                                : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
                                 }`}
                         >
                             Next Step
@@ -199,11 +289,11 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         </button>
                     ) : (
                         <button id="booking-booking-flow-btn-3"
+                            type="button"
                             onClick={handleComplete}
-                            disabled={!isStepValid()}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${isStepValid()
-                                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${stepValid
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl'
+                                : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
                                 }`}
                         >
                             <Check className="w-4 h-4" />

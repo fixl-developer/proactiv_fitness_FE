@@ -1,15 +1,31 @@
 'use client';
 
+import { useState } from 'react';
 import { User, Mail, Phone, Shield } from 'lucide-react';
+import {
+    validateName,
+    validateEmail,
+    validatePhone,
+    filterNameInput,
+    filterPhoneInput,
+    FORMAT_HINTS,
+} from '@/utils/validation';
 
 interface ParentDetailsProps {
     parentName: string;
     parentEmail: string;
     parentPhone: string;
     onUpdate: (data: { parentName?: string; parentEmail?: string; parentPhone?: string }) => void;
+    errors?: { parentName?: string; parentEmail?: string; parentPhone?: string };
 }
 
-export default function ParentDetails({ parentName, parentEmail, parentPhone, onUpdate }: ParentDetailsProps) {
+export default function ParentDetails({ parentName, parentEmail, parentPhone, onUpdate, errors }: ParentDetailsProps) {
+    const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; phone?: boolean }>({});
+
+    const nameErr = errors?.parentName ?? (touched.name ? validateName(parentName, 'Parent name') : null);
+    const emailErr = errors?.parentEmail ?? (touched.email ? validateEmail(parentEmail) : null);
+    const phoneErr = errors?.parentPhone ?? (touched.phone ? validatePhone(parentPhone, true) : null);
+
     return (
         <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -32,10 +48,17 @@ export default function ParentDetails({ parentName, parentEmail, parentPhone, on
                             id="parentName"
                             value={parentName}
                             onChange={(e) => onUpdate({ parentName: e.target.value })}
+                            onBlur={() => setTouched(t => ({ ...t, name: true }))}
+                            onKeyDown={filterNameInput}
+                            maxLength={80}
                             placeholder="Enter your full name"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            autoComplete="name"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${nameErr ? 'border-red-500' : 'border-gray-300'}`}
                         />
                     </div>
+                    <p className={`text-xs mt-1 ${nameErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {nameErr || FORMAT_HINTS.name}
+                    </p>
                 </div>
 
                 {/* Email */}
@@ -50,12 +73,15 @@ export default function ParentDetails({ parentName, parentEmail, parentPhone, on
                             id="parentEmail"
                             value={parentEmail}
                             onChange={(e) => onUpdate({ parentEmail: e.target.value })}
+                            onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                            maxLength={120}
                             placeholder="your.email@example.com"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            autoComplete="email"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${emailErr ? 'border-red-500' : 'border-gray-300'}`}
                         />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        We'll send booking confirmation and reminders to this email
+                    <p className={`text-xs mt-1 ${emailErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {emailErr || FORMAT_HINTS.email}
                     </p>
                 </div>
 
@@ -71,12 +97,16 @@ export default function ParentDetails({ parentName, parentEmail, parentPhone, on
                             id="parentPhone"
                             value={parentPhone}
                             onChange={(e) => onUpdate({ parentPhone: e.target.value })}
+                            onBlur={() => setTouched(t => ({ ...t, phone: true }))}
+                            onKeyDown={filterPhoneInput}
+                            maxLength={20}
                             placeholder="+852 1234 5678"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            autoComplete="tel"
+                            className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${phoneErr ? 'border-red-500' : 'border-gray-300'}`}
                         />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        We may call to confirm details or provide updates
+                    <p className={`text-xs mt-1 ${phoneErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {phoneErr || FORMAT_HINTS.phone}
                     </p>
                 </div>
 
