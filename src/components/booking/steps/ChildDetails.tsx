@@ -1,14 +1,25 @@
 'use client';
 
+import { useState } from 'react';
+import { validateName, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation';
+
 interface ChildDetailsProps {
     childName: string;
     childAge: string;
     childGender: string;
     onUpdate: (data: { childName?: string; childAge?: string; childGender?: string }) => void;
+    errors?: { childName?: string; childAge?: string; childGender?: string };
 }
 
-export default function ChildDetails({ childName, childAge, childGender, onUpdate }: ChildDetailsProps) {
-    const ageOptions = Array.from({ length: 10 }, (_, i) => i + 3); // Ages 3-12
+export default function ChildDetails({ childName, childAge, childGender, onUpdate, errors }: ChildDetailsProps) {
+    const ageOptions = Array.from({ length: 16 }, (_, i) => i + 3); // Ages 3-18
+
+    const [touched, setTouched] = useState<{ name?: boolean; age?: boolean; gender?: boolean }>({});
+
+    // Inline errors: prefer errors prop (driven by BookingFlow), else compute on touch
+    const nameErr = errors?.childName ?? (touched.name ? validateName(childName, "Child's name") : null);
+    const ageErr = errors?.childAge ?? (touched.age ? validateSelect(childAge, "Child's age") : null);
+    const genderErr = errors?.childGender ?? (touched.gender ? validateSelect(childGender, "Gender") : null);
 
     return (
         <div>
@@ -30,9 +41,16 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                         id="childName"
                         value={childName}
                         onChange={(e) => onUpdate({ childName: e.target.value })}
+                        onBlur={() => setTouched(t => ({ ...t, name: true }))}
+                        onKeyDown={filterNameInput}
+                        maxLength={50}
                         placeholder="Enter your child's first name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        autoComplete="off"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${nameErr ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <p className={`text-xs mt-1 ${nameErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {nameErr || FORMAT_HINTS.name}
+                    </p>
                 </div>
 
                 {/* Child Age */}
@@ -44,7 +62,8 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                         id="childAge"
                         value={childAge}
                         onChange={(e) => onUpdate({ childAge: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        onBlur={() => setTouched(t => ({ ...t, age: true }))}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${ageErr ? 'border-red-500' : 'border-gray-300'}`}
                     >
                         <option value="">Select age</option>
                         {ageOptions.map((age) => (
@@ -53,20 +72,30 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                             </option>
                         ))}
                     </select>
+                    <p className={`text-xs mt-1 ${ageErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {ageErr || 'Required for age-appropriate activities'}
+                    </p>
                 </div>
 
-                {/* Child Gender (Optional) */}
+                {/* Child Gender */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Gender (Optional)
+                        Gender *
                     </label>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-3">
                         {['Boy', 'Girl', 'Prefer not to say'].map((option) => (
-                            <button id={`child-details-gender-${option.toLowerCase().replace(/\s+/g, '-')}-btn`}
+                            <button
+                                id={`child-details-gender-${option.toLowerCase().replace(/\s+/g, '-')}-btn`}
+                                type="button"
                                 key={option}
-                                onClick={() => onUpdate({ childGender: option })}
+                                onClick={() => {
+                                    onUpdate({ childGender: option });
+                                    setTouched(t => ({ ...t, gender: true }));
+                                }}
                                 className={`px-6 py-3 rounded-xl border-2 font-medium transition-all ${childGender === option
-                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                    : genderErr
+                                        ? 'border-red-300 text-gray-700 hover:border-red-400'
                                         : 'border-gray-200 text-gray-700 hover:border-gray-300'
                                     }`}
                             >
@@ -74,6 +103,7 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                             </button>
                         ))}
                     </div>
+                    {genderErr && <p className="text-xs mt-2 text-red-600">{genderErr}</p>}
                 </div>
 
                 {/* Info Box */}
