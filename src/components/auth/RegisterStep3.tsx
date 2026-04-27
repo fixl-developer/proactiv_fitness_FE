@@ -13,8 +13,9 @@ import {
     validateAddress,
     validateName,
     validateZipCode,
-    validateSelect,
     filterNameInput,
+    filterZipCodeInput,
+    filterStreetInput,
     FORMAT_HINTS,
 } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
@@ -110,6 +111,7 @@ export function RegisterStep3({
                         {...register('address.street', {
                             onChange: (e) => validateField('street', e.target.value),
                         })}
+                        onKeyDown={filterStreetInput}
                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                             errors.address?.street || fieldErrors.street ? 'border-red-500' : 'border-gray-300'
                         }`}
@@ -192,6 +194,8 @@ export function RegisterStep3({
                             {...register('address.zipCode', {
                                 onChange: (e) => validateField('zipCode', e.target.value),
                             })}
+                            onKeyDown={filterZipCodeInput}
+                            maxLength={10}
                             className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                 errors.address?.zipCode || fieldErrors.zipCode ? 'border-red-500' : 'border-gray-300'
                             }`}
