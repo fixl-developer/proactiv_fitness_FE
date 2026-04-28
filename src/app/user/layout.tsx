@@ -24,6 +24,7 @@ import {
     Globe
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { rbacManager } from '@/services/auth/rbac'
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -99,7 +100,7 @@ const HEADER_HEIGHT = 120
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const router = useRouter()
-    const { isAuthenticated, isLoading, user } = useAuth()
+    const { isAuthenticated, isLoading, user, role } = useAuth()
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
@@ -118,10 +119,21 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
+        if (isLoading) return
+        if (!isAuthenticated) {
             router.push('/login')
+            return
         }
-    }, [isAuthenticated, isLoading, router])
+        if (role) {
+            const upper = String(role).toUpperCase()
+            const allowed = ['USER', 'STUDENT', 'ADMIN']
+            if (!allowed.includes(upper)) {
+                rbacManager.setRole(upper)
+                const target = rbacManager.getDashboard()
+                router.push(target && target !== '/login' ? target : '/unauthorized')
+            }
+        }
+    }, [isAuthenticated, isLoading, role, router])
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {

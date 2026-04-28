@@ -408,6 +408,21 @@ export const LocationService = {
     delete: async (id: string): Promise<void> => {
         await apiClient.delete(`/locations/${id}`)
     },
+
+    // Public, unauthenticated list of ACTIVE locations for the marketing site
+    // (header dropdown, /locations page). Returns flattened shape.
+    getPublic: async (): Promise<Array<Location & { slug: string }>> => {
+        const body = await apiClient.get('/public/locations')
+        const items = Array.isArray(body?.data) ? body.data : []
+        return items.map((item: any) => {
+            const flat = flattenLocation(item) as any
+            flat.slug = item.slug || String(item.code || item.name || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '')
+            return flat
+        })
+    },
 }
 
 // =============================================

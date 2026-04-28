@@ -227,19 +227,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         setMobileMenuOpen(false)
     }, [pathname])
 
-    // Load user data from localStorage
+    // Load user data from localStorage and guard role
     useEffect(() => {
         const userData = localStorage.getItem('user')
-        if (userData) {
-            try {
-                const user = JSON.parse(userData)
-                setUserName(user.name || user.fullName || user.firstName + ' ' + user.lastName || 'Admin User')
-                setUserEmail(user.email || 'admin@proactiv.com')
-            } catch (error) {
-                console.error('Error parsing user data:', error)
-            }
+        if (!userData) {
+            router.push('/login/staff')
+            return
         }
-    }, [])
+        try {
+            const user = JSON.parse(userData)
+            const roleStr = typeof user.role === 'object' ? user.role?.name : user.role
+            const roleUpper = String(roleStr || '').toUpperCase()
+            // Sub-admin sections (regional/franchise/location) are also admin-styled
+            // pages and reuse the admin scope tokens. Anyone outside this allow-list
+            // gets bounced to /unauthorized.
+            const allowed = ['ADMIN', 'REGIONAL_ADMIN', 'FRANCHISE_OWNER', 'LOCATION_MANAGER']
+            if (!allowed.includes(roleUpper)) {
+                router.push('/unauthorized')
+                return
+            }
+            setUserName(user.name || user.fullName || ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || 'Admin User')
+            setUserEmail(user.email || 'admin@proactiv.com')
+        } catch (error) {
+            console.error('Error parsing user data:', error)
+            router.push('/login/staff')
+        }
+    }, [router])
 
     // Auto-expand menus based on current path
     useEffect(() => {

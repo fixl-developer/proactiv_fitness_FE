@@ -6,6 +6,18 @@ import { apiClient } from '@/services/api/client'
 import { BusinessUnitService, LocationService } from '@/services/businessConfigService'
 import { extractList, extractPagination } from '@/utils/apiResponse'
 import { toast } from 'sonner'
+import {
+  validateRequired,
+  validateSelect,
+  validateNumber,
+  validateCurrency,
+  validateTextArea,
+} from '@/utils/validation'
+
+// Program name: letters, digits, spaces, hyphens, apostrophes, ampersand
+const PROGRAM_NAME_PATTERN = /^[A-Za-z0-9 '&\-]+$/
+// Age group: "5-10", "5 - 10", or just "5+" (we accept the dash form)
+const AGE_GROUP_PATTERN = /^\s*\d{1,2}\s*-\s*\d{1,2}\s*$/
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Program {
@@ -72,6 +84,7 @@ export default function ProgramCatalogPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
   // Dropdown data for Business Unit + Locations (required by backend)
@@ -251,22 +264,70 @@ export default function ProgramCatalogPage() {
     }
   }
 
-  // ── Create / Edit ──────────────────────────────────────────────────────
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // ── Validation ─────────────────────────────────────────────────────────
+  const validateFormData = () => {
+    const e: Record<string, string> = {}
 
-    // Backend requires businessUnitId and at least one locationId for create.
+    const nameErr = validateRequired(formData.name, 'Program name')
+    if (nameErr) e.name = nameErr
+    else if (formData.name.trim().length < 3) e.name = 'Program name must be at least 3 characters'
+    else if (formData.name.length > 80) e.name = 'Program name must be less than 80 characters'
+    else if (!PROGRAM_NAME_PATTERN.test(formData.name.trim())) {
+      e.name = 'Letters, digits, spaces, hyphens, apostrophes and & only'
+    }
+
+    const typeErr = validateSelect(formData.type, 'Type')
+    if (typeErr) e.type = typeErr
+
+    const ageErr = validateRequired(formData.ageGroup, 'Age group')
+    if (ageErr) e.ageGroup = ageErr
+    else if (!AGE_GROUP_PATTERN.test(formData.ageGroup.trim())) {
+      e.ageGroup = 'Use format min-max (e.g. 5-10)'
+    } else {
+      const [minStr, maxStr] = formData.ageGroup.trim().split('-')
+      const min = parseInt(minStr, 10)
+      const max = parseInt(maxStr, 10)
+      if (min < 1 || min > 99) e.ageGroup = 'Min age must be between 1 and 99'
+      else if (max < 1 || max > 99) e.ageGroup = 'Max age must be between 1 and 99'
+      else if (min > max) e.ageGroup = 'Min age cannot be greater than max age'
+    }
+
+    const levelErr = validateSelect(formData.level, 'Level')
+    if (levelErr) e.level = levelErr
+
+    const capErr = validateNumber(String(formData.capacity), 'Capacity', 1, 1000)
+    if (capErr) e.capacity = capErr
+
+    const priceErr = validateCurrency(String(formData.price), 'Price')
+    if (priceErr) e.price = priceErr
+
+    const statusErr = validateSelect(formData.status, 'Status')
+    if (statusErr) e.status = statusErr
+
+    if (formData.description) {
+      const descErr = validateTextArea(formData.description, 'Description', 0, 2000)
+      if (descErr) e.description = descErr
+    }
+
     if (!editingId) {
-      if (!formData.businessUnitId) {
-        toast.error('Please select a Business Unit')
-        return
-      }
+      const buErr = validateSelect(formData.businessUnitId, 'Business unit')
+      if (buErr) e.businessUnitId = buErr
       if (!formData.locationIds || formData.locationIds.length === 0) {
-        toast.error('Please select at least one Location')
-        return
+        e.locationIds = 'Select at least one location'
       }
     }
 
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  // ── Create / Edit ──────────────────────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validateFormData()) {
+      toast.error('Please fix the highlighted fields')
+      return
+    }
     setSubmitting(true)
     try {
       if (editingId) {
@@ -313,6 +374,7 @@ export default function ProgramCatalogPage() {
     setShowForm(false)
     setEditingId(null)
     setFormData(EMPTY_FORM)
+    setErrors({})
   }
 
   // ── Delete ─────────────────────────────────────────────────────────────
@@ -488,87 +550,144 @@ export default function ProgramCatalogPage() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Edit Program' : 'Create Program'}</h2>
-          <form id="form-admin-programs-catalog" onSubmit={handleSubmit} className="space-y-4">
+          <form id="form-admin-programs-catalog" onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Program Name</label>
+                <label className="block text-sm font-medium mb-2">
+                  Program Name <span className="text-red-500">*</span>
+                </label>
                 <input id="input-text-admin-programs-catalog"
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
+                  maxLength={80}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '' || PROGRAM_NAME_PATTERN.test(v)) {
+                      setFormData({ ...formData, name: v })
+                      if (errors.name) setErrors({ ...errors, name: '' })
+                    }
+                  }}
+                  placeholder="e.g. Tiny Tumblers"
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 />
+                {errors.name
+                  ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                  : <p className="mt-1 text-xs text-gray-500">Letters, digits, spaces, hyphens, apostrophes and &amp; only</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Type</label>
+                <label className="block text-sm font-medium mb-2">
+                  Type <span className="text-red-500">*</span>
+                </label>
                 <select id="select-admin-programs-catalog-19"
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) => { setFormData({ ...formData, type: e.target.value }); if (errors.type) setErrors({ ...errors, type: '' }) }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 >
+                  <option value="">Select type</option>
                   <option value="gymnastics">Gymnastics</option>
                   <option value="tumbling">Tumbling</option>
                   <option value="ninja">Ninja</option>
                 </select>
+                {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Age Group</label>
+                <label className="block text-sm font-medium mb-2">
+                  Age Group <span className="text-red-500">*</span>
+                </label>
                 <input id="input-text-admin-programs-catalog"
                   type="text"
                   value={formData.ageGroup}
-                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  maxLength={10}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    // Only digits, hyphen and a single space allowed while typing
+                    if (v === '' || /^[\d\- ]*$/.test(v)) {
+                      setFormData({ ...formData, ageGroup: v })
+                      if (errors.ageGroup) setErrors({ ...errors, ageGroup: '' })
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.ageGroup ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                   placeholder="e.g., 5-7"
-                  required
                 />
+                {errors.ageGroup
+                  ? <p className="mt-1 text-sm text-red-600">{errors.ageGroup}</p>
+                  : <p className="mt-1 text-xs text-gray-500">Format: min-max (numbers only)</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Level</label>
+                <label className="block text-sm font-medium mb-2">
+                  Level <span className="text-red-500">*</span>
+                </label>
                 <select id="select-admin-programs-catalog-20"
                   value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) => { setFormData({ ...formData, level: e.target.value }); if (errors.level) setErrors({ ...errors, level: '' }) }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.level ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 >
+                  <option value="">Select level</option>
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
                 </select>
+                {errors.level && <p className="mt-1 text-sm text-red-600">{errors.level}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Capacity</label>
+                <label className="block text-sm font-medium mb-2">
+                  Capacity <span className="text-red-500">*</span>
+                </label>
                 <input id="input-number-admin-programs-catalog"
-                  type="number"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  min={1}
-                  required
+                  type="text"
+                  inputMode="numeric"
+                  value={String(formData.capacity)}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '' || /^\d+$/.test(v)) {
+                      setFormData({ ...formData, capacity: v === '' ? 0 : Number(v) })
+                      if (errors.capacity) setErrors({ ...errors, capacity: '' })
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.capacity ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  placeholder="e.g. 15"
                 />
+                {errors.capacity
+                  ? <p className="mt-1 text-sm text-red-600">{errors.capacity}</p>
+                  : <p className="mt-1 text-xs text-gray-500">Whole number between 1 and 1000</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Price ($)</label>
+                <label className="block text-sm font-medium mb-2">
+                  Price ($) <span className="text-red-500">*</span>
+                </label>
                 <input id="input-number-admin-programs-catalog"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                  className="w-full px-4 py-2 border rounded-lg"
-                  min={0}
-                  step={0.01}
-                  required
+                  type="text"
+                  inputMode="decimal"
+                  value={String(formData.price)}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (v === '' || /^\d+(\.\d{0,2})?$/.test(v) || /^\d+\.$/.test(v)) {
+                      setFormData({ ...formData, price: v === '' ? 0 : parseFloat(v) || 0 })
+                      if (errors.price) setErrors({ ...errors, price: '' })
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.price ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  placeholder="0.00"
                 />
+                {errors.price
+                  ? <p className="mt-1 text-sm text-red-600">{errors.price}</p>
+                  : <p className="mt-1 text-xs text-gray-500">Numbers only, up to 2 decimal places</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Status</label>
+                <label className="block text-sm font-medium mb-2">
+                  Status <span className="text-red-500">*</span>
+                </label>
                 <select id="select-admin-programs-catalog-21"
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as Program['status'] })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={(e) => { setFormData({ ...formData, status: e.target.value as Program['status'] }); if (errors.status) setErrors({ ...errors, status: '' }) }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 >
+                  <option value="">Select status</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="draft">Draft</option>
                 </select>
+                {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
               </div>
             </div>
 
@@ -582,10 +701,12 @@ export default function ProgramCatalogPage() {
                   <select
                     id="select-admin-programs-catalog-bu"
                     value={formData.businessUnitId}
-                    onChange={(e) => setFormData({ ...formData, businessUnitId: e.target.value, locationIds: [] })}
-                    className="w-full px-4 py-2 border rounded-lg disabled:bg-gray-100"
+                    onChange={(e) => {
+                      setFormData({ ...formData, businessUnitId: e.target.value, locationIds: [] })
+                      if (errors.businessUnitId) setErrors({ ...errors, businessUnitId: '' })
+                    }}
+                    className={`w-full px-4 py-2 border rounded-lg disabled:bg-gray-100 focus:outline-none focus:ring-2 ${errors.businessUnitId ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     disabled={loadingDropdowns || businessUnits.length === 0}
-                    required
                   >
                     <option value="">
                       {loadingDropdowns
@@ -598,6 +719,7 @@ export default function ProgramCatalogPage() {
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
+                  {errors.businessUnitId && <p className="mt-1 text-sm text-red-600">{errors.businessUnitId}</p>}
                 </div>
 
                 <div>
@@ -622,7 +744,7 @@ export default function ProgramCatalogPage() {
                       )
                     }
                     return (
-                      <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-1">
+                      <div className={`border rounded-lg p-3 max-h-32 overflow-y-auto space-y-1 ${errors.locationIds ? 'border-red-500' : 'border-gray-300'}`}>
                         {filtered.map((l) => (
                           <label key={l.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
                             <input
@@ -633,6 +755,7 @@ export default function ProgramCatalogPage() {
                                   ? formData.locationIds.filter((id) => id !== l.id)
                                   : [...formData.locationIds, l.id]
                                 setFormData({ ...formData, locationIds: next })
+                                if (errors.locationIds) setErrors({ ...errors, locationIds: '' })
                               }}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
@@ -642,18 +765,22 @@ export default function ProgramCatalogPage() {
                       </div>
                     )
                   })()}
+                  {errors.locationIds && <p className="mt-1 text-sm text-red-600">{errors.locationIds}</p>}
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
+              <label className="block text-sm font-medium mb-2">Description (Optional)</label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
+                onChange={(e) => { setFormData({ ...formData, description: e.target.value }); if (errors.description) setErrors({ ...errors, description: '' }) }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 rows={3}
+                maxLength={2000}
+                placeholder="Brief description of the program (max 2000 characters)"
               />
+              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
             </div>
             <div className="flex gap-3">
               <button id="admin-programs-catalog-btn"

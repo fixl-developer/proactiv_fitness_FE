@@ -9,7 +9,8 @@ import {
     TrendingUp, Users, DollarSign, Building2, Calendar,
     Clock, Activity, BarChart3, Bell, AlertTriangle, Info, CheckCircle,
     Brain, Sparkles, Loader2, RefreshCw, Zap, Mail, FileText, Send, Megaphone,
-    Filter, X, ChevronDown
+    Filter, X, ChevronDown, Settings, UserCheck, CreditCard, MessageSquare,
+    Shield, LifeBuoy, BookOpen, Layers
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { globalIntelligenceService, revenueIntelligenceService } from '@/services/advancedAIServices'
@@ -100,6 +101,8 @@ export default function AdminDashboard() {
     const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([])
     const [alerts, setAlerts] = useState<AlertItem[]>([])
     const [aiInsights, setAiInsights] = useState<any>(null)
+    const [sidebarStats, setSidebarStats] = useState<any>(null)
+    const [sidebarStatsLoading, setSidebarStatsLoading] = useState(false)
     const [contentEngineLoading, setContentEngineLoading] = useState(false)
     const [generatedContent, setGeneratedContent] = useState<any>(null)
     const [workflowLoading, setWorkflowLoading] = useState(false)
@@ -117,6 +120,19 @@ export default function AdminDashboard() {
     const [statsLoading, setStatsLoading] = useState(false)
     const [chartsLoading, setChartsLoading] = useState(false)
     const [activitiesLoading, setActivitiesLoading] = useState(false)
+
+    const loadSidebarStats = useCallback(async () => {
+        try {
+            setSidebarStatsLoading(true)
+            const response = await apiClient.get('/admin/dashboard/sidebar-stats')
+            setSidebarStats(response?.data || null)
+        } catch (err) {
+            console.error('Sidebar stats unavailable:', err)
+            setSidebarStats(null)
+        } finally {
+            setSidebarStatsLoading(false)
+        }
+    }, [])
 
     const loadAiInsights = async () => {
         setAiLoading(true)
@@ -301,6 +317,7 @@ export default function AdminDashboard() {
         loadStats()
         loadCharts()
         loadActivities()
+        loadSidebarStats()
     })
 
     useEffect(() => {
@@ -315,9 +332,10 @@ export default function AdminDashboard() {
             loadStats(),
             loadCharts(),
             loadActivities(),
+            loadSidebarStats(),
             loadAiInsights()
         ]).finally(() => setIsLoading(false))
-    }, [isAuthenticated, authLoading, router, loadStats, loadCharts, loadActivities])
+    }, [isAuthenticated, authLoading, router, loadStats, loadCharts, loadActivities, loadSidebarStats])
 
     if (!isAuthenticated && !authLoading) return null
 
@@ -385,6 +403,187 @@ export default function AdminDashboard() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Module Overview — live counts per sidebar section */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-indigo-600" />
+                            Module Overview
+                            <Badge className="bg-indigo-100 text-indigo-700 text-xs">Live</Badge>
+                        </CardTitle>
+                        <button onClick={loadSidebarStats} disabled={sidebarStatsLoading} className="text-gray-400 hover:text-gray-600">
+                            <RefreshCw className={`w-4 h-4 ${sidebarStatsLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {sidebarStatsLoading && !sidebarStats ? (
+                        <div className="flex items-center justify-center py-8 gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                            <p className="text-sm text-gray-500">Loading module stats...</p>
+                        </div>
+                    ) : sidebarStats ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[
+                                {
+                                    title: 'Content Management',
+                                    icon: FileText,
+                                    color: 'blue',
+                                    href: '/admin/cms',
+                                    main: { label: 'Total CMS Items', value: sidebarStats.cms?.total ?? 0 },
+                                    rows: [
+                                        { label: 'Pages', value: sidebarStats.cms?.pages ?? 0 },
+                                        { label: 'Blog Posts', value: sidebarStats.cms?.blogPosts ?? 0 },
+                                        { label: 'Testimonials', value: sidebarStats.cms?.testimonials ?? 0 },
+                                        { label: 'FAQs', value: sidebarStats.cms?.faqs ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'User Management',
+                                    icon: Users,
+                                    color: 'green',
+                                    href: '/admin/users',
+                                    main: { label: 'Total Users', value: sidebarStats.users?.total ?? 0 },
+                                    rows: [
+                                        { label: 'Active', value: sidebarStats.users?.active ?? 0 },
+                                        { label: 'Parents', value: sidebarStats.users?.parents ?? 0 },
+                                        { label: 'Coaches', value: sidebarStats.users?.coaches ?? 0 },
+                                        { label: 'Admins', value: sidebarStats.users?.admins ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'Business Config',
+                                    icon: Settings,
+                                    color: 'purple',
+                                    href: '/admin/business-config',
+                                    main: { label: 'Active Locations', value: sidebarStats.bcms?.locations ?? 0 },
+                                    rows: [
+                                        { label: 'Countries', value: sidebarStats.bcms?.countries ?? 0 },
+                                        { label: 'Business Units', value: sidebarStats.bcms?.businessUnits ?? 0 },
+                                        { label: 'Rooms', value: sidebarStats.bcms?.rooms ?? 0 },
+                                        { label: 'Terms / Holidays', value: (sidebarStats.bcms?.terms ?? 0) + (sidebarStats.bcms?.holidays ?? 0) },
+                                    ],
+                                },
+                                {
+                                    title: 'Programs & Scheduling',
+                                    icon: Calendar,
+                                    color: 'pink',
+                                    href: '/admin/programs',
+                                    main: { label: 'Programs', value: sidebarStats.programs?.programs ?? 0 },
+                                    rows: [
+                                        { label: 'Schedules', value: sidebarStats.programs?.schedules ?? 0 },
+                                        { label: 'Published', value: sidebarStats.programs?.publishedSchedules ?? 0 },
+                                        { label: 'Sessions', value: sidebarStats.programs?.sessions ?? 0 },
+                                        { label: 'Rules', value: sidebarStats.programs?.rules ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'Operations',
+                                    icon: UserCheck,
+                                    color: 'orange',
+                                    href: '/admin/operations',
+                                    main: { label: 'Active Staff', value: sidebarStats.operations?.activeStaff ?? 0 },
+                                    rows: [
+                                        { label: 'Attendance Records', value: sidebarStats.operations?.attendanceRecords ?? 0 },
+                                        { label: 'Manual Bookings', value: sidebarStats.operations?.manualBookings ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'Finance',
+                                    icon: CreditCard,
+                                    color: 'emerald',
+                                    href: '/admin/finance',
+                                    main: { label: 'Payments', value: sidebarStats.finance?.payments ?? 0 },
+                                    rows: [
+                                        { label: 'Billings', value: sidebarStats.finance?.billings ?? 0 },
+                                        { label: 'Ledger Entries', value: sidebarStats.finance?.ledgerEntries ?? 0 },
+                                        { label: 'Gateways', value: sidebarStats.bcms?.paymentGateways ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'Communications',
+                                    icon: MessageSquare,
+                                    color: 'rose',
+                                    href: '/admin/communications',
+                                    main: { label: 'Notifications', value: sidebarStats.communications?.notifications ?? 0 },
+                                    rows: [
+                                        { label: 'Templates', value: sidebarStats.communications?.templates ?? 0 },
+                                        { label: 'CRM Leads', value: sidebarStats.communications?.crmLeads ?? 0 },
+                                        { label: 'Inquiries', value: sidebarStats.communications?.crmInquiries ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'System',
+                                    icon: Shield,
+                                    color: 'slate',
+                                    href: '/admin/system',
+                                    main: { label: 'Audit Entries', value: sidebarStats.system?.auditEntries ?? 0 },
+                                    rows: [
+                                        { label: 'Feature Flags', value: sidebarStats.system?.featureFlags ?? 0 },
+                                    ],
+                                },
+                                {
+                                    title: 'Support',
+                                    icon: LifeBuoy,
+                                    color: 'amber',
+                                    href: '/admin/support',
+                                    main: { label: 'Open Tickets', value: sidebarStats.support?.openTickets ?? 0 },
+                                    rows: [
+                                        { label: 'Total Tickets', value: sidebarStats.support?.totalTickets ?? 0 },
+                                        { label: 'KB Articles', value: sidebarStats.support?.knowledgeBaseArticles ?? 0 },
+                                    ],
+                                },
+                            ].map((mod) => {
+                                const palette: Record<string, string> = {
+                                    blue: 'from-blue-50 to-blue-100 text-blue-600 border-blue-200',
+                                    green: 'from-green-50 to-emerald-100 text-emerald-600 border-emerald-200',
+                                    purple: 'from-purple-50 to-purple-100 text-purple-600 border-purple-200',
+                                    pink: 'from-pink-50 to-pink-100 text-pink-600 border-pink-200',
+                                    orange: 'from-orange-50 to-orange-100 text-orange-600 border-orange-200',
+                                    emerald: 'from-emerald-50 to-emerald-100 text-emerald-600 border-emerald-200',
+                                    rose: 'from-rose-50 to-rose-100 text-rose-600 border-rose-200',
+                                    slate: 'from-slate-50 to-slate-100 text-slate-600 border-slate-200',
+                                    amber: 'from-amber-50 to-amber-100 text-amber-600 border-amber-200',
+                                }
+                                const cls = palette[mod.color] || palette.blue
+                                const ModIcon = mod.icon
+                                return (
+                                    <button
+                                        key={mod.title}
+                                        onClick={() => router.push(mod.href)}
+                                        className={`text-left p-4 rounded-lg border bg-gradient-to-br ${cls} hover:shadow-md transition-all`}
+                                    >
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <ModIcon className="w-4 h-4" />
+                                            <span className="text-xs font-semibold uppercase tracking-wide">{mod.title}</span>
+                                        </div>
+                                        <div className="mb-3">
+                                            <p className="text-xs text-gray-600">{mod.main.label}</p>
+                                            <p className="text-2xl font-bold text-gray-900">{mod.main.value.toLocaleString()}</p>
+                                        </div>
+                                        <div className="space-y-1 text-xs text-gray-700">
+                                            {mod.rows.map((r) => (
+                                                <div key={r.label} className="flex items-center justify-between">
+                                                    <span className="text-gray-600">{r.label}</span>
+                                                    <span className="font-semibold">{Number(r.value || 0).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <Layers className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">Module overview unavailable</p>
+                            <button onClick={loadSidebarStats} className="mt-2 text-sm text-indigo-600 hover:underline">Retry</button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Business Metrics, Recent Activities, Alerts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

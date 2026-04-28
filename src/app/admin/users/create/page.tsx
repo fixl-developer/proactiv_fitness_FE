@@ -15,13 +15,14 @@ import { validateName, validateEmail, validatePhone, validatePassword as validat
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ---------------------------------------------------------------------------
-// RBAC Hierarchy – defines which roles each admin role is allowed to create
+// RBAC Hierarchy – mirrors backend `rbac.middleware.ts`. Self-register roles
+// (PARENT, USER, STUDENT) are intentionally not creatable from the admin UI.
 // ---------------------------------------------------------------------------
 const ROLE_HIERARCHY: Record<string, string[]> = {
-  'ADMIN': ['ADMIN', 'REGIONAL_ADMIN', 'FRANCHISE_OWNER', 'LOCATION_MANAGER', 'COACH', 'PARTNER_ADMIN', 'SUPPORT_STAFF'],
-  'REGIONAL_ADMIN': ['FRANCHISE_OWNER', 'LOCATION_MANAGER', 'COACH', 'SUPPORT_STAFF'],
-  'FRANCHISE_OWNER': ['LOCATION_MANAGER', 'COACH'],
-  'LOCATION_MANAGER': ['COACH'],
+  'ADMIN': ['ADMIN', 'REGIONAL_ADMIN', 'FRANCHISE_OWNER', 'LOCATION_MANAGER', 'MANAGER', 'COACH', 'STAFF', 'SUPPORT_STAFF', 'PARTNER_ADMIN'],
+  'REGIONAL_ADMIN': ['FRANCHISE_OWNER', 'LOCATION_MANAGER', 'COACH', 'STAFF', 'SUPPORT_STAFF'],
+  'FRANCHISE_OWNER': ['LOCATION_MANAGER', 'COACH', 'STAFF'],
+  'LOCATION_MANAGER': ['COACH', 'STAFF'],
 }
 
 interface User {
@@ -79,7 +80,7 @@ const PASSWORD_REQUIREMENTS = [
 ]
 
 // Roles that require a location assignment
-const ROLES_NEEDING_LOCATION = ['COACH', 'LOCATION_MANAGER', 'SUPPORT_STAFF']
+const ROLES_NEEDING_LOCATION = ['COACH', 'LOCATION_MANAGER', 'MANAGER', 'STAFF', 'SUPPORT_STAFF']
 // Roles that require a region / organization assignment
 const ROLES_NEEDING_ORGANIZATION = ['REGIONAL_ADMIN', 'FRANCHISE_OWNER', 'PARTNER_ADMIN']
 // Roles that require a region assignment
@@ -129,11 +130,15 @@ export default function CreateUserPage() {
     { value: 'REGIONAL_ADMIN', label: 'Regional Admin', color: 'bg-purple-100 text-purple-800' },
     { value: 'FRANCHISE_OWNER', label: 'Franchise Owner', color: 'bg-blue-100 text-blue-800' },
     { value: 'LOCATION_MANAGER', label: 'Location Manager', color: 'bg-green-100 text-green-800' },
+    { value: 'MANAGER', label: 'Manager', color: 'bg-emerald-100 text-emerald-800' },
     { value: 'COACH', label: 'Coach', color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'STAFF', label: 'Staff', color: 'bg-orange-100 text-orange-800' },
     { value: 'SUPPORT_STAFF', label: 'Support Staff', color: 'bg-orange-100 text-orange-800' },
     { value: 'PARTNER_ADMIN', label: 'Partner Admin', color: 'bg-pink-100 text-pink-800' },
-    { value: 'PARENT', label: 'Parent', color: 'bg-indigo-100 text-indigo-800' },
-    { value: 'USER', label: 'User', color: 'bg-gray-100 text-gray-800' },
+    // Read-only entries for the *list* badge — not creatable.
+    { value: 'PARENT', label: 'Parent (self-register)', color: 'bg-indigo-100 text-indigo-800' },
+    { value: 'STUDENT', label: 'Student (self-register)', color: 'bg-teal-100 text-teal-800' },
+    { value: 'USER', label: 'User (self-register)', color: 'bg-gray-100 text-gray-800' },
   ]
 
   // ---------------------------------------------------------------------------

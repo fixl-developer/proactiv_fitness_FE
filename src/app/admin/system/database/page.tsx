@@ -7,6 +7,17 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { DatabaseHealthService, DatabaseHealth } from '@/services/systemService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import {
+    validateRequired,
+    validateSelect,
+    validateNumber,
+} from '@/utils/validation'
+
+const STATUSES = ['healthy', 'warning', 'critical']
+// DB friendly name (letters/digits/spaces/hyphens/underscores)
+const DB_NAME_PATTERN = /^[A-Za-z0-9 _\-]+$/
+// Hostname or IP (letters/digits/dots/hyphens — no spaces)
+const HOST_PATTERN = /^[A-Za-z0-9.\-]+$/
 
 export default function DatabaseHealthPage() {
     const [databases, setDatabases] = useState<DatabaseHealth[]>([])
@@ -22,32 +33,25 @@ export default function DatabaseHealthPage() {
     const [formData, setFormData] = useState<{
         name: string
         host: string
-        port: number
+        port: string
         status: DatabaseHealth['status']
-        diskUsage: number
-        connections: number
+        diskUsage: string
+        connections: string
     }>({
         name: '',
         host: '',
-        port: 5432,
+        port: '5432',
         status: 'healthy',
-        diskUsage: 0,
-        connections: 0,
+        diskUsage: '0',
+        connections: '0',
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
-    const statuses = ['healthy', 'warning', 'critical']
-
-    // Load databases
     const loadDatabases = async () => {
         try {
             setLoading(true)
-            const response = await DatabaseHealthService.getAll({
-                page: currentPage,
-                limit: 10,
-                search: searchTerm,
-            })
+            const response = await DatabaseHealthService.getAll({ page: currentPage, limit: 10, search: searchTerm })
             setDatabases(response.data || [])
             setTotalPages(response.pagination?.totalPages || 1)
         } catch (error) {
@@ -58,37 +62,38 @@ export default function DatabaseHealthPage() {
         }
     }
 
-    useEffect(() => {
-        loadDatabases()
-    }, [currentPage, searchTerm])
+    useEffect(() => { loadDatabases() }, [currentPage, searchTerm])
 
-    // Validate form
     const validateFormData = () => {
-        const newErrors: Record<string, string> = {}
+        const e: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Database name is required'
-        else if (formData.name.length < 2) newErrors.name = 'Database name must be at least 2 characters'
+        const nameErr = validateRequired(formData.name, 'Database name')
+        if (nameErr) e.name = nameErr
+        else if (formData.name.trim().length < 2) e.name = 'Database name must be at least 2 characters'
+        else if (!DB_NAME_PATTERN.test(formData.name.trim())) e.name = 'Letters, digits, spaces, hyphens and underscores only'
 
-        if (!formData.host) newErrors.host = 'Host is required'
-        else if (!/^[a-zA-Z0-9.-]+$/.test(formData.host)) newErrors.host = 'Invalid host format'
+        const hostErr = validateRequired(formData.host, 'Host')
+        if (hostErr) e.host = hostErr
+        else if (!HOST_PATTERN.test(formData.host.trim())) e.host = 'Letters, digits, dots and hyphens only (no spaces)'
 
-        if (!formData.port) newErrors.port = 'Port is required'
-        else if (formData.port < 1 || formData.port > 65535) newErrors.port = 'Port must be between 1 and 65535'
+        const portErr = validateNumber(formData.port, 'Port', 1, 65535)
+        if (portErr) e.port = portErr
 
-        if (!formData.status) newErrors.status = 'Status is required'
+        const statusErr = validateSelect(formData.status, 'Status')
+        if (statusErr) e.status = statusErr
 
-        if (formData.diskUsage < 0 || formData.diskUsage > 100) newErrors.diskUsage = 'Disk usage must be between 0 and 100'
+        const diskErr = validateNumber(formData.diskUsage, 'Disk usage', 0, 100)
+        if (diskErr) e.diskUsage = diskErr
 
-        if (formData.connections < 0) newErrors.connections = 'Connections cannot be negative'
+        const connErr = validateNumber(formData.connections, 'Connections', 0, 1000000)
+        if (connErr) e.connections = connErr
 
-        setErrors(newErrors)
-        return Object.keys(newErrors).length === 0
+        setErrors(e)
+        return Object.keys(e).length === 0
     }
 
-    // Handle submit
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
+    const handleSubmit = async (ev: React.FormEvent) => {
+        ev.preventDefault()
         if (!validateFormData()) {
             toast.error('Please fix the highlighted fields')
             return
@@ -96,12 +101,20 @@ export default function DatabaseHealthPage() {
 
         try {
             setSubmitting(true)
+            const submitData = {
+                name: formData.name.trim(),
+                host: formData.host.trim(),
+                port: parseInt(formData.port, 10),
+                status: formData.status,
+                diskUsage: parseInt(formData.diskUsage, 10) || 0,
+                connections: parseInt(formData.connections, 10) || 0,
+            }
 
             if (editingId) {
-                await DatabaseHealthService.update(editingId, formData)
+                await DatabaseHealthService.update(editingId, submitData)
                 toast.success('Database health record updated successfully')
             } else {
-                await DatabaseHealthService.create(formData)
+                await DatabaseHealthService.create(submitData)
                 toast.success('Database health record created successfully')
             }
 
@@ -116,21 +129,19 @@ export default function DatabaseHealthPage() {
         }
     }
 
-    // Handle edit
     const handleEdit = (db: DatabaseHealth) => {
         setFormData({
             name: db.name,
             host: db.host,
-            port: db.port,
+            port: String(db.port),
             status: db.status,
-            diskUsage: db.diskUsage,
-            connections: db.connections || 0,
+            diskUsage: String(db.diskUsage),
+            connections: String(db.connections || 0),
         })
         setEditingId(db.id)
         setShowForm(true)
     }
 
-    // Handle delete
     const handleDelete = async (id: string) => {
         try {
             await DatabaseHealthService.delete(id)
@@ -143,54 +154,32 @@ export default function DatabaseHealthPage() {
         }
     }
 
-    // Reset form
     const resetForm = () => {
         setFormData({
-            name: '',
-            host: '',
-            port: 5432,
-            status: 'healthy',
-            diskUsage: 0,
-            connections: 0,
+            name: '', host: '', port: '5432',
+            status: 'healthy', diskUsage: '0', connections: '0',
         })
         setErrors({})
         setEditingId(null)
     }
 
-    // Handle close drawer
-    const handleCloseDrawer = () => {
-        setShowForm(false)
-        resetForm()
-    }
+    const handleCloseDrawer = () => { setShowForm(false); resetForm() }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'healthy':
-                return 'bg-green-100 text-green-800'
-            case 'warning':
-                return 'bg-yellow-100 text-yellow-800'
-            case 'critical':
-                return 'bg-red-100 text-red-800'
-            default:
-                return 'bg-slate-100 text-slate-800'
+    const getStatusColor = (s: string) => {
+        switch (s) {
+            case 'healthy': return 'bg-green-100 text-green-800'
+            case 'warning': return 'bg-yellow-100 text-yellow-800'
+            case 'critical': return 'bg-red-100 text-red-800'
+            default: return 'bg-slate-100 text-slate-800'
         }
     }
-
-    const getDiskUsageColor = (usage: number) => {
-        if (usage < 70) return 'text-green-600'
-        if (usage < 85) return 'text-yellow-600'
-        return 'text-red-600'
-    }
+    const getDiskUsageColor = (u: number) => u < 70 ? 'text-green-600' : u < 85 ? 'text-yellow-600' : 'text-red-600'
+    const diskNum = parseInt(formData.diskUsage, 10) || 0
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <Database className="w-8 h-8 text-blue-600" />
                         <h1 className="text-4xl font-bold text-slate-900">Database Health</h1>
@@ -198,43 +187,21 @@ export default function DatabaseHealthPage() {
                     <p className="text-slate-600">Monitor database performance, connections, and query times</p>
                 </motion.div>
 
-                {/* Controls */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 flex gap-4 items-center"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search databases..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value)
-                                setCurrentPage(1)
-                            }}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <input type="text" placeholder="Search databases..."
+                            value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
-                    <button
-                        onClick={() => {
-                            resetForm()
-                            setShowForm(true)
-                        }}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
+                    <button onClick={() => { resetForm(); setShowForm(true) }}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                         <Plus className="w-5 h-5" />
                         Add Database
                     </button>
                 </motion.div>
 
-                {/* Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-lg shadow-lg overflow-hidden"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {loading ? (
                         <div className="p-8 text-center">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -267,26 +234,16 @@ export default function DatabaseHealthPage() {
                                                 <td className="px-6 py-4 text-sm text-slate-600 font-mono">{db.host}</td>
                                                 <td className="px-6 py-4 text-sm text-slate-600">{db.port}</td>
                                                 <td className="px-6 py-4 text-sm text-slate-600">{db.connections}</td>
-                                                <td className={`px-6 py-4 text-sm font-medium ${getDiskUsageColor(db.diskUsage)}`}>
-                                                    {db.diskUsage}%
-                                                </td>
+                                                <td className={`px-6 py-4 text-sm font-medium ${getDiskUsageColor(db.diskUsage)}`}>{db.diskUsage}%</td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(db.status)}`}>
-                                                        {db.status}
-                                                    </span>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(db.status)}`}>{db.status}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleEdit(db)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => handleEdit(db)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm(db.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => setDeleteConfirm(db.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
@@ -296,217 +253,151 @@ export default function DatabaseHealthPage() {
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Pagination */}
                             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                                <p className="text-sm text-slate-600">
-                                    Page {currentPage} of {totalPages}
-                                </p>
+                                <p className="text-sm text-slate-600">Page {currentPage} of {totalPages}</p>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
+                                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronLeft className="w-5 h-5" /></button>
+                                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronRight className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         </>
                     )}
                 </motion.div>
 
-                {/* Form Drawer */}
-                <SlideInDrawer
-                    isOpen={showForm}
-                    onClose={handleCloseDrawer}
-                    title={editingId ? 'Edit Database' : 'Add New Database'}
-                    size="lg"
-                >
+                <SlideInDrawer isOpen={showForm} onClose={handleCloseDrawer}
+                    title={editingId ? 'Edit Database' : 'Add New Database'} size="lg">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Database Name */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Database Name <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
-                                value={formData.name}
+                            <input type="text" value={formData.name} maxLength={80}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, name: e.target.value })
-                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                    const v = e.target.value
+                                    if (v === '' || DB_NAME_PATTERN.test(v)) {
+                                        setFormData({ ...formData, name: v })
+                                        if (errors.name) setErrors({ ...errors, name: '' })
+                                    }
                                 }}
-                                placeholder="e.g., Production DB"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                                placeholder="e.g. Production DB"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.name
+                                ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces, hyphens and underscores only</p>}
                         </div>
 
-                        {/* Host */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Host <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
-                                value={formData.host}
+                            <input type="text" value={formData.host} maxLength={200}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, host: e.target.value })
+                                    const v = e.target.value.replace(/\s/g, '')
+                                    setFormData({ ...formData, host: v })
                                     if (errors.host) setErrors({ ...errors, host: '' })
                                 }}
-                                placeholder="e.g., db.example.com"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.host ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.host && <p className="mt-1 text-sm text-red-600">{errors.host}</p>}
+                                placeholder="e.g. db.example.com or 192.168.1.10"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${errors.host ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.host
+                                ? <p className="mt-1 text-sm text-red-600">{errors.host}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Letters, digits, dots and hyphens only (no spaces)</p>}
                         </div>
 
-                        {/* Port */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Port <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="number"
-                                value={formData.port}
+                            <input type="text" inputMode="numeric" value={formData.port}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, port: parseInt(e.target.value) || 5432 })
-                                    if (errors.port) setErrors({ ...errors, port: '' })
+                                    const v = e.target.value
+                                    if (v === '' || /^\d+$/.test(v)) {
+                                        setFormData({ ...formData, port: v })
+                                        if (errors.port) setErrors({ ...errors, port: '' })
+                                    }
                                 }}
-                                placeholder="e.g., 5432"
-                                min="1"
-                                max="65535"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.port ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.port && <p className="mt-1 text-sm text-red-600">{errors.port}</p>}
+                                placeholder="e.g. 5432"
+                                maxLength={5}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.port ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.port
+                                ? <p className="mt-1 text-sm text-red-600">{errors.port}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Whole number between 1 and 65535</p>}
                         </div>
 
-                        {/* Connections */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Active Connections
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.connections}
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Active Connections</label>
+                            <input type="text" inputMode="numeric" value={formData.connections}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, connections: parseInt(e.target.value) || 0 })
-                                    if (errors.connections) setErrors({ ...errors, connections: '' })
+                                    const v = e.target.value
+                                    if (v === '' || /^\d+$/.test(v)) {
+                                        setFormData({ ...formData, connections: v })
+                                        if (errors.connections) setErrors({ ...errors, connections: '' })
+                                    }
                                 }}
-                                placeholder="e.g., 45"
-                                min="0"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.connections ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.connections && <p className="mt-1 text-sm text-red-600">{errors.connections}</p>}
+                                placeholder="e.g. 45"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.connections ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.connections
+                                ? <p className="mt-1 text-sm text-red-600">{errors.connections}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Whole number, 0 or more</p>}
                         </div>
 
-                        {/* Disk Usage */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Disk Usage (%)
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.diskUsage}
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Disk Usage (%)</label>
+                            <input type="text" inputMode="numeric" value={formData.diskUsage}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, diskUsage: parseInt(e.target.value) || 0 })
-                                    if (errors.diskUsage) setErrors({ ...errors, diskUsage: '' })
+                                    const v = e.target.value
+                                    if (v === '' || /^\d+$/.test(v)) {
+                                        setFormData({ ...formData, diskUsage: v })
+                                        if (errors.diskUsage) setErrors({ ...errors, diskUsage: '' })
+                                    }
                                 }}
-                                placeholder="e.g., 65"
-                                min="0"
-                                max="100"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.diskUsage ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.diskUsage && <p className="mt-1 text-sm text-red-600">{errors.diskUsage}</p>}
+                                placeholder="e.g. 65"
+                                maxLength={3}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.diskUsage ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.diskUsage
+                                ? <p className="mt-1 text-sm text-red-600">{errors.diskUsage}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Whole number between 0 and 100</p>}
                             <div className="mt-2 w-full bg-slate-200 rounded-full h-2">
-                                <div
-                                    className={`h-2 rounded-full transition-all ${formData.diskUsage < 70 ? 'bg-green-500' : formData.diskUsage < 85 ? 'bg-yellow-500' : 'bg-red-500'
-                                        }`}
-                                    style={{ width: `${formData.diskUsage}%` }}
-                                />
+                                <div className={`h-2 rounded-full transition-all ${diskNum < 70 ? 'bg-green-500' : diskNum < 85 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                    style={{ width: `${Math.min(100, diskNum)}%` }} />
                             </div>
                         </div>
 
-                        {/* Status */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Status <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                value={formData.status}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, status: e.target.value as any })
-                                    if (errors.status) setErrors({ ...errors, status: '' })
-                                }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            >
+                            <select value={formData.status}
+                                onChange={(e) => { setFormData({ ...formData, status: e.target.value as any }); if (errors.status) setErrors({ ...errors, status: '' }) }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}>
                                 <option value="">Select Status</option>
-                                {statuses.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </option>
-                                ))}
+                                {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                             </select>
                             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
                         </div>
 
-                        {/* Submit Button */}
                         <div className="flex gap-3 pt-6 border-t border-slate-200">
-                            <button
-                                type="button"
-                                onClick={handleCloseDrawer}
-                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-                            >
+                            <button type="button" onClick={handleCloseDrawer}
+                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                            <button type="submit" disabled={submitting}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
                                 {submitting ? 'Saving...' : editingId ? 'Update Database' : 'Create Database'}
                             </button>
                         </div>
                     </form>
                 </SlideInDrawer>
 
-                {/* Delete Confirmation */}
                 {deleteConfirm && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white rounded-lg p-6 max-w-sm"
-                        >
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
                             <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Database?</h3>
-                            <p className="text-slate-600 mb-6">
-                                This action cannot be undone. The database health record will be permanently removed.
-                            </p>
+                            <p className="text-slate-600 mb-6">This action cannot be undone. The database health record will be permanently removed.</p>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeleteConfirm(null)}
-                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                                >
-                                    Delete
-                                </button>
+                                <button onClick={() => setDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
                             </div>
                         </motion.div>
                     </div>

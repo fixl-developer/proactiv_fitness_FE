@@ -13,10 +13,12 @@ import {
   UserCheck,
   UserX,
   Users as UsersIcon,
+  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { UserService } from '@/services/userService'
+import { UserService, RoleService } from '@/services/userService'
+import { apiClient } from '@/services/api/client'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import {
   validateName,
@@ -26,19 +28,30 @@ import {
   filterPhoneInput,
 } from '@/utils/validation'
 
-// All system roles (aligned with backend UserRole enum)
+// Admin-creatable roles only. Self-register roles (PARENT, USER, STUDENT)
+// are handled via the public /register flow and are not creatable from here,
+// but they remain visible in the *list* + filter so admins can audit them.
 const ROLE_OPTIONS = [
-  { value: 'ADMIN', label: 'Admin', color: 'bg-red-100 text-red-800' },
-  { value: 'REGIONAL_ADMIN', label: 'Regional Admin', color: 'bg-purple-100 text-purple-800' },
-  { value: 'FRANCHISE_OWNER', label: 'Franchise Owner', color: 'bg-blue-100 text-blue-800' },
-  { value: 'LOCATION_MANAGER', label: 'Location Manager', color: 'bg-green-100 text-green-800' },
-  { value: 'COACH', label: 'Coach', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'SUPPORT_STAFF', label: 'Support Staff', color: 'bg-orange-100 text-orange-800' },
-  { value: 'PARTNER_ADMIN', label: 'Partner Admin', color: 'bg-pink-100 text-pink-800' },
-  { value: 'PARENT', label: 'Parent', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'STUDENT', label: 'Student', color: 'bg-teal-100 text-teal-800' },
-  { value: 'USER', label: 'User', color: 'bg-gray-100 text-gray-800' },
-]
+  { value: 'ADMIN', label: 'Admin', color: 'bg-red-100 text-red-800', dashboard: '/admin/dashboard', loginUrl: '/login/staff' },
+  { value: 'REGIONAL_ADMIN', label: 'Regional Admin', color: 'bg-purple-100 text-purple-800', dashboard: '/admin/regional/dashboard', loginUrl: '/login/staff' },
+  { value: 'FRANCHISE_OWNER', label: 'Franchise Owner', color: 'bg-blue-100 text-blue-800', dashboard: '/admin/franchise/dashboard', loginUrl: '/login/staff' },
+  { value: 'LOCATION_MANAGER', label: 'Location Manager', color: 'bg-green-100 text-green-800', dashboard: '/admin/location/dashboard', loginUrl: '/login/staff' },
+  { value: 'MANAGER', label: 'Manager', color: 'bg-emerald-100 text-emerald-800', dashboard: '/manager/dashboard', loginUrl: '/login/staff' },
+  { value: 'COACH', label: 'Coach', color: 'bg-yellow-100 text-yellow-800', dashboard: '/coach/dashboard', loginUrl: '/login/staff' },
+  { value: 'STAFF', label: 'Staff', color: 'bg-orange-100 text-orange-800', dashboard: '/staff/dashboard', loginUrl: '/login/staff' },
+  { value: 'SUPPORT_STAFF', label: 'Support Staff', color: 'bg-orange-100 text-orange-800', dashboard: '/staff/dashboard', loginUrl: '/login/staff' },
+  { value: 'PARTNER_ADMIN', label: 'Partner Admin', color: 'bg-pink-100 text-pink-800', dashboard: '/partner/dashboard', loginUrl: '/login/staff' },
+  // Read-only entries below — for filtering / display only.
+  { value: 'PARENT', label: 'Parent (self-register)', color: 'bg-indigo-100 text-indigo-800', dashboard: '/parent/dashboard', loginUrl: '/login', selfRegister: true },
+  { value: 'STUDENT', label: 'Student (self-register)', color: 'bg-teal-100 text-teal-800', dashboard: '/user/dashboard', loginUrl: '/login', selfRegister: true },
+  { value: 'USER', label: 'User (self-register)', color: 'bg-gray-100 text-gray-800', dashboard: '/user/dashboard', loginUrl: '/login', selfRegister: true },
+] as const
+
+// Roles the admin can actually create (matches backend ROLE_HIERARCHY['ADMIN'])
+const CREATABLE_ROLES = ROLE_OPTIONS.filter((r) => !(r as any).selfRegister)
+
+// Roles that need a location assignment
+const ROLES_NEEDING_LOCATION = ['LOCATION_MANAGER', 'MANAGER', 'COACH', 'STAFF', 'SUPPORT_STAFF']
 
 function getRoleMeta(role: string) {
   return ROLE_OPTIONS.find((r) => r.value === role?.toUpperCase()) || ROLE_OPTIONS[ROLE_OPTIONS.length - 1]
@@ -64,6 +77,17 @@ interface User {
   createdAt?: string
 }
 
+interface LocationOption {
+  id: string
+  name: string
+}
+
+interface RolePermissions {
+  name: string
+  description?: string
+  permissions: string[]
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,6 +101,9 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [statusActionId, setStatusActionId] = useState<string | null>(null)
+  const [locations, setLocations] = useState<LocationOption[]>([])
+  const [rolePermissionsMap, setRolePermissionsMap] = useState<Record<string, RolePermissions>>({})
+  const [createdUserInfo, setCreatedUserInfo] = useState<{ email: string; role: string; loginUrl: string; dashboard: string } | null>(null)
 
   const [formData, setFormData] = useState({
     email: '',
@@ -84,7 +111,7 @@ export default function UsersPage() {
     firstName: '',
     lastName: '',
     phone: '',
-    role: 'SUPPORT_STAFF',
+    role: 'COACH',
     locationId: '',
   })
 
@@ -115,6 +142,49 @@ export default function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchTerm, roleFilter, statusFilter])
 
+  // Load locations once for the location dropdown.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const data: any = await apiClient.get('/locations')
+        if (cancelled) return
+        const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
+        setLocations(
+          list.map((l: any) => ({ id: String(l.id || l._id), name: l.name }))
+            .filter((l: any) => l.id && l.name)
+        )
+      } catch {
+        if (!cancelled) setLocations([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Load role definitions (system roles + their permissions) once for the
+  // "Permissions for this role" preview.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const response = await RoleService.getAll({ page: 1, limit: 100 })
+        if (cancelled) return
+        const map: Record<string, RolePermissions> = {}
+        for (const role of response.data || []) {
+          map[role.name] = {
+            name: role.name,
+            description: role.description,
+            permissions: role.permissions || [],
+          }
+        }
+        setRolePermissionsMap(map)
+      } catch {
+        // non-fatal — drawer just won't show the permission preview
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
@@ -136,6 +206,10 @@ export default function UsersPage() {
     }
 
     if (!formData.role) newErrors.role = 'Role is required'
+
+    if (!editingId && ROLES_NEEDING_LOCATION.includes(formData.role) && !formData.locationId) {
+      newErrors.locationId = 'Location assignment is required for this role'
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -162,7 +236,19 @@ export default function UsersPage() {
         await UserService.update(editingId, updateData)
         toast.success('User updated successfully')
       } else {
-        await UserService.create(formData)
+        const payload: any = { ...formData }
+        if (!payload.locationId) delete payload.locationId
+        if (!payload.phone) delete payload.phone
+        await UserService.create(payload)
+        const meta = ROLE_OPTIONS.find((r) => r.value === formData.role)
+        if (meta) {
+          setCreatedUserInfo({
+            email: formData.email,
+            role: meta.label,
+            loginUrl: meta.loginUrl,
+            dashboard: meta.dashboard,
+          })
+        }
         toast.success('User created successfully')
       }
 
@@ -226,12 +312,16 @@ export default function UsersPage() {
       firstName: '',
       lastName: '',
       phone: '',
-      role: 'SUPPORT_STAFF',
+      role: 'COACH',
       locationId: '',
     })
     setErrors({})
     setEditingId(null)
   }
+
+  const selectedRoleMeta = ROLE_OPTIONS.find((r) => r.value === formData.role)
+  const selectedRolePermissions = rolePermissionsMap[formData.role]?.permissions || []
+  const showLocationField = !editingId && ROLES_NEEDING_LOCATION.includes(formData.role)
 
   const handleCloseDrawer = () => {
     setShowForm(false)
@@ -556,17 +646,81 @@ export default function UsersPage() {
               </label>
               <select
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value, locationId: '' })}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {ROLE_OPTIONS.map((r) => (
+                {(editingId ? ROLE_OPTIONS : CREATABLE_ROLES).map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
                   </option>
                 ))}
               </select>
               {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role}</p>}
+
+              {/* Role permissions preview — read-only display of what this
+                  role grants. Edit the actual list under Roles & Permissions. */}
+              {selectedRoleMeta && (
+                <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs">
+                  <div className="flex items-center gap-2 text-blue-900 font-semibold mb-1">
+                    <Info className="w-3.5 h-3.5" />
+                    Permissions for {selectedRoleMeta.label}
+                  </div>
+                  {selectedRolePermissions.length === 0 ? (
+                    <p className="text-blue-700">
+                      No permissions defined yet for this role. Configure them under{' '}
+                      <a href="/admin/users/roles" className="underline font-medium">
+                        Roles &amp; Permissions
+                      </a>.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedRolePermissions.slice(0, 12).map((p) => (
+                        <span key={p} className="px-2 py-0.5 rounded bg-white text-blue-800 border border-blue-200">
+                          {p}
+                        </span>
+                      ))}
+                      {selectedRolePermissions.length > 12 && (
+                        <span className="px-2 py-0.5 text-blue-700">
+                          +{selectedRolePermissions.length - 12} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {!editingId && (
+                    <p className="mt-2 text-blue-700">
+                      After creation, the user will sign in at{' '}
+                      <code className="bg-white px-1 rounded">{selectedRoleMeta.loginUrl}</code>{' '}
+                      and land on{' '}
+                      <code className="bg-white px-1 rounded">{selectedRoleMeta.dashboard}</code>.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {showLocationField && (
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-2">
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.locationId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, locationId: e.target.value })
+                    if (errors.locationId) setErrors({ ...errors, locationId: '' })
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.locationId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
+                >
+                  <option value="">Select location</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+                {errors.locationId && <p className="mt-1 text-sm text-red-600">{errors.locationId}</p>}
+              </div>
+            )}
 
             <div className="flex gap-3 pt-6 border-t border-slate-200">
               <button
@@ -586,6 +740,45 @@ export default function UsersPage() {
             </div>
           </form>
         </SlideInDrawer>
+
+        {createdUserInfo && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-lg p-6 max-w-md w-[90%]"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-green-600" />
+                User created
+              </h3>
+              <p className="text-slate-700 mb-4">
+                <strong>{createdUserInfo.email}</strong> ko successfully{' '}
+                <span className="font-medium">{createdUserInfo.role}</span> banaya gaya hai.
+              </p>
+              <div className="space-y-2 mb-5 text-sm">
+                <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-slate-600">Login URL</p>
+                  <code className="text-slate-900 break-all">{createdUserInfo.loginUrl}</code>
+                </div>
+                <div className="rounded border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-slate-600">Dashboard after login</p>
+                  <code className="text-slate-900 break-all">{createdUserInfo.dashboard}</code>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mb-5">
+                Email verification is auto-skipped for admin-created users — they can log in immediately
+                with the password you set.
+              </p>
+              <button
+                onClick={() => setCreatedUserInfo(null)}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                OK
+              </button>
+            </motion.div>
+          </div>
+        )}
 
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

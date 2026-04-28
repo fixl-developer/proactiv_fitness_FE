@@ -9,6 +9,14 @@ import { BookingService } from '@/services/operationsService'
 import { apiClient } from '@/services/api/client'
 import { extractList } from '@/utils/apiResponse'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import {
+  validateRequired,
+  validateSelect,
+  validateTextArea,
+} from '@/utils/validation'
+
+// Backend session IDs are 24-char hex Mongo ObjectIds — only validated when supplied
+const MONGO_ID_PATTERN = /^[a-f\d]{24}$/i
 
 interface Booking {
   id: string
@@ -135,16 +143,43 @@ export default function BookingManagementPage() {
     loadBookings()
   }, [currentPage, searchTerm])
 
-  // Validate form
+  // Validate form using shared validators per field
   const validateFormData = () => {
-    const newErrors: Record<string, string> = {}
+    const e: Record<string, string> = {}
 
-    if (!formData.customerId) newErrors.customerId = 'Customer is required'
-    if (!formData.programId) newErrors.programId = 'Program is required'
-    if (!formData.date) newErrors.date = 'Date is required'
+    const customerErr = validateSelect(formData.customerId, 'Customer')
+    if (customerErr) e.customerId = customerErr
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const programErr = validateSelect(formData.programId, 'Program')
+    if (programErr) e.programId = programErr
+
+    const typeErr = validateSelect(formData.bookingType, 'Booking type')
+    if (typeErr) e.bookingType = typeErr
+
+    const dateErr = validateRequired(formData.date, 'Date')
+    if (dateErr) e.date = dateErr
+    else {
+      const d = new Date(formData.date)
+      if (isNaN(d.getTime())) e.date = 'Please enter a valid date'
+    }
+
+    const statusErr = validateSelect(formData.status, 'Status')
+    if (statusErr) e.status = statusErr
+
+    const paymentErr = validateSelect(formData.paymentStatus, 'Payment status')
+    if (paymentErr) e.paymentStatus = paymentErr
+
+    if (formData.sessionId && !MONGO_ID_PATTERN.test(formData.sessionId.trim())) {
+      e.sessionId = 'Session ID must be a 24-character Mongo ObjectId, or leave blank'
+    }
+
+    if (formData.notes) {
+      const notesErr = validateTextArea(formData.notes, 'Notes', 0, 1000)
+      if (notesErr) e.notes = notesErr
+    }
+
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
   // Handle submit
@@ -497,16 +532,23 @@ export default function BookingManagementPage() {
 
             {/* Booking Type */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Booking Type</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Booking Type <span className="text-red-500">*</span>
+              </label>
               <select
                 value={formData.bookingType}
-                onChange={(e) => setFormData({ ...formData, bookingType: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, bookingType: e.target.value })
+                  if (errors.bookingType) setErrors({ ...errors, bookingType: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.bookingType ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
+                <option value="">Select booking type</option>
                 {BOOKING_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
+              {errors.bookingType && <p className="mt-1 text-sm text-red-600">{errors.bookingType}</p>}
             </div>
 
             {/* Session ID (optional) */}
@@ -515,11 +557,19 @@ export default function BookingManagementPage() {
               <input
                 type="text"
                 value={formData.sessionId}
-                onChange={(e) => setFormData({ ...formData, sessionId: e.target.value })}
-                placeholder="Mongo Session ID — leave blank if not assigning a specific session"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                maxLength={24}
+                onChange={(e) => {
+                  // Only allow hex chars while typing (Mongo ObjectId is 24 hex chars)
+                  const v = e.target.value.replace(/[^a-fA-F0-9]/g, '').toLowerCase()
+                  setFormData({ ...formData, sessionId: v })
+                  if (errors.sessionId) setErrors({ ...errors, sessionId: '' })
+                }}
+                placeholder="24-character Mongo Session ID — leave blank if not assigning a specific session"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${errors.sessionId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
-              <p className="mt-1 text-xs text-slate-500">Only set this if you have a real session ObjectId from the schedule</p>
+              {errors.sessionId
+                ? <p className="mt-1 text-sm text-red-600">{errors.sessionId}</p>
+                : <p className="mt-1 text-xs text-slate-500">Only set this if you have a real 24-char ObjectId from the schedule (a-f, 0-9 only)</p>}
             </div>
 
             {/* Date */}
@@ -542,43 +592,62 @@ export default function BookingManagementPage() {
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Status</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Status <span className="text-red-500">*</span>
+              </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'pending' | 'confirmed' | 'cancelled' | 'completed' })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, status: e.target.value as any })
+                  if (errors.status) setErrors({ ...errors, status: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
+                <option value="">Select status</option>
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="completed">Completed</option>
               </select>
+              {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
             </div>
 
             {/* Payment Status */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Payment Status</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Payment Status <span className="text-red-500">*</span>
+              </label>
               <select
                 value={formData.paymentStatus}
-                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as 'pending' | 'paid' | 'refunded' })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => {
+                  setFormData({ ...formData, paymentStatus: e.target.value as any })
+                  if (errors.paymentStatus) setErrors({ ...errors, paymentStatus: '' })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.paymentStatus ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
+                <option value="">Select payment status</option>
                 <option value="pending">Pending</option>
                 <option value="paid">Paid</option>
                 <option value="refunded">Refunded</option>
               </select>
+              {errors.paymentStatus && <p className="mt-1 text-sm text-red-600">{errors.paymentStatus}</p>}
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Notes</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Notes (Optional)</label>
               <textarea
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, notes: e.target.value })
+                  if (errors.notes) setErrors({ ...errors, notes: '' })
+                }}
                 placeholder="Optional notes..."
                 rows={4}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                maxLength={1000}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 resize-none ${errors.notes ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
+              {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
             </div>
 
             {/* Submit Button */}

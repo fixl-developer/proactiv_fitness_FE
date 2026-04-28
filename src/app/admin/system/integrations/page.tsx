@@ -7,6 +7,15 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { IntegrationGatewayService, Integration } from '@/services/systemService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import {
+    validateRequired,
+    validateSelect,
+    validateUrl,
+} from '@/utils/validation'
+
+const TYPES = ['payment', 'email', 'sms', 'analytics']
+const STATUSES = ['active', 'inactive', 'error', 'pending']
+const INTEGRATION_NAME_PATTERN = /^[A-Za-z0-9 _.\-]+$/
 
 export default function IntegrationGatewayPage() {
     const [integrations, setIntegrations] = useState<Integration[]>([])
@@ -36,18 +45,10 @@ export default function IntegrationGatewayPage() {
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
-    const types = ['payment', 'email', 'sms', 'analytics']
-    const statuses = ['active', 'inactive', 'error']
-
-    // Load integrations
     const loadIntegrations = async () => {
         try {
             setLoading(true)
-            const response = await IntegrationGatewayService.getAll({
-                page: currentPage,
-                limit: 10,
-                search: searchTerm,
-            })
+            const response = await IntegrationGatewayService.getAll({ page: currentPage, limit: 10, search: searchTerm })
             setIntegrations(response.data || [])
             setTotalPages(response.pagination?.totalPages || 1)
         } catch (error) {
@@ -58,34 +59,37 @@ export default function IntegrationGatewayPage() {
         }
     }
 
-    useEffect(() => {
-        loadIntegrations()
-    }, [currentPage, searchTerm])
+    useEffect(() => { loadIntegrations() }, [currentPage, searchTerm])
 
-    // Validate form
     const validateFormData = () => {
-        const newErrors: Record<string, string> = {}
+        const e: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Integration name is required'
-        else if (formData.name.length < 2) newErrors.name = 'Integration name must be at least 2 characters'
+        const nameErr = validateRequired(formData.name, 'Integration name')
+        if (nameErr) e.name = nameErr
+        else if (formData.name.trim().length < 2) e.name = 'Integration name must be at least 2 characters'
+        else if (!INTEGRATION_NAME_PATTERN.test(formData.name.trim())) {
+            e.name = 'Letters, digits, spaces, dots, hyphens and underscores only'
+        }
 
-        if (!formData.type) newErrors.type = 'Type is required'
+        const typeErr = validateSelect(formData.type, 'Type')
+        if (typeErr) e.type = typeErr
 
-        if (!formData.url) newErrors.url = 'URL is required'
-        else if (!/^https?:\/\/.+/.test(formData.url)) newErrors.url = 'URL must start with http:// or https://'
+        const urlErr = validateUrl(formData.url, true)
+        if (urlErr) e.url = urlErr
 
-        if (!formData.apiKey) newErrors.apiKey = 'API Key is required'
+        const apiKeyErr = validateRequired(formData.apiKey, 'API Key')
+        if (apiKeyErr) e.apiKey = apiKeyErr
+        else if (formData.apiKey.trim().length < 8) e.apiKey = 'API Key must be at least 8 characters'
 
-        if (!formData.status) newErrors.status = 'Status is required'
+        const statusErr = validateSelect(formData.status, 'Status')
+        if (statusErr) e.status = statusErr
 
-        setErrors(newErrors)
-        return Object.keys(newErrors).length === 0
+        setErrors(e)
+        return Object.keys(e).length === 0
     }
 
-    // Handle submit
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
+    const handleSubmit = async (ev: React.FormEvent) => {
+        ev.preventDefault()
         if (!validateFormData()) {
             toast.error('Please fix the highlighted fields')
             return
@@ -93,12 +97,19 @@ export default function IntegrationGatewayPage() {
 
         try {
             setSubmitting(true)
+            const submitData = {
+                name: formData.name.trim(),
+                type: formData.type,
+                url: formData.url.trim(),
+                apiKey: formData.apiKey.trim(),
+                status: formData.status,
+            }
 
             if (editingId) {
-                await IntegrationGatewayService.update(editingId, formData)
+                await IntegrationGatewayService.update(editingId, submitData)
                 toast.success('Integration updated successfully')
             } else {
-                await IntegrationGatewayService.create(formData)
+                await IntegrationGatewayService.create(submitData)
                 toast.success('Integration created successfully')
             }
 
@@ -113,20 +124,18 @@ export default function IntegrationGatewayPage() {
         }
     }
 
-    // Handle edit
-    const handleEdit = (integration: Integration) => {
+    const handleEdit = (i: Integration) => {
         setFormData({
-            name: integration.name,
-            type: integration.type,
-            url: integration.url,
-            apiKey: integration.apiKey || '',
-            status: integration.status,
+            name: i.name,
+            type: i.type,
+            url: i.url || '',
+            apiKey: i.apiKey || '',
+            status: i.status,
         })
-        setEditingId(integration.id)
+        setEditingId(i.id)
         setShowForm(true)
     }
 
-    // Handle delete
     const handleDelete = async (id: string) => {
         try {
             await IntegrationGatewayService.delete(id)
@@ -139,62 +148,47 @@ export default function IntegrationGatewayPage() {
         }
     }
 
-    // Reset form
     const resetForm = () => {
-        setFormData({
-            name: '',
-            type: 'payment',
-            url: '',
-            apiKey: '',
-            status: 'active',
-        })
+        setFormData({ name: '', type: 'payment', url: '', apiKey: '', status: 'active' })
         setErrors({})
         setEditingId(null)
     }
 
-    // Handle close drawer
-    const handleCloseDrawer = () => {
-        setShowForm(false)
-        resetForm()
-    }
+    const handleCloseDrawer = () => { setShowForm(false); resetForm() }
 
     const maskApiKey = (key: string) => {
         if (!key) return ''
+        if (key.length <= 8) return '*'.repeat(key.length)
         return key.substring(0, 4) + '*'.repeat(Math.max(0, key.length - 8)) + key.substring(key.length - 4)
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'bg-green-100 text-green-800'
-            case 'inactive':
-                return 'bg-yellow-100 text-yellow-800'
-            case 'error':
-                return 'bg-red-100 text-red-800'
-            default:
-                return 'bg-slate-100 text-slate-800'
+    const getStatusColor = (s: string) => {
+        switch (s) {
+            case 'active': return 'bg-green-100 text-green-800'
+            case 'inactive': return 'bg-yellow-100 text-yellow-800'
+            case 'error': return 'bg-red-100 text-red-800'
+            case 'pending': return 'bg-blue-100 text-blue-800'
+            default: return 'bg-slate-100 text-slate-800'
         }
     }
 
-    const getTypeColor = (type: string) => {
+    const getTypeColor = (t: string) => {
         const colors: Record<string, string> = {
             payment: 'bg-blue-100 text-blue-800',
             email: 'bg-purple-100 text-purple-800',
             sms: 'bg-green-100 text-green-800',
             analytics: 'bg-orange-100 text-orange-800',
+            api: 'bg-slate-100 text-slate-800',
+            service: 'bg-slate-100 text-slate-800',
+            webhook: 'bg-slate-100 text-slate-800',
         }
-        return colors[type] || 'bg-slate-100 text-slate-800'
+        return colors[t] || 'bg-slate-100 text-slate-800'
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <Plug className="w-8 h-8 text-blue-600" />
                         <h1 className="text-4xl font-bold text-slate-900">Integration Gateway</h1>
@@ -202,43 +196,21 @@ export default function IntegrationGatewayPage() {
                     <p className="text-slate-600">Manage third-party integrations and connections</p>
                 </motion.div>
 
-                {/* Controls */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 flex gap-4 items-center"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search integrations..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value)
-                                setCurrentPage(1)
-                            }}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <input type="text" placeholder="Search integrations..."
+                            value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
-                    <button
-                        onClick={() => {
-                            resetForm()
-                            setShowForm(true)
-                        }}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
+                    <button onClick={() => { resetForm(); setShowForm(true) }}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                         <Plus className="w-5 h-5" />
                         Add Integration
                     </button>
                 </motion.div>
 
-                {/* Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-lg shadow-lg overflow-hidden"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {loading ? (
                         <div className="p-8 text-center">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -264,56 +236,37 @@ export default function IntegrationGatewayPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {integrations.map((integration) => (
-                                            <tr key={integration.id} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{integration.name}</td>
+                                        {integrations.map((i) => (
+                                            <tr key={i.id} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{i.name}</td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getTypeColor(integration.type)}`}>
-                                                        {integration.type}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getTypeColor(i.type)}`}>
+                                                        {i.type}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600 font-mono truncate max-w-xs">{integration.url}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 font-mono truncate max-w-xs">{i.url || '-'}</td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-mono text-slate-600">
-                                                            {showApiKey[integration.id]
-                                                                ? integration.apiKey
-                                                                : maskApiKey(integration.apiKey || '')}
+                                                            {showApiKey[i.id] ? (i.apiKey || '-') : maskApiKey(i.apiKey || '')}
                                                         </span>
-                                                        <button
-                                                            onClick={() =>
-                                                                setShowApiKey({
-                                                                    ...showApiKey,
-                                                                    [integration.id]: !showApiKey[integration.id],
-                                                                })
-                                                            }
-                                                            className="p-1 text-slate-400 hover:text-slate-600 transition"
-                                                        >
-                                                            {showApiKey[integration.id] ? (
-                                                                <EyeOff className="w-4 h-4" />
-                                                            ) : (
-                                                                <Eye className="w-4 h-4" />
-                                                            )}
+                                                        <button onClick={() => setShowApiKey({ ...showApiKey, [i.id]: !showApiKey[i.id] })}
+                                                            className="p-1 text-slate-400 hover:text-slate-600 transition">
+                                                            {showApiKey[i.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                         </button>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(integration.status)}`}>
-                                                        {integration.status}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(i.status)}`}>
+                                                        {i.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleEdit(integration)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => handleEdit(i)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm(integration.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => setDeleteConfirm(i.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
@@ -323,192 +276,114 @@ export default function IntegrationGatewayPage() {
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Pagination */}
                             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                                <p className="text-sm text-slate-600">
-                                    Page {currentPage} of {totalPages}
-                                </p>
+                                <p className="text-sm text-slate-600">Page {currentPage} of {totalPages}</p>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
+                                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronLeft className="w-5 h-5" /></button>
+                                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronRight className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         </>
                     )}
                 </motion.div>
 
-                {/* Form Drawer */}
-                <SlideInDrawer
-                    isOpen={showForm}
-                    onClose={handleCloseDrawer}
-                    title={editingId ? 'Edit Integration' : 'Add New Integration'}
-                    size="lg"
-                >
+                <SlideInDrawer isOpen={showForm} onClose={handleCloseDrawer}
+                    title={editingId ? 'Edit Integration' : 'Add New Integration'} size="lg">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Integration Name */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Integration Name <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
-                                value={formData.name}
+                            <input type="text" value={formData.name} maxLength={80}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, name: e.target.value })
-                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                    const v = e.target.value
+                                    if (v === '' || INTEGRATION_NAME_PATTERN.test(v)) {
+                                        setFormData({ ...formData, name: v })
+                                        if (errors.name) setErrors({ ...errors, name: '' })
+                                    }
                                 }}
-                                placeholder="e.g., Stripe Payment Gateway"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                                placeholder="e.g. Stripe Payment Gateway"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.name
+                                ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces, dots, hyphens and underscores only</p>}
                         </div>
 
-                        {/* Type */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Type <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                value={formData.type}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, type: e.target.value as any })
-                                    if (errors.type) setErrors({ ...errors, type: '' })
-                                }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            >
+                            <select value={formData.type}
+                                onChange={(e) => { setFormData({ ...formData, type: e.target.value as any }); if (errors.type) setErrors({ ...errors, type: '' }) }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}>
                                 <option value="">Select Type</option>
-                                {types.map((type) => (
-                                    <option key={type} value={type}>
-                                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                                    </option>
-                                ))}
+                                {TYPES.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                             </select>
                             {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
                         </div>
 
-                        {/* URL */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 URL <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="url"
-                                value={formData.url}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, url: e.target.value })
-                                    if (errors.url) setErrors({ ...errors, url: '' })
-                                }}
-                                placeholder="e.g., https://api.stripe.com"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.url ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.url && <p className="mt-1 text-sm text-red-600">{errors.url}</p>}
+                            <input type="url" value={formData.url} maxLength={500}
+                                onChange={(e) => { setFormData({ ...formData, url: e.target.value }); if (errors.url) setErrors({ ...errors, url: '' }) }}
+                                placeholder="e.g. https://api.stripe.com"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.url ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.url
+                                ? <p className="mt-1 text-sm text-red-600">{errors.url}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Must start with http:// or https://</p>}
                         </div>
 
-                        {/* API Key */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 API Key <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="password"
-                                value={formData.apiKey}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, apiKey: e.target.value })
-                                    if (errors.apiKey) setErrors({ ...errors, apiKey: '' })
-                                }}
+                            <input type="password" value={formData.apiKey} maxLength={500}
+                                onChange={(e) => { setFormData({ ...formData, apiKey: e.target.value }); if (errors.apiKey) setErrors({ ...errors, apiKey: '' }) }}
                                 placeholder="Enter API key"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.apiKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            />
-                            {errors.apiKey && <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>}
-                            <p className="mt-1 text-xs text-slate-500">API keys are encrypted and never displayed in plain text</p>
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.apiKey ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
+                            {errors.apiKey
+                                ? <p className="mt-1 text-sm text-red-600">{errors.apiKey}</p>
+                                : <p className="mt-1 text-xs text-slate-500">At least 8 characters; stored encrypted on the server</p>}
                         </div>
 
-                        {/* Status */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
                                 Status <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                value={formData.status}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, status: e.target.value as any })
-                                    if (errors.status) setErrors({ ...errors, status: '' })
-                                }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                                    }`}
-                            >
+                            <select value={formData.status}
+                                onChange={(e) => { setFormData({ ...formData, status: e.target.value as any }); if (errors.status) setErrors({ ...errors, status: '' }) }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}>
                                 <option value="">Select Status</option>
-                                {statuses.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </option>
-                                ))}
+                                {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                             </select>
                             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
                         </div>
 
-                        {/* Submit Button */}
                         <div className="flex gap-3 pt-6 border-t border-slate-200">
-                            <button
-                                type="button"
-                                onClick={handleCloseDrawer}
-                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-                            >
+                            <button type="button" onClick={handleCloseDrawer}
+                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                            <button type="submit" disabled={submitting}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
                                 {submitting ? 'Saving...' : editingId ? 'Update Integration' : 'Create Integration'}
                             </button>
                         </div>
                     </form>
                 </SlideInDrawer>
 
-                {/* Delete Confirmation */}
                 {deleteConfirm && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white rounded-lg p-6 max-w-sm"
-                        >
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
                             <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Integration?</h3>
-                            <p className="text-slate-600 mb-6">
-                                This action cannot be undone. The integration will be permanently removed.
-                            </p>
+                            <p className="text-slate-600 mb-6">This action cannot be undone. The integration will be permanently removed.</p>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeleteConfirm(null)}
-                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                                >
-                                    Delete
-                                </button>
+                                <button onClick={() => setDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
                             </div>
                         </motion.div>
                     </div>
