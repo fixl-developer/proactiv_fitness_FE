@@ -10,6 +10,7 @@ import { authService } from '@/services/modules/auth.service'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
 import { CMSService, NavMenuTreeItem } from '@/services/cmsService'
+import { LocationService } from '@/services/businessConfigService'
 
 const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }) => {
     const router = useRouter()
@@ -138,16 +139,54 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
 
     useEffect(() => {
         let cancelled = false
-        CMSService.getNavMenu()
-            .then(items => {
-                if (cancelled) return
-                if (Array.isArray(items) && items.length > 0) {
-                    setNavigationItems(items)
+
+        // Load CMS-managed nav menu (if any) AND admin-managed locations in parallel.
+        // The "ProGym Locations" dropdown items come from business-config locations
+        // so anything an admin creates at /admin/business-config/locations is
+        // immediately reflected here — the hardcoded Cyberport/Wan Chai fallback
+        // is only used when the backend is unreachable.
+        Promise.allSettled([
+            CMSService.getNavMenu(),
+            LocationService.getPublic(),
+        ]).then(([navResult, locResult]) => {
+            if (cancelled) return
+
+            const cmsItems = navResult.status === 'fulfilled' && Array.isArray(navResult.value) && navResult.value.length > 0
+                ? navResult.value
+                : null
+            const liveLocations = locResult.status === 'fulfilled' ? locResult.value : []
+
+            // Pick whichever menu is "live": CMS-managed if present, otherwise the
+            // hardcoded fallback. Then patch the locations dropdown in place.
+            const baseItems: NavMenuTreeItem[] = cmsItems ?? fallbackNavigationItems
+
+            const isLocationsItem = (label?: string) => {
+                const l = String(label || '').toLowerCase()
+                return l.includes('location') || l.includes('progym') || l.includes('our centers') || l.includes('centers')
+            }
+
+            const patched: NavMenuTreeItem[] = baseItems.map(item => {
+                if (!isLocationsItem(item.label)) return item
+
+                if (liveLocations.length === 0) {
+                    // Backend unreachable or no active locations seeded yet — keep
+                    // whatever dropdown was already there so the menu doesn't go blank.
+                    return item
+                }
+
+                return {
+                    ...item,
+                    href: '/locations',
+                    dropdown: liveLocations.map(loc => ({
+                        label: loc.name,
+                        href: `/locations/${loc.slug}`,
+                    })),
                 }
             })
-            .catch(() => {
-                // keep fallback silently — public website should never break on CMS hiccups
-            })
+
+            setNavigationItems(patched)
+        })
+
         return () => { cancelled = true }
     }, [])
 

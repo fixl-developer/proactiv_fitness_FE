@@ -17,6 +17,13 @@ interface Schedule {
   name: string
   programId: string
   programName?: string
+  programNames?: string[]
+  coachNames?: string[]
+  locationNames?: string[]
+  sessionCount?: number
+  startDate?: string
+  endDate?: string
+  totalSessions?: number
   dayOfWeek: number
   startTime: string
   endTime: string
@@ -64,6 +71,10 @@ interface GenerateFormData {
   termId: string
   programIds: string[]
   locationIds: string[]
+  // User._ids of admin-selected coaches. The backend distributes these
+  // round-robin across the generated sessions; if left empty, the backend
+  // falls back to "any active COACH user".
+  coachIds: string[]
   startDate: string
   endDate: string
   settings: {
@@ -104,6 +115,7 @@ export default function ProgramSchedulePage() {
   const [programs, setPrograms] = useState<SelectOption[]>([])
   const [locations, setLocations] = useState<SelectOption[]>([])
   const [terms, setTerms] = useState<SelectOption[]>([])
+  const [coaches, setCoaches] = useState<SelectOption[]>([])
   const [loadingDropdowns, setLoadingDropdowns] = useState(false)
 
   // Form state
@@ -111,6 +123,7 @@ export default function ProgramSchedulePage() {
     termId: '',
     programIds: [],
     locationIds: [],
+    coachIds: [],
     startDate: '',
     endDate: '',
     settings: {
@@ -121,6 +134,7 @@ export default function ProgramSchedulePage() {
       avoidWeekends: false,
     },
   })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // ── Load schedules ─────────────────────────────────────────────────────
   const loadSchedules = useCallback(async () => {
@@ -136,14 +150,26 @@ export default function ProgramSchedulePage() {
       ])
 
       const list = extractList<any>(schedRes)
+      // The backend now denormalises programNames/coachNames/locationNames +
+      // a representative day/time per schedule onto the list rows. Hold those
+      // arrays alongside the joined-string fallbacks the table currently
+      // renders so future cells (chips, multi-line) can use the array form
+      // without another migration.
       setSchedules(list.map((s: any) => ({
         _id: s._id || s.id || '',
         name: s.name || s.sessionName || '',
         programId: s.programId || '',
         programName: s.programName || s.program?.name || s.name || '',
+        programNames: Array.isArray(s.programNames) ? s.programNames : [],
+        coachNames: Array.isArray(s.coachNames) ? s.coachNames : [],
+        locationNames: Array.isArray(s.locationNames) ? s.locationNames : [],
+        sessionCount: Number(s.sessionCount ?? s.totalSessions ?? 0) || 0,
+        startDate: s.startDate || '',
+        endDate: s.endDate || '',
+        totalSessions: Number(s.totalSessions ?? 0) || 0,
         dayOfWeek: Number(s.dayOfWeek) || 0,
-        startTime: s.startTime || '09:00',
-        endTime: s.endTime || '10:00',
+        startTime: s.startTime || '',
+        endTime: s.endTime || '',
         instructor: s.instructor || s.coachName || s.coach?.name || '',
         room: s.room || s.roomName || '',
         locationId: s.locationId || '',
@@ -188,10 +214,15 @@ export default function ProgramSchedulePage() {
   const loadDropdownData = useCallback(async () => {
     setLoadingDropdowns(true)
     try {
-      const [programsRes, locationsRes, termsRes] = await Promise.allSettled([
+      // /staff/coaches returns Staff records with embedded personalInfo +
+      // userId — the userId is what Session.coachAssignments.coachId expects,
+      // so we surface that as the option's `_id` and the human name as the
+      // label.
+      const [programsRes, locationsRes, termsRes, coachesRes] = await Promise.allSettled([
         apiClient.get('/programs'),
         apiClient.get('/locations'),
         apiClient.get('/terms'),
+        apiClient.get('/staff/coaches', { params: { limit: 200, status: 'active' } }),
       ])
 
       // /programs returns `{data: {programs: [...], totalCount, filters}}`,
@@ -209,31 +240,75 @@ export default function ProgramSchedulePage() {
         const list = extractList<any>(termsRes.value)
         setTerms(list.map((t: any) => ({ _id: t._id || t.id, name: t.name || t.termName })).filter((t: any) => t._id))
       }
+      if (coachesRes.status === 'fulfilled') {
+        const list = extractList<any>(coachesRes.value)
+        // The User._id (coach.userId) is what gets stored in
+        // Session.coachAssignments.coachId. Fall back to staff._id only if
+        // userId isn't populated, so the dropdown still functions on legacy
+        // staff records, but warn via console for follow-up.
+        const mapped = list.map((c: any) => {
+          const id = c.userId || c.user?._id || c._id || c.id
+          const first = c.personalInfo?.firstName || c.firstName || ''
+          const last = c.personalInfo?.lastName || c.lastName || ''
+          const name = `${first} ${last}`.trim() || c.name || c.contactInfo?.email || c.email || 'Unnamed coach'
+          return id ? { _id: String(id), name } : null
+        }).filter(Boolean) as SelectOption[]
+        setCoaches(mapped)
+      }
     } catch {
       // Partial data is fine
     }
     setLoadingDropdowns(false)
   }, [])
 
+  // ── Validation ─────────────────────────────────────────────────────────
+  const validateGenerateForm = () => {
+    const e: Record<string, string> = {}
+
+    if (!form.startDate) e.startDate = 'Start date is required'
+    if (!form.endDate) e.endDate = 'End date is required'
+    if (form.startDate && form.endDate) {
+      const s = new Date(form.startDate)
+      const en = new Date(form.endDate)
+      if (isNaN(s.getTime())) e.startDate = 'Please enter a valid start date'
+      else if (isNaN(en.getTime())) e.endDate = 'Please enter a valid end date'
+      else if (s > en) e.endDate = 'End date cannot be before start date'
+    }
+
+    if (form.programIds.length === 0) e.programIds = 'Select at least one program'
+    if (form.locationIds.length === 0) e.locationIds = 'Select at least one location'
+
+    const maxPerDay = Number(form.settings.maxSessionsPerDay)
+    if (!Number.isFinite(maxPerDay) || maxPerDay < 1 || maxPerDay > 20) {
+      e.maxSessionsPerDay = 'Max sessions per day must be between 1 and 20'
+    }
+    const minBreak = Number(form.settings.minBreakBetweenSessions)
+    if (!Number.isFinite(minBreak) || minBreak < 0 || minBreak > 120) {
+      e.minBreakBetweenSessions = 'Break must be between 0 and 120 minutes'
+    }
+    if (form.settings.preferredStartTime && form.settings.preferredEndTime) {
+      if (form.settings.preferredStartTime >= form.settings.preferredEndTime) {
+        e.preferredEndTime = 'End time must be after start time'
+      }
+    }
+
+    setFormErrors(e)
+    return Object.keys(e).length === 0
+  }
+
   // ── Generate schedule ──────────────────────────────────────────────────
   const handleGenerate = async () => {
-    // Validation
-    if (!form.startDate || !form.endDate) {
-      toast.error('Start date and end date are required')
-      return
-    }
-    if (form.programIds.length === 0) {
-      toast.error('Select at least one program')
-      return
-    }
-    if (form.locationIds.length === 0) {
-      toast.error('Select at least one location')
+    if (!validateGenerateForm()) {
+      toast.error('Please fix the highlighted fields')
       return
     }
 
     setGenerating(true)
     try {
-      const payload = {
+      // coachIds is optional — when admin doesn't pick any, the backend falls
+      // back to "any active COACH user". When they do pick coaches, we send
+      // their User._ids so the backend can round-robin them across sessions.
+      const payload: any = {
         termId: form.termId || undefined,
         programIds: form.programIds,
         locationIds: form.locationIds,
@@ -241,6 +316,8 @@ export default function ProgramSchedulePage() {
         endDate: form.endDate,
         settings: form.settings,
       }
+      if (form.coachIds.length > 0) payload.coachIds = form.coachIds
+
       await apiClient.post('/scheduling/generate', payload)
       toast.success('Schedule generated successfully!')
       setShowGenerateModal(false)
@@ -255,10 +332,12 @@ export default function ProgramSchedulePage() {
   }
 
   const resetForm = () => {
+    setFormErrors({})
     setForm({
       termId: '',
       programIds: [],
       locationIds: [],
+      coachIds: [],
       startDate: '',
       endDate: '',
       settings: {
@@ -540,6 +619,28 @@ export default function ProgramSchedulePage() {
       ) : viewMode === 'calendar' ? (
         /* ── Weekly Calendar View ──────────────────────────────────────── */
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Warn admin when schedules exist but the backend returned 0 sessions —
+              this almost always means session generation failed (no active coach
+              or no location in the DB), which silently swallowed the error during
+              "Generate Schedule". Without this banner, admins on the deployed
+              site see an empty calendar and assume the page is broken. */}
+          {schedules.length > 0 && calSessions.length === 0 && (
+            <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-900">
+                <p className="font-semibold mb-1">
+                  {schedules.length} schedule{schedules.length === 1 ? '' : 's'} found, but no sessions to display.
+                </p>
+                <p className="text-amber-800">
+                  This usually means &ldquo;Generate Schedule&rdquo; couldn&apos;t create session
+                  records — most often because there are no active coaches or no
+                  location set up in this environment. Add at least one active
+                  coach (User Management → Coaches) and one location, then
+                  delete and re-generate the affected schedules.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse min-w-[900px]">
               <thead>
@@ -596,56 +697,85 @@ export default function ProgramSchedulePage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Session</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Day</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Time</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Instructor</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Room</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Schedule</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Programs</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Coaches</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Locations</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Date Range</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Sessions</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
                   <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {schedules.map((s) => (
-                  <tr key={s._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(s._id)}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-blue-700 hover:text-blue-900">{s.programName || s.name}</div>
-                      {s.locationName && <div className="text-xs text-gray-500">{s.locationName}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{DAYS[s.dayOfWeek] || '-'}</td>
-                    <td className="px-4 py-3 text-sm">{s.startTime} - {s.endTime}</td>
-                    <td className="px-4 py-3 text-sm">{s.instructor || '-'}</td>
-                    <td className="px-4 py-3 text-sm">{s.room || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(s.status)}`}>
-                        {s.status}
-                      </span>
-                      {s.conflicts && s.conflicts.length > 0 && (
-                        <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          {s.conflicts.length} conflict(s)
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-1">
-                        <button id="btn-admin-programs-schedule-view" onClick={() => openDetail(s._id)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50 flex items-center gap-1" title="View / edit details">
-                          <Eye className="h-3.5 w-3.5" /> View
-                        </button>
-                        {s.status === 'draft' && (
-                          <button id="btn-admin-programs-schedule-6" onClick={() => handlePublish(s)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50 flex items-center gap-1">
-                            <Send className="h-3 w-3" /> Publish
-                          </button>
+                {schedules.map((s) => {
+                  const dateRange = s.startDate && s.endDate
+                    ? `${new Date(s.startDate).toLocaleDateString()} – ${new Date(s.endDate).toLocaleDateString()}`
+                    : '-'
+                  // The aggregated lists can be long ("Cricket, badmintation,
+                  // gym, …") so we render them as compact chips with overflow
+                  // hidden instead of one giant string. Empty arrays fall back
+                  // to "-" so blank rows stay scannable.
+                  const renderChips = (items: string[] | undefined, fallback: string) => {
+                    const arr = (items || []).filter(Boolean)
+                    if (arr.length === 0) return <span className="text-xs text-gray-400">{fallback}</span>
+                    const visible = arr.slice(0, 2)
+                    const remainder = arr.length - visible.length
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {visible.map((it) => (
+                          <span key={it} className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full max-w-[160px] truncate">{it}</span>
+                        ))}
+                        {remainder > 0 && (
+                          <span className="inline-block bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full" title={arr.join(', ')}>+{remainder}</span>
                         )}
-                        <button id="btn-admin-programs-schedule-7" onClick={() => handleDetectConflicts(s)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50">
-                          Check
-                        </button>
-                        <button id="btn-admin-programs-schedule-8" onClick={() => setShowDeleteConfirm(s._id)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
+                    )
+                  }
+                  return (
+                    <tr key={s._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(s._id)}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-blue-700 hover:text-blue-900">{s.name || '-'}</div>
+                        {s.startTime && s.endTime && (
+                          <div className="text-xs text-gray-500">{s.startTime} – {s.endTime}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{renderChips(s.programNames, '-')}</td>
+                      <td className="px-4 py-3 text-sm">{renderChips(s.coachNames, 'Auto-assigned')}</td>
+                      <td className="px-4 py-3 text-sm">{renderChips(s.locationNames, '-')}</td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">{dateRange}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{s.sessionCount ?? s.totalSessions ?? 0}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(s.status)}`}>
+                          {s.status}
+                        </span>
+                        {s.conflicts && s.conflicts.length > 0 && (
+                          <span className="ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {s.conflicts.length} conflict(s)
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                          <button id="btn-admin-programs-schedule-view" onClick={() => openDetail(s._id)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50 flex items-center gap-1" title="View / edit details">
+                            <Eye className="h-3.5 w-3.5" /> View
+                          </button>
+                          {s.status === 'draft' && (
+                            <button id="btn-admin-programs-schedule-6" onClick={() => handlePublish(s)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50 flex items-center gap-1">
+                              <Send className="h-3 w-3" /> Publish
+                            </button>
+                          )}
+                          <button id="btn-admin-programs-schedule-7" onClick={() => handleDetectConflicts(s)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50">
+                            Check
+                          </button>
+                          <button id="btn-admin-programs-schedule-8" onClick={() => setShowDeleteConfirm(s._id)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -716,9 +846,10 @@ export default function ProgramSchedulePage() {
                       <input id="input-date-admin-programs-schedule-start"
                         type="date"
                         value={form.startDate}
-                        onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                        className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => { setForm({ ...form, startDate: e.target.value }); if (formErrors.startDate) setFormErrors({ ...formErrors, startDate: '' }) }}
+                        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${formErrors.startDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                       />
+                      {formErrors.startDate && <p className="mt-1 text-xs text-red-600">{formErrors.startDate}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -727,9 +858,10 @@ export default function ProgramSchedulePage() {
                       <input id="input-date-admin-programs-schedule"
                         type="date"
                         value={form.endDate}
-                        onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                        className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => { setForm({ ...form, endDate: e.target.value }); if (formErrors.endDate) setFormErrors({ ...formErrors, endDate: '' }) }}
+                        className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${formErrors.endDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                       />
+                      {formErrors.endDate && <p className="mt-1 text-xs text-red-600">{formErrors.endDate}</p>}
                     </div>
                   </div>
 
@@ -741,10 +873,13 @@ export default function ProgramSchedulePage() {
                       <span className="text-xs text-gray-400 ml-2">({form.programIds.length} selected)</span>
                     </label>
                     {programs.length > 0 ? (
-                      <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                      <div className={`border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1 ${formErrors.programIds ? 'border-red-500' : 'border-gray-300'}`}>
                         <button id="admin-programs-schedule-btn"
                           type="button"
-                          onClick={() => setForm({ ...form, programIds: form.programIds.length === programs.length ? [] : programs.map((p) => p._id) })}
+                          onClick={() => {
+                            setForm({ ...form, programIds: form.programIds.length === programs.length ? [] : programs.map((p) => p._id) })
+                            if (formErrors.programIds) setFormErrors({ ...formErrors, programIds: '' })
+                          }}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium mb-1"
                         >
                           {form.programIds.length === programs.length ? 'Deselect All' : 'Select All'}
@@ -754,7 +889,10 @@ export default function ProgramSchedulePage() {
                             <input id={`input-checkbox-admin-programs-schedule-${p._id}`}
                               type="checkbox"
                               checked={form.programIds.includes(p._id)}
-                              onChange={() => setForm({ ...form, programIds: toggleArrayItem(form.programIds, p._id) })}
+                              onChange={() => {
+                                setForm({ ...form, programIds: toggleArrayItem(form.programIds, p._id) })
+                                if (formErrors.programIds) setFormErrors({ ...formErrors, programIds: '' })
+                              }}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700">{p.name}</span>
@@ -764,6 +902,7 @@ export default function ProgramSchedulePage() {
                     ) : (
                       <p className="text-sm text-gray-400 border rounded-lg p-3">No programs found. Create programs first.</p>
                     )}
+                    {formErrors.programIds && <p className="mt-1 text-xs text-red-600">{formErrors.programIds}</p>}
                   </div>
 
                   {/* Locations Selection */}
@@ -774,10 +913,13 @@ export default function ProgramSchedulePage() {
                       <span className="text-xs text-gray-400 ml-2">({form.locationIds.length} selected)</span>
                     </label>
                     {locations.length > 0 ? (
-                      <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                      <div className={`border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1 ${formErrors.locationIds ? 'border-red-500' : 'border-gray-300'}`}>
                         <button id="admin-programs-schedule-btn-2"
                           type="button"
-                          onClick={() => setForm({ ...form, locationIds: form.locationIds.length === locations.length ? [] : locations.map((l) => l._id) })}
+                          onClick={() => {
+                            setForm({ ...form, locationIds: form.locationIds.length === locations.length ? [] : locations.map((l) => l._id) })
+                            if (formErrors.locationIds) setFormErrors({ ...formErrors, locationIds: '' })
+                          }}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium mb-1"
                         >
                           {form.locationIds.length === locations.length ? 'Deselect All' : 'Select All'}
@@ -787,7 +929,10 @@ export default function ProgramSchedulePage() {
                             <input id={`input-checkbox-admin-programs-schedule-${l._id}`}
                               type="checkbox"
                               checked={form.locationIds.includes(l._id)}
-                              onChange={() => setForm({ ...form, locationIds: toggleArrayItem(form.locationIds, l._id) })}
+                              onChange={() => {
+                                setForm({ ...form, locationIds: toggleArrayItem(form.locationIds, l._id) })
+                                if (formErrors.locationIds) setFormErrors({ ...formErrors, locationIds: '' })
+                              }}
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700">{l.name}</span>
@@ -796,6 +941,48 @@ export default function ProgramSchedulePage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-400 border rounded-lg p-3">No locations found. Create locations first.</p>
+                    )}
+                    {formErrors.locationIds && <p className="mt-1 text-xs text-red-600">{formErrors.locationIds}</p>}
+                  </div>
+
+                  {/* Coaches Selection — optional. When admin picks at least
+                      one, the backend distributes the chosen coaches
+                      round-robin across the generated sessions. When empty,
+                      the backend auto-assigns any active COACH user, so
+                      leaving this blank still works on small academies. */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <User className="h-4 w-4 inline mr-1.5 text-gray-400" />
+                      Coaches
+                      <span className="text-xs text-gray-400 ml-2">
+                        ({form.coachIds.length} selected — leave empty to auto-assign any active coach)
+                      </span>
+                    </label>
+                    {coaches.length > 0 ? (
+                      <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, coachIds: form.coachIds.length === coaches.length ? [] : coaches.map((c) => c._id) })}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium mb-1"
+                        >
+                          {form.coachIds.length === coaches.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                        {coaches.map((c) => (
+                          <label key={c._id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.coachIds.includes(c._id)}
+                              onChange={() => setForm({ ...form, coachIds: toggleArrayItem(form.coachIds, c._id) })}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">{c.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 border rounded-lg p-3">
+                        No active coaches found. Add coaches under User Management → Coaches first; the schedule will then auto-assign any active coach.
+                      </p>
                     )}
                   </div>
 
@@ -806,32 +993,48 @@ export default function ProgramSchedulePage() {
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Max Sessions Per Day</label>
                         <input id="input-number-admin-programs-schedule-max"
-                          type="number"
-                          min={1}
-                          max={20}
-                          value={form.settings.maxSessionsPerDay}
-                          onChange={(e) => setForm({ ...form, settings: { ...form.settings, maxSessionsPerDay: Number(e.target.value) } })}
-                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="text"
+                          inputMode="numeric"
+                          value={String(form.settings.maxSessionsPerDay)}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            if (v === '' || /^\d{1,2}$/.test(v)) {
+                              setForm({ ...form, settings: { ...form.settings, maxSessionsPerDay: v === '' ? 0 : Number(v) } })
+                              if (formErrors.maxSessionsPerDay) setFormErrors({ ...formErrors, maxSessionsPerDay: '' })
+                            }
+                          }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.maxSessionsPerDay ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {formErrors.maxSessionsPerDay
+                          ? <p className="mt-1 text-xs text-red-600">{formErrors.maxSessionsPerDay}</p>
+                          : <p className="mt-1 text-xs text-gray-400">Whole number 1-20</p>}
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Break Between Sessions (min)</label>
                         <input id="input-number-admin-programs-schedule"
-                          type="number"
-                          min={0}
-                          max={120}
-                          value={form.settings.minBreakBetweenSessions}
-                          onChange={(e) => setForm({ ...form, settings: { ...form.settings, minBreakBetweenSessions: Number(e.target.value) } })}
-                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          type="text"
+                          inputMode="numeric"
+                          value={String(form.settings.minBreakBetweenSessions)}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            if (v === '' || /^\d{1,3}$/.test(v)) {
+                              setForm({ ...form, settings: { ...form.settings, minBreakBetweenSessions: v === '' ? 0 : Number(v) } })
+                              if (formErrors.minBreakBetweenSessions) setFormErrors({ ...formErrors, minBreakBetweenSessions: '' })
+                            }
+                          }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.minBreakBetweenSessions ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {formErrors.minBreakBetweenSessions
+                          ? <p className="mt-1 text-xs text-red-600">{formErrors.minBreakBetweenSessions}</p>
+                          : <p className="mt-1 text-xs text-gray-400">0-120 minutes</p>}
                       </div>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Preferred Start Time</label>
                         <input id="input-time-admin-programs-schedule"
                           type="time"
                           value={form.settings.preferredStartTime}
-                          onChange={(e) => setForm({ ...form, settings: { ...form.settings, preferredStartTime: e.target.value } })}
-                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onChange={(e) => { setForm({ ...form, settings: { ...form.settings, preferredStartTime: e.target.value } }); if (formErrors.preferredStartTime) setFormErrors({ ...formErrors, preferredStartTime: '' }) }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.preferredStartTime ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
                       </div>
                       <div>
@@ -839,9 +1042,10 @@ export default function ProgramSchedulePage() {
                         <input id="input-time-admin-programs-schedule"
                           type="time"
                           value={form.settings.preferredEndTime}
-                          onChange={(e) => setForm({ ...form, settings: { ...form.settings, preferredEndTime: e.target.value } })}
-                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onChange={(e) => { setForm({ ...form, settings: { ...form.settings, preferredEndTime: e.target.value } }); if (formErrors.preferredEndTime) setFormErrors({ ...formErrors, preferredEndTime: '' }) }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.preferredEndTime ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {formErrors.preferredEndTime && <p className="mt-1 text-xs text-red-600">{formErrors.preferredEndTime}</p>}
                       </div>
                     </div>
                     <label className="flex items-center gap-2 mt-3 cursor-pointer">

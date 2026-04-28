@@ -59,88 +59,49 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
         coach: 'all'
     });
 
-    // Load time slots from API
+    // Load time slots from API. No mock fallback — if the deployed backend has
+    // no PUBLISHED schedules with future-dated sessions, we show the real empty
+    // state so admins/users know they need to publish a schedule before it
+    // becomes bookable. Hiding that behind fake data was masking the problem.
+    //
+    // We fetch unfiltered (no params) and let the existing client-side
+    // `filteredSlots` narrow the visible cards. If we passed the filters to the
+    // server, the server's filtered response would also shrink the
+    // dropdown-option lists (uniqueLocations/Coaches/etc.) and the customer
+    // could no longer see other options to switch to.
     useEffect(() => {
-        const mockSlots: TimeSlot[] = [
-            {
-                id: '1',
-                startTime: '09:00',
-                endTime: '10:00',
-                programType: 'class',
-                programName: 'Beginner Gymnastics',
-                coach: 'Sarah Chen',
-                location: 'Cyberport',
-                ageGroup: '3-5 years',
-                capacity: 10,
-                booked: 7,
-                waitlist: 2,
-                price: 350,
-                level: 'Beginner',
-                status: 'available',
-                date: '2024-01-15'
-            },
-            {
-                id: '2',
-                startTime: '10:30',
-                endTime: '11:30',
-                programType: 'assessment',
-                programName: 'Skills Assessment',
-                coach: 'Will Murray',
-                location: 'Cyberport',
-                ageGroup: '6-12 years',
-                capacity: 8,
-                booked: 8,
-                waitlist: 3,
-                price: 0,
-                level: 'Assessment',
-                status: 'waitlist',
-                date: '2024-01-15'
-            },
-            {
-                id: '3',
-                startTime: '14:00',
-                endTime: '15:00',
-                programType: 'private',
-                programName: 'Private Coaching',
-                coach: 'Monica',
-                location: 'Wan Chai',
-                ageGroup: '8-16 years',
-                capacity: 2,
-                booked: 0,
-                waitlist: 0,
-                price: 800,
-                level: 'Advanced',
-                status: 'available',
-                date: '2024-01-15'
-            }
-        ]
-
         const loadTimeSlots = async () => {
             setIsLoading(true)
             try {
                 const { apiClient } = await import('@/services/api/client')
-                const params: Record<string, string> = {}
-                if (filters.location !== 'all') params.location = filters.location
-                if (filters.program !== 'all') params.programType = filters.program
-                if (filters.ageGroup !== 'all') params.ageGroup = filters.ageGroup
-                if (filters.coach !== 'all') params.coach = filters.coach
-
-                const result = await apiClient.get('/scheduling/available', { params })
-                if (result.success) {
-                    setTimeSlots(result.data)
-                } else {
-                    setTimeSlots(mockSlots)
-                }
+                const result: any = await apiClient.get('/scheduling/available')
+                // Backend wraps in { success, data: [...] }. Be liberal — accept
+                // a bare array too in case some deployment returns the older shape.
+                const slots: TimeSlot[] = Array.isArray(result)
+                    ? result
+                    : Array.isArray(result?.data)
+                        ? result.data
+                        : []
+                setTimeSlots(slots)
             } catch (error) {
                 console.error('Error loading time slots:', error)
-                setTimeSlots(mockSlots)
+                setTimeSlots([])
             } finally {
                 setIsLoading(false)
             }
         }
 
         loadTimeSlots()
-    }, [filters])
+    }, [])
+
+    // Filter dropdown options come from the slots themselves so we only show
+    // options the customer can actually pick. No more hardcoded "Cyberport /
+    // Wan Chai" + coach list — those drift from real data and confuse users
+    // when the academy adds a new location.
+    const uniqueLocations = Array.from(new Set(timeSlots.map(s => s.location).filter(Boolean))).sort()
+    const uniqueCoaches = Array.from(new Set(timeSlots.map(s => s.coach).filter(Boolean))).sort()
+    const uniqueAgeGroups = Array.from(new Set(timeSlots.map(s => s.ageGroup).filter(Boolean))).sort()
+    const uniqueProgramTypes = Array.from(new Set(timeSlots.map(s => s.programType).filter(Boolean))).sort()
 
     const getProgramImage = (type: string) => {
         const images = {
@@ -368,8 +329,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="all">All Locations</option>
-                                <option value="Cyberport">Cyberport</option>
-                                <option value="Wan Chai">Wan Chai</option>
+                                {uniqueLocations.map((loc) => (
+                                    <option key={loc} value={loc}>{loc}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -380,11 +342,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="all">All Programs</option>
-                                <option value="class">Classes</option>
-                                <option value="trial">Trials</option>
-                                <option value="assessment">Assessments</option>
-                                <option value="party">Parties</option>
-                                <option value="private">Private Lessons</option>
+                                {uniqueProgramTypes.map((t) => (
+                                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -395,10 +355,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="all">All Ages</option>
-                                <option value="2-3 years">2-3 years</option>
-                                <option value="3-5 years">3-5 years</option>
-                                <option value="6-12 years">6-12 years</option>
-                                <option value="8-16 years">8-16 years</option>
+                                {uniqueAgeGroups.map((ag) => (
+                                    <option key={ag} value={ag}>{ag}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -409,9 +368,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="all">All Coaches</option>
-                                <option value="Sarah Chen">Sarah Chen</option>
-                                <option value="Will Murray">Will Murray</option>
-                                <option value="Monica">Monica</option>
+                                {uniqueCoaches.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
                             </select>
                         </div>
                     </div>
@@ -457,7 +416,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({
                     <div className="text-center py-12">
                         <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No slots available</h3>
-                        <p className="text-gray-600">Try adjusting your filters or selecting a different date.</p>
+                        <p className="text-gray-600 max-w-md mx-auto">
+                            {timeSlots.length === 0
+                                ? 'No published programs are accepting bookings yet. Once an admin publishes a schedule, available classes will appear here.'
+                                : 'No slots match your current filters. Try selecting "All" for one of the filters above.'}
+                        </p>
                     </div>
                 )}
             </div>

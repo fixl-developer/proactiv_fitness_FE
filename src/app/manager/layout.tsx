@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
+import { rbacManager } from '@/services/auth/rbac'
 
 export default function ManagerLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const { user, isAuthenticated, isLoading } = useAuth()
+    const { user, isAuthenticated, isLoading, role } = useAuth()
     const router = useRouter()
     const [hasToken, setHasToken] = useState(true)
 
@@ -22,8 +23,18 @@ export default function ManagerLayout({
         if (isLoading) return
         if (!isAuthenticated && !localStorage.getItem('token')) {
             router.push('/login/staff')
+            return
         }
-    }, [isAuthenticated, isLoading, router])
+        if (isAuthenticated && role) {
+            const upper = String(role).toUpperCase()
+            const allowed = ['MANAGER', 'LOCATION_MANAGER', 'ADMIN']
+            if (!allowed.includes(upper)) {
+                rbacManager.setRole(upper)
+                const target = rbacManager.getDashboard()
+                router.push(target && target !== '/login' ? target : '/unauthorized')
+            }
+        }
+    }, [isAuthenticated, isLoading, router, role])
 
     if (isLoading && !hasToken) {
         return (
