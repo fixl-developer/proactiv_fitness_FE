@@ -73,7 +73,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         const roleStr = typeof parsedUser.role === 'object' ? parsedUser.role?.name : parsedUser.role
         parsedUser.role = roleStr
 
-        if (roleStr !== 'SUPPORT_STAFF' && roleStr !== 'ADMIN') {
+        const allowed = ['SUPPORT_STAFF', 'STAFF', 'ADMIN']
+        if (!allowed.includes(String(roleStr).toUpperCase())) {
             router.push('/unauthorized')
             return
         }

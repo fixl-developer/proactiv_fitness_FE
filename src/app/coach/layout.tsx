@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import { useAuth } from '@/contexts/AuthContext'
+import { rbacManager } from '@/services/auth/rbac'
 
 export default function CoachLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const { user, isAuthenticated, isLoading } = useAuth()
+    const { user, isAuthenticated, isLoading, role } = useAuth()
     const router = useRouter()
     const [hasToken, setHasToken] = useState(true)
 
@@ -24,8 +25,18 @@ export default function CoachLayout({
         if (isLoading) return
         if (!isAuthenticated && !localStorage.getItem('token')) {
             router.push('/login/staff')
+            return
         }
-    }, [isAuthenticated, isLoading, router])
+        // Role guard — only COACH (or ADMIN for impersonation/QA) lands here.
+        if (isAuthenticated && role) {
+            const upper = String(role).toUpperCase()
+            if (upper !== 'COACH' && upper !== 'ADMIN') {
+                rbacManager.setRole(upper)
+                const target = rbacManager.getDashboard()
+                router.push(target && target !== '/login' ? target : '/unauthorized')
+            }
+        }
+    }, [isAuthenticated, isLoading, router, role])
 
     // Show loading only on initial load, not on sub-page navigation
     if (isLoading && !hasToken) {
