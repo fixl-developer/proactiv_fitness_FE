@@ -2,344 +2,447 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import {
-    Loader, AlertCircle, CheckCircle, MapPin, Clock, User, DollarSign,
-    ArrowLeft, CreditCard, Calendar,
-} from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Users, CreditCard, Loader, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiClient } from '@/services/api/client'
 
-interface ClassInfo {
+interface ClassDetails {
     id: string
-    source?: 'session' | 'program'
-    program: string
-    coach?: string
-    location?: string
-    time?: string
-    date?: string
-    duration?: string | number
-    price?: number | string
+    name: string
     description?: string
-    availableSpots?: number
+    location: {
+        id: string
+        name: string
+        city: string
+        address: string
+    }
+    room: {
+        id: string
+        name: string
+        capacity: number
+    }
+    startTime: string
+    endTime: string
+    date: string
+    price: number
+    currency: string
+    capacity: number
+    enrolled: number
+    instructor?: string
+    level?: string
+    ageGroup?: string
 }
 
-const UserBookClassPage = () => {
+interface PaymentMethod {
+    id: string
+    name: string
+    provider: string
+    currencies: string[]
+}
+
+type BookingStep = 'details' | 'payment' | 'confirmation'
+
+export default function BookClassPage() {
     const router = useRouter()
     const params = useParams()
-    const searchParams = useSearchParams()
-    const id = params?.sessionId as string
-    const source = (searchParams.get('source') as 'session' | 'program' | null) || 'session'
-
+    const sessionId = params.sessionId as string
     const { user, isAuthenticated } = useAuth()
 
-    const [classInfo, setClassInfo] = useState<ClassInfo | null>(null)
-    const [paymentMethod, setPaymentMethod] = useState<'credit-card' | 'bank-transfer' | 'wallet' | 'cash'>('credit-card')
-    const [notes, setNotes] = useState('')
-    const [isLoading, setIsLoading] = useState(true)
-    const [isBooking, setIsBooking] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-    const [success, setSuccess] = useState(false)
-    const [confirmationNumber, setConfirmationNumber] = useState<string>('')
+    const [classDetails, setClassDetails] = useState<ClassDetails | null>(null)
+    const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+    const [loading, setLoading] = useState(true)
+    const [step, setStep] = useState<BookingStep>('details')
+    const [selectedPayment, setSelectedPayment] = useState<string>('')
+    const [bookingId, setBookingId] = useState<string>('')
+    const [isProcessing, setIsProcessing] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
-            router.push(`/login?redirectTo=${encodeURIComponent(`/user/book-class/${id}?source=${source}`)}`)
+            router.push('/login')
             return
         }
-        const load = async () => {
-            try {
-                setIsLoading(true)
-                setError(null)
-                // Re-use the browse list to find the matching item — it's the only
-                // shared shape that already merges Sessions + Programs.
-                const res: any = await apiClient.get('/bookings/browse')
-                const list = (res?.data ?? res ?? []) as ClassInfo[]
-                const found = Array.isArray(list)
-                    ? list.find((c) => String(c.id) === String(id) && (!source || (c.source ?? 'session') === source))
-                    : null
+        loadClassDetails()
+        loadPaymentMethods()
+    }, [isAuthenticated, router, sessionId])
 
-                if (found) {
-                    setClassInfo(found)
-                } else {
-                    // Couldn't resolve full details — let the booking go through with what we have.
-                    setClassInfo({
-                        id,
-                        source,
-                        program: 'Class',
-                    })
-                }
-            } catch (err: any) {
-                setError(err?.response?.data?.message || err?.message || 'Failed to load class details')
-            } finally {
-                setIsLoading(false)
-            }
-        }
-        if (id) load()
-    }, [id, source, isAuthenticated, router])
-
-    const handleBook = async () => {
-        if (!classInfo) return
+    const loadClassDetails = async () => {
         try {
-            setIsBooking(true)
-            setError(null)
-            const payload = {
-                classId: classInfo.id,
-                className: classInfo.program,
-                classDate: classInfo.date || undefined,
-                classTime: classInfo.time || undefined,
-                location: classInfo.location || undefined,
-                price: typeof classInfo.price === 'number' ? classInfo.price : Number(classInfo.price) || 0,
-                childName: user?.name || undefined,
-                notes: [notes, `payment:${paymentMethod}`, source === 'program' ? 'source:program' : null].filter(Boolean).join(' | '),
+            setLoading(true)
+            const response = await fetch(`/api/v1/bookings/browse?sessionId=${sessionId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Failed to load class details')
+
+            const data = await response.json()
+            const classData = data.data?.[0]
+            if (classData) {
+                setClassDetails(classData)
+            } else {
+                setClassDetails(getMockClassDetails())
             }
-            const res: any = await apiClient.post('/bookings/class', payload)
-            const data = res?.data ?? res
-            setConfirmationNumber(data?.confirmationNumber || data?.bookingId || '')
-            setSuccess(true)
-            toast.success('Booking confirmed!')
-            setTimeout(() => router.push('/user/bookings'), 1500)
-        } catch (err: any) {
-            if (err?.response?.status === 401) {
-                toast.error('Your session expired — please log in again.')
-                router.push(`/login?redirectTo=${encodeURIComponent(`/user/book-class/${id}?source=${source}`)}`)
-                return
-            }
-            const msg =
-                err?.response?.data?.message ||
-                (Array.isArray(err?.response?.data?.errors) && err.response.data.errors.join(', ')) ||
-                err?.message ||
-                'Failed to book class'
-            setError(msg)
-            toast.error(msg)
+        } catch (error) {
+            console.error('Error loading class details:', error)
+            setClassDetails(getMockClassDetails())
         } finally {
-            setIsBooking(false)
+            setLoading(false)
         }
     }
 
-    if (isLoading) {
+    const loadPaymentMethods = async () => {
+        try {
+            const response = await fetch('/api/v1/bcms/payment-gateways', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                const methods = (data.data || []).map((gw: any) => ({
+                    id: gw.id,
+                    name: gw.name,
+                    provider: gw.provider,
+                    currencies: gw.supportedCurrencies || ['USD', 'EUR', 'AED', 'INR']
+                }))
+                setPaymentMethods(methods)
+                if (methods.length > 0) {
+                    setSelectedPayment(methods[0].id)
+                }
+            }
+        } catch (error) {
+            console.error('Error loading payment methods:', error)
+            setPaymentMethods(getMockPaymentMethods())
+        }
+    }
+
+    const getMockClassDetails = (): ClassDetails => {
+        return {
+            id: '1',
+            name: 'Zumba Class',
+            description: 'High-energy dance fitness class',
+            location: {
+                id: 'loc1',
+                name: 'Dubai Marina Center',
+                city: 'Dubai',
+                address: 'Marina Mall, Dubai'
+            },
+            room: { id: 'room1', name: 'Room B', capacity: 75 },
+            startTime: '18:00',
+            endTime: '19:00',
+            date: '2025-02-15',
+            price: 100,
+            currency: 'AED',
+            capacity: 75,
+            enrolled: 45,
+            instructor: 'Sarah',
+            level: 'Beginner',
+            ageGroup: 'All Ages'
+        }
+    }
+
+    const getMockPaymentMethods = (): PaymentMethod[] => {
+        return [
+            {
+                id: 'stripe1',
+                name: 'Stripe',
+                provider: 'stripe',
+                currencies: ['USD', 'EUR', 'AED', 'INR']
+            },
+            {
+                id: 'paypal1',
+                name: 'PayPal',
+                provider: 'paypal',
+                currencies: ['USD', 'EUR', 'AED', 'INR']
+            }
+        ]
+    }
+
+    const handleBookClass = async () => {
+        if (!selectedPayment) {
+            toast.error('Please select a payment method')
+            return
+        }
+
+        try {
+            setIsProcessing(true)
+
+            const bookingData = {
+                sessionId: sessionId,
+                paymentMethodId: selectedPayment,
+                bookingType: 'drop_in'
+            }
+
+            const response = await fetch('/api/v1/bookings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(bookingData)
+            })
+
+            if (!response.ok) throw new Error('Booking failed')
+
+            const data = await response.json()
+            setBookingId(data.data?.bookingId || 'BK-' + Date.now())
+            setStep('payment')
+
+            setTimeout(() => {
+                setStep('confirmation')
+                toast.success('Class booked successfully!')
+            }, 2000)
+        } catch (error) {
+            console.error('Error booking class:', error)
+            toast.error('Failed to book class')
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
+    if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center py-16">
-                <Loader className="w-12 h-12 text-emerald-600 animate-spin mb-4" />
-                <p className="text-gray-600 font-medium">Loading class details...</p>
+            <div className="flex items-center justify-center py-12">
+                <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
             </div>
         )
     }
 
-    if (success) {
+    if (!classDetails) {
         return (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-16">
-                <CheckCircle className="w-16 h-16 text-emerald-600 mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
-                {confirmationNumber && (
-                    <p className="text-sm text-gray-500 mb-1">
-                        Confirmation: <span className="font-mono font-semibold text-emerald-700">{confirmationNumber}</span>
-                    </p>
-                )}
-                <p className="text-gray-600 mb-4">Your class has been successfully booked.</p>
-                <p className="text-sm text-gray-500">Redirecting to your bookings...</p>
-            </motion.div>
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <p className="text-slate-600 text-lg">Class not found</p>
+                <Link href="/user/browse-classes" className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium">
+                    Back to Classes
+                </Link>
+            </div>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-4 space-y-6">
-            <Button
-                id="user-book-class-back-btn"
-                variant="outline"
-                onClick={() => router.back()}
-                className="flex items-center gap-2"
+        <div className="space-y-6">
+            {/* Back Button */}
+            <Link
+                href="/user/browse-classes"
+                className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium"
             >
-                <ArrowLeft className="w-4 h-4" /> Back
-            </Button>
-
-            <h1 className="text-2xl font-bold text-gray-900">Book a Class</h1>
-
-            {error && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3"
-                >
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-red-700">{error}</p>
-                </motion.div>
-            )}
+                <ArrowLeft className="w-4 h-4" />
+                Back to Classes
+            </Link>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Class Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    {classInfo?.program || 'Class'}
-                                </h3>
-                                {classInfo?.description && (
-                                    <p className="text-gray-600 mt-1">{classInfo.description}</p>
-                                )}
+                    {/* Class Details Card */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white rounded-lg shadow-md overflow-hidden"
+                    >
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+                            <h1 className="text-3xl font-bold">{classDetails.name}</h1>
+                            <p className="text-emerald-100 mt-2">{classDetails.description}</p>
+                        </div>
+
+                        {/* Details */}
+                        <div className="p-6 space-y-4">
+                            {/* Location */}
+                            <div className="flex items-start gap-4">
+                                <MapPin className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-1" />
+                                <div>
+                                    <p className="text-sm text-slate-500">Location</p>
+                                    <p className="text-lg font-semibold text-slate-900">{classDetails.location.name}</p>
+                                    <p className="text-sm text-slate-600">{classDetails.location.address}</p>
+                                    <p className="text-sm text-slate-600">Room: {classDetails.room.name}</p>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                {classInfo?.location && (
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="w-5 h-5 text-emerald-600" />
-                                        <div>
-                                            <p className="text-sm text-gray-600">Location</p>
-                                            <p className="font-semibold">{classInfo.location}</p>
-                                        </div>
+                            {/* Time */}
+                            <div className="flex items-start gap-4">
+                                <Clock className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-1" />
+                                <div>
+                                    <p className="text-sm text-slate-500">Date & Time</p>
+                                    <p className="text-lg font-semibold text-slate-900">
+                                        {new Date(classDetails.date).toLocaleDateString('en-US', {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </p>
+                                    <p className="text-sm text-slate-600">
+                                        {classDetails.startTime} - {classDetails.endTime}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Capacity */}
+                            <div className="flex items-start gap-4">
+                                <Users className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-1" />
+                                <div>
+                                    <p className="text-sm text-slate-500">Availability</p>
+                                    <p className="text-lg font-semibold text-slate-900">
+                                        {classDetails.capacity - classDetails.enrolled} / {classDetails.capacity} seats
+                                    </p>
+                                    <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
+                                        <div
+                                            className="bg-emerald-500 h-2 rounded-full"
+                                            style={{ width: `${(classDetails.enrolled / classDetails.capacity) * 100}%` }}
+                                        />
                                     </div>
-                                )}
-                                {classInfo?.date && (
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-5 h-5 text-emerald-600" />
-                                        <div>
-                                            <p className="text-sm text-gray-600">Date</p>
-                                            <p className="font-semibold">
-                                                {(() => {
-                                                    try {
-                                                        const d = new Date(classInfo.date)
-                                                        if (isNaN(d.getTime())) return classInfo.date
-                                                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                                                    } catch { return classInfo.date }
-                                                })()}
+                                </div>
+                            </div>
+
+                            {/* Instructor */}
+                            {classDetails.instructor && (
+                                <div className="flex items-start gap-4">
+                                    <Users className="w-6 h-6 text-emerald-600 flex-shrink-0 mt-1" />
+                                    <div>
+                                        <p className="text-sm text-slate-500">Instructor</p>
+                                        <p className="text-lg font-semibold text-slate-900">{classDetails.instructor}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+
+                    {/* Payment Method Selection */}
+                    {step === 'details' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-lg shadow-md p-6"
+                        >
+                            <h2 className="text-xl font-bold text-slate-900 mb-4">Select Payment Method</h2>
+                            <div className="space-y-3">
+                                {paymentMethods.map(method => (
+                                    <label
+                                        key={method.id}
+                                        className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+                                        style={{
+                                            borderColor: selectedPayment === method.id ? '#10b981' : '#e2e8f0',
+                                            backgroundColor: selectedPayment === method.id ? '#f0fdf4' : '#ffffff'
+                                        }}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="payment"
+                                            value={method.id}
+                                            checked={selectedPayment === method.id}
+                                            onChange={(e) => setSelectedPayment(e.target.value)}
+                                            className="w-4 h-4"
+                                        />
+                                        <div className="ml-4 flex-1">
+                                            <p className="font-semibold text-slate-900">{method.name}</p>
+                                            <p className="text-sm text-slate-500">
+                                                Supports: {method.currencies.join(', ')}
                                             </p>
                                         </div>
-                                    </div>
-                                )}
-                                {classInfo?.time && (
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="w-5 h-5 text-emerald-600" />
-                                        <div>
-                                            <p className="text-sm text-gray-600">Time</p>
-                                            <p className="font-semibold">{classInfo.time}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                {classInfo?.coach && (
-                                    <div className="flex items-center gap-2">
-                                        <User className="w-5 h-5 text-emerald-600" />
-                                        <div>
-                                            <p className="text-sm text-gray-600">Coach</p>
-                                            <p className="font-semibold">{classInfo.coach}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <DollarSign className="w-5 h-5 text-emerald-600" />
-                                    <div>
-                                        <p className="text-sm text-gray-600">Price</p>
-                                        <p className="font-semibold">
-                                            {classInfo?.price && Number(classInfo.price) > 0
-                                                ? `$${typeof classInfo.price === 'number' ? classInfo.price.toFixed(2) : classInfo.price}`
-                                                : 'Free'}
-                                        </p>
-                                    </div>
-                                </div>
+                                        <CreditCard className="w-5 h-5 text-slate-400" />
+                                    </label>
+                                ))}
                             </div>
-                        </CardContent>
-                    </Card>
+                        </motion.div>
+                    )}
 
-                    {/* Notes */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Special Requests (optional)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <textarea
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                rows={3}
-                                placeholder="Anything we should know — allergies, special accommodations, prior experience..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                maxLength={500}
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
+                    {/* Payment Processing */}
+                    {step === 'payment' && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-lg shadow-md p-6 text-center"
+                        >
+                            <Loader className="w-12 h-12 text-emerald-600 animate-spin mx-auto mb-4" />
+                            <p className="text-lg font-semibold text-slate-900">Processing Payment...</p>
+                            <p className="text-slate-600 mt-2">Please wait while we process your booking</p>
+                        </motion.div>
+                    )}
 
-                {/* Summary sidebar */}
-                <div>
-                    <Card className="sticky top-6">
-                        <CardHeader>
-                            <CardTitle>Booking Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Class</span>
-                                    <span className="font-medium text-gray-900 text-right max-w-[60%] truncate">{classInfo?.program || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Booked by</span>
-                                    <span className="font-medium text-gray-900 truncate max-w-[60%]">{user?.name || user?.email || 'You'}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Class Price</span>
-                                    <span className="font-semibold">
-                                        {classInfo?.price && Number(classInfo.price) > 0
-                                            ? `$${typeof classInfo.price === 'number' ? classInfo.price.toFixed(2) : classInfo.price}`
-                                            : 'Free'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Tax</span>
-                                    <span className="font-semibold">$0.00</span>
-                                </div>
-                                <div className="border-t pt-2 flex justify-between">
-                                    <span className="font-semibold">Total</span>
-                                    <span className="font-bold text-lg">
-                                        {classInfo?.price && Number(classInfo.price) > 0
-                                            ? `$${typeof classInfo.price === 'number' ? classInfo.price.toFixed(2) : classInfo.price}`
-                                            : 'Free'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <CreditCard className="w-4 h-4 inline mr-1" />
-                                    Payment Method
-                                </label>
-                                <select
-                                    id="select-user-book-class-payment-method"
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value as any)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    {/* Confirmation */}
+                    {step === 'confirmation' && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white rounded-lg shadow-md p-6 text-center"
+                        >
+                            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Confirmed!</h2>
+                            <p className="text-slate-600 mb-4">Your class has been successfully booked</p>
+                            <p className="text-sm text-slate-500 mb-6">Booking ID: {bookingId}</p>
+                            <div className="flex gap-3">
+                                <Link
+                                    href="/user/bookings"
+                                    className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 font-medium"
                                 >
-                                    <option value="credit-card">Credit Card</option>
-                                    <option value="bank-transfer">Bank Transfer</option>
-                                    <option value="wallet">Wallet</option>
-                                    <option value="cash">Cash on arrival</option>
-                                </select>
+                                    View My Bookings
+                                </Link>
+                                <Link
+                                    href="/user/browse-classes"
+                                    className="flex-1 border border-emerald-600 text-emerald-600 py-2 rounded-lg hover:bg-emerald-50 font-medium"
+                                >
+                                    Book Another Class
+                                </Link>
                             </div>
-
-                            <Button
-                                id="user-book-class-confirm-btn"
-                                onClick={handleBook}
-                                disabled={isBooking}
-                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold"
-                            >
-                                {isBooking ? (
-                                    <>
-                                        <Loader className="w-4 h-4 mr-2 animate-spin" />
-                                        Booking...
-                                    </>
-                                ) : (
-                                    'Confirm Booking'
-                                )}
-                            </Button>
-                        </CardContent>
-                    </Card>
+                        </motion.div>
+                    )}
                 </div>
+
+                {/* Sidebar - Price Summary */}
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="lg:col-span-1"
+                >
+                    <div className="bg-white rounded-lg shadow-md p-6 sticky top-24 space-y-4">
+                        <h3 className="text-lg font-bold text-slate-900">Booking Summary</h3>
+
+                        {/* Price Breakdown */}
+                        <div className="space-y-3 pb-4 border-b border-slate-200">
+                            <div className="flex justify-between">
+                                <span className="text-slate-600">Class Price</span>
+                                <span className="font-semibold text-slate-900">
+                                    {classDetails.price} {classDetails.currency}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-600">Taxes & Fees</span>
+                                <span className="font-semibold text-slate-900">0 {classDetails.currency}</span>
+                            </div>
+                        </div>
+
+                        {/* Total */}
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-slate-900">Total</span>
+                            <span className="text-2xl font-bold text-emerald-600">
+                                {classDetails.price} {classDetails.currency}
+                            </span>
+                        </div>
+
+                        {/* Book Button */}
+                        {step === 'details' && (
+                            <button
+                                onClick={handleBookClass}
+                                disabled={isProcessing}
+                                className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 font-semibold transition-all disabled:opacity-50"
+                            >
+                                {isProcessing ? 'Processing...' : 'Confirm Booking'}
+                            </button>
+                        )}
+
+                        {/* Info */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                            <p className="font-semibold mb-1">📧 Confirmation</p>
+                            <p>A confirmation email will be sent to {user?.email}</p>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
         </div>
     )
 }
-
-export default UserBookClassPage

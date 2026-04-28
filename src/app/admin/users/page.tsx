@@ -145,19 +145,19 @@ export default function UsersPage() {
   // Load locations once for the location dropdown.
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const data: any = await apiClient.get('/locations')
-        if (cancelled) return
-        const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
-        setLocations(
-          list.map((l: any) => ({ id: String(l.id || l._id), name: l.name }))
-            .filter((l: any) => l.id && l.name)
-        )
-      } catch {
-        if (!cancelled) setLocations([])
-      }
-    })()
+      ; (async () => {
+        try {
+          const data: any = await apiClient.get('/admin/business-config/locations')
+          if (cancelled) return
+          const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
+          setLocations(
+            list.map((l: any) => ({ id: String(l.id || l._id), name: l.name }))
+              .filter((l: any) => l.id && l.name)
+          )
+        } catch {
+          if (!cancelled) setLocations([])
+        }
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -165,23 +165,23 @@ export default function UsersPage() {
   // "Permissions for this role" preview.
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const response = await RoleService.getAll({ page: 1, limit: 100 })
-        if (cancelled) return
-        const map: Record<string, RolePermissions> = {}
-        for (const role of response.data || []) {
-          map[role.name] = {
-            name: role.name,
-            description: role.description,
-            permissions: role.permissions || [],
+      ; (async () => {
+        try {
+          const response = await RoleService.getAll({ page: 1, limit: 100 })
+          if (cancelled) return
+          const map: Record<string, RolePermissions> = {}
+          for (const role of response.data || []) {
+            map[role.name] = {
+              name: role.name,
+              description: role.description,
+              permissions: role.permissions || [],
+            }
           }
+          setRolePermissionsMap(map)
+        } catch {
+          // non-fatal — drawer just won't show the permission preview
         }
-        setRolePermissionsMap(map)
-      } catch {
-        // non-fatal — drawer just won't show the permission preview
-      }
-    })()
+      })()
     return () => { cancelled = true }
   }, [])
 
@@ -449,13 +449,12 @@ export default function UsersPage() {
                           </td>
                           <td className="px-6 py-4 text-sm">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                isActive
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${isActive
                                   ? 'bg-green-100 text-green-800'
                                   : (user.status || '').toUpperCase() === 'SUSPENDED'
                                     ? 'bg-red-100 text-red-800'
                                     : 'bg-gray-100 text-gray-800'
-                              }`}
+                                }`}
                             >
                               {user.status || 'UNKNOWN'}
                             </span>
@@ -472,11 +471,10 @@ export default function UsersPage() {
                               <button
                                 onClick={() => handleToggleStatus(user)}
                                 disabled={statusActionId === user.id}
-                                className={`p-2 rounded transition ${
-                                  isActive
+                                className={`p-2 rounded transition ${isActive
                                     ? 'text-orange-600 hover:bg-orange-50'
                                     : 'text-green-600 hover:bg-green-50'
-                                } disabled:opacity-50`}
+                                  } disabled:opacity-50`}
                                 title={isActive ? 'Deactivate' : 'Activate'}
                               >
                                 {statusActionId === user.id ? (
@@ -547,9 +545,8 @@ export default function UsersPage() {
                   if (errors.email) setErrors({ ...errors, email: '' })
                 }}
                 disabled={!!editingId}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                } disabled:bg-slate-100`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  } disabled:bg-slate-100`}
               />
               {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
             </div>
@@ -566,9 +563,8 @@ export default function UsersPage() {
                     setFormData({ ...formData, password: e.target.value })
                     if (errors.password) setErrors({ ...errors, password: '' })
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.password ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 />
                 {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
                 {!errors.password && (
@@ -593,9 +589,8 @@ export default function UsersPage() {
                 }}
                 placeholder="John"
                 maxLength={50}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.firstName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
               {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
             </div>
@@ -614,9 +609,8 @@ export default function UsersPage() {
                 }}
                 placeholder="Smith"
                 maxLength={50}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.lastName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
               {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
             </div>
@@ -633,9 +627,8 @@ export default function UsersPage() {
                 }}
                 placeholder="+1 555 123 4567"
                 maxLength={20}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
               {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
             </div>
@@ -709,9 +702,8 @@ export default function UsersPage() {
                     setFormData({ ...formData, locationId: e.target.value })
                     if (errors.locationId) setErrors({ ...errors, locationId: '' })
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    errors.locationId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.locationId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 >
                   <option value="">Select location</option>
                   {locations.map((loc) => (

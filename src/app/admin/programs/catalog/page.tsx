@@ -41,9 +41,35 @@ interface ProgramStats {
   averageCapacity: number
 }
 
+interface TimeSlot {
+  id: string
+  startTime: string
+  endTime: string
+  days: string[]
+}
+
 interface FormState extends Omit<Program, '_id'> {
   businessUnitId: string
   locationIds: string[]
+  // NEW FIELDS
+  category: string
+  shortDescription: string
+  duration: number
+  sessionsPerWeek: number
+  availableDays: string[]
+  availableTimeSlots: TimeSlot[]
+  coachIds: string[]
+  minParticipants: number
+  waitlistCapacity: number
+  coachToParticipantRatio: number
+  allowOverbooking: boolean
+  currency: string
+  pricingType: string
+  medicalClearanceRequired: boolean
+  parentalConsentRequired: boolean
+  skillLevels: string[]
+  learningObjectives: string[]
+  activities: string[]
 }
 
 const EMPTY_FORM: FormState = {
@@ -57,6 +83,27 @@ const EMPTY_FORM: FormState = {
   status: 'active',
   businessUnitId: '',
   locationIds: [],
+  // NEW FIELDS
+  category: 'general',
+  shortDescription: '',
+  duration: 60,
+  sessionsPerWeek: 1,
+  availableDays: ['monday', 'wednesday', 'friday'],
+  availableTimeSlots: [
+    { id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }
+  ],
+  coachIds: [],
+  minParticipants: 1,
+  waitlistCapacity: 5,
+  coachToParticipantRatio: 10,
+  allowOverbooking: false,
+  currency: 'USD',
+  pricingType: 'per_term',
+  medicalClearanceRequired: false,
+  parentalConsentRequired: true,
+  skillLevels: ['beginner'],
+  learningObjectives: ['Skill development', 'Safety awareness'],
+  activities: ['Warm-up', 'Skill practice', 'Cool-down'],
 }
 
 // ── Fallback mock data ─────────────────────────────────────────────────────
@@ -115,7 +162,7 @@ export default function ProgramCatalogPage() {
       if (filterLevel) params.set('level', filterLevel)
       if (filterStatus) params.set('status', filterStatus)
 
-      const res: any = await apiClient.get(`/programs?${params.toString()}`)
+      const res: any = await apiClient.get(`/admin/programs?${params.toString()}`)
       const list = extractList<any>(res)
       // Normalize: backend mixes _id / id across list endpoints — collapse to _id
       // so the table key (and edit/delete actions) always have a stable identifier.
@@ -147,7 +194,7 @@ export default function ProgramCatalogPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      const res: any = await apiClient.get('/programs/statistics')
+      const res: any = await apiClient.get('/admin/programs/statistics')
       setStats(res?.data ?? res)
     } catch {
       setStats(FALLBACK_STATS)
@@ -194,7 +241,6 @@ export default function ProgramCatalogPage() {
   // Transform minimal form data into the full payload the backend Joi schema expects.
   // The UI only collects top-level fields; nested rules/templates get safe defaults.
   const buildCreatePayload = (): any => {
-    // Backend Joi expects lowercase enum values (see ProgramType validation)
     const programTypeMap: Record<string, string> = {
       gymnastics: 'regular',
       ninja: 'regular',
@@ -205,12 +251,6 @@ export default function ProgramCatalogPage() {
       party: 'party',
       assessment: 'assessment',
       private: 'private',
-    }
-    const skillLevelMap: Record<string, string> = {
-      beginner: 'beginner',
-      intermediate: 'intermediate',
-      advanced: 'advanced',
-      expert: 'expert',
     }
     const [minStr, maxStr] = (formData.ageGroup || '5-10').split('-')
     const minAge = Number(minStr) || 5
@@ -223,42 +263,46 @@ export default function ProgramCatalogPage() {
     return {
       name: formData.name,
       description,
-      shortDescription: description.slice(0, 200),
+      shortDescription: formData.shortDescription || description.slice(0, 200),
       programType: programTypeMap[formData.type] || 'regular',
-      category: formData.type || 'general',
+      category: formData.category || 'general',
       businessUnitId: formData.businessUnitId,
       locationIds: formData.locationIds,
       ageGroups: [ageGroup],
-      skillLevels: [skillLevelMap[formData.level] || 'beginner'],
+      skillLevels: formData.skillLevels.length > 0 ? formData.skillLevels : ['beginner'],
       capacityRules: {
-        minParticipants: 1,
+        minParticipants: formData.minParticipants,
         maxParticipants: formData.capacity || 15,
-        coachToParticipantRatio: 10,
-        waitlistCapacity: 5,
-        allowOverbooking: false,
+        coachToParticipantRatio: formData.coachToParticipantRatio,
+        waitlistCapacity: formData.waitlistCapacity,
+        allowOverbooking: formData.allowOverbooking,
       },
       eligibilityRules: {
         ageRestrictions: ageGroup,
-        medicalClearanceRequired: false,
-        parentalConsentRequired: true,
+        medicalClearanceRequired: formData.medicalClearanceRequired,
+        parentalConsentRequired: formData.parentalConsentRequired,
       },
       pricingModel: {
         basePrice: formData.price || 0,
-        currency: 'USD',
-        pricingType: 'per_term',
+        currency: formData.currency,
+        pricingType: formData.pricingType,
       },
       classTemplates: [{
         name: 'Default Session',
         description: 'Standard class template',
-        duration: 60,
-        activities: ['Warm-up', 'Skill practice', 'Cool-down'],
-        learningObjectives: ['Skill development', 'Safety awareness'],
+        duration: formData.duration,
+        activities: formData.activities,
+        learningObjectives: formData.learningObjectives,
       }],
-      sessionDuration: 60,
-      sessionsPerWeek: 1,
-      termDuration: 12,
-      availableDays: ['monday', 'wednesday', 'friday'],
-      availableTimeSlots: [{ startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
+      sessionDuration: formData.duration,
+      sessionsPerWeek: formData.sessionsPerWeek,
+      availableDays: formData.availableDays,
+      availableTimeSlots: formData.availableTimeSlots.map(slot => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        days: slot.days,
+      })),
+      coachIds: formData.coachIds,
       isActive: formData.status === 'active',
       isPublic: formData.status !== 'draft',
     }
@@ -268,6 +312,7 @@ export default function ProgramCatalogPage() {
   const validateFormData = () => {
     const e: Record<string, string> = {}
 
+    // 1. Program Name: Required, 3-80 chars, alphanumeric + spaces/hyphens/apostrophes
     const nameErr = validateRequired(formData.name, 'Program name')
     if (nameErr) e.name = nameErr
     else if (formData.name.trim().length < 3) e.name = 'Program name must be at least 3 characters'
@@ -276,9 +321,11 @@ export default function ProgramCatalogPage() {
       e.name = 'Letters, digits, spaces, hyphens, apostrophes and & only'
     }
 
+    // 2. Type: Required, must be valid type
     const typeErr = validateSelect(formData.type, 'Type')
     if (typeErr) e.type = typeErr
 
+    // 3. Age Group: Required, format min-max (e.g., 5-10), min 1-99, max 1-99, min <= max
     const ageErr = validateRequired(formData.ageGroup, 'Age group')
     if (ageErr) e.ageGroup = ageErr
     else if (!AGE_GROUP_PATTERN.test(formData.ageGroup.trim())) {
@@ -292,29 +339,134 @@ export default function ProgramCatalogPage() {
       else if (min > max) e.ageGroup = 'Min age cannot be greater than max age'
     }
 
+    // 4. Level: Required, must be valid level
     const levelErr = validateSelect(formData.level, 'Level')
     if (levelErr) e.level = levelErr
 
+    // 5. Capacity: Required, number 1-1000
     const capErr = validateNumber(String(formData.capacity), 'Capacity', 1, 1000)
     if (capErr) e.capacity = capErr
 
+    // 6. Price: Required, number >= 0, max 2 decimals
     const priceErr = validateCurrency(String(formData.price), 'Price')
     if (priceErr) e.price = priceErr
+    else if (formData.price < 0) e.price = 'Price cannot be negative'
+    else if (!/^\d+(\.\d{0,2})?$/.test(String(formData.price))) e.price = 'Price must have maximum 2 decimal places'
 
+    // 7. Status: Required, must be valid status
     const statusErr = validateSelect(formData.status, 'Status')
     if (statusErr) e.status = statusErr
 
-    if (formData.description) {
-      const descErr = validateTextArea(formData.description, 'Description', 0, 2000)
-      if (descErr) e.description = descErr
-    }
-
+    // 8. Business Unit: Required (for create only)
     if (!editingId) {
       const buErr = validateSelect(formData.businessUnitId, 'Business unit')
       if (buErr) e.businessUnitId = buErr
+    }
+
+    // 9. Locations: Required, at least 1 selected
+    if (!editingId) {
       if (!formData.locationIds || formData.locationIds.length === 0) {
         e.locationIds = 'Select at least one location'
       }
+    }
+
+    // 10. Category: Required, must be valid category
+    if (!formData.category || formData.category.trim() === '') {
+      e.category = 'Category is required'
+    }
+
+    // 11. Short Description: Optional, max 200 chars
+    if (formData.shortDescription && formData.shortDescription.length > 200) {
+      e.shortDescription = 'Short description must be less than 200 characters'
+    }
+
+    // 12. Duration: Required, must be 15-180 in 15-min increments
+    if (!formData.duration || formData.duration < 15 || formData.duration > 180) {
+      e.duration = 'Duration must be between 15 and 180 minutes'
+    } else if (formData.duration % 15 !== 0) {
+      e.duration = 'Duration must be in 15-minute increments'
+    }
+
+    // 13. Sessions Per Week: Required, 1-7
+    if (!formData.sessionsPerWeek || formData.sessionsPerWeek < 1 || formData.sessionsPerWeek > 7) {
+      e.sessionsPerWeek = 'Sessions per week must be between 1 and 7'
+    }
+
+    // 14. Available Days: Required, at least 1 day selected
+    if (!formData.availableDays || formData.availableDays.length === 0) {
+      e.availableDays = 'Select at least one day'
+    }
+
+    // 15. Available Time Slots: Required, at least 1 slot, start < end time
+    if (!formData.availableTimeSlots || formData.availableTimeSlots.length === 0) {
+      e.availableTimeSlots = 'Add at least one time slot'
+    } else {
+      for (let i = 0; i < formData.availableTimeSlots.length; i++) {
+        const slot = formData.availableTimeSlots[i]
+        if (!slot.startTime || !slot.endTime) {
+          e.availableTimeSlots = 'All time slots must have start and end times'
+          break
+        }
+        if (slot.startTime >= slot.endTime) {
+          e.availableTimeSlots = `Time slot ${i + 1}: Start time must be before end time`
+          break
+        }
+      }
+    }
+
+    // 16. Min Participants: Required, >= 1
+    if (!formData.minParticipants || formData.minParticipants < 1) {
+      e.minParticipants = 'Minimum participants must be at least 1'
+    }
+
+    // 17. Waitlist Capacity: Required, 0-50
+    if (formData.waitlistCapacity === undefined || formData.waitlistCapacity === null || formData.waitlistCapacity < 0 || formData.waitlistCapacity > 50) {
+      e.waitlistCapacity = 'Waitlist capacity must be between 0 and 50'
+    }
+
+    // 18. Coach to Participant Ratio: Required, 1-50
+    if (!formData.coachToParticipantRatio || formData.coachToParticipantRatio < 1 || formData.coachToParticipantRatio > 50) {
+      e.coachToParticipantRatio = 'Coach to participant ratio must be between 1 and 50'
+    }
+
+    // 19. Currency: Required, valid currency
+    if (!formData.currency || formData.currency.trim() === '') {
+      e.currency = 'Currency is required'
+    }
+
+    // 20. Pricing Type: Required, valid pricing type
+    if (!formData.pricingType || formData.pricingType.trim() === '') {
+      e.pricingType = 'Pricing type is required'
+    }
+
+    // 21. Skill Levels: Required, at least 1 selected
+    if (!formData.skillLevels || formData.skillLevels.length === 0) {
+      e.skillLevels = 'Select at least one skill level'
+    }
+
+    // 22. Learning Objectives: Optional, each max 200 chars
+    if (formData.learningObjectives && formData.learningObjectives.length > 0) {
+      for (let i = 0; i < formData.learningObjectives.length; i++) {
+        if (formData.learningObjectives[i].length > 200) {
+          e.learningObjectives = `Learning objective ${i + 1} must be less than 200 characters`
+          break
+        }
+      }
+    }
+
+    // 23. Activities: Optional, each max 200 chars
+    if (formData.activities && formData.activities.length > 0) {
+      for (let i = 0; i < formData.activities.length; i++) {
+        if (formData.activities[i].length > 200) {
+          e.activities = `Activity ${i + 1} must be less than 200 characters`
+          break
+        }
+      }
+    }
+
+    // 24. Description: Optional, max 2000 chars
+    if (formData.description && formData.description.length > 2000) {
+      e.description = 'Description must be less than 2000 characters'
     }
 
     setErrors(e)
@@ -366,6 +518,24 @@ export default function ProgramCatalogPage() {
       status: p.status,
       businessUnitId: (p as any).businessUnitId || '',
       locationIds: Array.isArray((p as any).locationIds) ? (p as any).locationIds : [],
+      category: (p as any).category || 'general',
+      shortDescription: (p as any).shortDescription || '',
+      duration: (p as any).duration || 60,
+      sessionsPerWeek: (p as any).sessionsPerWeek || 1,
+      availableDays: Array.isArray((p as any).availableDays) ? (p as any).availableDays : ['monday', 'wednesday', 'friday'],
+      availableTimeSlots: Array.isArray((p as any).availableTimeSlots) ? (p as any).availableTimeSlots : [{ id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
+      coachIds: Array.isArray((p as any).coachIds) ? (p as any).coachIds : [],
+      minParticipants: (p as any).minParticipants || 1,
+      waitlistCapacity: (p as any).waitlistCapacity || 5,
+      coachToParticipantRatio: (p as any).coachToParticipantRatio || 10,
+      allowOverbooking: (p as any).allowOverbooking || false,
+      currency: (p as any).currency || 'USD',
+      pricingType: (p as any).pricingType || 'per_term',
+      medicalClearanceRequired: (p as any).medicalClearanceRequired || false,
+      parentalConsentRequired: (p as any).parentalConsentRequired || true,
+      skillLevels: Array.isArray((p as any).skillLevels) ? (p as any).skillLevels : ['beginner'],
+      learningObjectives: Array.isArray((p as any).learningObjectives) ? (p as any).learningObjectives : ['Skill development', 'Safety awareness'],
+      activities: Array.isArray((p as any).activities) ? (p as any).activities : ['Warm-up', 'Skill practice', 'Cool-down'],
     })
     setShowForm(true)
   }
@@ -770,7 +940,435 @@ export default function ProgramCatalogPage() {
               </div>
             )}
 
-            <div>
+            {/* SECTION 1: BASIC INFORMATION */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => { setFormData({ ...formData, category: e.target.value }); if (errors.category) setErrors({ ...errors, category: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.category ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  >
+                    <option value="">Select category</option>
+                    <option value="general">General</option>
+                    <option value="fitness">Fitness</option>
+                    <option value="dance">Dance</option>
+                    <option value="martial-arts">Martial Arts</option>
+                    <option value="sports">Sports</option>
+                    <option value="arts">Arts</option>
+                    <option value="music">Music</option>
+                    <option value="academics">Academics</option>
+                  </select>
+                  {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Short Description</label>
+                  <textarea
+                    value={formData.shortDescription}
+                    onChange={(e) => { setFormData({ ...formData, shortDescription: e.target.value.slice(0, 200) }); if (errors.shortDescription) setErrors({ ...errors, shortDescription: '' }) }}
+                    maxLength={200}
+                    rows={2}
+                    placeholder="Brief summary (max 200 characters)"
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.shortDescription ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">{formData.shortDescription.length}/200</p>
+                    {errors.shortDescription && <p className="text-sm text-red-600">{errors.shortDescription}</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 2: SCHEDULE CONFIGURATION */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Schedule Configuration</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Duration (minutes) <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.duration}
+                    onChange={(e) => { setFormData({ ...formData, duration: Number(e.target.value) }); if (errors.duration) setErrors({ ...errors, duration: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.duration ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (i + 1) * 15).map(min => (
+                      <option key={min} value={min}>{min} minutes</option>
+                    ))}
+                  </select>
+                  {errors.duration && <p className="mt-1 text-sm text-red-600">{errors.duration}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Sessions Per Week <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.sessionsPerWeek}
+                    onChange={(e) => { setFormData({ ...formData, sessionsPerWeek: Number(e.target.value) }); if (errors.sessionsPerWeek) setErrors({ ...errors, sessionsPerWeek: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.sessionsPerWeek ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                      <option key={n} value={n}>{n} session{n > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                  {errors.sessionsPerWeek && <p className="mt-1 text-sm text-red-600">{errors.sessionsPerWeek}</p>}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Available Days <span className="text-red-500">*</span>
+                </label>
+                <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border rounded-lg ${errors.availableDays ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
+                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                    <label key={day} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.availableDays.includes(day)}
+                        onChange={() => {
+                          const updated = formData.availableDays.includes(day)
+                            ? formData.availableDays.filter(d => d !== day)
+                            : [...formData.availableDays, day]
+                          setFormData({ ...formData, availableDays: updated })
+                          if (errors.availableDays) setErrors({ ...errors, availableDays: '' })
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm capitalize">{day}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.availableDays && <p className="mt-1 text-sm text-red-600">{errors.availableDays}</p>}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Available Time Slots <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-3">
+                  {formData.availableTimeSlots.map((slot, idx) => (
+                    <div key={slot.id} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-300">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium mb-1">Start Time</label>
+                        <input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => {
+                            const updated = [...formData.availableTimeSlots]
+                            updated[idx].startTime = e.target.value
+                            setFormData({ ...formData, availableTimeSlots: updated })
+                            if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium mb-1">End Time</label>
+                        <input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => {
+                            const updated = [...formData.availableTimeSlots]
+                            updated[idx].endTime = e.target.value
+                            setFormData({ ...formData, availableTimeSlots: updated })
+                            if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.availableTimeSlots.filter((_, i) => i !== idx)
+                          setFormData({ ...formData, availableTimeSlots: updated })
+                          if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                        }}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSlot: TimeSlot = {
+                        id: Date.now().toString(),
+                        startTime: '16:00',
+                        endTime: '17:00',
+                        days: formData.availableDays
+                      }
+                      setFormData({ ...formData, availableTimeSlots: [...formData.availableTimeSlots, newSlot] })
+                      if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                    }}
+                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium"
+                  >
+                    + Add Time Slot
+                  </button>
+                </div>
+                {errors.availableTimeSlots && <p className="mt-1 text-sm text-red-600">{errors.availableTimeSlots}</p>}
+              </div>
+            </div>
+
+            {/* SECTION 3: INSTRUCTORS */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Instructors</h3>
+              <div>
+                <label className="block text-sm font-medium mb-2">Coach Assignment</label>
+                <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 text-sm text-gray-600">
+                  Coach selection coming soon - multi-select dropdown
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 4: CAPACITY & PRICING */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Capacity & Pricing</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Min Participants <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.minParticipants}
+                    onChange={(e) => { setFormData({ ...formData, minParticipants: Math.max(1, Number(e.target.value)) }); if (errors.minParticipants) setErrors({ ...errors, minParticipants: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.minParticipants ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  />
+                  {errors.minParticipants && <p className="mt-1 text-sm text-red-600">{errors.minParticipants}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Waitlist Capacity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={formData.waitlistCapacity}
+                    onChange={(e) => { setFormData({ ...formData, waitlistCapacity: Math.min(50, Math.max(0, Number(e.target.value))) }); if (errors.waitlistCapacity) setErrors({ ...errors, waitlistCapacity: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.waitlistCapacity ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  />
+                  {errors.waitlistCapacity && <p className="mt-1 text-sm text-red-600">{errors.waitlistCapacity}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Coach to Participant Ratio <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={formData.coachToParticipantRatio}
+                    onChange={(e) => { setFormData({ ...formData, coachToParticipantRatio: Math.min(50, Math.max(1, Number(e.target.value))) }); if (errors.coachToParticipantRatio) setErrors({ ...errors, coachToParticipantRatio: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.coachToParticipantRatio ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  />
+                  {errors.coachToParticipantRatio && <p className="mt-1 text-sm text-red-600">{errors.coachToParticipantRatio}</p>}
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="allowOverbooking"
+                    checked={formData.allowOverbooking}
+                    onChange={(e) => setFormData({ ...formData, allowOverbooking: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="allowOverbooking" className="text-sm font-medium cursor-pointer">Allow Overbooking</label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Currency <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => { setFormData({ ...formData, currency: e.target.value }); if (errors.currency) setErrors({ ...errors, currency: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.currency ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  >
+                    <option value="">Select currency</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="AED">AED (د.إ)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                  {errors.currency && <p className="mt-1 text-sm text-red-600">{errors.currency}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Pricing Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.pricingType}
+                    onChange={(e) => { setFormData({ ...formData, pricingType: e.target.value }); if (errors.pricingType) setErrors({ ...errors, pricingType: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.pricingType ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                  >
+                    <option value="">Select pricing type</option>
+                    <option value="per_session">Per Session</option>
+                    <option value="per_week">Per Week</option>
+                    <option value="per_month">Per Month</option>
+                    <option value="per_term">Per Term</option>
+                  </select>
+                  {errors.pricingType && <p className="mt-1 text-sm text-red-600">{errors.pricingType}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 5: REQUIREMENTS */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Requirements</h3>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.medicalClearanceRequired}
+                    onChange={(e) => setFormData({ ...formData, medicalClearanceRequired: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium">Medical Clearance Required</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.parentalConsentRequired}
+                    onChange={(e) => setFormData({ ...formData, parentalConsentRequired: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium">Parental Consent Required</span>
+                </label>
+              </div>
+            </div>
+
+            {/* SECTION 6: CONTENT */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-lg font-semibold mb-4">Content</h3>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">
+                  Skill Levels <span className="text-red-500">*</span>
+                </label>
+                <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border rounded-lg ${errors.skillLevels ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
+                  {['beginner', 'intermediate', 'advanced', 'expert'].map(level => (
+                    <label key={level} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.skillLevels.includes(level)}
+                        onChange={() => {
+                          const updated = formData.skillLevels.includes(level)
+                            ? formData.skillLevels.filter(l => l !== level)
+                            : [...formData.skillLevels, level]
+                          setFormData({ ...formData, skillLevels: updated })
+                          if (errors.skillLevels) setErrors({ ...errors, skillLevels: '' })
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm capitalize">{level}</span>
+                    </label>
+                  ))}
+                </div>
+                {errors.skillLevels && <p className="mt-1 text-sm text-red-600">{errors.skillLevels}</p>}
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Learning Objectives (Optional)</label>
+                <div className="space-y-2">
+                  {formData.learningObjectives.map((obj, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={obj}
+                          onChange={(e) => {
+                            const updated = [...formData.learningObjectives]
+                            updated[idx] = e.target.value.slice(0, 200)
+                            setFormData({ ...formData, learningObjectives: updated })
+                            if (errors.learningObjectives) setErrors({ ...errors, learningObjectives: '' })
+                          }}
+                          placeholder="e.g., Improve balance and coordination"
+                          maxLength={200}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.learningObjectives ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">{obj.length}/200</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.learningObjectives.filter((_, i) => i !== idx)
+                          setFormData({ ...formData, learningObjectives: updated })
+                          if (errors.learningObjectives) setErrors({ ...errors, learningObjectives: '' })
+                        }}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, learningObjectives: [...formData.learningObjectives, ''] })}
+                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium"
+                  >
+                    + Add Objective
+                  </button>
+                </div>
+                {errors.learningObjectives && <p className="mt-1 text-sm text-red-600">{errors.learningObjectives}</p>}
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Activities (Optional)</label>
+                <div className="space-y-2">
+                  {formData.activities.map((activity, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={activity}
+                          onChange={(e) => {
+                            const updated = [...formData.activities]
+                            updated[idx] = e.target.value.slice(0, 200)
+                            setFormData({ ...formData, activities: updated })
+                            if (errors.activities) setErrors({ ...errors, activities: '' })
+                          }}
+                          placeholder="e.g., Warm-up exercises"
+                          maxLength={200}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.activities ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">{activity.length}/200</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.activities.filter((_, i) => i !== idx)
+                          setFormData({ ...formData, activities: updated })
+                          if (errors.activities) setErrors({ ...errors, activities: '' })
+                        }}
+                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, activities: [...formData.activities, ''] })}
+                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium"
+                  >
+                    + Add Activity
+                  </button>
+                </div>
+                {errors.activities && <p className="mt-1 text-sm text-red-600">{errors.activities}</p>}
+              </div>
+            </div>
+
+            {/* DESCRIPTION */}
+            <div className="border-t pt-4 mt-4">
               <label className="block text-sm font-medium mb-2">Description (Optional)</label>
               <textarea
                 value={formData.description}
@@ -782,7 +1380,9 @@ export default function ProgramCatalogPage() {
               />
               {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
             </div>
-            <div className="flex gap-3">
+
+            {/* SUBMIT BUTTONS */}
+            <div className="border-t pt-4 mt-4 flex gap-3">
               <button id="admin-programs-catalog-btn"
                 type="submit"
                 disabled={submitting}

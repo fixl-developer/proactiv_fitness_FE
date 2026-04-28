@@ -15,12 +15,7 @@ import {
     getToastMessage,
     shouldShowToast,
 } from '@/services/socket/socketEvents'
-
-const SOCKET_URL =
-    process.env.NEXT_PUBLIC_SOCKET_URL ||
-    (process.env.NEXT_PUBLIC_API_BASE_URL
-        ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api(\/v\d+)?\/?$/, '')
-        : 'http://localhost:3001')
+import { getSocketUrl } from '@/utils/apiBaseUrl'
 
 export interface SocketContextType {
     socket: Socket | null
@@ -71,6 +66,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         // Get token from localStorage
         const token = localStorage.getItem('token')
         if (!token) return
+
+        // Resolve here (not at module-eval) so the browser's hostname drives
+        // local-vs-prod selection rather than the SSR pass.
+        const SOCKET_URL = getSocketUrl()
 
         // Create socket connection
         const socket = io(SOCKET_URL, {

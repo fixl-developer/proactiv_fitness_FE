@@ -249,10 +249,15 @@ export const StaffService = {
 
 export const AttendanceService = {
     // Get all attendance records
+    // Backend response: { success, data: [...records], pagination: {...} }
+    // Page expects: { data: [...records], pagination: {...} } — preserve both layers.
     getAll: async (params?: { page?: number; limit?: number; search?: string; date?: string; status?: string; classId?: string }) => {
         try {
-            const response = await apiClient.get('/attendance', { params })
-            return response.data
+            const response: any = await apiClient.get('/attendance', { params })
+            return {
+                data: Array.isArray(response?.data) ? response.data : [],
+                pagination: response?.pagination,
+            }
         } catch (error) {
             console.error('Error fetching attendance records:', error)
             throw error

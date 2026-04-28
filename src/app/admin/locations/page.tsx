@@ -49,7 +49,7 @@ export default function LocationsPage() {
             const params: Record<string, string> = {}
             if (searchTerm) params.search = searchTerm
 
-            const response = await apiClient.get<any>('/locations', { params })
+            const response = await apiClient.get<any>('/admin/business-config/locations', { params })
             const list = response?.locations || response?.data || (Array.isArray(response) ? response : [])
             setLocations(list)
         } catch (error: any) {
