@@ -8,6 +8,7 @@ import Footer from '@/components/layout/Footer'
 import PageHero from '@/components/sections/PageHero'
 import TeamPreview from '@/components/sections/TeamPreview'
 import { useCMSData } from '@/hooks/useCMSData'
+import { usePageHero } from '@/hooks/usePageHero'
 import { CMSService, ProgramLevelData } from '@/services/cmsService'
 
 const staticPrograms = [
@@ -100,6 +101,16 @@ const SchoolGymnasticsPage = () => {
         []
     )
 
+    const { hero } = usePageHero('school-gymnastics', {
+        title: 'School Gymnastics Programs',
+        subtitle: 'Comprehensive gymnastics training for all skill levels. From first-time gymnasts to competitive athletes, we provide structured programs that build skills, confidence, and character.',
+        backgroundImage: '/images/pages/school-gymnastics-hero.jpg',
+        fallbackGradient: 'from-blue-600 to-green-600',
+        ctaText: '',
+        ctaLink: '',
+        height: 'xlarge',
+    })
+
     const programs = dynamicPrograms.length > 0
         ? dynamicPrograms.map((p) => ({
             level: p.name,
@@ -123,11 +134,11 @@ const SchoolGymnasticsPage = () => {
             <main className="min-h-screen bg-gray-50">
                 {/* Page Hero */}
                 <PageHero
-                    title="School Gymnastics Programs"
-                    subtitle="Comprehensive gymnastics training for all skill levels. From first-time gymnasts to competitive athletes, we provide structured programs that build skills, confidence, and character."
-                    backgroundImage="/images/pages/school-gymnastics-hero.jpg"
-                    fallbackGradient="from-blue-600 to-green-600"
-                    height="xlarge"
+                    title={hero.title}
+                    subtitle={hero.subtitle}
+                    backgroundImage={hero.backgroundImage}
+                    fallbackGradient={hero.fallbackGradient}
+                    height={hero.height}
                 />
 
                 {/* Program Levels */}

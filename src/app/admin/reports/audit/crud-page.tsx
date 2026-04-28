@@ -31,14 +31,22 @@ export default function AuditLogsPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        date: string
+        action: 'create' | 'update' | 'delete' | 'view' | 'export'
+        entityType: 'user' | 'payment' | 'booking' | 'staff'
+        entityId: string
+        userId: string
+        changes: string
+        status: 'success' | 'failed'
+    }>({
         date: '',
-        action: 'create' as const,
-        entityType: 'user' as const,
+        action: 'create',
+        entityType: 'user',
         entityId: '',
         userId: '',
         changes: '',
-        status: 'success' as const,
+        status: 'success',
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})

@@ -126,16 +126,23 @@ const Hero = () => {
     const [heroSlides, setHeroSlides] = useState<DisplaySlide[]>(staticHeroSlides)
     const [stats, setStats] = useState<SiteStat[]>(staticStats)
 
-    // Fetch CMS hero slides + stats on mount; keep static fallback if API empty/fails.
+    // Fetch CMS hero slides + stats. Retries with backoff if the backend is briefly
+    // unavailable (e.g. during a seed/restart) so the carousel doesn't get stuck on the
+    // 3-slide static fallback after a transient failure.
     useEffect(() => {
         let cancelled = false
-        const load = async () => {
+        let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+        const load = async (attempt = 0): Promise<void> => {
             try {
                 const [slidesRes, statsRes] = await Promise.allSettled([
                     CMSService.getHeroSlides(),
                     CMSService.getSiteStats(),
                 ])
                 if (cancelled) return
+
+                let slidesLoaded = false
+                let statsLoaded = false
 
                 if (slidesRes.status === 'fulfilled' && Array.isArray(slidesRes.value) && slidesRes.value.length > 0) {
                     const adapted = slidesRes.value
@@ -146,19 +153,31 @@ const Hero = () => {
                     if (adapted.length > 0) {
                         setHeroSlides(adapted)
                         setCurrentSlide(0)
+                        slidesLoaded = true
                     }
                 }
 
                 if (statsRes.status === 'fulfilled' && Array.isArray(statsRes.value) && statsRes.value.length > 0) {
                     setStats(statsRes.value)
+                    statsLoaded = true
+                }
+
+                // If either call failed/returned empty and we still have attempts left, retry.
+                if ((!slidesLoaded || !statsLoaded) && attempt < 3) {
+                    timeoutId = setTimeout(() => { if (!cancelled) load(attempt + 1) }, 1500 * (attempt + 1))
                 }
             } catch (err) {
-                // Silently fall back to static data
-                console.warn('Hero CMS fetch failed, using static fallback:', err)
+                console.warn('Hero CMS fetch failed:', err)
+                if (attempt < 3) {
+                    timeoutId = setTimeout(() => { if (!cancelled) load(attempt + 1) }, 1500 * (attempt + 1))
+                }
             }
         }
         load()
-        return () => { cancelled = true }
+        return () => {
+            cancelled = true
+            if (timeoutId) clearTimeout(timeoutId)
+        }
     }, [])
 
     // Auto-slide functionality
@@ -258,39 +277,41 @@ const Hero = () => {
                     </motion.div>
                 </AnimatePresence>
 
-                {/* Mobile-Optimized Slide Indicators */}
-                {heroSlides.length > 1 && (
-                    <motion.div
-                        className="absolute bottom-16 sm:bottom-24 left-1/2 transform -translate-x-1/2 -translate-x-8 sm:-translate-x-12 z-20 flex space-x-2 sm:space-x-3"
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 1.2, duration: 0.8 }}
-                    >
-                        {heroSlides.map((_, index) => (
-                            <motion.button
-                                id={`hero-slide-dot-${index}-btn`}
-                                key={index}
-                                onClick={() => goToSlide(index)}
-                                className={`relative overflow-hidden rounded-full transition-all duration-500 ${index === currentSlide
-                                    ? 'w-8 h-3 sm:w-12 sm:h-4 bg-white shadow-lg'
-                                    : 'w-3 h-3 sm:w-4 sm:h-4 bg-white/40 hover:bg-white/70 hover:scale-110'
-                                    }`}
-                                aria-label={`Go to slide ${index + 1}`}
-                                whileHover={{ scale: index === currentSlide ? 1.05 : 1.2 }}
-                                whileTap={{ scale: 0.9 }}
-                            >
-                                {index === currentSlide && (
-                                    <motion.div
-                                        className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"
-                                        layoutId="activeIndicator"
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                    />
-                                )}
-                            </motion.button>
-                        ))}
-                    </motion.div>
-                )}
             </div>
+
+            {/* Slide Indicator Dots — placed at section level (outside bg div) so z-30 actually wins
+                against the content's stacking context. Sits below the stat cards near the bottom edge. */}
+            {heroSlides.length > 1 && (
+                <motion.div
+                    className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 -ml-12 sm:-ml-20 z-30 flex space-x-2 sm:space-x-3 pointer-events-auto"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 1.2, duration: 0.8 }}
+                >
+                    {heroSlides.map((_, index) => (
+                        <motion.button
+                            id={`hero-slide-dot-${index}-btn`}
+                            key={index}
+                            onClick={() => goToSlide(index)}
+                            className={`relative overflow-hidden rounded-full transition-all duration-500 ${index === currentSlide
+                                ? 'w-8 h-3 sm:w-12 sm:h-4 bg-white shadow-lg'
+                                : 'w-3 h-3 sm:w-4 sm:h-4 bg-white/40 hover:bg-white/70 hover:scale-110'
+                                }`}
+                            aria-label={`Go to slide ${index + 1}`}
+                            whileHover={{ scale: index === currentSlide ? 1.05 : 1.2 }}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            {index === currentSlide && (
+                                <motion.div
+                                    className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"
+                                    layoutId="activeIndicator"
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                        </motion.button>
+                    ))}
+                </motion.div>
+            )}
 
             {/* Navigation Arrows - Outside background div for proper z-index */}
             {heroSlides.length > 1 && (
@@ -437,7 +458,7 @@ const Hero = () => {
                             initial={{ opacity: 0, y: 50 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 1.5, duration: 0.8 }}
-                            className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 max-w-xl mx-auto px-4"
+                            className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-3xl mx-auto px-4"
                         >
                             {stats.map((stat, index) => (
                                 <motion.div
@@ -483,12 +504,12 @@ const Hero = () => {
                 </motion.div>
             </div>
 
-            {/* Mobile-Optimized Scroll Indicator */}
+            {/* Scroll indicator — pushed up so it doesn't collide with the slide dots at bottom-3/4. */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1, duration: 0.8 }}
-                className="absolute bottom-4 sm:bottom-8 left-1/2 transform -translate-x-1/2 z-10"
+                className="absolute bottom-12 sm:bottom-14 right-4 sm:right-8 z-30"
             >
                 <div className="w-5 h-8 sm:w-6 sm:h-10 border-2 border-white/30 rounded-full flex justify-center">
                     <div className="w-1 h-2 sm:h-3 bg-white rounded-full mt-2 animate-bounce-gentle"></div>

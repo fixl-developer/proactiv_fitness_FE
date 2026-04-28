@@ -36,7 +36,7 @@ export default function BookingDashboardLayout({ children, currentSection }: Boo
     const router = useRouter()
     const { user, logout } = useAuth()
 
-    const handleNavigation = (section: string | null, href?: string) => {
+    const handleNavigation = (section: string | null | undefined, href?: string) => {
         if (href) {
             router.push(href)
             return
@@ -55,7 +55,7 @@ export default function BookingDashboardLayout({ children, currentSection }: Boo
         router.push(baseUrl + currentUrl.search)
     }
 
-    const isActiveSection = (section: string | null, href?: string) => {
+    const isActiveSection = (section: string | null | undefined, href?: string) => {
         if (href) {
             return window.location.pathname === href
         }

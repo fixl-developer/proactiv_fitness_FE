@@ -33,7 +33,7 @@ const AuthDebug = () => {
                 {user && (
                     <div className="mt-2 p-2 bg-gray-800 rounded">
                         <div>Email: {user.email}</div>
-                        <div>Role: {user.role}</div>
+                        <div>Role: {typeof user.role === 'string' ? user.role : user.role?.name}</div>
                         <div>Name: {user.name}</div>
                     </div>
                 )}

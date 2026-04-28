@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer'
 import { formatDateShort } from '@/utils/dateUtils'
 import { getRandomImage } from '@/utils/imageUtils'
 import { useCMSData } from '@/hooks/useCMSData'
+import { usePageHero } from '@/hooks/usePageHero'
 import { CMSService, BlogPostData } from '@/services/cmsService'
 
 interface StaticBlogPost {
@@ -139,6 +140,16 @@ const BlogPage = () => {
         []
     )
 
+    const { hero } = usePageHero('blog', {
+        title: 'ProActive Sports Blog',
+        subtitle: 'Expert insights, training tips, and valuable resources for gymnasts, parents, and coaches. Stay informed with the latest in gymnastics education.',
+        backgroundImage: '',
+        fallbackGradient: 'from-primary-600 to-primary-800',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
+
     const blogPosts: StaticBlogPost[] = useMemo(() => {
         if (dynamicPosts && dynamicPosts.length > 0) {
             return dynamicPosts.map(mapCMSPostToLocal)
@@ -174,12 +185,12 @@ const BlogPage = () => {
             <Header />
             <main className="pt-0">
                 {/* Hero Section */}
-                <section className="relative bg-gradient-to-br from-primary-600 to-primary-800 text-white section-padding overflow-hidden">
+                <section className={`relative bg-gradient-to-br ${hero.fallbackGradient} text-white section-padding overflow-hidden`}>
                     {/* Background Image */}
                     <div className="absolute inset-0">
                         <Image
-                            src={getRandomImage('blog writing')}
-                            alt="Blog Hero Background"
+                            src={hero.backgroundImage || getRandomImage('blog writing')}
+                            alt={hero.title}
                             fill
                             className="object-cover opacity-20"
                             onError={(e) => e.currentTarget.style.display = 'none'}
@@ -194,11 +205,10 @@ const BlogPage = () => {
                             className="max-w-4xl mx-auto text-center"
                         >
                             <h1 className="text-4xl sm:text-5xl font-heading font-bold mb-6">
-                                ProActive Sports Blog
+                                {hero.title}
                             </h1>
                             <p className="text-xl text-primary-100 mb-8 leading-relaxed">
-                                Expert insights, training tips, and valuable resources for gymnasts,
-                                parents, and coaches. Stay informed with the latest in gymnastics education.
+                                {hero.subtitle}
                             </p>
                         </motion.div>
                     </div>

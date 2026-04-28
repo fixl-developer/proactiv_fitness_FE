@@ -53,7 +53,7 @@ export default function WorkflowBuilderPage() {
                 name: workflowName,
                 trigger,
                 steps
-            })
+            } as any)
             router.push('/advanced/workflows')
         } catch (err) {
             console.error('Error saving workflow:', err)

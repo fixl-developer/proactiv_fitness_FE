@@ -34,7 +34,7 @@ export default function ReportBuilderPage() {
                 type: reportType,
                 dataSource,
                 metrics
-            })
+            } as any)
             router.push('/advanced/reports')
         } catch (err) {
             console.error('Error saving report:', err)

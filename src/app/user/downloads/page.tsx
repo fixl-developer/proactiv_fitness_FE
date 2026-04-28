@@ -265,7 +265,7 @@ export default function DownloadsPage() {
                             {/* Meta Info */}
                             <div className="space-y-2 mb-4 text-xs text-gray-500">
                                 <div className="flex items-center space-x-2">
-                                    <FileSize className="w-3 h-3" />
+                                    <HardDrive className="w-3 h-3" />
                                     <span>{item.size}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">

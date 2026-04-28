@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Layers, CheckCircle2, Users, Gauge } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { BusinessUnitService, LocationService } from '@/services/businessConfigService'
+import { extractList, extractPagination } from '@/utils/apiResponse'
 import { toast } from 'sonner'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -101,10 +103,24 @@ export default function ProgramCatalogPage() {
       if (filterStatus) params.set('status', filterStatus)
 
       const res: any = await apiClient.get(`/programs?${params.toString()}`)
-      const raw = res?.data ?? res
-      const list = Array.isArray(raw) ? raw : raw?.programs ?? raw?.data ?? []
-      setPrograms(Array.isArray(list) ? list : [])
-      setTotalPages(res?.totalPages ?? raw?.totalPages ?? res?.meta?.totalPages ?? 1)
+      const list = extractList<any>(res)
+      // Normalize: backend mixes _id / id across list endpoints — collapse to _id
+      // so the table key (and edit/delete actions) always have a stable identifier.
+      const normalized: Program[] = list.map((p: any) => ({
+        _id: p._id || p.id || '',
+        name: p.name || '',
+        type: p.type || '',
+        level: p.level || '',
+        ageGroup: p.ageGroup || '',
+        description: p.description || '',
+        capacity: Number(p.capacity) || 0,
+        price: Number(p.price) || 0,
+        status: p.status || 'active',
+        enrolledCount: p.enrolledCount,
+        createdAt: p.createdAt,
+      })).filter((p: Program) => p._id)
+      setPrograms(normalized)
+      setTotalPages(extractPagination(res).totalPages)
       setApiFailed(false)
     } catch (err: any) {
       console.error('Failed to load programs:', err)
@@ -384,14 +400,54 @@ export default function ProgramCatalogPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total Programs', value: stats.totalPrograms, color: 'blue' },
-            { label: 'Active Programs', value: stats.activePrograms, color: 'green' },
-            { label: 'Total Enrolled', value: stats.totalEnrolled, color: 'purple' },
-            { label: 'Avg Capacity', value: stats.averageCapacity, color: 'orange' },
+            {
+              label: 'Total Programs',
+              value: stats.totalPrograms,
+              Icon: Layers,
+              gradient: 'from-blue-50 to-blue-100',
+              border: 'border-blue-200',
+              iconBg: 'bg-blue-500',
+              valueText: 'text-blue-700',
+            },
+            {
+              label: 'Active Programs',
+              value: stats.activePrograms,
+              Icon: CheckCircle2,
+              gradient: 'from-green-50 to-emerald-100',
+              border: 'border-green-200',
+              iconBg: 'bg-green-500',
+              valueText: 'text-green-700',
+            },
+            {
+              label: 'Total Enrolled',
+              value: stats.totalEnrolled,
+              Icon: Users,
+              gradient: 'from-purple-50 to-fuchsia-100',
+              border: 'border-purple-200',
+              iconBg: 'bg-purple-500',
+              valueText: 'text-purple-700',
+            },
+            {
+              label: 'Avg Capacity',
+              value: stats.averageCapacity,
+              Icon: Gauge,
+              gradient: 'from-orange-50 to-amber-100',
+              border: 'border-orange-200',
+              iconBg: 'bg-orange-500',
+              valueText: 'text-orange-700',
+            },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-500">{s.label}</p>
-              <p className="text-2xl font-bold mt-1">{s.value}</p>
+            <div
+              key={s.label}
+              className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} border ${s.border} rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 min-h-[120px] flex flex-col justify-between`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-gray-600">{s.label}</p>
+                <div className={`w-10 h-10 ${s.iconBg} rounded-lg flex items-center justify-center shadow-sm shrink-0`}>
+                  <s.Icon className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <p className={`text-3xl font-bold ${s.valueText}`}>{s.value}</p>
             </div>
           ))}
         </div>
@@ -639,8 +695,8 @@ export default function ProgramCatalogPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {programs.map((p) => (
-                  <tr key={p._id} className="hover:bg-gray-50">
+                {programs.map((p, idx) => (
+                  <tr key={p._id || `program-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="font-medium">{p.name}</div>
                       {p.description && <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description}</div>}

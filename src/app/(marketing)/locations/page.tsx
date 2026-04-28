@@ -124,37 +124,41 @@ export default function LocationsPage() {
 
                                 {/* Content */}
                                 <div className="p-6 space-y-4">
-                                    {/* Phone */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                            <Phone className="w-5 h-5 text-primary" />
+                                    {/* Phone — only render when this branch publishes a contact number */}
+                                    {location.phone && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <Phone className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Phone</p>
+                                                <a id="marketing-locations-link"
+                                                    href={`tel:${location.phone}`}
+                                                    className="text-gray-900 font-semibold hover:text-primary"
+                                                >
+                                                    {location.phone}
+                                                </a>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Phone</p>
-                                            <a id="marketing-locations-link"
-                                                href={`tel:${location.phone}`}
-                                                className="text-gray-900 font-semibold hover:text-primary"
-                                            >
-                                                {location.phone}
-                                            </a>
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    {/* Email */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                            <Mail className="w-5 h-5 text-primary" />
+                                    {/* Email — only render when this branch publishes a contact email */}
+                                    {location.email && (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <Mail className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-600">Email</p>
+                                                <a id="marketing-locations-link-2"
+                                                    href={`mailto:${location.email}`}
+                                                    className="text-gray-900 font-semibold hover:text-primary"
+                                                >
+                                                    {location.email}
+                                                </a>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm text-gray-600">Email</p>
-                                            <a id="marketing-locations-link-2"
-                                                href={`mailto:${location.email}`}
-                                                className="text-gray-900 font-semibold hover:text-primary"
-                                            >
-                                                {location.email}
-                                            </a>
-                                        </div>
-                                    </div>
+                                    )}
 
                                     {/* Hours */}
                                     <div className="flex items-start gap-3">

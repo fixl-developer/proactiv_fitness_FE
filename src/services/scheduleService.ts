@@ -163,7 +163,7 @@ export class ScheduleService {
         limit?: number
     }): Promise<Schedule[]> {
         try {
-            const response = await apiClient.get<Schedule[]>('/schedules', { params })
+            const response: any = await apiClient.get('/schedules', { params })
             return response.data
         } catch (error: any) {
             console.error('Get schedules failed:', error)
@@ -177,7 +177,7 @@ export class ScheduleService {
      */
     static async getScheduleById(id: string): Promise<Schedule> {
         try {
-            const response = await apiClient.get<Schedule>(`/schedules/${id}`)
+            const response: any = await apiClient.get(`/schedules/${id}`)
             return response.data
         } catch (error: any) {
             console.error('Get schedule failed:', error)
@@ -191,7 +191,7 @@ export class ScheduleService {
      */
     static async createSchedule(data: CreateScheduleRequest): Promise<Schedule> {
         try {
-            const response = await apiClient.post<Schedule>('/schedules', data)
+            const response: any = await apiClient.post('/schedules', data)
             return response.data
         } catch (error: any) {
             console.error('Create schedule failed:', error)
@@ -205,7 +205,7 @@ export class ScheduleService {
      */
     static async updateSchedule(id: string, data: UpdateScheduleRequest): Promise<Schedule> {
         try {
-            const response = await apiClient.put<Schedule>(`/schedules/${id}`, data)
+            const response: any = await apiClient.put(`/schedules/${id}`, data)
             return response.data
         } catch (error: any) {
             console.error('Update schedule failed:', error)
@@ -232,7 +232,7 @@ export class ScheduleService {
      */
     static async publishSchedule(id: string): Promise<Schedule> {
         try {
-            const response = await apiClient.patch<Schedule>(`/schedules/${id}/publish`)
+            const response: any = await apiClient.patch(`/schedules/${id}/publish`)
             return response.data
         } catch (error: any) {
             console.error('Publish schedule failed:', error)
@@ -249,7 +249,7 @@ export class ScheduleService {
         endDate: string
     }): Promise<Session[]> {
         try {
-            const response = await apiClient.post<Session[]>(`/schedules/${id}/generate-sessions`, params)
+            const response: any = await apiClient.post(`/schedules/${id}/generate-sessions`, params)
             return response.data
         } catch (error: any) {
             console.error('Generate sessions failed:', error)
@@ -274,7 +274,7 @@ export class ScheduleService {
         limit?: number
     }): Promise<Session[]> {
         try {
-            const response = await apiClient.get<Session[]>('/sessions', { params })
+            const response: any = await apiClient.get('/sessions', { params })
             return response.data
         } catch (error: any) {
             console.error('Get sessions failed:', error)
@@ -288,7 +288,7 @@ export class ScheduleService {
      */
     static async getSessionById(id: string): Promise<Session> {
         try {
-            const response = await apiClient.get<Session>(`/sessions/${id}`)
+            const response: any = await apiClient.get(`/sessions/${id}`)
             return response.data
         } catch (error: any) {
             console.error('Get session failed:', error)
@@ -302,7 +302,7 @@ export class ScheduleService {
      */
     static async updateSession(id: string, data: Partial<Session>): Promise<Session> {
         try {
-            const response = await apiClient.put<Session>(`/sessions/${id}`, data)
+            const response: any = await apiClient.put(`/sessions/${id}`, data)
             return response.data
         } catch (error: any) {
             console.error('Update session failed:', error)
@@ -316,7 +316,7 @@ export class ScheduleService {
      */
     static async cancelSession(id: string, reason?: string): Promise<Session> {
         try {
-            const response = await apiClient.patch<Session>(`/sessions/${id}/cancel`, { reason })
+            const response: any = await apiClient.patch(`/sessions/${id}/cancel`, { reason })
             return response.data
         } catch (error: any) {
             console.error('Cancel session failed:', error)
@@ -333,7 +333,7 @@ export class ScheduleService {
         endDate: string
     }): Promise<AvailabilitySlot[]> {
         try {
-            const response = await apiClient.get<AvailabilitySlot[]>(
+            const response: any = await apiClient.get(
                 `/schedules/coach/${coachId}/availability`,
                 { params }
             )
@@ -359,7 +359,7 @@ export class ScheduleService {
         coachIds: string[]
     }): Promise<Conflict[]> {
         try {
-            const response = await apiClient.post<Conflict[]>('/schedules/check-conflicts', data)
+            const response: any = await apiClient.post('/schedules/check-conflicts', data)
             return response.data
         } catch (error: any) {
             console.error('Check conflicts failed:', error)
@@ -378,7 +378,7 @@ export class ScheduleService {
         notes?: string
     }): Promise<SubstituteRequest> {
         try {
-            const response = await apiClient.post<SubstituteRequest>('/schedules/substitute-request', data)
+            const response: any = await apiClient.post('/schedules/substitute-request', data)
             return response.data
         } catch (error: any) {
             console.error('Request substitute failed:', error)
@@ -398,7 +398,7 @@ export class ScheduleService {
         }
     ): Promise<SubstituteRequest> {
         try {
-            const response = await apiClient.patch<SubstituteRequest>(
+            const response: any = await apiClient.patch(
                 `/schedules/substitute-request/${id}`,
                 data
             )
@@ -417,7 +417,7 @@ export class ScheduleService {
         date: string
     }): Promise<AvailabilitySlot[]> {
         try {
-            const response = await apiClient.get<AvailabilitySlot[]>(
+            const response: any = await apiClient.get(
                 `/schedules/room/${roomId}/availability`,
                 { params }
             )
@@ -437,7 +437,7 @@ export class ScheduleService {
         updates: Partial<Session>
     }): Promise<Session[]> {
         try {
-            const response = await apiClient.patch<Session[]>('/sessions/bulk-update', data)
+            const response: any = await apiClient.patch('/sessions/bulk-update', data)
             return response.data
         } catch (error: any) {
             console.error('Bulk update sessions failed:', error)

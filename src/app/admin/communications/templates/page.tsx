@@ -7,17 +7,34 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { TemplateService } from '@/services/communicationsService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import {
+    validateRequired,
+    validateSelect,
+    validateTextArea,
+} from '@/utils/validation'
+
+// Backend `NotificationTemplate` model strict enums:
+//   type:   'EMAIL' | 'SMS' | 'PUSH' | 'IN_APP'   (UPPERCASE)
+//   status: 'published' | 'draft'
+const TYPES = ['EMAIL', 'SMS', 'PUSH', 'IN_APP']
+const STATUSES = ['draft', 'published']
+const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9_\- ]+$/
+const VARIABLE_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/
 
 interface Template {
     id: string
     name: string
-    type: 'email' | 'sms' | 'push'
-    subject: string
-    content: string
-    variables?: string
-    status: 'active' | 'inactive'
+    type: string
+    subject?: string
+    body?: string
+    content?: string
+    variables?: string[] | string
+    status: string
+    category?: string
     createdAt?: string
 }
+
+const formatTypeLabel = (t: string) => t.replace('_', ' ')
 
 export default function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([])
@@ -30,36 +47,28 @@ export default function TemplatesPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState<{
-        name: string
-        type: 'email' | 'sms' | 'push'
-        subject: string
-        content: string
-        variables: string
-        status: 'active' | 'inactive'
-    }>({
+    const [formData, setFormData] = useState({
         name: '',
-        type: 'email',
+        type: 'EMAIL',
         subject: '',
         content: '',
-        variables: '',
-        status: 'active',
+        variables: '', // comma-separated string of variable names
+        status: 'draft',
+        category: 'General',
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
 
-    const types = ['email', 'sms', 'push']
-    const statuses = ['active', 'inactive']
-
     const loadTemplates = async () => {
         try {
             setLoading(true)
-            const response = await TemplateService.getAll({
-                page: currentPage,
-                limit: 10,
-                search: searchTerm,
-            })
-            setTemplates(response.data || [])
+            const response: any = await TemplateService.getAll({ page: currentPage, limit: 10, search: searchTerm })
+            const items = (response.data || []).map((t: any) => ({
+                ...t,
+                id: t.id || t._id,
+                content: t.content || t.body,
+            }))
+            setTemplates(items)
             setTotalPages(response.pagination?.totalPages || 1)
         } catch (error) {
             console.error('Error loading templates:', error)
@@ -69,33 +78,46 @@ export default function TemplatesPage() {
         }
     }
 
-    useEffect(() => {
-        loadTemplates()
-    }, [currentPage, searchTerm])
+    useEffect(() => { loadTemplates() }, [currentPage, searchTerm])
 
     const validateFormData = () => {
-        const newErrors: Record<string, string> = {}
+        const e: Record<string, string> = {}
 
-        if (!formData.name) newErrors.name = 'Name is required'
-        else if (formData.name.length < 3) newErrors.name = 'Name must be at least 3 characters'
+        const nameErr = validateRequired(formData.name, 'Template name')
+        if (nameErr) e.name = nameErr
+        else if (formData.name.trim().length < 3) e.name = 'Template name must be at least 3 characters'
+        else if (!TEMPLATE_NAME_PATTERN.test(formData.name.trim())) {
+            e.name = 'Letters, digits, spaces, hyphens and underscores only'
+        }
 
-        if (!formData.type) newErrors.type = 'Type is required'
+        const typeErr = validateSelect(formData.type, 'Type')
+        if (typeErr) e.type = typeErr
 
-        if (!formData.subject) newErrors.subject = 'Subject is required'
-        else if (formData.subject.length < 5) newErrors.subject = 'Subject must be at least 5 characters'
+        // Subject is mandatory only for EMAIL templates
+        if (formData.type === 'EMAIL') {
+            const subjectErr = validateRequired(formData.subject, 'Subject')
+            if (subjectErr) e.subject = subjectErr
+            else if (formData.subject.trim().length < 5) e.subject = 'Subject must be at least 5 characters'
+        }
 
-        if (!formData.content) newErrors.content = 'Content is required'
-        else if (formData.content.length < 20) newErrors.content = 'Content must be at least 20 characters'
+        const contentErr = validateTextArea(formData.content, 'Content', 20, 5000)
+        if (contentErr) e.content = contentErr
 
-        if (!formData.status) newErrors.status = 'Status is required'
+        const statusErr = validateSelect(formData.status, 'Status')
+        if (statusErr) e.status = statusErr
 
-        setErrors(newErrors)
-        return Object.keys(newErrors).length === 0
+        if (formData.variables.trim()) {
+            const parts = formData.variables.split(',').map(s => s.trim()).filter(Boolean)
+            const bad = parts.find(p => !VARIABLE_NAME_PATTERN.test(p))
+            if (bad) e.variables = `"${bad}" is not a valid variable name (must start with a letter, then letters/digits/underscore)`
+        }
+
+        setErrors(e)
+        return Object.keys(e).length === 0
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
+    const handleSubmit = async (ev: React.FormEvent) => {
+        ev.preventDefault()
         if (!validateFormData()) {
             toast.error('Please fix the highlighted fields')
             return
@@ -103,10 +125,19 @@ export default function TemplatesPage() {
 
         try {
             setSubmitting(true)
+            const variables = formData.variables.trim()
+                ? formData.variables.split(',').map(s => s.trim()).filter(Boolean)
+                : []
 
             const submitData = {
-                ...formData,
-                variables: formData.variables ? JSON.parse(formData.variables) : undefined,
+                name: formData.name.trim(),
+                type: formData.type,
+                subject: formData.subject.trim(),
+                content: formData.content,
+                body: formData.content,    // backend column is `body`; sent for compatibility
+                variables,
+                status: formData.status,
+                category: formData.category || 'General',
             }
 
             if (editingId) {
@@ -128,16 +159,20 @@ export default function TemplatesPage() {
         }
     }
 
-    const handleEdit = (template: Template) => {
+    const handleEdit = (t: Template) => {
+        const vars = Array.isArray(t.variables)
+            ? t.variables.join(', ')
+            : (typeof t.variables === 'string' ? t.variables : '')
         setFormData({
-            name: template.name,
-            type: template.type,
-            subject: template.subject,
-            content: template.content,
-            variables: template.variables || '',
-            status: template.status,
+            name: t.name,
+            type: (t.type || 'EMAIL').toUpperCase(),
+            subject: t.subject || '',
+            content: t.content || t.body || '',
+            variables: vars,
+            status: ['published', 'draft'].includes(t.status) ? t.status : 'draft',
+            category: t.category || 'General',
         })
-        setEditingId(template.id)
+        setEditingId(t.id)
         setShowForm(true)
     }
 
@@ -155,34 +190,22 @@ export default function TemplatesPage() {
 
     const resetForm = () => {
         setFormData({
-            name: '',
-            type: 'email',
-            subject: '',
-            content: '',
-            variables: '',
-            status: 'active',
+            name: '', type: 'EMAIL', subject: '', content: '',
+            variables: '', status: 'draft', category: 'General',
         })
         setErrors({})
         setEditingId(null)
     }
 
-    const handleCloseDrawer = () => {
-        setShowForm(false)
-        resetForm()
-    }
+    const handleCloseDrawer = () => { setShowForm(false); resetForm() }
 
-    const getStatusColor = (status: string) => {
-        return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-    }
+    const getStatusColor = (s: string) =>
+        s === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
             <div className="max-w-7xl mx-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <FileText className="w-8 h-8 text-purple-600" />
                         <h1 className="text-4xl font-bold text-slate-900">Template Management</h1>
@@ -190,41 +213,21 @@ export default function TemplatesPage() {
                     <p className="text-slate-600">Create and manage notification templates</p>
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 flex gap-4 items-center"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
                     <div className="flex-1 relative">
                         <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search templates..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value)
-                                setCurrentPage(1)
-                            }}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
+                        <input type="text" placeholder="Search templates..."
+                            value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
                     </div>
-                    <button
-                        onClick={() => {
-                            resetForm()
-                            setShowForm(true)
-                        }}
-                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
-                    >
+                    <button onClick={() => { resetForm(); setShowForm(true) }}
+                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
                         <Plus className="w-5 h-5" />
                         Add Template
                     </button>
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-lg shadow-lg overflow-hidden"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
                     {loading ? (
                         <div className="p-8 text-center">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -249,32 +252,26 @@ export default function TemplatesPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {templates.map((template) => (
-                                            <tr key={template.id} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{template.name}</td>
+                                        {templates.map((t) => (
+                                            <tr key={t.id} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{t.name}</td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium uppercase">
-                                                        {template.type}
+                                                        {formatTypeLabel(t.type)}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{template.subject}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 truncate max-w-xs">{t.subject || '-'}</td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(template.status)}`}>
-                                                        {template.status}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(t.status)}`}>
+                                                        {t.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleEdit(template)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => handleEdit(t)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
                                                             <Pencil className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirm(template.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                                                        >
+                                                        <button onClick={() => setDeleteConfirm(t.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </div>
@@ -284,158 +281,100 @@ export default function TemplatesPage() {
                                     </tbody>
                                 </table>
                             </div>
-
                             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                                <p className="text-sm text-slate-600">
-                                    Page {currentPage} of {totalPages}
-                                </p>
+                                <p className="text-sm text-slate-600">Page {currentPage} of {totalPages}</p>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronLeft className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                                    >
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
+                                    <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronLeft className="w-5 h-5" /></button>
+                                    <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"><ChevronRight className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         </>
                     )}
                 </motion.div>
 
-                <SlideInDrawer
-                    isOpen={showForm}
-                    onClose={handleCloseDrawer}
-                    title={editingId ? 'Edit Template' : 'Add New Template'}
-                    size="lg"
-                >
+                <SlideInDrawer isOpen={showForm} onClose={handleCloseDrawer}
+                    title={editingId ? 'Edit Template' : 'Add New Template'} size="lg">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.name}
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Name <span className="text-red-500">*</span></label>
+                            <input type="text" value={formData.name} maxLength={80}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, name: e.target.value })
-                                    if (errors.name) setErrors({ ...errors, name: '' })
+                                    const v = e.target.value
+                                    if (v === '' || TEMPLATE_NAME_PATTERN.test(v)) {
+                                        setFormData({ ...formData, name: v })
+                                        if (errors.name) setErrors({ ...errors, name: '' })
+                                    }
                                 }}
-                                placeholder="Template name"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}
-                            />
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                                placeholder="e.g. Welcome Email"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
+                            {errors.name
+                                ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces, hyphens and underscores only</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Type <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={formData.type}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, type: e.target.value as any })
-                                    if (errors.type) setErrors({ ...errors, type: '' })
-                                }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}
-                            >
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Type <span className="text-red-500">*</span></label>
+                            <select value={formData.type}
+                                onChange={(e) => { setFormData({ ...formData, type: e.target.value }); if (errors.type) setErrors({ ...errors, type: '' }) }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.type ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}>
                                 <option value="">Select Type</option>
-                                {types.map((type) => (
-                                    <option key={type} value={type}>
-                                        {type.toUpperCase()}
-                                    </option>
-                                ))}
+                                {TYPES.map((t) => <option key={t} value={t}>{formatTypeLabel(t)}</option>)}
                             </select>
                             {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Subject <span className="text-red-500">*</span>
+                                Subject {formData.type === 'EMAIL' && <span className="text-red-500">*</span>}
+                                {formData.type !== 'EMAIL' && <span className="text-slate-500 text-xs"> (Optional)</span>}
                             </label>
-                            <input
-                                type="text"
-                                value={formData.subject}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, subject: e.target.value })
-                                    if (errors.subject) setErrors({ ...errors, subject: '' })
-                                }}
-                                placeholder="Template subject"
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}
-                            />
+                            <input type="text" value={formData.subject} maxLength={200}
+                                onChange={(e) => { setFormData({ ...formData, subject: e.target.value }); if (errors.subject) setErrors({ ...errors, subject: '' }) }}
+                                placeholder="Email subject line or title"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
                             {errors.subject && <p className="mt-1 text-sm text-red-600">{errors.subject}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Content <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                value={formData.content}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, content: e.target.value })
-                                    if (errors.content) setErrors({ ...errors, content: '' })
-                                }}
-                                placeholder="Template content"
-                                rows={5}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.content ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}
-                            />
-                            {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Content <span className="text-red-500">*</span></label>
+                            <textarea value={formData.content} rows={6} maxLength={5000}
+                                onChange={(e) => { setFormData({ ...formData, content: e.target.value }); if (errors.content) setErrors({ ...errors, content: '' }) }}
+                                placeholder="Template body. Use {{variable}} for substitutions."
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.content ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
+                            {errors.content
+                                ? <p className="mt-1 text-sm text-red-600">{errors.content}</p>
+                                : <p className="mt-1 text-xs text-slate-500">{formData.content.length}/5000 — minimum 20 characters</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">Variables (JSON - Optional)</label>
-                            <textarea
-                                value={formData.variables}
-                                onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
-                                placeholder='{"name": "string", "email": "string"}'
-                                rows={3}
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-                            />
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Variables (Optional)</label>
+                            <input type="text" value={formData.variables}
+                                onChange={(e) => { setFormData({ ...formData, variables: e.target.value }); if (errors.variables) setErrors({ ...errors, variables: '' }) }}
+                                placeholder="e.g. firstName, lastName, bookingId"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${errors.variables ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
+                            {errors.variables
+                                ? <p className="mt-1 text-sm text-red-600">{errors.variables}</p>
+                                : <p className="mt-1 text-xs text-slate-500">Comma-separated names. Each must start with a letter (letters, digits, underscore allowed).</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-900 mb-2">
-                                Status <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={formData.status}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, status: e.target.value as any })
-                                    if (errors.status) setErrors({ ...errors, status: '' })
-                                }}
-                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}
-                            >
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Status <span className="text-red-500">*</span></label>
+                            <select value={formData.status}
+                                onChange={(e) => { setFormData({ ...formData, status: e.target.value }); if (errors.status) setErrors({ ...errors, status: '' }) }}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`}>
                                 <option value="">Select Status</option>
-                                {statuses.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                                    </option>
-                                ))}
+                                {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                             </select>
                             {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
                         </div>
 
                         <div className="flex gap-3 pt-6 border-t border-slate-200">
-                            <button
-                                type="button"
-                                onClick={handleCloseDrawer}
-                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
-                            >
+                            <button type="button" onClick={handleCloseDrawer}
+                                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                            <button type="submit" disabled={submitting}
+                                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition">
                                 {submitting ? 'Saving...' : editingId ? 'Update Template' : 'Create Template'}
                             </button>
                         </div>
@@ -444,26 +383,14 @@ export default function TemplatesPage() {
 
                 {deleteConfirm && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white rounded-lg p-6 max-w-sm"
-                        >
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
                             <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Template?</h3>
                             <p className="text-slate-600 mb-6">This action cannot be undone.</p>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setDeleteConfirm(null)}
-                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                                >
-                                    Delete
-                                </button>
+                                <button onClick={() => setDeleteConfirm(null)}
+                                    className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">Cancel</button>
+                                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>
                             </div>
                         </motion.div>
                     </div>

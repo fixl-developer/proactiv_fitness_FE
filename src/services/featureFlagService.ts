@@ -78,7 +78,7 @@ export class FeatureFlagService {
         search?: string
     }): Promise<FeatureFlag[]> {
         try {
-            const response = await apiClient.get<FeatureFlag[]>('/feature-flags', { params })
+            const response: any = await apiClient.get('/feature-flags', { params })
             return response.data
         } catch (error: any) {
             console.error('Get feature flags failed:', error)
@@ -92,7 +92,7 @@ export class FeatureFlagService {
      */
     static async getFeatureFlagByKey(key: string): Promise<FeatureFlag> {
         try {
-            const response = await apiClient.get<FeatureFlag>(`/feature-flags/${key}`)
+            const response: any = await apiClient.get(`/feature-flags/${key}`)
             return response.data
         } catch (error: any) {
             console.error('Get feature flag failed:', error)
@@ -106,7 +106,7 @@ export class FeatureFlagService {
      */
     static async createFeatureFlag(data: CreateFeatureFlagRequest): Promise<FeatureFlag> {
         try {
-            const response = await apiClient.post<FeatureFlag>('/feature-flags', data)
+            const response: any = await apiClient.post('/feature-flags', data)
             return response.data
         } catch (error: any) {
             console.error('Create feature flag failed:', error)
@@ -120,7 +120,7 @@ export class FeatureFlagService {
      */
     static async updateFeatureFlag(key: string, data: UpdateFeatureFlagRequest): Promise<FeatureFlag> {
         try {
-            const response = await apiClient.put<FeatureFlag>(`/feature-flags/${key}`, data)
+            const response: any = await apiClient.put(`/feature-flags/${key}`, data)
             return response.data
         } catch (error: any) {
             console.error('Update feature flag failed:', error)
@@ -147,7 +147,7 @@ export class FeatureFlagService {
      */
     static async checkFeatureFlag(key: string): Promise<boolean> {
         try {
-            const response = await apiClient.get<FeatureFlagCheckResponse>(`/feature-flags/check/${key}`)
+            const response: any = await apiClient.get(`/feature-flags/check/${key}`)
             return response.data.isEnabled
         } catch (error: any) {
             console.error('Check feature flag failed:', error)

@@ -107,7 +107,7 @@ export function RegisterStep5({
 
     const handleFormSubmit = (data: RegisterStep5Data) => {
         const errs: Record<string, string> = {};
-        data.guardians.forEach((guardian, index) => {
+        (data.guardians ?? []).forEach((guardian, index) => {
             const fnErr = validateName(guardian.firstName, 'First name');
             if (fnErr) errs[`guardians.${index}.firstName`] = fnErr;
             const lnErr = validateName(guardian.lastName, 'Last name');

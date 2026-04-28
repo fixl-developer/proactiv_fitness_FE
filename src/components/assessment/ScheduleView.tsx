@@ -25,7 +25,7 @@ interface Assessment {
 }
 
 interface ScheduleViewProps {
-    assessments: Assessment[]
+    assessments?: Assessment[]
     onBookAssessment: (assessmentId: string) => void
 }
 

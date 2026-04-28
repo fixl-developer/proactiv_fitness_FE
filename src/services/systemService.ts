@@ -258,27 +258,101 @@ export const FeatureFlagsService = {
 
 // =============================================
 // INTEGRATION GATEWAY SERVICE
+//
+// Backend `Integration` model expects a nested shape:
+//   { integrationType, provider, name, description?, config: { environment, apiKey?, apiSecret?, webhookUrl? } }
+// The admin Integration Gateway page uses a simpler flat shape:
+//   { name, type, url, apiKey, status }
+// These mappers translate between the two so the form stays simple while the
+// backend stores the canonical shape that other consumers depend on.
+// Identifier note: backend writes/reads by `integrationId` (UUID), not Mongo
+// `_id`; mapped → `id` so the frontend never has to know the difference.
 // =============================================
+
+const FRONT_TYPE_TO_BACK: Record<string, string> = {
+    payment: 'payment_gateway',
+    email: 'email_sms',
+    sms: 'email_sms',
+    analytics: 'third_party_api',
+    webhook: 'third_party_api',
+    api: 'third_party_api',
+    service: 'third_party_api',
+}
+const BACK_TYPE_TO_FRONT: Record<string, Integration['type']> = {
+    payment_gateway: 'payment',
+    email_sms: 'email',
+    third_party_api: 'api',
+    accounting: 'service',
+    calendar: 'service',
+    access_control: 'service',
+}
+
+function mapIntegrationToBackend(data: Partial<Integration>): any {
+    const payload: any = {}
+    if (data.name !== undefined) payload.name = data.name
+    if (data.type !== undefined) {
+        payload.integrationType = FRONT_TYPE_TO_BACK[data.type as string] || 'third_party_api'
+        payload.provider = data.type
+    }
+    if (data.status !== undefined) payload.status = data.status
+    if (data.url !== undefined || data.apiKey !== undefined) {
+        payload.config = {
+            environment: 'sandbox',
+            apiKey: data.apiKey,
+            webhookUrl: data.url,
+        }
+    }
+    return payload
+}
+
+function mapIntegrationFromBackend(item: any): Integration {
+    if (!item || typeof item !== 'object') return item
+    return {
+        id: String(item.integrationId || item._id || item.id),
+        name: item.name,
+        type: BACK_TYPE_TO_FRONT[item.integrationType] || (item.integrationType as Integration['type']) || 'api',
+        url: item.config?.webhookUrl || '',
+        apiKey: item.config?.apiKey || '',
+        status: item.status || 'pending',
+        lastSync: item.healthCheck?.lastChecked,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+    }
+}
 
 export const IntegrationGatewayService = {
     getAll: async (params?: { page?: number; limit?: number; search?: string; type?: string; status?: string }): Promise<ListResponse<Integration>> => {
         const body = await apiClient.get('/integration-gateway/integrations', { params })
-        return unwrapListResponse<Integration>(body, params)
+        const payload = body?.data !== undefined ? body.data : body
+        const items: any[] = Array.isArray(payload) ? payload : (payload?.items || payload?.data || [])
+        const search = (params?.search || '').toLowerCase()
+        const filtered = search
+            ? items.filter(i => `${i.name || ''} ${i.provider || ''}`.toLowerCase().includes(search))
+            : items
+        const mapped = filtered.map(mapIntegrationFromBackend)
+        const page = params?.page || 1
+        const limit = params?.limit || 10
+        const total = mapped.length
+        const start = (page - 1) * limit
+        return {
+            data: mapped.slice(start, start + limit),
+            pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+        }
     },
 
     getById: async (id: string): Promise<Integration> => {
         const body = await apiClient.get(`/integration-gateway/integrations/${id}`)
-        return unwrapItemResponse<Integration>(body)
+        return mapIntegrationFromBackend(body?.data ?? body)
     },
 
     create: async (data: Partial<Integration>): Promise<Integration> => {
-        const body = await apiClient.post('/integration-gateway/integrations', data)
-        return unwrapItemResponse<Integration>(body)
+        const body = await apiClient.post('/integration-gateway/integrations', mapIntegrationToBackend(data))
+        return mapIntegrationFromBackend(body?.data ?? body)
     },
 
     update: async (id: string, data: Partial<Integration>): Promise<Integration> => {
-        const body = await apiClient.put(`/integration-gateway/integrations/${id}`, data)
-        return unwrapItemResponse<Integration>(body)
+        const body = await apiClient.put(`/integration-gateway/integrations/${id}`, mapIntegrationToBackend(data))
+        return mapIntegrationFromBackend(body?.data ?? body)
     },
 
     delete: async (id: string): Promise<void> => {

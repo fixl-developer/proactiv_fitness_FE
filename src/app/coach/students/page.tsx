@@ -710,7 +710,7 @@ const CoachStudentsPage = () => {
                                                     </div>
                                                     {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).length > 0 ? (
                                                         <ul className="space-y-1">
-                                                            {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).map((rec: string, i: number) => (
+                                                            {(aiAnalysis.get(student.id)?.recommendations || aiAnalysis.get(student.id)?.data?.recommendations || []).map((rec: any, i: number) => (
                                                                 <li key={i} className="text-xs text-purple-700 flex items-start gap-1.5">
                                                                     <Target className="w-3 h-3 mt-0.5 flex-shrink-0 text-purple-500" />
                                                                     {typeof rec === 'string' ? rec : rec?.message || rec?.description || rec?.title || formatAIResponse(rec)}

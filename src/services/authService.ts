@@ -85,7 +85,7 @@ export class AuthService {
      */
     static async login(credentials: LoginRequest): Promise<AuthResponse> {
         try {
-            const response = await apiClient.post<AuthResponse>('/auth/login', credentials)
+            const response: any = await apiClient.post('/auth/login', credentials)
 
             // Store tokens in localStorage
             if (response.success && response.data) {
@@ -105,7 +105,7 @@ export class AuthService {
      */
     static async register(userData: RegisterRequest): Promise<AuthResponse> {
         try {
-            const response = await apiClient.post<AuthResponse>('/auth/register', userData)
+            const response: any = await apiClient.post('/auth/register', userData)
 
             // Store tokens in localStorage
             if (response.success && response.data) {
@@ -125,7 +125,7 @@ export class AuthService {
      */
     static async getCurrentUser(): Promise<User> {
         try {
-            const response = await apiClient.get<User>('/auth/me')
+            const response: any = await apiClient.get('/auth/me')
             return response.data
         } catch (error: any) {
             console.error('Get current user failed:', error)
@@ -154,7 +154,7 @@ export class AuthService {
      */
     static async refreshToken(refreshToken: string): Promise<AuthTokens> {
         try {
-            const response = await apiClient.post<AuthTokens>('/auth/refresh-token', {
+            const response: any = await apiClient.post('/auth/refresh-token', {
                 refreshToken
             })
 

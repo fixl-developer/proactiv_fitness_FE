@@ -47,8 +47,8 @@ export function validateName(value: string, fieldLabel = 'Name'): string | null 
   return null
 }
 
-export function validateEmail(value: string): string | null {
-  if (!value || !value.trim()) return 'Email is required'
+export function validateEmail(value: string, required = true): string | null {
+  if (!value || !value.trim()) return required ? 'Email is required' : null
   if (!PATTERNS.emailFormat.test(value.trim())) return 'Please enter a valid email address (e.g. user@example.com)'
   return null
 }
@@ -58,6 +58,25 @@ export function validatePhone(value: string, required = true): string | null {
   const digits = value.replace(/\D/g, '')
   if (digits.length < 7 || digits.length > 15) return 'Phone number must be 7-15 digits'
   if (!PATTERNS.phoneDigits.test(value.trim())) return 'Please enter a valid phone number (digits, +, -, spaces only)'
+  return null
+}
+
+export function validatePhoneWithCountry(value: string, requiredDigits: number, required = true): string | null {
+  if (!value || !value.trim()) return required ? 'Phone number is required' : null
+
+  // Extract digits only
+  const digits = value.replace(/\D/g, '')
+
+  // Check if digit count matches required
+  if (digits.length !== requiredDigits) {
+    return `Phone number must have exactly ${requiredDigits} digits (currently ${digits.length})`
+  }
+
+  // Check format
+  if (!PATTERNS.phoneDigits.test(value.trim())) {
+    return 'Please enter a valid phone number (digits, +, -, spaces only)'
+  }
+
   return null
 }
 

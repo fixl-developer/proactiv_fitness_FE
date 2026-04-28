@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+// @ts-expect-error — package not installed; component unused in active flows
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"

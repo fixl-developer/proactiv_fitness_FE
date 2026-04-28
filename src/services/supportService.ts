@@ -106,7 +106,8 @@ export const SupportTicketService = {
 
 export const KnowledgeBaseService = {
     // Get all knowledge base articles — returns the full body { success, data, pagination }
-    getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+    // Pass `status: 'all'` for the admin list (so drafts are visible, not just published).
+    getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string; category?: string }) => {
         try {
             const body = await apiClient.get('/support/knowledge', { params })
             return body

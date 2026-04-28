@@ -122,6 +122,7 @@ export interface PartyPackageData {
     notIncluded: string[]
     price: string
     image: string
+    popular?: boolean
 }
 
 export interface ProgramLevelData {
@@ -230,6 +231,83 @@ export interface FAQItemData {
     category: string
 }
 
+// =============================================
+// Header Navigation
+// =============================================
+export interface NavMenuItemData {
+    id?: string
+    label: string
+    href: string
+    parentLabel: string
+    order: number
+    isActive: boolean
+    icon?: string
+}
+
+export interface NavMenuTreeItem {
+    label: string
+    href: string
+    order: number
+    dropdown?: Array<{ label: string; href: string }>
+}
+
+// =============================================
+// Page Content (per-slug singleton)
+// =============================================
+export interface PageContentHero {
+    title: string
+    subtitle: string
+    backgroundImage: string
+    fallbackGradient: string
+    ctaText: string
+    ctaLink: string
+    height: 'small' | 'medium' | 'large' | 'xlarge'
+}
+
+export interface PageContentSection {
+    key: string
+    title: string
+    subtitle: string
+    body: string
+    image: string
+    items: any[]
+    order: number
+    isActive: boolean
+}
+
+export interface PageContentData {
+    id?: string
+    slug: string
+    name: string
+    hero: PageContentHero
+    sections: PageContentSection[]
+    seo: {
+        metaTitle: string
+        metaDescription: string
+        keywords: string[]
+    }
+    isActive: boolean
+}
+
+// =============================================
+// Team Member
+// =============================================
+export interface TeamMemberData {
+    id: string
+    name: string
+    role: string
+    bio: string
+    image: string
+    fallbackGradient: string
+    specialization: string
+    experience: string
+    qualifications: string[]
+    socialLinks: Array<{ platform: string; url: string }>
+    location: string
+    order: number
+    isActive: boolean
+}
+
 export interface LandingPageData {
     heroSlides: HeroSlide[]
     stats: SiteStat[]
@@ -238,6 +316,7 @@ export interface LandingPageData {
     partners: ClientPartnerData[]
     about: AboutContentData | null
     aiFeatures: AIFeatureData[]
+    navMenu: NavMenuTreeItem[]
 }
 
 // =============================================
@@ -348,6 +427,25 @@ class CMSPublicService {
 
     async getFAQs(category?: string): Promise<FAQItemData[]> {
         const response = await apiClient.get<any>(`${this.baseUrl}/faqs`, { params: { category } })
+        return response.data || []
+    }
+
+    async getNavMenu(): Promise<NavMenuTreeItem[]> {
+        const response = await apiClient.get<any>(`${this.baseUrl}/nav-menu`)
+        return response.data || []
+    }
+
+    async getPageContent(slug: string): Promise<PageContentData | null> {
+        try {
+            const response = await apiClient.get<any>(`${this.baseUrl}/page/${slug}`)
+            return response.data
+        } catch {
+            return null
+        }
+    }
+
+    async getTeamMembers(): Promise<TeamMemberData[]> {
+        const response = await apiClient.get<any>(`${this.baseUrl}/team`)
         return response.data || []
     }
 }
@@ -505,6 +603,37 @@ class CMSAdminServiceClass {
         delete: (id: string) => this._delete('faqs', id),
     }
 
+    navMenuItems = {
+        getAll: (params?: any) => this._getAll('nav-menu', params),
+        getById: (id: string) => this._getById('nav-menu', id),
+        create: (data: any) => this._create('nav-menu', data),
+        update: (id: string, data: any) => this._update('nav-menu', id, data),
+        delete: (id: string) => this._delete('nav-menu', id),
+    }
+
+    teamMembers = {
+        getAll: (params?: any) => this._getAll('team', params),
+        getById: (id: string) => this._getById('team', id),
+        create: (data: any) => this._create('team', data),
+        update: (id: string, data: any) => this._update('team', id, data),
+        delete: (id: string) => this._delete('team', id),
+    }
+
+    pageContents = {
+        list: async () => {
+            const response = await apiClient.get<any>(`${this.baseUrl}/pages`)
+            return response.data || []
+        },
+        get: async (slug: string) => {
+            const response = await apiClient.get<any>(`${this.baseUrl}/page/${slug}`)
+            return response.data
+        },
+        upsert: async (slug: string, data: any) => {
+            const response = await apiClient.put<any>(`${this.baseUrl}/page/${slug}`, data)
+            return response.data
+        },
+    }
+
     about = {
         get: async () => {
             const response = await apiClient.get<any>(`${this.baseUrl}/about`)
@@ -536,6 +665,11 @@ class CMSAdminServiceClass {
     // Reset all data and re-seed with defaults
     async resetAndSeedData(): Promise<{ cleared: string[]; seeded: string[]; skipped: string[] }> {
         const response = await apiClient.post<any>(`${this.baseUrl}/reset-and-seed`)
+        return response.data
+    }
+
+    async reseedPagesAndLocations(): Promise<{ pageContents: string[]; locations: string[] }> {
+        const response = await apiClient.post<any>(`${this.baseUrl}/reseed-pages-and-locations`)
         return response.data
     }
 }

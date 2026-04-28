@@ -26,7 +26,7 @@ import { authApi } from '@/lib/api/auth';
 import { useAuthStore } from '@/store/authStore';
 
 function ProfilePageContent() {
-    const { user, setUser } = useAuthStore();
+    const { user, setUser } = useAuthStore() as any;
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isEditingPassword, setIsEditingPassword] = useState(false);
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);

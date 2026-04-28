@@ -9,6 +9,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { getRandomImage } from '@/utils/imageUtils'
 import { useCMSData } from '@/hooks/useCMSData'
+import { usePageHero } from '@/hooks/usePageHero'
 import { CMSService, PartyPackageData, FAQItemData } from '@/services/cmsService'
 
 const staticPackages = [
@@ -128,6 +129,16 @@ const BirthdayPartiesPage = () => {
         ? dynamicFAQs.map(f => ({ question: f.question, answer: f.answer }))
         : staticFAQs
 
+    const { hero } = usePageHero('parties', {
+        title: 'Gymnastics Birthday Parties',
+        subtitle: "Make your child's birthday unforgettable with our action-packed gymnastics parties",
+        backgroundImage: '/images/pages/birthday-parties-hero.jpg',
+        fallbackGradient: 'from-pink-500 to-purple-600',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
+
     const addOns = [
         {
             id: 'photography',
@@ -154,12 +165,12 @@ const BirthdayPartiesPage = () => {
             <Header />
             <main className="min-h-screen bg-gray-50">
                 {/* Hero Section */}
-                <section className="relative h-96 bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                <section className={`relative h-96 bg-gradient-to-r ${hero.fallbackGradient} flex items-center justify-center overflow-hidden`}>
                     {/* Background Image */}
                     <div className="absolute inset-0">
                         <Image
-                            src="/images/pages/birthday-parties-hero.jpg"
-                            alt="Birthday Parties"
+                            src={hero.backgroundImage}
+                            alt={hero.title}
                             fill
                             className="object-cover opacity-40"
                             onError={(e) => e.currentTarget.style.display = 'none'}
@@ -172,7 +183,7 @@ const BirthdayPartiesPage = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="text-4xl md:text-5xl font-bold mb-4"
                         >
-                            Gymnastics Birthday Parties
+                            {hero.title}
                         </motion.h1>
                         <motion.p
                             initial={{ opacity: 0, y: 30 }}
@@ -180,7 +191,7 @@ const BirthdayPartiesPage = () => {
                             transition={{ delay: 0.2 }}
                             className="text-xl max-w-2xl mx-auto"
                         >
-                            Make your child's birthday unforgettable with our action-packed gymnastics parties
+                            {hero.subtitle}
                         </motion.p>
                     </div>
                 </section>

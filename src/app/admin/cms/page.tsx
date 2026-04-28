@@ -7,10 +7,30 @@ import {
     Image, Star, Layers, MessageSquare, Users, Info, Zap,
     ClipboardList, BookOpen, PartyPopper, GraduationCap, Tent,
     MapPin, FileText, Briefcase, Phone, HelpCircle, BarChart3,
-    Database, RefreshCw, Loader2, CheckCircle, AlertTriangle
+    Database, RefreshCw, Loader2, CheckCircle, AlertTriangle,
+    Menu as MenuIcon, Globe, Shield, Calendar, UserCheck, Mountain, Users2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
+
+// Header navigation pages — names match exactly what admins see in the public site header
+// so there's no confusion when locating a page to edit.
+const headerPageModules = [
+    { title: 'Header Navigation', description: 'Manage the items shown in the top header (ProGym Locations, About Us dropdown, etc.)', icon: MenuIcon, href: '/admin/cms/header-navigation', color: 'from-slate-600 to-gray-800', group: 'header' },
+    { title: 'Cyberport', description: 'Edit the Cyberport location page hero & SEO', icon: MapPin, href: '/admin/cms/pages/cyberport', color: 'from-blue-500 to-cyan-500', group: 'header' },
+    { title: 'Wan Chai', description: 'Edit the Wan Chai location page hero & SEO', icon: MapPin, href: '/admin/cms/pages/wan-chai', color: 'from-emerald-500 to-teal-500', group: 'header' },
+    { title: 'School Gymnastics', description: 'Edit the School Gymnastics page hero & SEO', icon: GraduationCap, href: '/admin/cms/pages/school-gymnastics', color: 'from-blue-600 to-purple-600', group: 'header' },
+    { title: 'Gymnastics Camps', description: 'Edit the Gymnastics Camps page hero & SEO', icon: Tent, href: '/admin/cms/pages/gymnastics-camps', color: 'from-orange-500 to-red-500', group: 'header' },
+    { title: 'Multi-Activity Camps', description: 'Edit the Multi-Activity Camps page hero & SEO', icon: Mountain, href: '/admin/cms/pages/multi-activity-camps', color: 'from-purple-500 to-pink-500', group: 'header' },
+    { title: 'Shenzhen Competitive', description: 'Edit the Shenzhen Competitive page hero & SEO', icon: Shield, href: '/admin/cms/pages/shenzhen-competitive', color: 'from-rose-600 to-red-700', group: 'header' },
+    { title: 'Parties', description: 'Edit the Birthday Parties page hero & SEO', icon: PartyPopper, href: '/admin/cms/pages/parties', color: 'from-pink-500 to-rose-500', group: 'header' },
+    { title: 'About', description: 'Edit the About page hero & SEO', icon: Info, href: '/admin/cms/pages/about', color: 'from-sky-600 to-blue-700', group: 'header' },
+    { title: 'Careers', description: 'Edit the Careers page hero & SEO', icon: Briefcase, href: '/admin/cms/pages/careers', color: 'from-gray-700 to-gray-900', group: 'header' },
+    { title: 'Team', description: 'Edit the Team page hero & SEO', icon: Users2, href: '/admin/cms/pages/team', color: 'from-indigo-600 to-purple-700', group: 'header' },
+    { title: 'Blog', description: 'Edit the Blog page hero & SEO', icon: FileText, href: '/admin/cms/pages/blog', color: 'from-cyan-600 to-blue-700', group: 'header' },
+    { title: 'Terms & Conditions', description: 'Edit the Terms & Conditions page hero & content', icon: FileText, href: '/admin/cms/pages/terms', color: 'from-slate-600 to-slate-900', group: 'header' },
+    { title: 'Contact Us', description: 'Edit the Contact page hero & SEO', icon: Phone, href: '/admin/cms/pages/contact', color: 'from-emerald-600 to-green-700', group: 'header' },
+]
 
 const cmsModules = [
     {
@@ -148,6 +168,14 @@ const cmsModules = [
         href: '/admin/cms/faqs',
         color: 'from-yellow-500 to-amber-500',
         count: 'FAQs'
+    },
+    {
+        title: 'Team Members',
+        description: 'Manage coach profiles shown on the public Team page',
+        icon: Users2,
+        href: '/admin/cms/team',
+        color: 'from-indigo-500 to-purple-500',
+        count: 'Members'
     },
 ]
 
@@ -292,34 +320,82 @@ export default function AdminCMSPage() {
                 </motion.div>
             )}
 
-            {/* Module Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cmsModules.map((module, index) => (
-                    <motion.div
-                        key={module.href}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                    >
-                        <Link href={module.href}>
-                            <div className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-300 h-full">
-                                <div className="flex items-start gap-4">
-                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
-                                        <module.icon className="w-6 h-6 text-white" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                                            {module.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                                            {module.description}
-                                        </p>
+            {/* Header Navigation Pages — exact names matching the public site header */}
+            <div className="space-y-4">
+                <div className="flex items-baseline justify-between border-b border-gray-200 pb-2">
+                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-blue-600" />
+                        Header Navigation Pages
+                    </h2>
+                    <span className="text-xs text-gray-500">Same names as the public website header</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {headerPageModules.map((module, index) => (
+                        <motion.div
+                            key={module.href}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                        >
+                            <Link href={module.href}>
+                                <div className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-300 h-full">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                                            <module.icon className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                {module.title}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                                {module.description}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Link>
-                    </motion.div>
-                ))}
+                            </Link>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Other CMS Sections */}
+            <div className="space-y-4">
+                <div className="flex items-baseline justify-between border-b border-gray-200 pb-2">
+                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <Layers className="w-5 h-5 text-purple-600" />
+                        Other CMS Sections
+                    </h2>
+                    <span className="text-xs text-gray-500">Reusable content collections</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {cmsModules.map((module, index) => (
+                        <motion.div
+                            key={module.href}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                        >
+                            <Link href={module.href}>
+                                <div className="group bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-300 h-full">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${module.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
+                                            <module.icon className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                                {module.title}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                                {module.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+                        </motion.div>
+                    ))}
+                </div>
             </div>
         </div>
     )

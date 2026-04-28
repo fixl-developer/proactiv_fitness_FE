@@ -293,7 +293,7 @@ const AdminScheduleManager: React.FC<AdminScheduleManagerProps> = ({
                         <Upload className="w-4 h-4 mr-2" />
                         Import
                     </Button>
-                    <Button id={`btn-set-show-create-modal-components-admin-ScheduleManager-${i}`} size="sm" onClick={() => setShowCreateModal(true)}>
+                    <Button id="btn-set-show-create-modal-components-admin-ScheduleManager" size="sm" onClick={() => setShowCreateModal(true)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Add Schedule
                     </Button>
