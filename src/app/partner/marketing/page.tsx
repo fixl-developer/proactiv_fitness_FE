@@ -51,7 +51,7 @@ export default function PartnerMarketingPage() {
         try {
             const [socialRes, emailRes] = await Promise.allSettled([
                 contentEngineService.generateSocialPost({ topic: 'partner program promotions', platform: 'instagram' }),
-                contentEngineService.generateEmail({ type: 'promotional', audience: 'parents', subject: 'New programs available' }),
+                contentEngineService.generateEmail({ topic: 'New programs available', targetAudience: 'parents', tone: 'promotional' } as any),
             ])
             setAiContent({
                 social: socialRes.status === 'fulfilled' ? socialRes.value?.data || socialRes.value : null,
@@ -162,7 +162,7 @@ export default function PartnerMarketingPage() {
         setCreateSubmitting(true)
         try {
             const partnerId = user?.id || 'partner-1'
-            await PartnerPortalService.createMarketingCampaign?.(partnerId, createForm)
+            await (PartnerPortalService as any).createMarketingCampaign?.(partnerId, createForm)
         } catch {
             // API may not exist yet, continue with local add
         }

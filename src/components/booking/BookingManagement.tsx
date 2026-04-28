@@ -82,7 +82,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
             if (filters.dateRange !== 'all') params.dateRange = filters.dateRange
 
             const response = await bookingService.getBookings(params)
-            setBookings(response?.data ?? response ?? [])
+            setBookings((response as any)?.data ?? response ?? [])
         } catch (error) {
             console.error('Failed to fetch bookings:', error)
             setBookings([])

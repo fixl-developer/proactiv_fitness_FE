@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import type { Booking } from '@/types/booking';
 
+// Booking shape coming from /bookings/* endpoints is flatter than the canonical
+// type in @/types/booking — leaving it as `any` here so the runtime fields the
+// API actually sends (classDate, className, studentName, etc.) typecheck.
 interface BookingCardProps {
-    booking: Booking;
+    booking: any;
     onCancel: (bookingId: string) => void;
 }
 

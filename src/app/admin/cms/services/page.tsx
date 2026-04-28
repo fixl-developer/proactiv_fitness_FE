@@ -13,9 +13,9 @@ export default function ServicesPage() {
                 { name: 'image', label: 'Image', type: 'image', required: true, showInTable: true },
                 { name: 'emoji', label: 'Emoji', type: 'text', maxLength: 4 },
                 { name: 'features', label: 'Features', type: 'array', helpText: 'Add one feature per row' },
-                { name: 'href', label: 'Link URL', type: 'text', required: true, showInTable: true, placeholder: '/programs or https://...', helpText: 'Internal path (starts with /) or full URL' },
+                { name: 'href', label: 'Link URL', type: 'url', required: true, showInTable: true, placeholder: '/programs or https://...', helpText: 'Internal path (starts with /) or full URL' },
                 { name: 'color', label: 'Color', type: 'text' },
-                { name: 'gradient', label: 'Gradient', type: 'text' },
+                { name: 'gradient', label: 'Gradient', type: 'gradient', gradientFormat: 'colors-only', helpText: 'Pick a preset palette or use Advanced for custom Tailwind classes.' },
                 { name: 'order', label: 'Display Order', type: 'number', min: 0, max: 999, showInTable: true },
                 { name: 'isActive', label: 'Active', type: 'boolean' },
             ]}

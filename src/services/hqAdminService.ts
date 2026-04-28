@@ -128,7 +128,7 @@ export class HQAdminService {
             if (role) params.append('role', role)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<SystemUser>>(
+            const response: any = await apiClient.get(
                 `/admin/hq/users?${params.toString()}`
             )
             return response?.data || response
@@ -144,7 +144,7 @@ export class HQAdminService {
      */
     static async getUser(userId: string): Promise<SystemUser> {
         try {
-            const response = await apiClient.get<SystemUser>(`/admin/hq/users/${userId}`)
+            const response: any = await apiClient.get(`/admin/hq/users/${userId}`)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch user:', error)
@@ -158,7 +158,7 @@ export class HQAdminService {
      */
     static async createUser(userData: Partial<SystemUser>): Promise<SystemUser> {
         try {
-            const response = await apiClient.post<SystemUser>('/admin/hq/users', userData)
+            const response: any = await apiClient.post('/admin/hq/users', userData)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to create user:', error)
@@ -172,7 +172,7 @@ export class HQAdminService {
      */
     static async updateUser(userId: string, userData: Partial<SystemUser>): Promise<SystemUser> {
         try {
-            const response = await apiClient.put<SystemUser>(`/admin/hq/users/${userId}`, userData)
+            const response: any = await apiClient.put(`/admin/hq/users/${userId}`, userData)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to update user:', error)
@@ -210,7 +210,7 @@ export class HQAdminService {
             if (search) params.append('search', search)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<Location>>(
+            const response: any = await apiClient.get(
                 `/admin/hq/locations?${params.toString()}`
             )
             return response?.data || response
@@ -226,7 +226,7 @@ export class HQAdminService {
      */
     static async getLocation(locationId: string): Promise<Location> {
         try {
-            const response = await apiClient.get<Location>(`/admin/hq/locations/${locationId}`)
+            const response: any = await apiClient.get(`/admin/hq/locations/${locationId}`)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch location:', error)
@@ -251,7 +251,7 @@ export class HQAdminService {
             if (search) params.append('search', search)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<Franchise>>(
+            const response: any = await apiClient.get(
                 `/admin/hq/franchises?${params.toString()}`
             )
             return response?.data || response
@@ -267,7 +267,7 @@ export class HQAdminService {
      */
     static async getFranchise(franchiseId: string): Promise<Franchise> {
         try {
-            const response = await apiClient.get<Franchise>(`/admin/hq/franchises/${franchiseId}`)
+            const response: any = await apiClient.get(`/admin/hq/franchises/${franchiseId}`)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch franchise:', error)
@@ -281,7 +281,7 @@ export class HQAdminService {
      */
     static async getAnalytics(): Promise<AnalyticsData> {
         try {
-            const response = await apiClient.get<AnalyticsData>('/admin/hq/analytics')
+            const response: any = await apiClient.get('/admin/hq/analytics')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch analytics:', error)
@@ -295,7 +295,7 @@ export class HQAdminService {
      */
     static async getSettings(): Promise<SystemSettings> {
         try {
-            const response = await apiClient.get<any>('/admin/hq/settings')
+            const response: any = await apiClient.get('/admin/hq/settings')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch settings:', error)
@@ -309,7 +309,7 @@ export class HQAdminService {
      */
     static async updateSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
         try {
-            const response = await apiClient.put<any>('/admin/hq/settings', settings)
+            const response: any = await apiClient.put('/admin/hq/settings', settings)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to update settings:', error)
@@ -340,7 +340,7 @@ export class HQAdminService {
             if (startDate) params.append('startDate', startDate)
             if (endDate) params.append('endDate', endDate)
 
-            const response = await apiClient.get<PaginatedResponse<AuditLog>>(
+            const response: any = await apiClient.get(
                 `/admin/hq/audit-logs?${params.toString()}`
             )
             return response?.data || response
@@ -356,7 +356,7 @@ export class HQAdminService {
      */
     static async getDashboardOverview(): Promise<any> {
         try {
-            const response = await apiClient.get('/admin/hq/dashboard')
+            const response: any = await apiClient.get('/admin/hq/dashboard')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch dashboard overview:', error)
@@ -369,7 +369,7 @@ export class HQAdminService {
      */
     static async getAPIKeys(): Promise<any[]> {
         try {
-            const response = await apiClient.get<any[]>('/admin/hq/api-keys')
+            const response: any = await apiClient.get('/admin/hq/api-keys')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch API keys:', error)
@@ -382,7 +382,7 @@ export class HQAdminService {
      */
     static async createAPIKey(data: { name: string; permissions?: string[] } | string): Promise<any> {
         try {
-            const response = await apiClient.post<any>('/admin/hq/api-keys', data)
+            const response: any = await apiClient.post('/admin/hq/api-keys', data)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to create API key:', error)
@@ -407,7 +407,7 @@ export class HQAdminService {
      */
     static async getSystemHealth(): Promise<any> {
         try {
-            const response = await apiClient.get<any>('/admin/hq/health')
+            const response: any = await apiClient.get('/admin/hq/health')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch system health:', error)
@@ -420,7 +420,7 @@ export class HQAdminService {
      */
     static async getNotifications(): Promise<any[]> {
         try {
-            const response = await apiClient.get<any[]>('/admin/hq/notifications')
+            const response: any = await apiClient.get('/admin/hq/notifications')
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch notifications:', error)
@@ -433,7 +433,7 @@ export class HQAdminService {
      */
     static async updateNotificationSettings(settings: any): Promise<any> {
         try {
-            const response = await apiClient.put<any>('/admin/hq/notifications/settings', settings)
+            const response: any = await apiClient.put('/admin/hq/notifications/settings', settings)
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to update notification settings:', error)
@@ -446,7 +446,7 @@ export class HQAdminService {
      */
     static async getReports(params?: any): Promise<any[]> {
         try {
-            const response = await apiClient.get<any[]>('/admin/hq/reports', { params })
+            const response: any = await apiClient.get('/admin/hq/reports', { params })
             return response?.data || response
         } catch (error: any) {
             console.error('Failed to fetch reports:', error)

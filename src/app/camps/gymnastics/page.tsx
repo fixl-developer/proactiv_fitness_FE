@@ -6,9 +6,21 @@ import Image from 'next/image'
 import { FiCalendar, FiClock, FiUsers, FiMapPin, FiStar, FiTarget } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import CampBookButton from '@/components/camps/CampBookButton'
 import { getRandomImage } from '@/utils/imageUtils'
+import { usePageHero } from '@/hooks/usePageHero'
 
 const GymnasticsCampsPage = () => {
+    const { hero } = usePageHero('gymnastics-camps', {
+        title: 'Gymnastics Holiday Camps',
+        subtitle: 'Action-packed holiday camps combining skill development with fun activities. Perfect for gymnasts of all levels to learn, grow, and make new friends during school breaks.',
+        backgroundImage: '',
+        fallbackGradient: 'from-blue-600 to-indigo-700',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
+
     const campLevels = [
         {
             level: 'Beginner',
@@ -118,12 +130,12 @@ const GymnasticsCampsPage = () => {
             <Header />
             <main className="min-h-screen">
                 {/* Hero Section */}
-                <section className="relative bg-gradient-to-br from-blue-600 to-indigo-700 text-white section-padding overflow-hidden">
+                <section className={`relative bg-gradient-to-br ${hero.fallbackGradient} text-white section-padding overflow-hidden`}>
                     {/* Background Image */}
                     <div className="absolute inset-0">
                         <Image
-                            src={getRandomImage('gymnastics camps')}
-                            alt="Gymnastics Camps Background"
+                            src={hero.backgroundImage || getRandomImage('gymnastics camps')}
+                            alt={hero.title}
                             fill
                             className="object-cover opacity-20"
                             onError={(e) => e.currentTarget.style.display = 'none'}
@@ -138,11 +150,10 @@ const GymnasticsCampsPage = () => {
                             className="max-w-4xl mx-auto text-center"
                         >
                             <h1 className="text-4xl sm:text-5xl font-heading font-bold mb-6">
-                                Gymnastics Holiday Camps
+                                {hero.title}
                             </h1>
                             <p className="text-xl text-green-100 mb-8 leading-relaxed">
-                                Action-packed holiday camps combining skill development with fun activities.
-                                Perfect for gymnasts of all levels to learn, grow, and make new friends during school breaks.
+                                {hero.subtitle}
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                                 <Link id="upcoming-camps" href="#upcoming-camps" className="btn-secondary">
@@ -311,12 +322,14 @@ const GymnasticsCampsPage = () => {
                                         <div className="text-2xl font-bold text-green-600">
                                             {camp.price}
                                         </div>
-                                        <Link id="camps-gymnastics-nav-book-now"
-                                            href={`/camps/book?camp=${camp.id}`}
+                                        <CampBookButton
+                                            id={`camps-gymnastics-nav-book-now-${camp.id}`}
+                                            campId={camp.id}
+                                            category="gymnastics"
                                             className="btn-primary"
                                         >
                                             Book Now
-                                        </Link>
+                                        </CampBookButton>
                                     </div>
                                 </motion.div>
                             ))}
@@ -458,7 +471,7 @@ const GymnasticsCampsPage = () => {
                                 so secure your child's spot today and give them an unforgettable gymnastics adventure.
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link id="camps-book" href="/camps/book" className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="camps-book" href="#upcoming-camps" className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Camp Now
                                 </Link>
                                 <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-green-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">

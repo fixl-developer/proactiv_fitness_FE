@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { apiClient } from '@/services/api/client'
+import { extractList } from '@/utils/apiResponse'
 import { toast } from 'sonner'
 import {
   Calendar, CheckCircle, Clock, AlertTriangle, X, Plus, Loader2,
-  RotateCcw, Trash2, Send, Search, ChevronDown, MapPin, User, BookOpen
+  RotateCcw, Trash2, Send, Search, ChevronDown, MapPin, User, BookOpen,
+  Eye, Pencil, Save
 } from 'lucide-react'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -31,6 +33,26 @@ interface Conflict {
   type: string
   message: string
   scheduleIds: string[]
+}
+
+// Flat session for the calendar — comes from GET /scheduling/all-sessions.
+// Each row is one Session, positioned by its real date+time, not the parent
+// Schedule's container default.
+interface CalSession {
+  id: string
+  scheduleId: string
+  scheduleName: string
+  scheduleStatus: string
+  date: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  programName: string
+  locationName: string
+  coachName: string
+  status: string
+  enrolled: number
+  capacity: number
 }
 
 interface SelectOption {
@@ -59,12 +81,24 @@ const HOURS = Array.from({ length: 14 }, (_, i) => i + 7)
 // ── Component ──────────────────────────────────────────────────────────────
 export default function ProgramSchedulePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [calSessions, setCalSessions] = useState<CalSession[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+
+  // ── Detail / Edit drawer state ─────────────────────────────────────────
+  // `detail` holds the populated schedule (with sessionsList) the backend
+  // returns from GET /scheduling/:id. `editMode` toggles between read-only
+  // detail panel and the editable form (only `name` + `description` are
+  // updatable per the backend's updateScheduleValidation).
+  const [detail, setDetail] = useState<any | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', description: '' })
+  const [savingDetail, setSavingDetail] = useState(false)
 
   // Dropdown data
   const [programs, setPrograms] = useState<SelectOption[]>([])
@@ -93,9 +127,15 @@ export default function ProgramSchedulePage() {
     setLoading(true)
     setError(null)
     try {
-      const res: any = await apiClient.get('/scheduling')
-      const raw = res?.data ?? res?.schedules ?? res
-      const list = Array.isArray(raw) ? raw : []
+      // Fetch schedule containers (for List view + drawer index) and the flat
+      // session feed (for Calendar grid) in parallel — each serves a different
+      // view and they share no work.
+      const [schedRes, sessRes]: any = await Promise.all([
+        apiClient.get('/scheduling'),
+        apiClient.get('/scheduling/all-sessions').catch(() => ({ data: [] })),
+      ])
+
+      const list = extractList<any>(schedRes)
       setSchedules(list.map((s: any) => ({
         _id: s._id || s.id || '',
         name: s.name || s.sessionName || '',
@@ -112,10 +152,29 @@ export default function ProgramSchedulePage() {
         conflicts: s.conflicts || [],
         createdAt: s.createdAt || '',
       })))
+
+      const sessList = (sessRes?.data ?? sessRes ?? []) as any[]
+      setCalSessions(Array.isArray(sessList) ? sessList.map((s: any) => ({
+        id: String(s.id || s._id || ''),
+        scheduleId: String(s.scheduleId || ''),
+        scheduleName: s.scheduleName || '',
+        scheduleStatus: s.scheduleStatus || '',
+        date: s.date || '',
+        dayOfWeek: Number(s.dayOfWeek ?? 0),
+        startTime: s.startTime || '',
+        endTime: s.endTime || '',
+        programName: s.programName || '',
+        locationName: s.locationName || '',
+        coachName: s.coachName || '',
+        status: s.status || 'scheduled',
+        enrolled: Number(s.enrolled) || 0,
+        capacity: Number(s.capacity) || 0,
+      })) : [])
     } catch (err: any) {
       console.error('Failed to load schedules:', err)
       setError('Failed to load schedules. Please ensure the backend is running.')
       setSchedules([])
+      setCalSessions([])
     } finally {
       setLoading(false)
     }
@@ -135,20 +194,20 @@ export default function ProgramSchedulePage() {
         apiClient.get('/terms'),
       ])
 
+      // /programs returns `{data: {programs: [...], totalCount, filters}}`,
+      // /locations returns `{data: {data: [...], pagination}}`,
+      // /terms returns `{data: [...]}` — extractList handles all three shapes.
       if (programsRes.status === 'fulfilled') {
-        const d: any = programsRes.value
-        const list = d?.data || d || []
-        setPrograms(Array.isArray(list) ? list.map((p: any) => ({ _id: p._id || p.id, name: p.name })).filter((p: any) => p._id) : [])
+        const list = extractList<any>(programsRes.value)
+        setPrograms(list.map((p: any) => ({ _id: p._id || p.id, name: p.name })).filter((p: any) => p._id))
       }
       if (locationsRes.status === 'fulfilled') {
-        const d: any = locationsRes.value
-        const list = d?.data || d || []
-        setLocations(Array.isArray(list) ? list.map((l: any) => ({ _id: l._id || l.id, name: l.name })).filter((l: any) => l._id) : [])
+        const list = extractList<any>(locationsRes.value)
+        setLocations(list.map((l: any) => ({ _id: l._id || l.id, name: l.name })).filter((l: any) => l._id))
       }
       if (termsRes.status === 'fulfilled') {
-        const d: any = termsRes.value
-        const list = d?.data || d || []
-        setTerms(Array.isArray(list) ? list.map((t: any) => ({ _id: t._id || t.id, name: t.name || t.termName })).filter((t: any) => t._id) : [])
+        const list = extractList<any>(termsRes.value)
+        setTerms(list.map((t: any) => ({ _id: t._id || t.id, name: t.name || t.termName })).filter((t: any) => t._id))
       }
     } catch {
       // Partial data is fine
@@ -235,6 +294,60 @@ export default function ProgramSchedulePage() {
     }
   }
 
+  // ── Open detail drawer ────────────────────────────────────────────────
+  // Click handler shared by calendar block + list row. Fetches the populated
+  // schedule (with sessions) so the drawer doesn't show stale list-view data.
+  const openDetail = async (id: string) => {
+    if (!id) return
+    setDetail(null)
+    setEditMode(false)
+    setDetailLoading(true)
+    try {
+      const res: any = await apiClient.get(`/scheduling/${id}`)
+      const d = res?.data ?? res
+      setDetail(d)
+      setEditForm({
+        name: d?.name || '',
+        description: d?.description || '',
+      })
+    } catch {
+      toast.error('Failed to load schedule details')
+      setDetail(null)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const closeDetail = () => {
+    setDetail(null)
+    setEditMode(false)
+    setEditForm({ name: '', description: '' })
+  }
+
+  const saveDetail = async () => {
+    if (!detail?._id && !detail?.id) return
+    if (!editForm.name.trim()) {
+      toast.error('Schedule name is required')
+      return
+    }
+    setSavingDetail(true)
+    try {
+      const id = detail._id || detail.id
+      await apiClient.put(`/scheduling/${id}`, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim(),
+      })
+      toast.success('Schedule updated')
+      // Reload both the list (so the row reflects new name) and the drawer
+      await Promise.all([loadSchedules(), openDetail(id)])
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to update schedule'
+      toast.error(msg)
+    } finally {
+      setSavingDetail(false)
+    }
+  }
+
   // ── Detect conflicts ──────────────────────────────────────────────────
   const handleDetectConflicts = async (s: Schedule) => {
     try {
@@ -263,13 +376,57 @@ export default function ProgramSchedulePage() {
     }
   }
 
-  const getSchedulesForDayHour = (day: number, hour: number): Schedule[] => {
-    return schedules.filter((s) => {
+  // Calendar grid: bucket sessions by their REAL day-of-week + start hour.
+  // Multiple session dates that recur on the same day/time stack in one cell
+  // — we group identical (programName, scheduleId, startTime, endTime, dayOfWeek)
+  // tuples and surface the dates as a comma-separated subtitle.
+  type SessionGroup = {
+    key: string
+    scheduleId: string
+    scheduleName: string
+    scheduleStatus: string
+    programName: string
+    coachName: string
+    locationName: string
+    startTime: string
+    endTime: string
+    sessionCount: number
+    nextDate: string
+  }
+
+  const groupSessionsForCell = (day: number, hour: number): SessionGroup[] => {
+    const cellSessions = calSessions.filter((s) => {
       if (s.dayOfWeek !== day) return false
+      if (!s.startTime) return false
       const startH = parseInt(s.startTime.split(':')[0], 10)
-      const endH = parseInt(s.endTime.split(':')[0], 10)
-      return hour >= startH && hour < endH
+      return startH === hour
     })
+
+    const map = new Map<string, SessionGroup>()
+    for (const s of cellSessions) {
+      const key = `${s.scheduleId}|${s.programName}|${s.startTime}|${s.endTime}`
+      const existing = map.get(key)
+      if (!existing) {
+        map.set(key, {
+          key,
+          scheduleId: s.scheduleId,
+          scheduleName: s.scheduleName,
+          scheduleStatus: s.scheduleStatus,
+          programName: s.programName,
+          coachName: s.coachName,
+          locationName: s.locationName,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          sessionCount: 1,
+          nextDate: s.date,
+        })
+      } else {
+        existing.sessionCount += 1
+        // keep the earliest date as the "next" representative
+        if (!existing.nextDate || (s.date && s.date < existing.nextDate)) existing.nextDate = s.date
+      }
+    }
+    return Array.from(map.values())
   }
 
   const scheduleColors = [
@@ -400,23 +557,29 @@ export default function ProgramSchedulePage() {
                       {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}
                     </td>
                     {DAYS.map((_, dayIdx) => {
-                      const items = getSchedulesForDayHour(dayIdx, hour)
+                      const groups = groupSessionsForCell(dayIdx, hour)
                       return (
                         <td key={dayIdx} className="border px-1 py-1 align-top h-16">
-                          {items.map((s) => {
-                            const startH = parseInt(s.startTime.split(':')[0], 10)
-                            if (startH !== hour) return null
-                            return (
-                              <div key={s._id} className={`rounded border-l-4 px-2 py-1 text-xs mb-1 ${getColorForSchedule(s._id)}`}>
-                                <div className="font-semibold truncate">{s.programName || s.name}</div>
-                                <div className="opacity-75">{s.startTime} - {s.endTime}</div>
-                                <div className="opacity-75 truncate">{s.instructor} · {s.room}</div>
-                                {s.conflicts && s.conflicts.length > 0 && (
-                                  <div className="text-red-600 font-semibold mt-0.5">Conflict!</div>
-                                )}
+                          {groups.map((g) => (
+                            <button
+                              key={g.key}
+                              type="button"
+                              onClick={() => openDetail(g.scheduleId)}
+                              className={`w-full text-left rounded border-l-4 px-2 py-1 text-xs mb-1 hover:ring-2 hover:ring-blue-300 transition cursor-pointer ${getColorForSchedule(g.scheduleId)}`}
+                              title={`${g.programName} — ${g.scheduleName}\n${g.sessionCount} session${g.sessionCount > 1 ? 's' : ''} · click to view details`}
+                            >
+                              <div className="font-semibold truncate">{g.programName || g.scheduleName || 'Session'}</div>
+                              <div className="opacity-75">{g.startTime} - {g.endTime}</div>
+                              <div className="opacity-75 truncate">
+                                {g.coachName || 'Unassigned'}{g.locationName ? ` · ${g.locationName}` : ''}
                               </div>
-                            )
-                          })}
+                              {g.sessionCount > 1 && (
+                                <div className="opacity-75 text-[10px] mt-0.5">
+                                  {g.sessionCount}× recurring
+                                </div>
+                              )}
+                            </button>
+                          ))}
                         </td>
                       )
                     })}
@@ -444,9 +607,9 @@ export default function ProgramSchedulePage() {
               </thead>
               <tbody className="divide-y">
                 {schedules.map((s) => (
-                  <tr key={s._id} className="hover:bg-gray-50">
+                  <tr key={s._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(s._id)}>
                     <td className="px-4 py-3">
-                      <div className="font-medium">{s.programName || s.name}</div>
+                      <div className="font-medium text-blue-700 hover:text-blue-900">{s.programName || s.name}</div>
                       {s.locationName && <div className="text-xs text-gray-500">{s.locationName}</div>}
                     </td>
                     <td className="px-4 py-3 text-sm">{DAYS[s.dayOfWeek] || '-'}</td>
@@ -463,8 +626,11 @@ export default function ProgramSchedulePage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
+                        <button id="btn-admin-programs-schedule-view" onClick={() => openDetail(s._id)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50 flex items-center gap-1" title="View / edit details">
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </button>
                         {s.status === 'draft' && (
                           <button id="btn-admin-programs-schedule-6" onClick={() => handlePublish(s)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50 flex items-center gap-1">
                             <Send className="h-3 w-3" /> Publish
@@ -758,6 +924,226 @@ export default function ProgramSchedulePage() {
                   Delete
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Detail / Edit Drawer ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {(detail || detailLoading) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={closeDetail}
+          >
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col"
+            >
+              {/* Drawer header */}
+              <div className="flex items-center justify-between p-5 border-b">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {editMode ? 'Edit Schedule' : 'Schedule Details'}
+                  </h2>
+                  {detail && !editMode && (
+                    <p className="text-xs text-gray-500 mt-0.5">{detail.id || detail._id}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {detail && !editMode && (
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Pencil className="h-4 w-4" /> Edit
+                    </button>
+                  )}
+                  <button onClick={closeDetail} className="p-1.5 hover:bg-gray-100 rounded-lg" title="Close">
+                    <X className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer body */}
+              <div className="flex-1 overflow-y-auto p-5">
+                {detailLoading && (
+                  <div className="flex items-center justify-center py-12 text-gray-500">
+                    <Loader2 className="animate-spin h-6 w-6 mr-2" /> Loading…
+                  </div>
+                )}
+
+                {detail && !editMode && (
+                  <div className="space-y-6">
+                    {/* Headline + status */}
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-2xl font-bold text-gray-900">{detail.name}</h3>
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(detail.status)}`}>
+                          {detail.status}
+                        </span>
+                      </div>
+                      {detail.description && (
+                        <p className="text-sm text-gray-600">{detail.description}</p>
+                      )}
+                    </div>
+
+                    {/* Quick stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-700 font-medium">Total Sessions</p>
+                        <p className="text-2xl font-bold text-blue-900">{detail.totalSessions ?? (detail.sessionsList?.length || 0)}</p>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-xs text-green-700 font-medium">Locations</p>
+                        <p className="text-2xl font-bold text-green-900">{(detail.locationNames || []).length || (detail.locationIds || []).length}</p>
+                      </div>
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <p className="text-xs text-purple-700 font-medium">Conflicts</p>
+                        <p className="text-2xl font-bold text-purple-900">{detail.statistics?.totalConflicts ?? 0}</p>
+                      </div>
+                    </div>
+
+                    {/* Date range + term */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">Start Date</p>
+                        <p className="font-medium text-gray-900">{detail.startDate ? new Date(detail.startDate).toLocaleDateString() : '-'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">End Date</p>
+                        <p className="font-medium text-gray-900">{detail.endDate ? new Date(detail.endDate).toLocaleDateString() : '-'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                        <p className="text-xs text-gray-500 mb-1">Term</p>
+                        <p className="font-medium text-gray-900">{detail.termName || '-'}</p>
+                      </div>
+                    </div>
+
+                    {/* Locations */}
+                    {(detail.locationNames || []).length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-2 flex items-center gap-1">
+                          <MapPin className="h-3.5 w-3.5" /> Locations
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {detail.locationNames.map((n: string) => (
+                            <span key={n} className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200">{n}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sessions list */}
+                    <div>
+                      <p className="text-sm text-gray-700 font-semibold mb-3 flex items-center gap-1">
+                        <BookOpen className="h-4 w-4" /> Sessions ({detail.sessionsList?.length || 0})
+                      </p>
+                      {(!detail.sessionsList || detail.sessionsList.length === 0) ? (
+                        <p className="text-sm text-gray-500 italic">No sessions found for this schedule.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {detail.sessionsList.map((s: any) => (
+                            <div key={s.id} className="border rounded-lg p-3 hover:bg-gray-50">
+                              <div className="flex items-start justify-between mb-1">
+                                <div>
+                                  <p className="font-medium text-gray-900">{s.programName || 'Session'}</p>
+                                  <p className="text-xs text-gray-500">{s.programType}</p>
+                                </div>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs capitalize ${statusColor(s.status)}`}>
+                                  {s.status}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-3 text-xs text-gray-600 mt-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="h-3 w-3" />
+                                  {s.date ? new Date(s.date).toLocaleDateString() : '-'}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="h-3 w-3" />
+                                  {s.startTime} - {s.endTime}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin className="h-3 w-3" />
+                                  {s.locationName || '-'}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <User className="h-3 w-3" />
+                                  {s.coachName}
+                                </div>
+                                <div className="col-span-2 text-gray-500 mt-1">
+                                  Enrolled: <span className="font-medium text-gray-700">{s.enrolled}/{s.capacity}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {detail && editMode && (
+                  <div className="space-y-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                      Only the schedule&apos;s name and description can be edited. To change programs, locations, or dates, delete this schedule and generate a new one.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Schedule Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        maxLength={100}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        maxLength={500}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Drawer footer (edit mode only) */}
+              {detail && editMode && (
+                <div className="border-t p-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setEditMode(false)
+                      setEditForm({ name: detail.name || '', description: detail.description || '' })
+                    }}
+                    className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                    disabled={savingDetail}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveDetail}
+                    disabled={savingDetail || !editForm.name.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingDetail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {savingDetail ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

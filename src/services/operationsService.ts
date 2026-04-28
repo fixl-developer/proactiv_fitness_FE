@@ -53,12 +53,64 @@ export interface Booking {
 // STAFF SERVICE
 // =============================================
 
+// Map backend staffType (lowercase enum) back to UI label
+const STAFF_TYPE_TO_ROLE: Record<string, string> = {
+    coach: 'Coach',
+    instructor: 'Instructor',
+    manager: 'Manager',
+    admin: 'Admin',
+    receptionist: 'Assistant',
+    maintenance: 'Assistant',
+    security: 'Assistant',
+    cleaner: 'Assistant',
+}
+
+// Flatten the deeply-nested Staff document the backend returns into the flat
+// shape the admin Staff page expects.
+const flattenStaffDoc = (doc: any) => {
+    if (!doc) return doc
+    const personal = doc.personalInfo || {}
+    const contact = doc.contactInfo || {}
+    return {
+        // Backend's PUT/DELETE /staff/:staffId looks records up by the generated
+        // `staffId` string, not by Mongo _id — so use staffId for routing IDs.
+        id: doc.staffId || doc.id || doc._id,
+        staffId: doc.staffId,
+        _id: doc.id || doc._id,
+        firstName: personal.firstName || '',
+        lastName: personal.lastName || '',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        role: STAFF_TYPE_TO_ROLE[String(doc.staffType || '').toLowerCase()] || doc.staffType || '',
+        staffType: doc.staffType,
+        businessUnitId: doc.businessUnitId || '',
+        locationId: doc.primaryLocationId || (Array.isArray(doc.locationIds) && doc.locationIds[0]) || '',
+        status: doc.status === 'active' ? 'active' : 'inactive',
+        hireDate: doc.hireDate ? String(doc.hireDate).slice(0, 10) : '',
+        certifications: Array.isArray(doc.certifications) ? doc.certifications.map((c: any) => c.name || c).filter(Boolean) : [],
+        createdAt: doc.createdAt,
+    }
+}
+
 export const StaffService = {
-    // Get all staff
+    // Get all staff — unwraps the paginated response and flattens nested fields
+    // so the page can consume a plain array of `{id, firstName, lastName, ...}`.
     getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string; locationId?: string }) => {
         try {
             const response = await apiClient.get('/staff', { params })
-            return response.data
+            // After the BaseController fix, response shape is:
+            //   { success, message, data: { data: [...staff], pagination: {...} } }
+            // Unwrap to expose the array + pagination at the top level so the
+            // page's existing fallback chain finds it under `payload.data`.
+            const body: any = response?.data ?? response
+            const list = Array.isArray(body?.data) ? body.data
+                : Array.isArray(body?.items) ? body.items
+                    : Array.isArray(body) ? body
+                        : []
+            return {
+                data: list.map(flattenStaffDoc),
+                pagination: body?.pagination,
+            }
         } catch (error) {
             console.error('Error fetching staff:', error)
             throw error
@@ -267,12 +319,46 @@ export const AttendanceService = {
 // BOOKING SERVICE
 // =============================================
 
+// Backend booking docs use nested fields (sessionDate, payment.status, bookedBy,
+// participants[]). Flatten + alias for the admin table so existing column code
+// finds {customerId, sessionId, programId, date, status, paymentStatus, customerName}.
+const flattenBookingDoc = (doc: any) => {
+    if (!doc) return doc
+    const participant = Array.isArray(doc.participants) && doc.participants.length > 0 ? doc.participants[0] : null
+    const sessionDateRaw = doc.sessionDate || doc.date || doc.createdAt
+    return {
+        id: doc.id || doc._id || doc.bookingId,
+        bookingId: doc.bookingId,
+        customerId: doc.bookedBy || doc.familyId || doc.customerId || '',
+        customerName: participant?.name || doc.customerName || '',
+        programId: doc.programId || '',
+        programName: doc.programName || '',
+        sessionId: doc.sessionId || '',
+        date: sessionDateRaw ? new Date(sessionDateRaw).toISOString() : '',
+        sessionDate: sessionDateRaw ? new Date(sessionDateRaw).toISOString() : '',
+        status: doc.status || 'pending',
+        paymentStatus: doc.payment?.status || doc.paymentStatus || 'pending',
+        notes: Array.isArray(doc.specialRequests) ? doc.specialRequests.join(' ') : (doc.notes || ''),
+        bookingType: doc.bookingType || '',
+        locationId: doc.locationId || '',
+        createdAt: doc.createdAt,
+    }
+}
+
 export const BookingService = {
-    // Get all bookings
+    // Get all bookings — unwrap pagination + flatten nested fields for the admin page
     getAll: async (params?: { page?: number; limit?: number; search?: string; status?: string; paymentStatus?: string; date?: string }) => {
         try {
             const response = await apiClient.get('/bookings', { params })
-            return response.data
+            const body: any = response?.data ?? response
+            const list = Array.isArray(body?.data) ? body.data
+                : Array.isArray(body?.items) ? body.items
+                    : Array.isArray(body) ? body
+                        : []
+            return {
+                data: list.map(flattenBookingDoc),
+                pagination: body?.pagination,
+            }
         } catch (error) {
             console.error('Error fetching bookings:', error)
             throw error

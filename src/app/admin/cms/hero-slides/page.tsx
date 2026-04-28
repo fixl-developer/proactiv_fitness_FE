@@ -11,7 +11,7 @@ export default function HeroSlidesPage() {
                 { name: 'title', label: 'Title', type: 'text', required: true, minLength: 2, maxLength: 120, showInTable: true },
                 { name: 'subtitle', label: 'Subtitle', type: 'text', maxLength: 200 },
                 { name: 'image', label: 'Image', type: 'image', required: true, showInTable: true, helpText: 'Upload an image or paste a valid URL' },
-                { name: 'fallbackGradient', label: 'Fallback Gradient CSS', type: 'text', placeholder: 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800' },
+                { name: 'fallbackGradient', label: 'Fallback Gradient', type: 'gradient', gradientFormat: 'full', helpText: 'Shown when no image is set. Pick a preset or use Advanced for a custom Tailwind class.' },
                 { name: 'ctaText', label: 'CTA Button Text', type: 'text', maxLength: 40 },
                 { name: 'ctaLink', label: 'CTA Button Link', type: 'url', helpText: 'Must start with http:// or https://' },
                 { name: 'order', label: 'Display Order', type: 'number', min: 0, max: 999 },

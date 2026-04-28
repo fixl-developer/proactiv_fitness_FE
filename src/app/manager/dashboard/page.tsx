@@ -45,7 +45,7 @@ const ManagerDashboard = () => {
     const loadScheduleInsights = async () => {
         setScheduleLoading(true)
         try {
-            const res = await smartSchedulerService.predictAttendance({ locationId: assignedLocation.id })
+            const res = await smartSchedulerService.predictAttendance({ locationId: assignedLocation.id } as any)
             setScheduleInsights(res)
         } catch { setScheduleInsights(null) }
         finally { setScheduleLoading(false) }

@@ -75,12 +75,14 @@ export default function SelectLocation({ selectedLocation, onSelect }: SelectLoc
                                         </div>
                                     </div>
 
-                                    {/* Details */}
+                                    {/* Details — phone hides if branch doesn't publish one */}
                                     <div className="grid md:grid-cols-2 gap-4 mb-4">
-                                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                                            <Phone className="w-4 h-4" />
-                                            {location.phone}
-                                        </div>
+                                        {location.phone && (
+                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                <Phone className="w-4 h-4" />
+                                                {location.phone}
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
                                             <Clock className="w-4 h-4" />
                                             {location.hours}

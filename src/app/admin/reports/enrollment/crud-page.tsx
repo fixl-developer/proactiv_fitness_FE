@@ -30,12 +30,19 @@ export default function EnrollmentReportsPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        date: string
+        programId: string
+        locationId: string
+        enrollmentCount: number
+        status: 'active' | 'inactive' | 'completed'
+        notes: string
+    }>({
         date: '',
         programId: '',
         locationId: '',
         enrollmentCount: 1,
-        status: 'active' as const,
+        status: 'active',
         notes: '',
     })
 

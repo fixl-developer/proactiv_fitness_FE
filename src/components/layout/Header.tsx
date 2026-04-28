@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { authService } from '@/services/modules/auth.service'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
+import { CMSService, NavMenuTreeItem } from '@/services/cmsService'
 
 const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }) => {
     const router = useRouter()
@@ -100,26 +101,28 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         setMobileDropdowns(prev => ({ ...prev, [itemLabel]: !prev[itemLabel] }))
     }
 
-    const navigationItems = [
+    // Default navigation — used as fallback while CMS is loading or unreachable.
+    // Admins manage live header items at /admin/cms/header-navigation.
+    const fallbackNavigationItems: NavMenuTreeItem[] = [
         {
-            label: 'ProGym Locations', href: '#',
+            label: 'ProGym Locations', href: '#', order: 1,
             dropdown: [
                 { label: 'Cyberport', href: '/locations/cyberport' },
                 { label: 'Wan Chai', href: '/locations/wan-chai' }
             ]
         },
-        { label: 'School Gymnastics', href: '/school-gymnastics' },
+        { label: 'School Gymnastics', href: '/school-gymnastics', order: 2 },
         {
-            label: 'Holiday Camps', href: '#',
+            label: 'Holiday Camps', href: '#', order: 3,
             dropdown: [
                 { label: 'Gymnastics Camps', href: '/camps/gymnastics' },
                 { label: 'Multi-Activity Camps', href: '/camps/multi-activity' },
                 { label: 'Shenzhen Competitive', href: '/camps/shenzhen-competitive' }
             ]
         },
-        { label: 'Parties', href: '/birthday-parties' },
+        { label: 'Parties', href: '/birthday-parties', order: 4 },
         {
-            label: 'About Us', href: '#',
+            label: 'About Us', href: '#', order: 5,
             dropdown: [
                 { label: 'About', href: '/about' },
                 { label: 'Careers', href: '/careers' },
@@ -128,8 +131,25 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
                 { label: 'Terms & Conditions', href: '/terms' }
             ]
         },
-        { label: 'Contact Us', href: '/contact' }
+        { label: 'Contact Us', href: '/contact', order: 6 }
     ]
+
+    const [navigationItems, setNavigationItems] = useState<NavMenuTreeItem[]>(fallbackNavigationItems)
+
+    useEffect(() => {
+        let cancelled = false
+        CMSService.getNavMenu()
+            .then(items => {
+                if (cancelled) return
+                if (Array.isArray(items) && items.length > 0) {
+                    setNavigationItems(items)
+                }
+            })
+            .catch(() => {
+                // keep fallback silently — public website should never break on CMS hiccups
+            })
+        return () => { cancelled = true }
+    }, [])
 
     const languageOptions = [
         { code: 'EN', label: 'English', flag: '\uD83C\uDDEC\uD83C\uDDE7' },

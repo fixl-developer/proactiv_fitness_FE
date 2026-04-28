@@ -26,11 +26,17 @@ const TermsPage = () => {
     const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [saving, setSaving] = useState(false)
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string
+        startDate: string
+        endDate: string
+        status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
+        description: string
+    }>({
         name: '',
         startDate: '',
         endDate: '',
-        status: 'ACTIVE' as const,
+        status: 'ACTIVE',
         description: ''
     })
 

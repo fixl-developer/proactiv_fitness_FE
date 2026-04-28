@@ -131,7 +131,7 @@ export default function Students() {
         if (!validateStudentForm()) return
         try {
             setSubmitting(true)
-            const updated = await PartnerPortalService.updatePartnerStudent(partnerId, selectedStudent.id, editForm)
+            const updated = await PartnerPortalService.updatePartnerStudent(partnerId, selectedStudent.id, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 0 } as any)
             setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, ...updated } : s))
             setShowEditModal(false)
             setSelectedStudent(null)
@@ -147,7 +147,7 @@ export default function Students() {
         if (!validateStudentForm()) return
         try {
             setSubmitting(true)
-            const newStudent = await PartnerPortalService.createPartnerStudent(partnerId, editForm)
+            const newStudent = await PartnerPortalService.createPartnerStudent(partnerId, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 0 } as any)
             if (newStudent) {
                 setStudents(prev => [...prev, newStudent])
             }

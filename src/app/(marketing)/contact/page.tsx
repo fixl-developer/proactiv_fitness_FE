@@ -1,25 +1,54 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
-import { filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation';
+import { filterNameInput, FORMAT_HINTS, PATTERNS } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
+import { PhoneInput } from '@/components/ui/PhoneInput';
+import { findByDialCode, validatePhoneForCountry } from '@/utils/countryCodes';
 import { useCMSData } from '@/hooks/useCMSData';
 import { CMSService, ContactInfoData } from '@/services/cmsService';
 
 const contactSchema = z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().email('Invalid email address'),
-    phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-    subject: z.string().min(5, 'Subject must be at least 5 characters'),
-    message: z.string().min(10, 'Message must be at least 10 characters'),
+    name: z
+        .string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(60, 'Name must be at most 60 characters')
+        .regex(PATTERNS.nameOnly, 'Only letters, spaces, hyphens and apostrophes allowed'),
+    email: z
+        .string()
+        .min(1, 'Email is required')
+        .regex(PATTERNS.emailFormat, 'Please enter a valid email (e.g. user@example.com)'),
+    phone: z
+        .string()
+        .min(1, 'Phone number is required')
+        .superRefine((val, ctx) => {
+            const country = findByDialCode(val);
+            if (!country) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Please select a valid country code',
+                });
+                return;
+            }
+            const national = val.slice(country.dialCode.length).replace(/\D/g, '');
+            const err = validatePhoneForCountry(national, country);
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        }),
+    subject: z
+        .string()
+        .min(5, 'Subject must be at least 5 characters')
+        .max(120, 'Subject must be at most 120 characters')
+        .regex(PATTERNS.alphanumeric, 'Only letters, numbers and spaces allowed'),
+    message: z
+        .string()
+        .min(10, 'Message must be at least 10 characters')
+        .max(2000, 'Message must be 2000 characters or fewer'),
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;
@@ -48,10 +77,19 @@ export default function ContactPage() {
     const {
         register,
         handleSubmit,
+        control,
         formState: { errors },
         reset,
     } = useForm<ContactFormData>({
         resolver: zodResolver(contactSchema),
+        mode: 'onBlur',
+        defaultValues: {
+            name: '',
+            email: '',
+            phone: '',
+            subject: '',
+            message: '',
+        },
     });
 
     const onSubmit = async (data: ContactFormData) => {
@@ -71,9 +109,7 @@ export default function ContactPage() {
     };
 
     return (
-        <>
-            <Header />
-            <main className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
+        <main className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
                 {/* Hero Section */}
                 <section className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-16 overflow-hidden">
                     {/* Animated Background Elements */}
@@ -296,14 +332,19 @@ export default function ContactPage() {
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     Phone Number
                                                 </label>
-                                                <input
-                                                    type="tel"
-                                                    {...register('phone')}
-                                                    onKeyDown={filterPhoneInput}
-                                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.phone ? 'border-red-500' : 'border-gray-300'}`}
-                                                    placeholder="+1234567890"
+                                                <Controller
+                                                    control={control}
+                                                    name="phone"
+                                                    render={({ field }) => (
+                                                        <PhoneInput
+                                                            value={field.value}
+                                                            onChange={field.onChange}
+                                                            defaultCountry="HK"
+                                                            error={errors.phone?.message}
+                                                            placeholder="Enter phone number"
+                                                        />
+                                                    )}
                                                 />
-                                                <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone?.message} />
                                             </motion.div>
                                         </div>
 
@@ -376,8 +417,6 @@ export default function ContactPage() {
                         </div>
                     </div>
                 </section>
-            </main>
-            <Footer />
-        </>
+        </main>
     );
 }

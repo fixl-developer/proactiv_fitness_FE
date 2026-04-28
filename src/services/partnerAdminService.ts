@@ -127,7 +127,7 @@ class PartnerAdminService {
     // Dashboard Methods
     async getDashboardData(partnerId: string = 'default'): Promise<PartnerDashboard> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/dashboard`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/dashboard`)
             const data = response.data || response
 
             // Transform backend data to frontend format
@@ -153,7 +153,7 @@ class PartnerAdminService {
     // Program Methods
     async getPrograms(partnerId: string = 'default'): Promise<PartnerProgram[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/programs`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/programs`)
             const programs = response.data || response
 
             // Transform backend data to frontend format
@@ -182,7 +182,7 @@ class PartnerAdminService {
 
     async createProgram(programData: Partial<PartnerProgram>): Promise<PartnerProgram> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/partners/programs', programData)
+            const response: any = await apiClient.post('/partners/programs', programData)
             return response.data || response
         } catch (error) {
             console.error('Error creating program:', error)
@@ -192,7 +192,7 @@ class PartnerAdminService {
 
     async updateProgram(programId: string, updates: Partial<PartnerProgram>): Promise<PartnerProgram> {
         try {
-            const response = await apiClient.put<{ success: boolean; data: any }>(`/partners/programs/${programId}`, updates)
+            const response: any = await apiClient.put(`/partners/programs/${programId}`, updates)
             return response.data || response
         } catch (error) {
             console.error('Error updating program:', error)
@@ -211,7 +211,7 @@ class PartnerAdminService {
     // Student Methods
     async getStudents(partnerId: string = 'default'): Promise<PartnerStudent[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/students`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/students`)
             const students = response.data || response
 
             return Array.isArray(students) ? students.map(student => ({
@@ -238,7 +238,7 @@ class PartnerAdminService {
 
     async getStudentDetails(studentId: string): Promise<PartnerStudent> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/students/${studentId}`)
+            const response: any = await apiClient.get(`/partners/students/${studentId}`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching student details:', error)
@@ -248,7 +248,7 @@ class PartnerAdminService {
 
     async updateStudent(studentId: string, updates: Partial<PartnerStudent>): Promise<PartnerStudent> {
         try {
-            const response = await apiClient.put<{ success: boolean; data: any }>(`/partners/students/${studentId}`, updates)
+            const response: any = await apiClient.put(`/partners/students/${studentId}`, updates)
             return response.data || response
         } catch (error) {
             console.error('Error updating student:', error)
@@ -259,7 +259,7 @@ class PartnerAdminService {
     // Report Methods
     async getReports(partnerId: string = 'default'): Promise<PartnerReport[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/reports`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/reports`)
             const reports = response.data || response
 
             return Array.isArray(reports) ? reports.map(report => ({
@@ -281,7 +281,7 @@ class PartnerAdminService {
 
     async generateReport(reportData: { type: string; period: string; format: string }): Promise<PartnerReport> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/partners/reports', reportData)
+            const response: any = await apiClient.post('/partners/reports', reportData)
             return response.data || response
         } catch (error) {
             console.error('Error generating report:', error)
@@ -292,7 +292,7 @@ class PartnerAdminService {
     async downloadReport(reportId: string): Promise<Blob> {
         try {
             // For blob responses, we need to handle differently
-            const url = `${apiClient['baseURL']}/partners/reports/${reportId}/download`
+            const url = `${(apiClient as any)['baseURL']}/partners/reports/${reportId}/download`
             const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
 
             const response = await fetch(url, {
@@ -315,7 +315,7 @@ class PartnerAdminService {
     // Settings Methods
     async getSettings(partnerId: string = 'default'): Promise<PartnerSettings> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/settings`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/settings`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching settings:', error)
@@ -325,7 +325,7 @@ class PartnerAdminService {
 
     async updateSettings(partnerId: string = 'default', settings: Partial<PartnerSettings>): Promise<PartnerSettings> {
         try {
-            const response = await apiClient.put<{ success: boolean; data: any }>(`/partners/${partnerId}/settings`, settings)
+            const response: any = await apiClient.put(`/partners/${partnerId}/settings`, settings)
             return response.data || response
         } catch (error) {
             console.error('Error updating settings:', error)
@@ -336,7 +336,7 @@ class PartnerAdminService {
     // Compliance Methods
     async getComplianceData(partnerId: string = 'default'): Promise<ComplianceData> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/compliance`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/compliance`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching compliance data:', error)
@@ -356,7 +356,7 @@ class PartnerAdminService {
     // Analytics Methods
     async getAnalytics(period: string, partnerId: string = 'default'): Promise<any> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/analytics?period=${period}`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/analytics?period=${period}`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching analytics:', error)
@@ -367,7 +367,7 @@ class PartnerAdminService {
     // Commission Methods
     async getCommissions(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/commissions`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/commissions`)
             const commissions = response.data || response
             return Array.isArray(commissions) ? commissions : []
         } catch (error) {
@@ -388,7 +388,7 @@ class PartnerAdminService {
     // Integration Methods
     async getIntegrations(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/integrations`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/integrations`)
             const integrations = response.data || response
             return Array.isArray(integrations) ? integrations : []
         } catch (error) {
@@ -399,7 +399,7 @@ class PartnerAdminService {
 
     async testIntegration(integrationId: string): Promise<boolean> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>(`/partners/integrations/${integrationId}/test`, {})
+            const response: any = await apiClient.post(`/partners/integrations/${integrationId}/test`, {})
             return response.success || false
         } catch (error) {
             console.error('Error testing integration:', error)
@@ -410,7 +410,7 @@ class PartnerAdminService {
     // Marketing Methods
     async getMarketingCampaigns(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/marketing/campaigns`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/marketing/campaigns`)
             const campaigns = response.data || response
             return Array.isArray(campaigns) ? campaigns : []
         } catch (error) {
@@ -421,7 +421,7 @@ class PartnerAdminService {
 
     async createMarketingCampaign(campaignData: any): Promise<any> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/partners/marketing/campaigns', campaignData)
+            const response: any = await apiClient.post('/partners/marketing/campaigns', campaignData)
             return response.data || response
         } catch (error) {
             console.error('Error creating marketing campaign:', error)
@@ -431,7 +431,7 @@ class PartnerAdminService {
 
     async getMarketingLeads(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/marketing/leads`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/marketing/leads`)
             const leads = response.data || response
             return Array.isArray(leads) ? leads : []
         } catch (error) {
@@ -443,7 +443,7 @@ class PartnerAdminService {
     // Financial Methods
     async getFinancialData(partnerId: string = 'default'): Promise<any> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/financial/overview`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/financial/overview`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching financial data:', error)
@@ -453,7 +453,7 @@ class PartnerAdminService {
 
     async getTransactions(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/financial/transactions`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/financial/transactions`)
             const transactions = response.data || response
             return Array.isArray(transactions) ? transactions : []
         } catch (error) {
@@ -464,7 +464,7 @@ class PartnerAdminService {
 
     async getInvoices(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/financial/invoices`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/financial/invoices`)
             const invoices = response.data || response
             return Array.isArray(invoices) ? invoices : []
         } catch (error) {
@@ -485,7 +485,7 @@ class PartnerAdminService {
     // Communication Methods
     async getMessages(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/communication/messages`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/communication/messages`)
             const messages = response.data || response
             return Array.isArray(messages) ? messages : []
         } catch (error) {
@@ -496,7 +496,7 @@ class PartnerAdminService {
 
     async sendMessage(messageData: any): Promise<any> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/partners/communication/messages', messageData)
+            const response: any = await apiClient.post('/partners/communication/messages', messageData)
             return response.data || response
         } catch (error) {
             console.error('Error sending message:', error)
@@ -506,7 +506,7 @@ class PartnerAdminService {
 
     async getNotifications(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/communication/notifications`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/communication/notifications`)
             const notifications = response.data || response
             return Array.isArray(notifications) ? notifications : []
         } catch (error) {
@@ -518,7 +518,7 @@ class PartnerAdminService {
     // Performance Methods
     async getPerformanceData(partnerId: string = 'default'): Promise<any> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any }>(`/partners/${partnerId}/performance/overview`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/performance/overview`)
             return response.data || response
         } catch (error) {
             console.error('Error fetching performance data:', error)
@@ -528,7 +528,7 @@ class PartnerAdminService {
 
     async getKPIs(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/performance/kpis`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/performance/kpis`)
             const kpis = response.data || response
             return Array.isArray(kpis) ? kpis : []
         } catch (error) {
@@ -539,7 +539,7 @@ class PartnerAdminService {
 
     async getGoals(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/performance/goals`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/performance/goals`)
             const goals = response.data || response
             return Array.isArray(goals) ? goals : []
         } catch (error) {
@@ -551,7 +551,7 @@ class PartnerAdminService {
     // Resources Methods
     async getResources(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/resources`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/resources`)
             const resources = response.data || response
             return Array.isArray(resources) ? resources : []
         } catch (error) {
@@ -563,7 +563,7 @@ class PartnerAdminService {
     async downloadResource(resourceId: string): Promise<Blob> {
         try {
             // For blob responses, we need to handle differently
-            const url = `${apiClient['baseURL']}/partners/resources/${resourceId}/download`
+            const url = `${(apiClient as any)['baseURL']}/partners/resources/${resourceId}/download`
             const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
 
             const response = await fetch(url, {
@@ -586,7 +586,7 @@ class PartnerAdminService {
     // Support Methods
     async getSupportTickets(partnerId: string = 'default'): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>(`/partners/${partnerId}/support/tickets`)
+            const response: any = await apiClient.get(`/partners/${partnerId}/support/tickets`)
             const tickets = response.data || response
             return Array.isArray(tickets) ? tickets : []
         } catch (error) {
@@ -597,7 +597,7 @@ class PartnerAdminService {
 
     async createSupportTicket(ticketData: any): Promise<any> {
         try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/partners/support/tickets', ticketData)
+            const response: any = await apiClient.post('/partners/support/tickets', ticketData)
             return response.data || response
         } catch (error) {
             console.error('Error creating support ticket:', error)
@@ -607,7 +607,7 @@ class PartnerAdminService {
 
     async getFAQs(): Promise<any[]> {
         try {
-            const response = await apiClient.get<{ success: boolean; data: any[] }>('/partners/support/faqs')
+            const response: any = await apiClient.get('/partners/support/faqs')
             const faqs = response.data || response
             return Array.isArray(faqs) ? faqs : []
         } catch (error) {

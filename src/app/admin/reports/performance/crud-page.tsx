@@ -29,9 +29,15 @@ export default function PerformanceAnalyticsPage() {
     const [submitting, setSubmitting] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        date: string
+        metric: 'attendance' | 'completion' | 'satisfaction' | 'progress'
+        value: number
+        locationId: string
+        notes: string
+    }>({
         date: '',
-        metric: 'attendance' as const,
+        metric: 'attendance',
         value: 0,
         locationId: '',
         notes: '',

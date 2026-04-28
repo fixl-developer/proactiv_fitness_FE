@@ -6,9 +6,21 @@ import Image from 'next/image'
 import { FiCalendar, FiClock, FiUsers, FiMapPin, FiStar, FiTarget, FiHeart } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import CampBookButton from '@/components/camps/CampBookButton'
 import { getRandomImage } from '@/utils/imageUtils'
+import { usePageHero } from '@/hooks/usePageHero'
 
 const MultiActivityCampsPage = () => {
+    const { hero } = usePageHero('multi-activity-camps', {
+        title: 'Multi-Activity Holiday Camps',
+        subtitle: 'The ultimate holiday experience combining gymnastics, sports, arts, dance, and outdoor adventures. Perfect for children who love variety and want to explore different activities in a fun, supportive environment.',
+        backgroundImage: '',
+        fallbackGradient: 'from-purple-600 to-purple-800',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
+
     const activities = [
         {
             name: 'Gymnastics',
@@ -117,12 +129,12 @@ const MultiActivityCampsPage = () => {
             <Header />
             <main className="min-h-screen">
                 {/* Hero Section */}
-                <section className="relative bg-gradient-to-br from-purple-600 to-purple-800 text-white section-padding overflow-hidden">
+                <section className={`relative bg-gradient-to-br ${hero.fallbackGradient} text-white section-padding overflow-hidden`}>
                     {/* Background Image */}
                     <div className="absolute inset-0">
                         <Image
-                            src={getRandomImage('multi activity camps')}
-                            alt="Multi Activity Camps Background"
+                            src={hero.backgroundImage || getRandomImage('multi activity camps')}
+                            alt={hero.title}
                             fill
                             className="object-cover opacity-20"
                             onError={(e) => e.currentTarget.style.display = 'none'}
@@ -137,11 +149,10 @@ const MultiActivityCampsPage = () => {
                             className="max-w-4xl mx-auto text-center"
                         >
                             <h1 className="text-4xl sm:text-5xl font-heading font-bold mb-6">
-                                Multi-Activity Holiday Camps
+                                {hero.title}
                             </h1>
                             <p className="text-xl text-purple-100 mb-8 leading-relaxed">
-                                The ultimate holiday experience combining gymnastics, sports, arts, dance, and outdoor adventures.
-                                Perfect for children who love variety and want to explore different activities in a fun, supportive environment.
+                                {hero.subtitle}
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                                 <Link id="upcoming-camps" href="#upcoming-camps" className="btn-secondary">
@@ -365,12 +376,14 @@ const MultiActivityCampsPage = () => {
                                         <div className="text-2xl font-bold text-purple-600">
                                             {camp.price}
                                         </div>
-                                        <Link id="camps-multi-activity-nav-book-now"
-                                            href={`/camps/book?camp=${camp.id}`}
+                                        <CampBookButton
+                                            id={`camps-multi-activity-nav-book-now-${camp.id}`}
+                                            campId={camp.id}
+                                            category="multi-activity"
                                             className="btn-primary"
                                         >
                                             Book Now
-                                        </Link>
+                                        </CampBookButton>
                                     </div>
                                 </motion.div>
                             ))}
@@ -511,7 +524,7 @@ const MultiActivityCampsPage = () => {
                                 Book now to secure your child's spot in an unforgettable holiday experience!
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                                <Link id="camps-book" href="/camps/book" className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
+                                <Link id="camps-book" href="#upcoming-camps" className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
                                     Book Camp Now
                                 </Link>
                                 <Link id="contact" href="/contact" className="border-2 border-white text-white hover:bg-white hover:text-purple-600 px-8 py-3 rounded-lg font-semibold transition-all duration-300">

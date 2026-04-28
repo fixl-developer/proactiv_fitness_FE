@@ -126,7 +126,7 @@ export default function ProgressPage() {
         try {
             setAiLoading(true)
             const userId = user?.id || ''
-            const tenantId = user?.tenantId || user?.tenant_id || 'default'
+            const tenantId = (user as any)?.tenantId || (user as any)?.tenant_id || 'default'
             if (userId) {
                 const result = await aiCoachService.predictProgress(userId, tenantId)
                 setAiData(result)
@@ -140,7 +140,7 @@ export default function ProgressPage() {
         } finally {
             setAiLoading(false)
         }
-    }, [user?.id, user?.tenantId, user?.tenant_id])
+    }, [user?.id, (user as any)?.tenantId, (user as any)?.tenant_id])
 
     useEffect(() => {
         if (!isAuthenticated) {

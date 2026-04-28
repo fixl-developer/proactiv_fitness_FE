@@ -4,7 +4,6 @@ import { ReactNode, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
 import NotificationBell from '@/components/shared/NotificationBell'
@@ -49,6 +48,22 @@ const adminMenuItems: MenuItem[] = [
         href: '/admin/cms',
         submenu: [
             { label: 'All Content', href: '/admin/cms' },
+            // ── Header Navigation Pages (same names as public website) ──
+            { label: 'Header Navigation', href: '/admin/cms/header-navigation' },
+            { label: 'Cyberport', href: '/admin/cms/pages/cyberport' },
+            { label: 'Wan Chai', href: '/admin/cms/pages/wan-chai' },
+            { label: 'School Gymnastics', href: '/admin/cms/pages/school-gymnastics' },
+            { label: 'Gymnastics Camps', href: '/admin/cms/pages/gymnastics-camps' },
+            { label: 'Multi-Activity Camps', href: '/admin/cms/pages/multi-activity-camps' },
+            { label: 'Shenzhen Competitive', href: '/admin/cms/pages/shenzhen-competitive' },
+            { label: 'Parties', href: '/admin/cms/pages/parties' },
+            { label: 'About', href: '/admin/cms/pages/about' },
+            { label: 'Careers', href: '/admin/cms/pages/careers' },
+            { label: 'Team', href: '/admin/cms/pages/team' },
+            { label: 'Blog', href: '/admin/cms/pages/blog' },
+            { label: 'Terms & Conditions', href: '/admin/cms/pages/terms' },
+            { label: 'Contact Us', href: '/admin/cms/pages/contact' },
+            // ── Reusable content collections ──
             { label: 'Hero Slides', href: '/admin/cms/hero-slides' },
             { label: 'Site Statistics', href: '/admin/cms/stats' },
             { label: 'Services', href: '/admin/cms/services' },
@@ -63,6 +78,7 @@ const adminMenuItems: MenuItem[] = [
             { label: 'Location Details', href: '/admin/cms/locations' },
             { label: 'Blog Posts', href: '/admin/cms/blog' },
             { label: 'Job Positions', href: '/admin/cms/careers' },
+            { label: 'Team Members', href: '/admin/cms/team' },
             { label: 'About Page', href: '/admin/cms/about' },
             { label: 'Contact Info', href: '/admin/cms/contact' },
             { label: 'FAQs', href: '/admin/cms/faqs' },
@@ -107,7 +123,7 @@ const adminMenuItems: MenuItem[] = [
         submenu: [
             { label: 'Staff Management', href: '/admin/operations/staff' },
             { label: 'Attendance', href: '/admin/operations/attendance' },
-            { label: 'Bookings', href: '/admin/operations/bookings' }
+            { label: 'Manual Bookings', href: '/admin/operations/bookings' }
         ]
     },
     {
@@ -176,7 +192,6 @@ const SIDEBAR_COLLAPSED = 72
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const pathname = usePathname()
     const router = useRouter()
-    useAuth()
     const [expandedMenus, setExpandedMenus] = useState<string[]>([])
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -185,6 +200,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const [userName, setUserName] = useState('Admin User')
     const [userEmail, setUserEmail] = useState('admin@proactiv.com')
     const [isMobile, setIsMobile] = useState(false)
+
+    const isSubAdminRoute = pathname?.startsWith('/admin/hq')
+        || pathname?.startsWith('/admin/regional')
+        || pathname?.startsWith('/admin/franchise')
+        || pathname?.startsWith('/admin/location')
 
     const sidebarWidth = isMobile ? 0 : (sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED)
 
@@ -221,22 +241,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }
     }, [])
 
-    // Sub-admin routes have their own layout — skip parent chrome
-    if (pathname?.startsWith('/admin/hq') || pathname?.startsWith('/admin/regional') || pathname?.startsWith('/admin/franchise') || pathname?.startsWith('/admin/location')) {
-        return <>{children}</>
-    }
-
     // Auto-expand menus based on current path
     useEffect(() => {
-        const currentPath = pathname
+        if (isSubAdminRoute || !pathname) return
         adminMenuItems.forEach(item => {
-            if (item.submenu && currentPath.startsWith(item.href)) {
+            if (item.submenu && pathname.startsWith(item.href)) {
                 setExpandedMenus(prev =>
                     prev.includes(item.href) ? prev : [...prev, item.href]
                 )
             }
         })
-    }, [pathname])
+    }, [pathname, isSubAdminRoute])
 
     // Collapse submenus when sidebar collapses
     useEffect(() => {
@@ -244,6 +259,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             setExpandedMenus([])
         }
     }, [sidebarCollapsed])
+
+    // Sub-admin routes have their own layout — skip parent chrome.
+    // Early return MUST come after all hooks: a conditional return between
+    // useEffect calls changes the hook count when navigating between admin
+    // sections, which crashes React and makes Next.js dev re-fetch the page.
+    if (isSubAdminRoute) {
+        return <>{children}</>
+    }
 
     // Toggle submenu expansion
     const toggleSubmenu = (href: string) => {

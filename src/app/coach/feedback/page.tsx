@@ -180,7 +180,7 @@ const CoachFeedbackPage = () => {
             const feedbackType: 'positive' | 'constructive' = rating >= 4 ? 'positive' : 'constructive'
 
             await coachService.sendFeedback({
-                studentId: selectedStudent,
+                studentId: selectedStudent ?? '',
                 coachId,
                 rating,
                 text: feedbackText,
@@ -190,7 +190,7 @@ const CoachFeedbackPage = () => {
             const selectedStudentData = students.find(s => s.id === selectedStudent)
             const newFeedback: CoachFeedback = {
                 id: Date.now().toString(),
-                studentId: selectedStudent,
+                studentId: selectedStudent ?? '',
                 studentName: selectedStudentData?.name || 'Unknown',
                 coachId,
                 date: new Date().toISOString(),

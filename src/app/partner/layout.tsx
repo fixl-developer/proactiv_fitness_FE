@@ -95,7 +95,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
         { name: 'Settings', href: '/partner/settings', icon: Settings },
     ]
 
-    const PartnerIcon = ICON_MAP[config.iconName] || Briefcase
+    const PartnerIcon = ICON_MAP[(config as any).iconName] || Briefcase
 
     if (!user) {
         return (

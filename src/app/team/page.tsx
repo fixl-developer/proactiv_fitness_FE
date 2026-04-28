@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { FiChevronLeft, FiChevronRight, FiX, FiMail, FiMapPin, FiStar, FiArrowRight } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { usePageHero } from '@/hooks/usePageHero'
 
 // Team Member Card Component
 const TeamMemberCard = ({ member, index, onOpenModal }: { member: any, index: number, onOpenModal: () => void }) => (
@@ -145,6 +146,16 @@ const TeamPage = () => {
     const [leadershipCarouselIndex, setLeadershipCarouselIndex] = useState(0)
     const [officeCarouselIndex, setOfficeCarouselIndex] = useState(0)
     const [coachesCarouselIndex, setCoachesCarouselIndex] = useState(0)
+
+    const { hero } = usePageHero('team', {
+        title: 'Meet Our Expert Team',
+        subtitle: "Qualified professionals dedicated to your child's development and success",
+        backgroundImage: '/images/pages/team-hero.jpg',
+        fallbackGradient: 'from-blue-600 via-purple-600 to-pink-600',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
 
     // Using the same team data structure as TeamPreview component
     const teamMembers = [
@@ -471,13 +482,13 @@ const TeamPage = () => {
             <Header />
             <main className="min-h-screen bg-gray-50">
                 {/* Hero Section */}
-                <section className="relative h-96 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center overflow-hidden">
+                <section className={`relative h-96 bg-gradient-to-r ${hero.fallbackGradient} flex items-center justify-center overflow-hidden`}>
                     {/* Background Image */}
                     <div className="absolute inset-0">
-                        <div className="w-full h-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600"></div>
+                        <div className={`w-full h-full bg-gradient-to-br ${hero.fallbackGradient}`}></div>
                         <Image
-                            src="/images/pages/team-hero.jpg"
-                            alt="ProActive Sports Team"
+                            src={hero.backgroundImage}
+                            alt={hero.title}
                             fill
                             className="object-cover opacity-20"
                             onError={(e) => e.currentTarget.style.display = 'none'}
@@ -505,7 +516,7 @@ const TeamPage = () => {
                             transition={{ duration: 0.8 }}
                             className="text-4xl md:text-5xl font-bold mb-4"
                         >
-                            Meet Our Expert Team
+                            {hero.title}
                         </motion.h1>
                         <motion.p
                             initial={{ opacity: 0, y: 30 }}
@@ -513,7 +524,7 @@ const TeamPage = () => {
                             transition={{ delay: 0.2, duration: 0.8 }}
                             className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
                         >
-                            Qualified professionals dedicated to your child's development and success
+                            {hero.subtitle}
                         </motion.p>
                     </div>
                 </section>

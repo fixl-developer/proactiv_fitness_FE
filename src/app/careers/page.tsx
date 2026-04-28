@@ -7,6 +7,7 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import PageHero from '@/components/sections/PageHero'
 import { useCMSData } from '@/hooks/useCMSData'
+import { usePageHero } from '@/hooks/usePageHero'
 import { CMSService, JobPositionData } from '@/services/cmsService'
 
 const staticPositions = [
@@ -117,6 +118,16 @@ const CareersPage = () => {
 
     const positions = dynamicPositions.length > 0 ? dynamicPositions : staticPositions
 
+    const { hero } = usePageHero('careers', {
+        title: 'Join Our Team',
+        subtitle: "Be part of Hong Kong's premier gymnastics training center. Help us inspire the next generation of gymnasts while building your own rewarding career.",
+        backgroundImage: '/images/pages/careers-hero.jpg',
+        fallbackGradient: 'from-purple-600 to-blue-600',
+        ctaText: '',
+        ctaLink: '',
+        height: 'large',
+    })
+
     const benefits = [
         {
             icon: FiHeart,
@@ -169,11 +180,11 @@ const CareersPage = () => {
             <main className="min-h-screen bg-gray-50">
                 {/* Page Hero */}
                 <PageHero
-                    title="Join Our Team"
-                    subtitle="Be part of Hong Kong's premier gymnastics training center. Help us inspire the next generation of gymnasts while building your own rewarding career."
-                    backgroundImage="/images/pages/careers-hero.jpg"
-                    fallbackGradient="from-purple-600 to-blue-600"
-                    height="large"
+                    title={hero.title}
+                    subtitle={hero.subtitle}
+                    backgroundImage={hero.backgroundImage}
+                    fallbackGradient={hero.fallbackGradient}
+                    height={hero.height}
                 />
 
                 {/* Why Work With Us */}

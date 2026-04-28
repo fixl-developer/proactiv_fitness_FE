@@ -147,7 +147,7 @@ export class LocationManagerService {
      */
     static async getDashboardOverview(): Promise<any> {
         try {
-            const response = await apiClient.get('/admin/location/dashboard')
+            const response: any = await apiClient.get('/admin/location/dashboard')
             return response.data
         } catch (error: any) {
             console.error('Failed to fetch dashboard overview:', error)
@@ -174,7 +174,7 @@ export class LocationManagerService {
             if (level) params.append('level', level)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<LocationClass>>(
+            const response: any = await apiClient.get(
                 `/admin/location/classes?${params.toString()}`
             )
             return response.data
@@ -190,7 +190,7 @@ export class LocationManagerService {
      */
     static async getClass(classId: string): Promise<LocationClass> {
         try {
-            const response = await apiClient.get<LocationClass>(
+            const response: any = await apiClient.get(
                 `/admin/location/classes/${classId}`
             )
             return response.data
@@ -219,7 +219,7 @@ export class LocationManagerService {
             if (role) params.append('role', role)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<LocationStaff>>(
+            const response: any = await apiClient.get(
                 `/admin/location/staff?${params.toString()}`
             )
             return response.data
@@ -235,7 +235,7 @@ export class LocationManagerService {
      */
     static async getStaffMember(staffId: string): Promise<LocationStaff> {
         try {
-            const response = await apiClient.get<LocationStaff>(
+            const response: any = await apiClient.get(
                 `/admin/location/staff/${staffId}`
             )
             return response.data
@@ -262,7 +262,7 @@ export class LocationManagerService {
             if (search) params.append('search', search)
             if (status) params.append('status', status)
 
-            const response = await apiClient.get<PaginatedResponse<Facility>>(
+            const response: any = await apiClient.get(
                 `/admin/location/facilities?${params.toString()}`
             )
             return response.data
@@ -278,7 +278,7 @@ export class LocationManagerService {
      */
     static async getFacility(facilityId: string): Promise<Facility> {
         try {
-            const response = await apiClient.get<Facility>(
+            const response: any = await apiClient.get(
                 `/admin/location/facilities/${facilityId}`
             )
             return response.data
@@ -294,7 +294,7 @@ export class LocationManagerService {
      */
     static async updateFacility(facilityId: string, data: Partial<Facility>): Promise<Facility> {
         try {
-            const response = await apiClient.put<Facility>(
+            const response: any = await apiClient.put(
                 `/admin/location/facilities/${facilityId}`,
                 data
             )
@@ -312,7 +312,7 @@ export class LocationManagerService {
     static async getAnalytics(timeRange?: string): Promise<LocationAnalytics> {
         try {
             const params = timeRange ? `?timeRange=${timeRange}` : ''
-            const response = await apiClient.get<LocationAnalytics>(
+            const response: any = await apiClient.get(
                 `/admin/location/analytics${params}`
             )
             return response.data
@@ -328,7 +328,7 @@ export class LocationManagerService {
      */
     static async getSettings(): Promise<LocationSettings> {
         try {
-            const response = await apiClient.get<LocationSettings>('/admin/location/settings')
+            const response: any = await apiClient.get('/admin/location/settings')
             return response.data
         } catch (error: any) {
             console.error('Failed to fetch settings:', error)
@@ -342,7 +342,7 @@ export class LocationManagerService {
      */
     static async updateSettings(settings: Partial<LocationSettings>): Promise<LocationSettings> {
         try {
-            const response = await apiClient.put<LocationSettings>(
+            const response: any = await apiClient.put(
                 '/admin/location/settings',
                 settings
             )
@@ -363,7 +363,7 @@ export class LocationManagerService {
         notes?: string
     ): Promise<any> {
         try {
-            const response = await apiClient.post(
+            const response: any = await apiClient.post(
                 `/admin/location/facilities/${facilityId}/schedule-maintenance`,
                 { maintenanceDate, notes }
             )
@@ -378,7 +378,7 @@ export class LocationManagerService {
 
     static async createClass(data: Partial<LocationClass>): Promise<LocationClass> {
         try {
-            const response = await apiClient.post<LocationClass>('/admin/location/classes', data)
+            const response: any = await apiClient.post('/admin/location/classes', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to create class:', error)
@@ -388,7 +388,7 @@ export class LocationManagerService {
 
     static async updateClass(classId: string, data: Partial<LocationClass>): Promise<LocationClass> {
         try {
-            const response = await apiClient.put<LocationClass>(`/admin/location/classes/${classId}`, data)
+            const response: any = await apiClient.put(`/admin/location/classes/${classId}`, data)
             return response.data
         } catch (error: any) {
             console.error('Failed to update class:', error)
@@ -409,7 +409,7 @@ export class LocationManagerService {
 
     static async createStaff(data: any): Promise<LocationStaff> {
         try {
-            const response = await apiClient.post<LocationStaff>('/admin/location/staff', data)
+            const response: any = await apiClient.post('/admin/location/staff', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to create staff:', error)
@@ -419,7 +419,7 @@ export class LocationManagerService {
 
     static async updateStaff(staffId: string, data: Partial<LocationStaff>): Promise<LocationStaff> {
         try {
-            const response = await apiClient.put<LocationStaff>(`/admin/location/staff/${staffId}`, data)
+            const response: any = await apiClient.put(`/admin/location/staff/${staffId}`, data)
             return response.data
         } catch (error: any) {
             console.error('Failed to update staff:', error)
@@ -444,7 +444,7 @@ export class LocationManagerService {
             if (timeRange) params.append('timeRange', timeRange)
             if (search) params.append('search', search)
             if (classFilter && classFilter !== 'all') params.append('class', classFilter)
-            const response = await apiClient.get(`/admin/location/attendance?${params.toString()}`)
+            const response: any = await apiClient.get(`/admin/location/attendance?${params.toString()}`)
             return response.data
         } catch (error: any) {
             console.error('Failed to fetch attendance:', error)
@@ -454,7 +454,7 @@ export class LocationManagerService {
 
     static async checkInStudent(data: { studentId: string; sessionId?: string; checkInMethod?: string }): Promise<any> {
         try {
-            const response = await apiClient.post('/admin/location/attendance/check-in', data)
+            const response: any = await apiClient.post('/admin/location/attendance/check-in', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to check in student:', error)
@@ -476,7 +476,7 @@ export class LocationManagerService {
             params.append('pageSize', pageSize.toString())
             if (search) params.append('search', search)
             if (status && status !== 'all') params.append('status', status)
-            const response = await apiClient.get<PaginatedResponse<WaitlistEntry>>(
+            const response: any = await apiClient.get(
                 `/admin/location/waitlist?${params.toString()}`
             )
             return response.data
@@ -488,7 +488,7 @@ export class LocationManagerService {
 
     static async addToWaitlist(data: any): Promise<WaitlistEntry> {
         try {
-            const response = await apiClient.post<WaitlistEntry>('/admin/location/waitlist', data)
+            const response: any = await apiClient.post('/admin/location/waitlist', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to add to waitlist:', error)
@@ -498,7 +498,7 @@ export class LocationManagerService {
 
     static async offerWaitlistSpot(entryId: string): Promise<WaitlistEntry> {
         try {
-            const response = await apiClient.put<WaitlistEntry>(`/admin/location/waitlist/${entryId}/offer`)
+            const response: any = await apiClient.put(`/admin/location/waitlist/${entryId}/offer`)
             return response.data
         } catch (error: any) {
             console.error('Failed to offer spot:', error)
@@ -519,7 +519,7 @@ export class LocationManagerService {
 
     static async createFacility(data: Partial<Facility>): Promise<Facility> {
         try {
-            const response = await apiClient.post<Facility>('/admin/location/facilities', data)
+            const response: any = await apiClient.post('/admin/location/facilities', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to create facility:', error)
@@ -550,7 +550,7 @@ export class LocationManagerService {
             params.append('pageSize', pageSize.toString())
             if (search) params.append('search', search)
             if (status && status !== 'all') params.append('status', status)
-            const response = await apiClient.get<PaginatedResponse<EmergencyContact>>(
+            const response: any = await apiClient.get(
                 `/admin/location/emergency-contacts?${params.toString()}`
             )
             return response.data
@@ -562,7 +562,7 @@ export class LocationManagerService {
 
     static async createEmergencyContact(data: Partial<EmergencyContact>): Promise<EmergencyContact> {
         try {
-            const response = await apiClient.post<EmergencyContact>('/admin/location/emergency-contacts', data)
+            const response: any = await apiClient.post('/admin/location/emergency-contacts', data)
             return response.data
         } catch (error: any) {
             console.error('Failed to create emergency contact:', error)
@@ -572,7 +572,7 @@ export class LocationManagerService {
 
     static async updateEmergencyContact(contactId: string, data: Partial<EmergencyContact>): Promise<EmergencyContact> {
         try {
-            const response = await apiClient.put<EmergencyContact>(
+            const response: any = await apiClient.put(
                 `/admin/location/emergency-contacts/${contactId}`, data
             )
             return response.data
@@ -584,7 +584,7 @@ export class LocationManagerService {
 
     static async verifyEmergencyContact(contactId: string): Promise<EmergencyContact> {
         try {
-            const response = await apiClient.put<EmergencyContact>(
+            const response: any = await apiClient.put(
                 `/admin/location/emergency-contacts/${contactId}/verify`
             )
             return response.data
