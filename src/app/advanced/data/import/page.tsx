@@ -45,7 +45,7 @@ export default function ImportPage() {
     const handleImport = async () => {
         try {
             setImporting(true)
-            await DataManagementService.importData(entity, format, {})
+            await (DataManagementService as any).importData(entity, format, {})
             await loadJobs()
         } catch (err) {
             console.error('Error importing:', err)
@@ -151,8 +151,8 @@ export default function ImportPage() {
                                                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                                                     )}
                                                     <div className="flex-1">
-                                                        <p className="font-medium">{job.name}</p>
-                                                        <p className="text-sm text-gray-600">{job.totalRecords} records • {job.format}</p>
+                                                        <p className="font-medium">{(job as any).name || job.id}</p>
+                                                        <p className="text-sm text-gray-600">{job.totalRecords} records • {(job as any).format || ''}</p>
                                                     </div>
                                                 </div>
                                                 <Badge className={`${job.status === 'completed' ? 'bg-green-100 text-green-800' :

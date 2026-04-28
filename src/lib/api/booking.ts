@@ -1,5 +1,8 @@
 import apiClient from '@/lib/apiClient';
-import type { Class, Booking, BookingFilters, ApiResponse, Pagination } from '@/types';
+import type { ApiResponse, PaginatedResponse } from '@/types';
+import type { Class, Booking, BookingFilters } from '@/types/booking';
+
+type Pagination = PaginatedResponse<unknown> extends infer P ? Omit<P, 'data'> : never;
 
 // Booking API endpoints
 export const bookingApi = {

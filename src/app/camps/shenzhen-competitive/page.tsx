@@ -6,9 +6,21 @@ import Image from 'next/image'
 import { FiCalendar, FiClock, FiUsers, FiMapPin, FiStar, FiTarget, FiAward, FiTrendingUp } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import CampBookButton from '@/components/camps/CampBookButton'
 import { getRandomImage } from '@/utils/imageUtils'
+import { usePageHero } from '@/hooks/usePageHero'
 
 const ShenzhenCompetitivePage = () => {
+  const { hero } = usePageHero('shenzhen-competitive', {
+    title: 'Shenzhen Competitive Training',
+    subtitle: 'Elite gymnastics training program in Shenzhen for serious competitive gymnasts. Experience world-class facilities, international coaching standards, and intensive skill development.',
+    backgroundImage: '',
+    fallbackGradient: 'from-red-600 to-red-800',
+    ctaText: '',
+    ctaLink: '',
+    height: 'medium',
+  })
+
   const programFeatures = [
     {
       icon: FiTarget,
@@ -122,21 +134,16 @@ const ShenzhenCompetitivePage = () => {
       <Header />
       <main className="min-h-screen">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-red-600 to-red-800 text-white section-padding overflow-hidden">
+        <section className={`relative bg-gradient-to-br ${hero.fallbackGradient} text-white section-padding overflow-hidden`}>
           {/* Background Image */}
           <div className="absolute inset-0">
             <Image
-              src={getRandomImage('gymnastics competition')}
-              alt="Shenzhen Competitive Training Background"
+              src={hero.backgroundImage || getRandomImage('gymnastics competition')}
+              alt={hero.title}
               fill
               className="object-cover opacity-30"
               onError={(e) => {
                 e.currentTarget.style.display = 'none'
-                // Show fallback gradient if image fails
-                const parent = e.currentTarget.parentElement
-                if (parent) {
-                  parent.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)'
-                }
               }}
             />
           </div>
@@ -149,11 +156,10 @@ const ShenzhenCompetitivePage = () => {
               className="max-w-4xl mx-auto text-center"
             >
               <h1 className="text-4xl sm:text-5xl font-heading font-bold mb-6">
-                Shenzhen Competitive Training
+                {hero.title}
               </h1>
               <p className="text-xl text-red-100 mb-8 leading-relaxed">
-                Elite gymnastics training program in Shenzhen for serious competitive gymnasts.
-                Experience world-class facilities, international coaching standards, and intensive skill development.
+                {hero.subtitle}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <Link id="programs" href="#programs" className="btn-secondary">
@@ -449,12 +455,14 @@ const ShenzhenCompetitivePage = () => {
                       </div>
 
                       <div className="space-y-3">
-                        <Link id="camps-shenzhen-competitive-nav-apply-now"
-                          href={`/camps/book?program=${program.id}`}
+                        <CampBookButton
+                          id={`camps-shenzhen-competitive-nav-apply-now-${program.id}`}
+                          campId={program.id}
+                          category="shenzhen-competitive"
                           className="w-full btn-primary text-center block"
                         >
                           Apply Now
-                        </Link>
+                        </CampBookButton>
                         <Link id="camps-shenzhen-competitive-nav-contact"
                           href="/contact"
                           className="w-full btn-outline text-center block"

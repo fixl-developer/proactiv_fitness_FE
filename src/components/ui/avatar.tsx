@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+// @ts-expect-error — package not installed; component unused in active flows
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"

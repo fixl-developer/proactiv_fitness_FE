@@ -6,12 +6,14 @@ import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, Eye, EyeOff
 import { toast } from 'sonner'
 import ImageUploader from './ImageUploader'
 import ImageArrayUploader from './ImageArrayUploader'
+import GradientPicker from './GradientPicker'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { validateFieldByName, sanitizeFieldInput, getPlaceholder, getHelpText, getCharacterLimit } from '@/utils/cmsValidation'
 
 export interface FieldConfig {
     name: string
     label: string
-    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'image-array' | 'richtext' | 'email' | 'url' | 'slug' | 'tel' | 'name'
+    type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'array' | 'image' | 'image-array' | 'richtext' | 'email' | 'url' | 'slug' | 'tel' | 'name' | 'gradient'
     required?: boolean
     options?: { label: string; value: string }[]
     placeholder?: string
@@ -24,6 +26,8 @@ export interface FieldConfig {
     pattern?: RegExp
     patternMessage?: string
     helpText?: string
+    /** For type='gradient' only — controls how the picker stores its value. Defaults to 'auto'. */
+    gradientFormat?: 'auto' | 'colors-only' | 'full'
     /** Auto-fill this field from another field (e.g. slug from title) while this field is empty or untouched */
     deriveFrom?: string
 }
@@ -57,7 +61,7 @@ interface CMSCrudTableProps {
 // Built-in validators
 // =============================================
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const URL_REGEX = /^https?:\/\/[^\s/$.?#].[^\s]*$/i
+const URL_REGEX = /^(https?:\/\/[^\s/$.?#].[^\s]*|\/[^\s]*)$/i
 const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const PHONE_REGEX = /^[+]?[\d\s()-]{7,20}$/
 const NAME_REGEX = /^[A-Za-z\s'-]+$/
@@ -108,7 +112,7 @@ function validateField(field: FieldConfig, value: any): string | null {
         return `${field.label} must be a valid email address`
     }
     if (field.type === 'url' && !URL_REGEX.test(str)) {
-        return `${field.label} must be a valid URL (http:// or https://)`
+        return `${field.label} must be a valid URL (http://, https://, or /)`
     }
     if (field.type === 'slug' && !SLUG_REGEX.test(str)) {
         return `${field.label} must be lowercase letters, numbers, and hyphens only (e.g., my-blog-post)`
@@ -125,6 +129,12 @@ function validateField(field: FieldConfig, value: any): string | null {
 
     if (field.pattern && !field.pattern.test(str)) {
         return field.patternMessage || `${field.label} format is invalid`
+    }
+
+    // Use enhanced field-name-based validation
+    const fieldNameValidationError = validateFieldByName(field.name, field.type, value, false)
+    if (fieldNameValidationError) {
+        return fieldNameValidationError
     }
 
     return null
@@ -267,7 +277,8 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                     .filter(v => v != null && v !== '')
             }
             if ((field.type === 'text' || field.type === 'textarea' || field.type === 'richtext' || field.type === 'email' || field.type === 'url' || field.type === 'slug' || field.type === 'tel' || field.type === 'name' || field.type === 'image') && typeof value === 'string') {
-                payload[field.name] = value.trim()
+                // Use enhanced sanitization
+                payload[field.name] = sanitizeFieldInput(field.name, field.type, value)
             }
         })
         return payload
@@ -399,9 +410,9 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
     const inputClass = (name: string) => `${inputBase} ${errors[name] ? inputErr : inputOk}`
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-8">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-gray-200">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
                     <p className="text-gray-500 text-sm mt-1">{description}</p>
@@ -565,7 +576,7 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                 size="lg"
                 showOverlay={true}
             >
-                <div className="space-y-4">
+                <div className="space-y-6 pb-6">
                     {submitError && (
                         <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2.5 text-sm">
                             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -611,8 +622,8 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                             if (e.key.length === 1 && !allowed.test(e.key)) e.preventDefault()
                                         }
                                     }}
-                                    placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                    maxLength={field.maxLength}
+                                    placeholder={field.placeholder || getPlaceholder(field.name, field.type)}
+                                    maxLength={field.maxLength || getCharacterLimit(field.name, field.type) || undefined}
                                     className={inputClass(field.name)}
                                 />
                             ) : field.type === 'textarea' || field.type === 'richtext' ? (
@@ -620,9 +631,9 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                     value={formData[field.name] || ''}
                                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
                                     onBlur={() => handleFieldBlur(field)}
-                                    placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                                    placeholder={field.placeholder || getPlaceholder(field.name, field.type)}
                                     rows={field.type === 'richtext' ? 8 : 3}
-                                    maxLength={field.maxLength}
+                                    maxLength={field.maxLength || getCharacterLimit(field.name, field.type) || undefined}
                                     className={inputClass(field.name) + ' resize-y'}
                                 />
                             ) : field.type === 'number' ? (
@@ -650,6 +661,14 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
                                 </select>
+                            ) : field.type === 'gradient' ? (
+                                <GradientPicker
+                                    value={formData[field.name] || ''}
+                                    onChange={(v) => handleFieldChange(field.name, v)}
+                                    format={field.gradientFormat || 'auto'}
+                                    placeholder={field.placeholder}
+                                    invalid={!!errors[field.name]}
+                                />
                             ) : field.type === 'boolean' ? (
                                 <label className="flex items-center gap-3 cursor-pointer">
                                     <div className="relative">
@@ -700,14 +719,14 @@ export default function CMSCrudTable({ title, description, fields, service, tabl
                                     {errors[field.name]}
                                 </p>
                             )}
-                            {!errors[field.name] && field.helpText && (
-                                <p className="mt-1 text-xs text-gray-500">{field.helpText}</p>
+                            {!errors[field.name] && (field.helpText || getHelpText(field.name, field.type)) && (
+                                <p className="mt-1 text-xs text-gray-500">{field.helpText || getHelpText(field.name, field.type)}</p>
                             )}
                         </div>
                     ))}
 
                     {/* Form Footer */}
-                    <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
+                    <div className="flex items-center justify-end gap-4 pt-8 border-t border-gray-100 mt-8">
                         <button
                             onClick={() => setShowModal(false)}
                             className="px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors"

@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, XCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Calendar, XCircle, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { BookingService } from '@/services/operationsService'
+import { apiClient } from '@/services/api/client'
+import { extractList } from '@/utils/apiResponse'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface Booking {
   id: string
   customerId: string
+  customerName?: string
   programId: string
+  programName?: string
   sessionId: string
   date: string
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
@@ -19,6 +23,29 @@ interface Booking {
   notes?: string
   createdAt?: string
 }
+
+interface CustomerOption {
+  id: string
+  name: string
+  email: string
+}
+
+interface ProgramOption {
+  id: string
+  name: string
+}
+
+const BOOKING_TYPES: { value: string; label: string }[] = [
+  { value: 'drop_in', label: 'Drop-in / Class' },
+  { value: 'trial', label: 'Trial' },
+  { value: 'assessment', label: 'Assessment' },
+  { value: 'term_enrollment', label: 'Term Enrollment' },
+  { value: 'private_lesson', label: 'Private Lesson' },
+  { value: 'camp', label: 'Camp' },
+  { value: 'event', label: 'Event' },
+  { value: 'party', label: 'Party' },
+  { value: 'makeup', label: 'Makeup' },
+]
 
 export default function BookingManagementPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -31,17 +58,59 @@ export default function BookingManagementPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
+  const [customers, setCustomers] = useState<CustomerOption[]>([])
+  const [programs, setPrograms] = useState<ProgramOption[]>([])
+
   const [formData, setFormData] = useState({
     customerId: '',
     programId: '',
     sessionId: '',
     date: '',
+    bookingType: 'drop_in',
     status: 'pending' as 'pending' | 'confirmed' | 'cancelled' | 'completed',
     paymentStatus: 'pending' as 'pending' | 'paid' | 'refunded',
     notes: '',
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Load customers + programs once for the create/edit drawer dropdowns
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const [usersRes, programsRes] = await Promise.all([
+          apiClient.get<any>('/users', { params: { limit: 200 } }),
+          apiClient.get<any>('/programs', { params: { limit: 200 } }),
+        ])
+
+        // Customers = end users + parents only. Showing admins/coaches/managers
+        // here would let an admin "book" themselves, which isn't the intent of
+        // a manual customer reservation.
+        const userList = extractList<any>(usersRes)
+        const customerRoles = new Set(['USER', 'PARENT', 'CUSTOMER'])
+        setCustomers(
+          userList
+            .filter((u: any) => customerRoles.has(String(u.role || '').toUpperCase()))
+            .map((u: any) => ({
+              id: u.id || u._id,
+              name: u.fullName || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+              email: u.email,
+            }))
+            .filter((c: any) => c.id),
+        )
+
+        const progList = extractList<any>(programsRes)
+        setPrograms(
+          progList.map((p: any) => ({
+            id: p.id || p._id,
+            name: p.name || p.title || p.programName || 'Untitled program',
+          })).filter((p: any) => p.id),
+        )
+      } catch (error) {
+        console.error('Failed to load customers/programs:', error)
+      }
+    })()
+  }, [])
 
   // Load bookings
   const loadBookings = async () => {
@@ -70,9 +139,8 @@ export default function BookingManagementPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.customerId) newErrors.customerId = 'Customer ID is required'
-    if (!formData.programId) newErrors.programId = 'Program ID is required'
-    if (!formData.sessionId) newErrors.sessionId = 'Session ID is required'
+    if (!formData.customerId) newErrors.customerId = 'Customer is required'
+    if (!formData.programId) newErrors.programId = 'Program is required'
     if (!formData.date) newErrors.date = 'Date is required'
 
     setErrors(newErrors)
@@ -92,10 +160,10 @@ export default function BookingManagementPage() {
       setSubmitting(true)
 
       if (editingId) {
-        await BookingService.update(editingId, formData)
+        await BookingService.update(editingId, formData as any)
         toast.success('Booking updated successfully')
       } else {
-        await BookingService.create(formData)
+        await BookingService.create(formData as any)
         toast.success('Booking created successfully')
       }
 
@@ -115,8 +183,9 @@ export default function BookingManagementPage() {
     setFormData({
       customerId: booking.customerId,
       programId: booking.programId,
-      sessionId: booking.sessionId,
-      date: booking.date,
+      sessionId: booking.sessionId || '',
+      date: booking.date ? new Date(booking.date).toISOString().slice(0, 10) : '',
+      bookingType: (booking as any).bookingType || 'drop_in',
       status: booking.status,
       paymentStatus: booking.paymentStatus,
       notes: booking.notes || '',
@@ -157,6 +226,7 @@ export default function BookingManagementPage() {
       programId: '',
       sessionId: '',
       date: '',
+      bookingType: 'drop_in',
       status: 'pending',
       paymentStatus: 'pending',
       notes: '',
@@ -192,6 +262,13 @@ export default function BookingManagementPage() {
     return colors[status] || 'bg-gray-100 text-gray-800'
   }
 
+  const formatDate = (raw: string) => {
+    if (!raw) return '-'
+    const d = new Date(raw)
+    if (isNaN(d.getTime())) return '-'
+    return d.toLocaleDateString()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -203,9 +280,19 @@ export default function BookingManagementPage() {
         >
           <div className="flex items-center gap-3 mb-2">
             <Calendar className="w-8 h-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-slate-900">Booking Management</h1>
+            <h1 className="text-4xl font-bold text-slate-900">Manual Bookings</h1>
           </div>
-          <p className="text-slate-600">Manage customer bookings and reservations</p>
+          <p className="text-slate-600">Walk-in &amp; phone bookings — record reservations on behalf of customers who can&apos;t book online.</p>
+
+          {/* Channel-purpose callout — clarifies this page vs. the public Book Now flow */}
+          <div className="mt-4 flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-900 space-y-1">
+              <p><strong>When to use this page:</strong> walk-in customers, phone bookings, VIP/internal reservations, or fixing a botched online booking.</p>
+              <p><strong>Customers should self-book:</strong> direct them to the public <code className="px-1 py-0.5 bg-white rounded text-blue-700">/book-now</code> page or their parent dashboard — every booking made there shows up here too.</p>
+              <p><strong>No slots available?</strong> Sessions only appear after admin <em>generates &amp; publishes</em> a schedule under <code className="px-1 py-0.5 bg-white rounded text-blue-700">Programs &amp; Scheduling → Schedule</code>.</p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Controls */}
@@ -261,9 +348,8 @@ export default function BookingManagementPage() {
                 <table className="w-full">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Customer ID</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Program ID</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Session ID</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Customer</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Program</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Date</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Payment</th>
@@ -273,12 +359,13 @@ export default function BookingManagementPage() {
                   <tbody className="divide-y divide-slate-200">
                     {bookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-slate-50 transition">
-                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{booking.customerId}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{booking.programId}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{booking.sessionId}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          {new Date(booking.date).toLocaleDateString()}
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                          {booking.customerName || booking.customerId || '-'}
                         </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {booking.programName || (booking.programId ? `${String(booking.programId).slice(0, 8)}…` : '-')}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{formatDate(booking.date)}</td>
                         <td className="px-6 py-4 text-sm">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(booking.status)}`}>
                             {booking.status}
@@ -352,65 +439,87 @@ export default function BookingManagementPage() {
         <SlideInDrawer
           isOpen={showForm}
           onClose={handleCloseDrawer}
-          title={editingId ? 'Edit Booking' : 'Add New Booking'}
+          title={editingId ? 'Edit Booking' : 'Manual Booking — on behalf of customer'}
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Customer ID */}
+            {/* Customer */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
-                Customer ID <span className="text-red-500">*</span>
+                Customer <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.customerId}
                 onChange={(e) => {
                   setFormData({ ...formData, customerId: e.target.value })
                   if (errors.customerId) setErrors({ ...errors, customerId: '' })
                 }}
-                placeholder="e.g., CUST-12345"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.customerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
-              />
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.customerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+              >
+                <option value="">Select customer</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.email ? `— ${c.email}` : ''}
+                  </option>
+                ))}
+              </select>
               {errors.customerId && <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>}
+              {!errors.customerId && customers.length === 0 && (
+                <p className="mt-1 text-xs text-slate-500">No users found — add a user first under User Management</p>
+              )}
             </div>
 
-            {/* Program ID */}
+            {/* Program */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
-                Program ID <span className="text-red-500">*</span>
+                Program <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.programId}
                 onChange={(e) => {
                   setFormData({ ...formData, programId: e.target.value })
                   if (errors.programId) setErrors({ ...errors, programId: '' })
                 }}
-                placeholder="e.g., PROG-67890"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.programId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
-              />
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.programId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
+              >
+                <option value="">Select program</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
               {errors.programId && <p className="mt-1 text-sm text-red-600">{errors.programId}</p>}
+              {!errors.programId && programs.length === 0 && (
+                <p className="mt-1 text-xs text-slate-500">No programs found — add one in Programs & Scheduling</p>
+              )}
             </div>
 
-            {/* Session ID */}
+            {/* Booking Type */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">
-                Session ID <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Booking Type</label>
+              <select
+                value={formData.bookingType}
+                onChange={(e) => setFormData({ ...formData, bookingType: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {BOOKING_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Session ID (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Session ID <span className="text-slate-400 font-normal">(optional)</span></label>
               <input
                 type="text"
                 value={formData.sessionId}
-                onChange={(e) => {
-                  setFormData({ ...formData, sessionId: e.target.value })
-                  if (errors.sessionId) setErrors({ ...errors, sessionId: '' })
-                }}
-                placeholder="e.g., SESS-11111"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.sessionId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                onChange={(e) => setFormData({ ...formData, sessionId: e.target.value })}
+                placeholder="Mongo Session ID — leave blank if not assigning a specific session"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.sessionId && <p className="mt-1 text-sm text-red-600">{errors.sessionId}</p>}
+              <p className="mt-1 text-xs text-slate-500">Only set this if you have a real session ObjectId from the schedule</p>
             </div>
 
             {/* Date */}

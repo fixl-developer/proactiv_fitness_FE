@@ -43,7 +43,8 @@ const BookingHeader = () => {
             MANAGER: '/manager/dashboard'
         }
 
-        return dashboards[user.role] || '/parent/dashboard'
+        const roleKey = typeof user.role === 'string' ? user.role : user.role?.name
+        return (roleKey && dashboards[roleKey]) || '/parent/dashboard'
     }
 
     return (
@@ -152,7 +153,7 @@ const BookingHeader = () => {
                                             </div>
                                             <div className="hidden md:block text-left">
                                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                                                <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+                                                <p className="text-xs text-gray-500 capitalize">{(typeof user.role === 'string' ? user.role : user.role?.name || '').toLowerCase()}</p>
                                             </div>
                                             <FiChevronDown className="w-3 h-3" />
                                         </>
@@ -181,7 +182,7 @@ const BookingHeader = () => {
                                                         <div>
                                                             <p className="text-sm font-semibold text-gray-900">{user.name}</p>
                                                             <p className="text-xs text-gray-500">{user.email}</p>
-                                                            <p className="text-xs text-blue-600 capitalize font-medium">{user.role.toLowerCase()}</p>
+                                                            <p className="text-xs text-blue-600 capitalize font-medium">{(typeof user.role === 'string' ? user.role : user.role?.name || '').toLowerCase()}</p>
                                                         </div>
                                                     </div>
                                                 </div>

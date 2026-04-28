@@ -7,15 +7,18 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { KnowledgeBaseService } from '@/services/supportService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { extractList, extractPagination } from '@/utils/apiResponse'
+
+type ArticleCategory = 'faq' | 'guide' | 'troubleshooting' | 'tutorial'
+type ArticleStatus = 'published' | 'draft' | 'archived'
 
 interface KnowledgeBaseArticle {
     id: string
     title: string
-    category: 'faq' | 'guide' | 'troubleshooting' | 'tutorial'
+    category: ArticleCategory
     content: string
     tags?: string[]
-    isPublished?: boolean
-    status?: 'published' | 'draft' | 'archived'
+    status?: ArticleStatus
     views?: number
     createdAt?: string
 }
@@ -59,13 +62,20 @@ export default function KnowledgeBasePage() {
     const loadArticles = async () => {
         try {
             setLoading(true)
+            // status='all' tells the backend to skip its default "published only" filter,
+            // so admins see drafts they just created.
             const response = await KnowledgeBaseService.getAll({
                 page: currentPage,
                 limit: 10,
                 search: searchTerm,
+                status: 'all',
             })
-            setArticles(response.data || [])
-            setTotalPages(response.pagination?.totalPages || 1)
+            const list = extractList<any>(response).map((a: any) => ({
+                ...a,
+                id: a.id || a._id,
+            }))
+            setArticles(list)
+            setTotalPages(extractPagination(response).totalPages)
         } catch (error) {
             console.error('Error loading articles:', error)
             toast.error('Failed to load knowledge base articles')
@@ -78,17 +88,29 @@ export default function KnowledgeBasePage() {
         loadArticles()
     }, [currentPage, searchTerm])
 
-    // Validate form
+    // Validate form (per-field rules)
     const validateFormData = () => {
         const newErrors: Record<string, string> = {}
 
-        if (!formData.title) newErrors.title = 'Title is required'
-        else if (formData.title.length < 3) newErrors.title = 'Title must be at least 3 characters'
+        const title = formData.title.trim()
+        if (!title) newErrors.title = 'Title is required'
+        else if (title.length < 3) newErrors.title = 'Title must be at least 3 characters'
+        else if (title.length > 200) newErrors.title = 'Title must be under 200 characters'
 
-        if (!formData.category) newErrors.category = 'Category is required'
+        const validCategories: ArticleCategory[] = ['faq', 'guide', 'troubleshooting', 'tutorial']
+        if (!validCategories.includes(formData.category)) newErrors.category = 'Select a valid category'
 
-        if (!formData.content) newErrors.content = 'Content is required'
-        else if (formData.content.length < 20) newErrors.content = 'Content must be at least 20 characters'
+        const content = formData.content.trim()
+        if (!content) newErrors.content = 'Content is required'
+        else if (content.length < 20) newErrors.content = 'Content must be at least 20 characters'
+        else if (content.length > 20000) newErrors.content = 'Content is too long'
+
+        // Tags optional, but each tag must be a sane slug-ish word
+        if (formData.tags.trim()) {
+            const tagList = formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
+            const bad = tagList.find((t) => !/^[A-Za-z0-9][A-Za-z0-9 _-]{0,29}$/.test(t))
+            if (bad) newErrors.tags = `Invalid tag: "${bad}". Use letters/numbers/spaces (max 30 chars).`
+        }
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -106,22 +128,23 @@ export default function KnowledgeBasePage() {
         try {
             setSubmitting(true)
 
+            // Backend stores status (published|draft|archived); the toggle maps to that.
             const submitData = {
-                title: formData.title,
+                title: formData.title.trim(),
                 category: formData.category,
-                content: formData.content,
+                content: formData.content.trim(),
                 tags: formData.tags
                     .split(',')
                     .map((tag) => tag.trim())
                     .filter((tag) => tag),
-                isPublished: formData.isPublished,
+                status: formData.isPublished ? 'published' : 'draft',
             }
 
             if (editingId) {
-                await KnowledgeBaseService.update(editingId, submitData)
+                await KnowledgeBaseService.update(editingId, submitData as any)
                 toast.success('Article updated successfully')
             } else {
-                await KnowledgeBaseService.create(submitData)
+                await KnowledgeBaseService.create(submitData as any)
                 toast.success('Article created successfully')
             }
 
@@ -143,7 +166,7 @@ export default function KnowledgeBasePage() {
             category: article.category,
             content: article.content,
             tags: article.tags?.join(', ') || '',
-            isPublished: article.isPublished ?? true,
+            isPublished: article.status ? article.status === 'published' : true,
         })
         setEditingId(article.id)
         setShowForm(true)
@@ -271,12 +294,16 @@ export default function KnowledgeBasePage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <span
-                                                        className={`px-3 py-1 rounded-full text-xs font-medium ${article.isPublished
+                                                        className={`px-3 py-1 rounded-full text-xs font-medium ${article.status === 'published'
                                                                 ? 'bg-green-100 text-green-800'
-                                                                : 'bg-gray-100 text-gray-800'
+                                                                : article.status === 'archived'
+                                                                    ? 'bg-slate-200 text-slate-700'
+                                                                    : 'bg-gray-100 text-gray-800'
                                                             }`}
                                                     >
-                                                        {article.isPublished ? 'Published' : 'Draft'}
+                                                        {article.status
+                                                            ? article.status.charAt(0).toUpperCase() + article.status.slice(1)
+                                                            : 'Draft'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-slate-600">
@@ -354,6 +381,7 @@ export default function KnowledgeBasePage() {
                                     if (errors.title) setErrors({ ...errors, title: '' })
                                 }}
                                 placeholder="e.g., How to book a class"
+                                maxLength={200}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.title
                                         ? 'border-red-500 focus:ring-red-500'
                                         : 'border-slate-300 focus:ring-blue-500'
@@ -372,7 +400,7 @@ export default function KnowledgeBasePage() {
                                 onChange={(e) => {
                                     setFormData({
                                         ...formData,
-                                        category: e.target.value as 'faq' | 'guide' | 'troubleshooting' | 'tutorial',
+                                        category: e.target.value as ArticleCategory,
                                     })
                                     if (errors.category) setErrors({ ...errors, category: '' })
                                 }}
@@ -419,10 +447,17 @@ export default function KnowledgeBasePage() {
                             <input
                                 type="text"
                                 value={formData.tags}
-                                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, tags: e.target.value })
+                                    if (errors.tags) setErrors({ ...errors, tags: '' })
+                                }}
                                 placeholder="e.g., booking, class, schedule (comma-separated)"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.tags
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
                             />
+                            {errors.tags && <p className="mt-1 text-sm text-red-600">{errors.tags}</p>}
                             <p className="mt-1 text-xs text-slate-500">Separate tags with commas</p>
                         </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle, Edit, Brain, Sparkles, Zap } from 'lucide-react'
+import { Calendar, Clock, MapPin, DollarSign, RefreshCw, Plus, Eye, X, CheckCircle, AlertCircle, Edit, Brain, Sparkles, Zap, Star } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -266,7 +266,7 @@ export default function BookingsPage() {
         setAiPredictError(null)
         setAiPredictResult(null)
         try {
-            const userId = user?.id || user?._id || ''
+            const userId = user?.id || (user as any)?._id || ''
             const response = await apiClient.post('/smart-scheduler/predict-attendance', { studentId: userId })
             setAiPredictResult(response?.data || response)
         } catch (err: any) {
@@ -282,7 +282,7 @@ export default function BookingsPage() {
         setAiCoachError(null)
         setAiCoachResult(null)
         try {
-            const userId = user?.id || user?._id || ''
+            const userId = user?.id || (user as any)?._id || ''
             const response = await apiClient.post('/smart-scheduler/match-coach', { studentId: userId, requirements: { level: 'any' } })
             setAiCoachResult(response?.data || response)
         } catch (err: any) {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react'
 import { authService } from '@/services/modules/auth.service'
 import { tokenManager } from '@/services/auth/tokenManager'
 import { rbacManager, UserRole } from '@/services/auth/rbac'
@@ -227,22 +227,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null)
     }
 
-    // While loading, check localStorage directly to prevent flash redirect
-    const hasStoredSession = typeof window !== 'undefined' && !!localStorage.getItem('token') && !!localStorage.getItem('user')
-
-    const value: AuthContextType = {
-        user,
-        isAuthenticated: isLoading ? hasStoredSession : (!!user && tokenManager.isAuthenticated()),
-        isLoading,
-        error,
-        role,
-        login,
-        logout,
-        softLogout,
-        register,
-        clearError,
-        refreshToken
-    }
+    // Memoize so consumers (e.g. admin layout) don't re-render on every parent
+    // render. Without this, the value object is rebuilt every render and every
+    // useAuth() consumer re-renders, cascading down through the dashboard tree
+    // — which in dev mode can interact badly with HMR and trigger repeated
+    // page re-fetches.
+    const value: AuthContextType = useMemo(() => {
+        const hasStoredSession = typeof window !== 'undefined' && !!localStorage.getItem('token') && !!localStorage.getItem('user')
+        return {
+            user,
+            isAuthenticated: isLoading ? hasStoredSession : (!!user && tokenManager.isAuthenticated()),
+            isLoading,
+            error,
+            role,
+            login,
+            logout,
+            softLogout,
+            register,
+            clearError,
+            refreshToken,
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, isLoading, error, role])
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

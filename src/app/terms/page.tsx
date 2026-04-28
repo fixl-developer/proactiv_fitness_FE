@@ -5,8 +5,19 @@ import Link from 'next/link'
 import { FiArrowLeft, FiShield, FiFileText, FiUsers, FiAlertCircle } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { usePageHero } from '@/hooks/usePageHero'
 
 export default function TermsAndConditionsPage() {
+    const { hero } = usePageHero('terms', {
+        title: 'Terms & Conditions',
+        subtitle: 'Please read these terms carefully before enrolling in our programs. These conditions ensure a safe and positive experience for all participants.',
+        backgroundImage: '/images/pages/terms-hero.jpg',
+        fallbackGradient: 'from-blue-600 via-purple-600 to-pink-600',
+        ctaText: '',
+        ctaLink: '',
+        height: 'medium',
+    })
+
     const sections = [
         {
             id: 'acceptance',
@@ -123,15 +134,17 @@ export default function TermsAndConditionsPage() {
                     {/* Background Image */}
                     <div className="absolute inset-0 z-0">
                         {/* Fallback gradient background */}
-                        <div className="w-full h-full bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600"></div>
+                        <div className={`w-full h-full bg-gradient-to-br ${hero.fallbackGradient}`}></div>
 
                         {/* Actual hero image */}
-                        <div
-                            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-                            style={{
-                                backgroundImage: 'url(/images/pages/terms-hero.jpg)'
-                            }}
-                        />
+                        {hero.backgroundImage && (
+                            <div
+                                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+                                style={{
+                                    backgroundImage: `url(${hero.backgroundImage})`
+                                }}
+                            />
+                        )}
 
                         {/* Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 via-purple-600/90 to-pink-600/90"></div>
@@ -179,7 +192,7 @@ export default function TermsAndConditionsPage() {
                                 transition={{ delay: 0.3, duration: 0.8 }}
                                 className="text-4xl md:text-5xl font-bold mb-4 leading-tight"
                             >
-                                Terms & Conditions
+                                {hero.title}
                             </motion.h1>
 
                             <motion.p
@@ -188,8 +201,7 @@ export default function TermsAndConditionsPage() {
                                 transition={{ delay: 0.4, duration: 0.8 }}
                                 className="text-base md:text-lg text-white/90 mb-6 leading-relaxed"
                             >
-                                Please read these terms carefully before enrolling in our programs.
-                                These conditions ensure a safe and positive experience for all participants.
+                                {hero.subtitle}
                             </motion.p>
 
                             <motion.div

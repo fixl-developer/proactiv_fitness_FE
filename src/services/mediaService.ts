@@ -67,7 +67,7 @@ export class MediaService {
             if (options?.tags) formData.append('tags', JSON.stringify(options.tags))
             if (options?.metadata) formData.append('metadata', JSON.stringify(options.metadata))
 
-            const response = await apiClient.post<MediaFile>('/media/upload', formData, {
+            const response: any = await apiClient.post('/media/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 },
@@ -121,7 +121,7 @@ export class MediaService {
      */
     static async getMediaFile(id: string): Promise<MediaFile> {
         try {
-            const response = await apiClient.get<MediaFile>(`/media/${id}`)
+            const response: any = await apiClient.get(`/media/${id}`)
             return response.data
         } catch (error: any) {
             console.error('Get media file failed:', error)
@@ -136,7 +136,7 @@ export class MediaService {
     static async getSignedUrl(id: string, expiresIn?: number): Promise<string> {
         try {
             const params = expiresIn ? { expiresIn } : undefined
-            const response = await apiClient.get<{ signedUrl: string }>(`/media/signed-url/${id}`, { params })
+            const response: any = await apiClient.get(`/media/signed-url/${id}`, { params })
             return response.data.signedUrl
         } catch (error: any) {
             console.error('Get signed URL failed:', error)
@@ -163,7 +163,7 @@ export class MediaService {
      */
     static async getMediaByEntity(entityType: string, entityId: string): Promise<MediaFile[]> {
         try {
-            const response = await apiClient.get<MediaFile[]>('/media', {
+            const response: any = await apiClient.get('/media', {
                 params: { entityType, entityId }
             })
             return response.data
@@ -184,7 +184,7 @@ export class MediaService {
         tags?: string[]
     }): Promise<MediaFile> {
         try {
-            const response = await apiClient.patch<MediaFile>(`/media/${id}`, data)
+            const response: any = await apiClient.patch(`/media/${id}`, data)
             return response.data
         } catch (error: any) {
             console.error('Update media file failed:', error)

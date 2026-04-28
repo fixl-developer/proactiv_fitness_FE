@@ -75,7 +75,7 @@ export class StaffManagementService {
      */
     static async getTrainingModules(staffId?: string, filters?: { status?: string; page?: number; limit?: number }): Promise<{ modules: TrainingModule[]; total: number }> {
         try {
-            const params = { ...filters }
+            const params: Record<string, any> = { ...filters }
             if (staffId) params.staffId = staffId
             const response = await apiClient.get('/staff/training', { params })
             return (response as any)?.data || { modules: [], total: 0 }

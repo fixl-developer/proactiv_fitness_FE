@@ -18,7 +18,7 @@ export default function WebhooksPage() {
     const [error, setError] = useState<string | null>(null)
     const [webhooks, setWebhooks] = useState<Webhook[]>([])
     const [showForm, setShowForm] = useState(false)
-    const [formData, setFormData] = useState({ url: '', events: [] })
+    const [formData, setFormData] = useState<{ url: string; events: string[] }>({ url: '', events: [] })
 
     useEffect(() => {
         if (!isAuthenticated) {

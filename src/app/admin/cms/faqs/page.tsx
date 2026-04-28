@@ -10,14 +10,16 @@ export default function FAQsPage() {
             fields={[
                 { name: 'question', label: 'Question', type: 'text', required: true, minLength: 5, maxLength: 300, showInTable: true },
                 { name: 'answer', label: 'Answer', type: 'textarea', required: true, minLength: 5, maxLength: 2000 },
-                { name: 'category', label: 'Category', type: 'select', required: true, showInTable: true, options: [
-                    { label: 'General', value: 'general' },
-                    { label: 'Classes', value: 'classes' },
-                    { label: 'Assessments', value: 'assessments' },
-                    { label: 'Camps', value: 'camps' },
-                    { label: 'Programs', value: 'programs' },
-                    { label: 'Birthday Parties', value: 'birthday-parties' },
-                ] },
+                {
+                    name: 'category', label: 'Category', type: 'select', required: true, showInTable: true, options: [
+                        { label: 'General', value: 'general' },
+                        { label: 'Classes', value: 'classes' },
+                        { label: 'Assessments', value: 'assessments' },
+                        { label: 'Camps', value: 'camps' },
+                        { label: 'Programs', value: 'programs' },
+                        { label: 'Birthday Parties', value: 'birthday-parties' },
+                    ]
+                },
                 { name: 'order', label: 'Display Order', type: 'number', min: 0, max: 999, showInTable: true },
                 { name: 'isActive', label: 'Active', type: 'boolean' },
             ]}

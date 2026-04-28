@@ -52,7 +52,6 @@ const staticServices = [
 
 const Services = () => {
     const [flippedCard, setFlippedCard] = useState<number | null>(null)
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
     const [ripples, setRipples] = useState<Array<{ x: number; y: number; id: number }>>([])
     const [particles, setParticles] = useState<Array<{ id: number; left: number; top: number; duration: number; delay: number }>>([])
 
@@ -102,13 +101,7 @@ const Services = () => {
         setFlippedCard(flippedCard === index ? null : index)
     }
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        setMousePosition({
-            x: (e.clientX - rect.left - rect.width / 2) / 15,
-            y: (e.clientY - rect.top - rect.height / 2) / 15
-        })
-    }
+
 
     return (
         <section className="relative py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-white via-blue-50/20 to-purple-50/20 overflow-hidden">
@@ -221,8 +214,6 @@ const Services = () => {
                                 style={{ transformStyle: 'preserve-3d' }}
                                 animate={{ rotateY: flippedCard === index ? 180 : 0 }}
                                 transition={{ duration: 0.6 }}
-                                onMouseMove={handleMouseMove}
-                                onMouseLeave={() => setMousePosition({ x: 0, y: 0 })}
                             >
                                 {/* Front Side */}
                                 <motion.div
@@ -232,9 +223,7 @@ const Services = () => {
                                                 'bg-blue-900'
                                         } text-white shadow-2xl cursor-pointer min-h-[400px]`}
                                     style={{
-                                        backfaceVisibility: 'hidden',
-                                        transform: `perspective(1000px) rotateY(${mousePosition.x}deg) rotateX(${-mousePosition.y}deg)`,
-                                        transition: 'transform 0.1s ease-out'
+                                        backfaceVisibility: 'hidden'
                                     }}
                                     onClick={(e) => createRipple(e, index)}
                                     whileHover={{ scale: 1.02 }}

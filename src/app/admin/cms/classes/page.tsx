@@ -15,11 +15,13 @@ export default function ClassSessionsPage() {
                 { name: 'duration', label: 'Duration', type: 'text', required: true, placeholder: '1 hour' },
                 { name: 'days', label: 'Days', type: 'text', required: true, placeholder: 'Mo, We, Fr' },
                 { name: 'ageGroup', label: 'Age Group', type: 'text', required: true, placeholder: '3 - 16 years', showInTable: true },
-                { name: 'level', label: 'Level', type: 'select', required: true, options: [
-                    { label: 'Beginner', value: 'BEGINNER' },
-                    { label: 'Intermediate', value: 'INTERMEDIATE' },
-                    { label: 'Advanced', value: 'ADVANCED' },
-                ] },
+                {
+                    name: 'level', label: 'Level', type: 'select', required: true, options: [
+                        { label: 'Beginner', value: 'BEGINNER' },
+                        { label: 'Intermediate', value: 'INTERMEDIATE' },
+                        { label: 'Advanced', value: 'ADVANCED' },
+                    ]
+                },
                 { name: 'price', label: 'Price', type: 'text', required: true, placeholder: 'AED 500 or FREE', showInTable: true },
                 { name: 'isFree', label: 'Is Free', type: 'boolean' },
                 { name: 'availableSlots', label: 'Available Slots', type: 'number', required: true, min: 0, max: 10000, showInTable: true },

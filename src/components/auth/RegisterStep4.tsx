@@ -112,7 +112,7 @@ export function RegisterStep4({
 
     const handleFormSubmit = (data: RegisterStep4Data) => {
         const errs: Record<string, string> = {};
-        data.students.forEach((student, index) => {
+        (data.students ?? []).forEach((student, index) => {
             const fnErr = validateName(student.firstName, 'First name');
             if (fnErr) errs[`students.${index}.firstName`] = fnErr;
             const lnErr = validateName(student.lastName, 'Last name');

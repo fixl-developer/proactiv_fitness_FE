@@ -36,7 +36,7 @@ class TeamServiceClass {
      */
     async getAllTeam(filters?: any): Promise<TeamResponse> {
         try {
-            const response = await apiClient.get<TeamResponse>('/api/team', { params: filters })
+            const response = await apiClient.get<{ data: TeamResponse }>('/api/team', { params: filters })
             return response.data
         } catch (error) {
             console.error('Failed to fetch team:', error)

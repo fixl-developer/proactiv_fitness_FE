@@ -156,7 +156,6 @@ export default function HorizontalSection({
                             gap: `${gap}px`,
                             scrollbarWidth: 'none',
                             msOverflowStyle: 'none',
-                            WebkitScrollbar: { display: 'none' }
                         }}
                     >
                         {assessments.map((assessment, index) => (

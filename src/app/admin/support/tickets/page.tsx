@@ -7,6 +7,11 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { SupportTicketService } from '@/services/supportService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { extractList, extractPagination } from '@/utils/apiResponse'
+
+// Backend enum: priority = low|medium|high|critical, status = open|in-progress|pending|resolved|closed
+type TicketPriority = 'low' | 'medium' | 'high' | 'critical'
+type TicketStatus = 'open' | 'in-progress' | 'pending' | 'resolved' | 'closed'
 
 interface SupportTicket {
     id: string
@@ -16,8 +21,8 @@ interface SupportTicket {
     description: string
     userId?: string
     customerId?: string
-    priority: 'low' | 'medium' | 'high' | 'urgent'
-    status: 'open' | 'in_progress' | 'resolved' | 'closed'
+    priority: TicketPriority
+    status: TicketStatus
     assignedTo?: string
     createdAt?: string
 }
@@ -36,8 +41,8 @@ export default function SupportTicketsPage() {
     const [formData, setFormData] = useState<{
         title: string
         description: string
-        priority: SupportTicket['priority']
-        status: SupportTicket['status']
+        priority: TicketPriority
+        status: TicketStatus
         assignedTo: string
     }>({
         title: '',
@@ -54,16 +59,20 @@ export default function SupportTicketsPage() {
         low: 'bg-blue-100 text-blue-800',
         medium: 'bg-yellow-100 text-yellow-800',
         high: 'bg-orange-100 text-orange-800',
-        urgent: 'bg-red-100 text-red-800',
+        critical: 'bg-red-100 text-red-800',
     }
 
     // Status colors
     const statusColors: Record<string, string> = {
         open: 'bg-blue-100 text-blue-800',
-        in_progress: 'bg-yellow-100 text-yellow-800',
+        'in-progress': 'bg-yellow-100 text-yellow-800',
+        pending: 'bg-purple-100 text-purple-800',
         resolved: 'bg-green-100 text-green-800',
         closed: 'bg-gray-100 text-gray-800',
     }
+
+    const formatLabel = (s: string) =>
+        s.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 
     // Load tickets
     const loadTickets = async () => {
@@ -74,8 +83,12 @@ export default function SupportTicketsPage() {
                 limit: 10,
                 search: searchTerm,
             })
-            setTickets(response.data || [])
-            setTotalPages(response.pagination?.totalPages || 1)
+            const list = extractList<any>(response).map((t: any) => ({
+                ...t,
+                id: t.id || t._id,
+            }))
+            setTickets(list)
+            setTotalPages(extractPagination(response).totalPages)
         } catch (error) {
             console.error('Error loading tickets:', error)
             toast.error('Failed to load support tickets')
@@ -88,18 +101,33 @@ export default function SupportTicketsPage() {
         loadTickets()
     }, [currentPage, searchTerm])
 
-    // Validate form
+    // Validate form (per-field rules)
     const validateFormData = () => {
         const newErrors: Record<string, string> = {}
 
-        if (!formData.title) newErrors.title = 'Title is required'
-        else if (formData.title.length < 3) newErrors.title = 'Title must be at least 3 characters'
+        const title = formData.title.trim()
+        if (!title) newErrors.title = 'Title is required'
+        else if (title.length < 3) newErrors.title = 'Title must be at least 3 characters'
+        else if (title.length > 150) newErrors.title = 'Title must be under 150 characters'
 
-        if (!formData.description) newErrors.description = 'Description is required'
-        else if (formData.description.length < 10) newErrors.description = 'Description must be at least 10 characters'
+        const description = formData.description.trim()
+        if (!description) newErrors.description = 'Description is required'
+        else if (description.length < 10) newErrors.description = 'Description must be at least 10 characters'
+        else if (description.length > 2000) newErrors.description = 'Description must be under 2000 characters'
 
-        if (!formData.priority) newErrors.priority = 'Priority is required'
-        if (!formData.status) newErrors.status = 'Status is required'
+        const validPriorities: TicketPriority[] = ['low', 'medium', 'high', 'critical']
+        if (!validPriorities.includes(formData.priority)) newErrors.priority = 'Select a valid priority'
+
+        const validStatuses: TicketStatus[] = ['open', 'in-progress', 'pending', 'resolved', 'closed']
+        if (!validStatuses.includes(formData.status)) newErrors.status = 'Select a valid status'
+
+        // Assigned To is a name field — reject digits/special chars when present
+        const assignedTo = formData.assignedTo.trim()
+        if (assignedTo) {
+            if (!/^[A-Za-z][A-Za-z\s.'-]{1,49}$/.test(assignedTo)) {
+                newErrors.assignedTo = 'Name must contain only letters, spaces, . \' - (no digits)'
+            }
+        }
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -117,11 +145,23 @@ export default function SupportTicketsPage() {
         try {
             setSubmitting(true)
 
+            // Backend expects `subject` (not `title`), priority enum is critical (not urgent),
+            // and status uses hyphenated `in-progress` (not `in_progress`).
+            const payload: any = {
+                subject: formData.title.trim(),
+                description: formData.description.trim(),
+                priority: formData.priority,
+                status: formData.status,
+                category: 'general',
+            }
+            const assignedTo = formData.assignedTo.trim()
+            if (assignedTo) payload.assignedTo = assignedTo
+
             if (editingId) {
-                await SupportTicketService.update(editingId, formData)
+                await SupportTicketService.update(editingId, payload)
                 toast.success('Ticket updated successfully')
             } else {
-                await SupportTicketService.create(formData)
+                await SupportTicketService.create(payload)
                 toast.success('Ticket created successfully')
             }
 
@@ -265,13 +305,13 @@ export default function SupportTicketsPage() {
                                                     {ticket.title || ticket.subject}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[ticket.priority]}`}>
-                                                        {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${priorityColors[ticket.priority] || 'bg-slate-100 text-slate-700'}`}>
+                                                        {formatLabel(ticket.priority || '')}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[ticket.status]}`}>
-                                                        {ticket.status.replace('_', ' ').charAt(0).toUpperCase() + ticket.status.replace('_', ' ').slice(1)}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[ticket.status] || 'bg-slate-100 text-slate-700'}`}>
+                                                        {formatLabel(ticket.status || '')}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-slate-600">
@@ -349,6 +389,7 @@ export default function SupportTicketsPage() {
                                     if (errors.title) setErrors({ ...errors, title: '' })
                                 }}
                                 placeholder="e.g., Payment processing error"
+                                maxLength={150}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.title
                                         ? 'border-red-500 focus:ring-red-500'
                                         : 'border-slate-300 focus:ring-blue-500'
@@ -370,6 +411,7 @@ export default function SupportTicketsPage() {
                                 }}
                                 placeholder="Detailed description of the issue..."
                                 rows={4}
+                                maxLength={2000}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description
                                         ? 'border-red-500 focus:ring-red-500'
                                         : 'border-slate-300 focus:ring-blue-500'
@@ -390,7 +432,7 @@ export default function SupportTicketsPage() {
                                 onChange={(e) => {
                                     setFormData({
                                         ...formData,
-                                        priority: e.target.value as 'low' | 'medium' | 'high' | 'urgent',
+                                        priority: e.target.value as TicketPriority,
                                     })
                                     if (errors.priority) setErrors({ ...errors, priority: '' })
                                 }}
@@ -402,7 +444,7 @@ export default function SupportTicketsPage() {
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>
                                 <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
+                                <option value="critical">Critical</option>
                             </select>
                             {errors.priority && <p className="mt-1 text-sm text-red-600">{errors.priority}</p>}
                         </div>
@@ -417,7 +459,7 @@ export default function SupportTicketsPage() {
                                 onChange={(e) => {
                                     setFormData({
                                         ...formData,
-                                        status: e.target.value as 'open' | 'in_progress' | 'resolved' | 'closed',
+                                        status: e.target.value as TicketStatus,
                                     })
                                     if (errors.status) setErrors({ ...errors, status: '' })
                                 }}
@@ -427,7 +469,8 @@ export default function SupportTicketsPage() {
                                     }`}
                             >
                                 <option value="open">Open</option>
-                                <option value="in_progress">In Progress</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="pending">Pending</option>
                                 <option value="resolved">Resolved</option>
                                 <option value="closed">Closed</option>
                             </select>
@@ -442,11 +485,21 @@ export default function SupportTicketsPage() {
                             <input
                                 type="text"
                                 value={formData.assignedTo}
-                                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                                onChange={(e) => {
+                                    // Name field — strip any digit the user types
+                                    const cleaned = e.target.value.replace(/[0-9]/g, '')
+                                    setFormData({ ...formData, assignedTo: cleaned })
+                                    if (errors.assignedTo) setErrors({ ...errors, assignedTo: '' })
+                                }}
                                 placeholder="e.g., John Doe"
-                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                maxLength={50}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.assignedTo
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : 'border-slate-300 focus:ring-blue-500'
+                                    }`}
                             />
-                            <p className="mt-1 text-xs text-slate-500">Leave empty for unassigned</p>
+                            {errors.assignedTo && <p className="mt-1 text-sm text-red-600">{errors.assignedTo}</p>}
+                            <p className="mt-1 text-xs text-slate-500">Leave empty for unassigned. Letters only.</p>
                         </div>
 
                         {/* Submit Button */}

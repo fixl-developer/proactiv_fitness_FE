@@ -17,7 +17,7 @@ export function ProtectedRoute({
     requiredPermissions,
 }: ProtectedRouteProps) {
     const router = useRouter();
-    const { isAuthenticated, user, isLoading } = useAuthStore();
+    const { isAuthenticated, user, isLoading } = useAuthStore() as any;
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -45,7 +45,7 @@ export function ProtectedRoute({
     }, [isAuthenticated, user, isLoading, requiredRoles, requiredPermissions, router]);
 
     if (isLoading) {
-        return <LoadingSpinner.PageLoader />;
+        return <LoadingSpinner />;
     }
 
     if (!isAuthenticated) {

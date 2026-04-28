@@ -7,6 +7,14 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { PaymentService } from '@/services/financeService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import {
+  validateRequired,
+  validateCurrency,
+  validateSelect,
+  validateTextArea,
+  filterAlphanumericInput,
+  PATTERNS,
+} from '@/utils/validation'
 
 interface Payment {
   id: string
@@ -21,6 +29,15 @@ interface Payment {
   metadata?: any
   createdAt?: string
 }
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'AED', 'HKD', 'JPY', 'AUD', 'CAD', 'SGD', 'CNY']
+// Backend payments.model enum
+const PAYMENT_METHODS = ['credit_card', 'debit_card', 'paypal', 'stripe', 'line_pay']
+const GATEWAYS = ['stripe', 'paypal', 'line_pay']
+const STATUSES = ['pending', 'completed', 'failed', 'refunded']
+
+const TRANSACTION_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+const CUSTOMER_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
@@ -38,7 +55,7 @@ export default function PaymentsPage() {
     transactionId: '',
     amount: '',
     currency: 'USD',
-    paymentMethod: 'card',
+    paymentMethod: 'credit_card',
     gateway: 'stripe',
     status: 'pending',
     description: '',
@@ -48,16 +65,10 @@ export default function PaymentsPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const currencies = ['USD', 'EUR', 'GBP', 'AED', 'HKD', 'JPY', 'AUD', 'CAD', 'SGD', 'CNY']
-  const paymentMethods = ['card', 'cash', 'bank_transfer', 'wallet']
-  const gateways = ['stripe', 'paypay', 'manual']
-  const statuses = ['pending', 'completed', 'failed', 'refunded']
-
-  // Load payments
   const loadPayments = async () => {
     try {
       setLoading(true)
-      const response = await PaymentService.getAll({
+      const response: any = await PaymentService.getAll({
         page: currentPage,
         limit: 10,
         search: searchTerm,
@@ -76,25 +87,52 @@ export default function PaymentsPage() {
     loadPayments()
   }, [currentPage, searchTerm])
 
-  // Validate form
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.transactionId) newErrors.transactionId = 'Transaction ID is required'
-    if (!formData.amount) newErrors.amount = 'Amount is required'
+    const txnErr = validateRequired(formData.transactionId, 'Transaction ID')
+    if (txnErr) newErrors.transactionId = txnErr
+    else if (!TRANSACTION_ID_PATTERN.test(formData.transactionId.trim())) {
+      newErrors.transactionId = 'Letters, digits, hyphens and underscores only'
+    }
+
+    const amountErr = validateCurrency(formData.amount, 'Amount')
+    if (amountErr) newErrors.amount = amountErr
     else if (parseFloat(formData.amount) <= 0) newErrors.amount = 'Amount must be greater than 0'
 
-    if (!formData.currency) newErrors.currency = 'Currency is required'
-    if (!formData.paymentMethod) newErrors.paymentMethod = 'Payment method is required'
-    if (!formData.gateway) newErrors.gateway = 'Gateway is required'
-    if (!formData.status) newErrors.status = 'Status is required'
-    if (!formData.customerId) newErrors.customerId = 'Customer ID is required'
+    const currencyErr = validateSelect(formData.currency, 'Currency')
+    if (currencyErr) newErrors.currency = currencyErr
+
+    const methodErr = validateSelect(formData.paymentMethod, 'Payment method')
+    if (methodErr) newErrors.paymentMethod = methodErr
+
+    const gatewayErr = validateSelect(formData.gateway, 'Gateway')
+    if (gatewayErr) newErrors.gateway = gatewayErr
+
+    const statusErr = validateSelect(formData.status, 'Status')
+    if (statusErr) newErrors.status = statusErr
+
+    const customerErr = validateRequired(formData.customerId, 'Customer ID')
+    if (customerErr) newErrors.customerId = customerErr
+    else if (!CUSTOMER_ID_PATTERN.test(formData.customerId.trim())) {
+      newErrors.customerId = 'Letters, digits, hyphens and underscores only'
+    }
+
+    if (formData.description) {
+      const descErr = validateTextArea(formData.description, 'Description', 0, 500)
+      if (descErr) newErrors.description = descErr
+    }
+
+    if (formData.metadata.trim()) {
+      try { JSON.parse(formData.metadata) } catch {
+        newErrors.metadata = 'Metadata must be valid JSON (e.g. {"key":"value"})'
+      }
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // Handle submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -107,9 +145,15 @@ export default function PaymentsPage() {
       setSubmitting(true)
 
       const submitData = {
-        ...formData,
+        transactionId: formData.transactionId.trim(),
         amount: parseFloat(formData.amount),
-        metadata: formData.metadata ? JSON.parse(formData.metadata) : undefined,
+        currency: formData.currency,
+        paymentMethod: formData.paymentMethod,
+        gateway: formData.gateway,
+        status: formData.status,
+        description: formData.description,
+        customerId: formData.customerId.trim(),
+        metadata: formData.metadata.trim() ? JSON.parse(formData.metadata) : {},
       }
 
       if (editingId) {
@@ -131,7 +175,6 @@ export default function PaymentsPage() {
     }
   }
 
-  // Handle edit
   const handleEdit = (payment: Payment) => {
     setFormData({
       transactionId: payment.transactionId,
@@ -148,7 +191,6 @@ export default function PaymentsPage() {
     setShowForm(true)
   }
 
-  // Handle delete
   const handleDelete = async (id: string) => {
     try {
       await PaymentService.delete(id)
@@ -161,7 +203,6 @@ export default function PaymentsPage() {
     }
   }
 
-  // Handle refund
   const handleRefund = async (transactionId: string) => {
     try {
       setRefundingId(transactionId)
@@ -176,13 +217,12 @@ export default function PaymentsPage() {
     }
   }
 
-  // Reset form
   const resetForm = () => {
     setFormData({
       transactionId: '',
       amount: '',
       currency: 'USD',
-      paymentMethod: 'card',
+      paymentMethod: 'credit_card',
       gateway: 'stripe',
       status: 'pending',
       description: '',
@@ -193,7 +233,6 @@ export default function PaymentsPage() {
     setEditingId(null)
   }
 
-  // Handle close drawer
   const handleCloseDrawer = () => {
     setShowForm(false)
     resetForm()
@@ -201,28 +240,18 @@ export default function PaymentsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-blue-100 text-blue-800'
-      case 'completed':
-        return 'bg-green-100 text-green-800'
-      case 'failed':
-        return 'bg-red-100 text-red-800'
-      case 'refunded':
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-slate-100 text-slate-800'
+      case 'pending': return 'bg-blue-100 text-blue-800'
+      case 'completed': return 'bg-green-100 text-green-800'
+      case 'failed': return 'bg-red-100 text-red-800'
+      case 'refunded': return 'bg-orange-100 text-orange-800'
+      default: return 'bg-slate-100 text-slate-800'
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <DollarSign className="w-8 h-8 text-blue-600" />
             <h1 className="text-4xl font-bold text-slate-900">Payment Management</h1>
@@ -230,30 +259,19 @@ export default function PaymentsPage() {
           <p className="text-slate-600">Manage all payment transactions and refunds</p>
         </motion.div>
 
-        {/* Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex gap-4 items-center"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex gap-4 items-center">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search by transaction ID or customer..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <button
-            onClick={() => {
-              resetForm()
-              setShowForm(true)
-            }}
+            onClick={() => { resetForm(); setShowForm(true) }}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
           >
             <Plus className="w-5 h-5" />
@@ -261,12 +279,7 @@ export default function PaymentsPage() {
           </button>
         </motion.div>
 
-        {/* Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow-lg overflow-hidden"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg shadow-lg overflow-hidden">
           {loading ? (
             <div className="p-8 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -297,9 +310,9 @@ export default function PaymentsPage() {
                       <tr key={payment.id} className="hover:bg-slate-50 transition">
                         <td className="px-6 py-4 text-sm font-medium text-slate-900">{payment.transactionId}</td>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                          {payment.amount.toFixed(2)} {payment.currency}
+                          {Number(payment.amount).toFixed(2)} {payment.currency}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600 capitalize">{payment.paymentMethod}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 capitalize">{payment.paymentMethod?.replace('_', ' ')}</td>
                         <td className="px-6 py-4 text-sm">
                           <span className="px-3 py-1 bg-slate-100 text-slate-800 rounded-full text-xs font-medium capitalize">
                             {payment.gateway}
@@ -325,16 +338,10 @@ export default function PaymentsPage() {
                                 <RotateCcw className="w-4 h-4" />
                               </button>
                             )}
-                            <button
-                              onClick={() => handleEdit(payment)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                            >
+                            <button onClick={() => handleEdit(payment)} className="p-2 text-blue-600 hover:bg-blue-50 rounded transition">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => setDeleteConfirm(payment.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                            >
+                            <button onClick={() => setDeleteConfirm(payment.id)} className="p-2 text-red-600 hover:bg-red-50 rounded transition">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -345,24 +352,15 @@ export default function PaymentsPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                <p className="text-sm text-slate-600">
-                  Page {currentPage} of {totalPages}
-                </p>
+                <p className="text-sm text-slate-600">Page {currentPage} of {totalPages}</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                  >
+                  <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition"
-                  >
+                  <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 transition">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -371,7 +369,6 @@ export default function PaymentsPage() {
           )}
         </motion.div>
 
-        {/* Form Drawer */}
         <SlideInDrawer
           isOpen={showForm}
           onClose={handleCloseDrawer}
@@ -379,7 +376,6 @@ export default function PaymentsPage() {
           size="lg"
         >
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Transaction ID */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Transaction ID <span className="text-red-500">*</span>
@@ -387,39 +383,43 @@ export default function PaymentsPage() {
               <input
                 type="text"
                 value={formData.transactionId}
+                onKeyDown={filterAlphanumericInput}
                 onChange={(e) => {
-                  setFormData({ ...formData, transactionId: e.target.value })
+                  setFormData({ ...formData, transactionId: e.target.value.replace(/[^A-Za-z0-9_-]/g, '') })
                   if (errors.transactionId) setErrors({ ...errors, transactionId: '' })
                 }}
-                placeholder="e.g., TXN-2024-001"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.transactionId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                placeholder="e.g. TXN-2024-001"
+                maxLength={64}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.transactionId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
-              {errors.transactionId && <p className="mt-1 text-sm text-red-600">{errors.transactionId}</p>}
+              {errors.transactionId
+                ? <p className="mt-1 text-sm text-red-600">{errors.transactionId}</p>
+                : <p className="mt-1 text-xs text-slate-500">Letters, digits, hyphens and underscores only</p>}
             </div>
 
-            {/* Amount */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Amount <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.amount}
                 onChange={(e) => {
-                  setFormData({ ...formData, amount: e.target.value })
-                  if (errors.amount) setErrors({ ...errors, amount: '' })
+                  const v = e.target.value
+                  if (v === '' || PATTERNS.currencyAmount.test(v) || /^\d+\.?$/.test(v)) {
+                    setFormData({ ...formData, amount: v })
+                    if (errors.amount) setErrors({ ...errors, amount: '' })
+                  }
                 }}
                 placeholder="0.00"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.amount ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.amount ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
-              {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+              {errors.amount
+                ? <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
+                : <p className="mt-1 text-xs text-slate-500">Numbers only, up to 2 decimal places (e.g. 99.99)</p>}
             </div>
 
-            {/* Currency */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Currency <span className="text-red-500">*</span>
@@ -430,20 +430,14 @@ export default function PaymentsPage() {
                   setFormData({ ...formData, currency: e.target.value })
                   if (errors.currency) setErrors({ ...errors, currency: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.currency ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.currency ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
                 <option value="">Select Currency</option>
-                {currencies.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               {errors.currency && <p className="mt-1 text-sm text-red-600">{errors.currency}</p>}
             </div>
 
-            {/* Payment Method */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Payment Method <span className="text-red-500">*</span>
@@ -454,20 +448,18 @@ export default function PaymentsPage() {
                   setFormData({ ...formData, paymentMethod: e.target.value })
                   if (errors.paymentMethod) setErrors({ ...errors, paymentMethod: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.paymentMethod ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.paymentMethod ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
                 <option value="">Select Method</option>
-                {paymentMethods.map((method) => (
-                  <option key={method} value={method}>
-                    {method.replace('_', ' ').toUpperCase()}
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {m.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </option>
                 ))}
               </select>
               {errors.paymentMethod && <p className="mt-1 text-sm text-red-600">{errors.paymentMethod}</p>}
             </div>
 
-            {/* Gateway */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Gateway <span className="text-red-500">*</span>
@@ -478,20 +470,16 @@ export default function PaymentsPage() {
                   setFormData({ ...formData, gateway: e.target.value })
                   if (errors.gateway) setErrors({ ...errors, gateway: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.gateway ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.gateway ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
                 <option value="">Select Gateway</option>
-                {gateways.map((gateway) => (
-                  <option key={gateway} value={gateway}>
-                    {gateway.toUpperCase()}
-                  </option>
+                {GATEWAYS.map((g) => (
+                  <option key={g} value={g}>{g.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
                 ))}
               </select>
               {errors.gateway && <p className="mt-1 text-sm text-red-600">{errors.gateway}</p>}
             </div>
 
-            {/* Status */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Status <span className="text-red-500">*</span>
@@ -502,20 +490,16 @@ export default function PaymentsPage() {
                   setFormData({ ...formData, status: e.target.value })
                   if (errors.status) setErrors({ ...errors, status: '' })
                 }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.status ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               >
                 <option value="">Select Status</option>
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
               {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
             </div>
 
-            {/* Customer ID */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Customer ID <span className="text-red-500">*</span>
@@ -523,85 +507,78 @@ export default function PaymentsPage() {
               <input
                 type="text"
                 value={formData.customerId}
+                onKeyDown={filterAlphanumericInput}
                 onChange={(e) => {
-                  setFormData({ ...formData, customerId: e.target.value })
+                  setFormData({ ...formData, customerId: e.target.value.replace(/[^A-Za-z0-9_-]/g, '') })
                   if (errors.customerId) setErrors({ ...errors, customerId: '' })
                 }}
-                placeholder="e.g., CUST-001"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.customerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
-                  }`}
+                placeholder="e.g. CUST-001"
+                maxLength={64}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.customerId ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
-              {errors.customerId && <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>}
+              {errors.customerId
+                ? <p className="mt-1 text-sm text-red-600">{errors.customerId}</p>
+                : <p className="mt-1 text-xs text-slate-500">Letters, digits, hyphens and underscores only</p>}
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">Description</label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, description: e.target.value })
+                  if (errors.description) setErrors({ ...errors, description: '' })
+                }}
                 placeholder="Optional payment description"
                 rows={3}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                maxLength={500}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
+              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
             </div>
 
-            {/* Metadata */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Metadata (JSON)</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">Metadata (JSON, optional)</label>
               <textarea
                 value={formData.metadata}
-                onChange={(e) => setFormData({ ...formData, metadata: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, metadata: e.target.value })
+                  if (errors.metadata) setErrors({ ...errors, metadata: '' })
+                }}
                 placeholder='{"key": "value"}'
                 rows={3}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${errors.metadata ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
               />
-              <p className="mt-1 text-xs text-slate-500">Optional JSON metadata for additional information</p>
+              {errors.metadata
+                ? <p className="mt-1 text-sm text-red-600">{errors.metadata}</p>
+                : <p className="mt-1 text-xs text-slate-500">Optional JSON object for extra data</p>}
             </div>
 
-            {/* Submit Button */}
             <div className="flex gap-3 pt-6 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={handleCloseDrawer}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-              >
+              <button type="button" onClick={handleCloseDrawer}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-              >
+              <button type="submit" disabled={submitting}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition">
                 {submitting ? 'Saving...' : editingId ? 'Update Payment' : 'Create Payment'}
               </button>
             </div>
           </form>
         </SlideInDrawer>
 
-        {/* Delete Confirmation */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-lg p-6 max-w-sm"
-            >
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Delete Payment?</h3>
-              <p className="text-slate-600 mb-6">
-                This action cannot be undone. The payment record will be permanently deleted.
-              </p>
+              <p className="text-slate-600 mb-6">This action cannot be undone. The payment record will be permanently deleted.</p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-                >
+                <button onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 transition">
                   Cancel
                 </button>
-                <button
-                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                >
+                <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                   Delete
                 </button>
               </div>

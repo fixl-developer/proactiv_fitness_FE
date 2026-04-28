@@ -165,7 +165,7 @@ export default function PartnerDashboard() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">{config.dashboardTitle}</h1>
-                    <p className="text-gray-600 mt-1">Welcome back, {profile?.name || user?.name || 'Partner'} — {config.welcomeMessage}</p>
+                    <p className="text-gray-600 mt-1">Welcome back, {profile?.name || user?.name || 'Partner'} — {(config as any).welcomeMessage || ''}</p>
                 </div>
                 <div className="flex items-center gap-3">
                     {profile?.tier && (

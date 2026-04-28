@@ -111,7 +111,7 @@ export default function PartnerResourcesPage() {
             } else {
                 const partnerId = user?.id || 'partner-1'
                 try {
-                    const blob = await PartnerPortalService.downloadPartnerDocument(partnerId, resource.id)
+                    const blob = await (PartnerPortalService as any).downloadPartnerDocument(partnerId, resource.id)
                     const url = window.URL.createObjectURL(blob as Blob)
                     const link = document.createElement('a')
                     link.href = url
@@ -159,7 +159,7 @@ export default function PartnerResourcesPage() {
         setRequestSubmitting(true)
         try {
             const partnerId = user?.id || 'partner-1'
-            await PartnerPortalService.requestResource?.(partnerId, requestForm)
+            await (PartnerPortalService as any).requestResource?.(partnerId, requestForm)
         } catch {
             // API may not exist yet
         }

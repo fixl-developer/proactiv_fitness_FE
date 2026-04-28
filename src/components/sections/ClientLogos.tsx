@@ -8,55 +8,17 @@ import { useAIAnimations } from '@/hooks/useAIAnimations'
 import { useCMSData } from '@/hooks/useCMSData'
 import { CMSService, ClientPartnerData } from '@/services/cmsService'
 
+// logo intentionally empty — no committed client logo files in /public/images/clients/.
+// Component renders the fallback text + gradient when logo is empty (see Image guard below).
 const staticClients = [
-    {
-        name: 'Hong Kong International School',
-        logo: '/images/clients/client-1.png',
-        fallback: 'HKIS',
-        color: 'from-blue-500 to-cyan-500'
-    },
-    {
-        name: 'Discovery Bay International School',
-        logo: '/images/clients/client-2.png',
-        fallback: 'DBIS',
-        color: 'from-green-500 to-emerald-500'
-    },
-    {
-        name: 'German Swiss International School',
-        logo: '/images/clients/client-3.png',
-        fallback: 'GSIS',
-        color: 'from-purple-500 to-pink-500'
-    },
-    {
-        name: 'Kellett School',
-        logo: '/images/clients/client-4.png',
-        fallback: 'KS',
-        color: 'from-orange-500 to-red-500'
-    },
-    {
-        name: 'Hong Kong Academy',
-        logo: '/images/clients/client-5.png',
-        fallback: 'HKA',
-        color: 'from-teal-500 to-cyan-500'
-    },
-    {
-        name: 'Canadian International School',
-        logo: '/images/clients/client-6.png',
-        fallback: 'CDNIS',
-        color: 'from-indigo-500 to-purple-500'
-    },
-    {
-        name: 'Harrow International School',
-        logo: '/images/clients/client-7.png',
-        fallback: 'HIS',
-        color: 'from-pink-500 to-rose-500'
-    },
-    {
-        name: 'French International School',
-        logo: '/images/clients/client-8.png',
-        fallback: 'FIS',
-        color: 'from-yellow-500 to-orange-500'
-    }
+    { name: 'Hong Kong International School', logo: '', fallback: 'HKIS', color: 'from-blue-500 to-cyan-500' },
+    { name: 'Discovery Bay International School', logo: '', fallback: 'DBIS', color: 'from-green-500 to-emerald-500' },
+    { name: 'German Swiss International School', logo: '', fallback: 'GSIS', color: 'from-purple-500 to-pink-500' },
+    { name: 'Kellett School', logo: '', fallback: 'KS', color: 'from-orange-500 to-red-500' },
+    { name: 'Hong Kong Academy', logo: '', fallback: 'HKA', color: 'from-teal-500 to-cyan-500' },
+    { name: 'Canadian International School', logo: '', fallback: 'CDNIS', color: 'from-indigo-500 to-purple-500' },
+    { name: 'Harrow International School', logo: '', fallback: 'HIS', color: 'from-pink-500 to-rose-500' },
+    { name: 'French International School', logo: '', fallback: 'FIS', color: 'from-yellow-500 to-orange-500' },
 ]
 
 const ClientLogos = () => {
@@ -234,17 +196,19 @@ const ClientLogos = () => {
                                     </div>
                                 </motion.div>
 
-                                {/* Actual logo (will show when images are added) */}
-                                <Image
-                                    src={client.logo}
-                                    alt={client.name}
-                                    width={140}
-                                    height={70}
-                                    className="object-contain filter grayscale hover:grayscale-0 transition-all duration-500 relative z-10"
-                                    onError={(e) => {
-                                        e.currentTarget.style.display = 'none'
-                                    }}
-                                />
+                                {/* Actual logo — only render when a logo URL is set; otherwise the gradient + fallback text behind it is the final visual. */}
+                                {client.logo && (
+                                    <Image
+                                        src={client.logo}
+                                        alt={client.name}
+                                        width={140}
+                                        height={70}
+                                        className="object-contain filter grayscale hover:grayscale-0 transition-all duration-500 relative z-10"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none'
+                                        }}
+                                    />
+                                )}
 
                                 {/* Animated Border */}
                                 <motion.div
