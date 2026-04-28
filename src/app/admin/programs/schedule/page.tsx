@@ -7,7 +7,7 @@ import { extractList } from '@/utils/apiResponse'
 import { toast } from 'sonner'
 import {
   Calendar, CheckCircle, Clock, AlertTriangle, X, Plus, Loader2,
-  RotateCcw, Trash2, Send, Search, ChevronDown, MapPin, User, BookOpen,
+  RotateCcw, Trash2, Send, MapPin, User, BookOpen,
   Eye, Pencil, Save
 } from 'lucide-react'
 
@@ -77,6 +77,23 @@ interface GenerateFormData {
   coachIds: string[]
   startDate: string
   endDate: string
+  // SECTION 1 - Basic Information
+  scheduleName: string
+  description: string
+  // SECTION 2 - Date Range & Preferences
+  preferredDays: number[] // 0-6 for Sunday-Saturday
+  blackoutDates: string[]
+  // SECTION 3 - Generation Settings
+  conflictResolutionStrategy: 'skip' | 'adjust' | 'waitlist' | 'split'
+  recurringPattern: 'weekly' | 'bi-weekly' | 'monthly'
+  maxWeeks: number
+  // SECTION 4 - Overrides
+  capacityOverride: number
+  priceOverride: number
+  sessionTemplate: 'default' | 'advanced' | 'kids' | 'beginner'
+  // SECTION 5 - Publishing
+  autoPublishAfterGeneration: boolean
+  notifyCoachesOnPublish: boolean
   settings: {
     maxSessionsPerDay: number
     minBreakBetweenSessions: number
@@ -126,6 +143,23 @@ export default function ProgramSchedulePage() {
     coachIds: [],
     startDate: '',
     endDate: '',
+    // SECTION 1 - Basic Information
+    scheduleName: '',
+    description: '',
+    // SECTION 2 - Date Range & Preferences
+    preferredDays: [],
+    blackoutDates: [],
+    // SECTION 3 - Generation Settings
+    conflictResolutionStrategy: 'skip',
+    recurringPattern: 'weekly',
+    maxWeeks: 0,
+    // SECTION 4 - Overrides
+    capacityOverride: 0,
+    priceOverride: 0,
+    sessionTemplate: 'default',
+    // SECTION 5 - Publishing
+    autoPublishAfterGeneration: false,
+    notifyCoachesOnPublish: false,
     settings: {
       maxSessionsPerDay: 6,
       minBreakBetweenSessions: 15,
@@ -145,8 +179,8 @@ export default function ProgramSchedulePage() {
       // session feed (for Calendar grid) in parallel — each serves a different
       // view and they share no work.
       const [schedRes, sessRes]: any = await Promise.all([
-        apiClient.get('/scheduling'),
-        apiClient.get('/scheduling/all-sessions').catch(() => ({ data: [] })),
+        apiClient.get('/admin/programs/schedule'),
+        apiClient.get('/admin/programs/schedule/sessions').catch(() => ({ data: [] })),
       ])
 
       const list = extractList<any>(schedRes)
@@ -219,10 +253,10 @@ export default function ProgramSchedulePage() {
       // so we surface that as the option's `_id` and the human name as the
       // label.
       const [programsRes, locationsRes, termsRes, coachesRes] = await Promise.allSettled([
-        apiClient.get('/programs'),
-        apiClient.get('/locations'),
-        apiClient.get('/terms'),
-        apiClient.get('/staff/coaches', { params: { limit: 200, status: 'active' } }),
+        apiClient.get('/admin/programs'),
+        apiClient.get('/admin/business-config/locations'),
+        apiClient.get('/admin/business-config/terms'),
+        apiClient.get('/admin/operations/staff/coaches', { params: { limit: 200, status: 'active' } }),
       ])
 
       // /programs returns `{data: {programs: [...], totalCount, filters}}`,
@@ -265,32 +299,148 @@ export default function ProgramSchedulePage() {
   const validateGenerateForm = () => {
     const e: Record<string, string> = {}
 
-    if (!form.startDate) e.startDate = 'Start date is required'
-    if (!form.endDate) e.endDate = 'End date is required'
-    if (form.startDate && form.endDate) {
-      const s = new Date(form.startDate)
-      const en = new Date(form.endDate)
-      if (isNaN(s.getTime())) e.startDate = 'Please enter a valid start date'
-      else if (isNaN(en.getTime())) e.endDate = 'Please enter a valid end date'
-      else if (s > en) e.endDate = 'End date cannot be before start date'
+    // SECTION 1 - Basic Information
+    // 1. Schedule Name: Required, 3-100 chars
+    if (!form.scheduleName.trim()) {
+      e.scheduleName = 'Schedule name is required'
+    } else if (form.scheduleName.trim().length < 3) {
+      e.scheduleName = 'Schedule name must be at least 3 characters'
+    } else if (form.scheduleName.length > 100) {
+      e.scheduleName = 'Schedule name must be less than 100 characters'
     }
 
-    if (form.programIds.length === 0) e.programIds = 'Select at least one program'
-    if (form.locationIds.length === 0) e.locationIds = 'Select at least one location'
+    // 2. Description: Optional, max 500 chars
+    if (form.description && form.description.length > 500) {
+      e.description = 'Description cannot exceed 500 characters'
+    }
 
+    // 3. Start Date: Required, valid date
+    if (!form.startDate) {
+      e.startDate = 'Start date is required'
+    } else {
+      const s = new Date(form.startDate)
+      if (isNaN(s.getTime())) {
+        e.startDate = 'Please enter a valid start date'
+      }
+    }
+
+    // 4. End Date: Required, valid date, must be after start date
+    if (!form.endDate) {
+      e.endDate = 'End date is required'
+    } else {
+      const en = new Date(form.endDate)
+      if (isNaN(en.getTime())) {
+        e.endDate = 'Please enter a valid end date'
+      } else if (form.startDate) {
+        const s = new Date(form.startDate)
+        if (s > en) {
+          e.endDate = 'End date cannot be before start date'
+        }
+      }
+    }
+
+    // 5. Programs: Required, at least 1 selected
+    if (form.programIds.length === 0) {
+      e.programIds = 'Select at least one program'
+    }
+
+    // 6. Locations: Required, at least 1 selected
+    if (form.locationIds.length === 0) {
+      e.locationIds = 'Select at least one location'
+    }
+
+    // SECTION 2 - Date Range & Preferences
+    // 7. Preferred Days: Required, at least 1 day selected
+    if (form.preferredDays.length === 0) {
+      e.preferredDays = 'Select at least one preferred day'
+    }
+
+    // 8. Blackout Dates: Optional, but if provided must be valid dates
+    if (form.blackoutDates && form.blackoutDates.length > 0) {
+      for (let i = 0; i < form.blackoutDates.length; i++) {
+        const d = new Date(form.blackoutDates[i])
+        if (isNaN(d.getTime())) {
+          e.blackoutDates = `Blackout date ${i + 1} is not a valid date`
+          break
+        }
+      }
+    }
+
+    // SECTION 3 - Generation Settings
+    // 9. Conflict Resolution Strategy: Required, valid value
+    if (!form.conflictResolutionStrategy || !['skip', 'adjust', 'waitlist', 'split'].includes(form.conflictResolutionStrategy)) {
+      e.conflictResolutionStrategy = 'Select a valid conflict resolution strategy'
+    }
+
+    // 10. Recurring Pattern: Required, valid value
+    if (!form.recurringPattern || !['weekly', 'bi-weekly', 'monthly'].includes(form.recurringPattern)) {
+      e.recurringPattern = 'Select a valid recurring pattern'
+    }
+
+    // 11. Max Weeks: Optional, but if provided must be non-negative number
+    const maxWeeks = Number(form.maxWeeks)
+    if (form.maxWeeks > 0) {
+      if (!Number.isFinite(maxWeeks) || maxWeeks < 0) {
+        e.maxWeeks = 'Max weeks must be a non-negative number (0 = no limit)'
+      }
+    }
+
+    // SECTION 4 - Overrides
+    // 12. Capacity Override: Optional, but if provided must be non-negative number
+    const capacityOverride = Number(form.capacityOverride)
+    if (form.capacityOverride > 0) {
+      if (!Number.isFinite(capacityOverride) || capacityOverride < 0) {
+        e.capacityOverride = 'Capacity override must be a non-negative number (0 = use default)'
+      }
+    }
+
+    // 13. Price Override: Optional, but if provided must be non-negative number with max 2 decimals
+    const priceOverride = Number(form.priceOverride)
+    if (form.priceOverride > 0) {
+      if (!Number.isFinite(priceOverride) || priceOverride < 0) {
+        e.priceOverride = 'Price override must be a non-negative number (0 = use default)'
+      } else if (!/^\d+(\.\d{0,2})?$/.test(String(form.priceOverride))) {
+        e.priceOverride = 'Price must have maximum 2 decimal places'
+      }
+    }
+
+    // 14. Session Template: Required, valid value
+    if (!form.sessionTemplate || !['default', 'advanced', 'kids', 'beginner'].includes(form.sessionTemplate)) {
+      e.sessionTemplate = 'Select a valid session template'
+    }
+
+    // Settings validation
+    // 15. Max Sessions Per Day: Required, 1-20
     const maxPerDay = Number(form.settings.maxSessionsPerDay)
     if (!Number.isFinite(maxPerDay) || maxPerDay < 1 || maxPerDay > 20) {
       e.maxSessionsPerDay = 'Max sessions per day must be between 1 and 20'
     }
+
+    // 16. Min Break Between Sessions: Required, 0-120 minutes
     const minBreak = Number(form.settings.minBreakBetweenSessions)
     if (!Number.isFinite(minBreak) || minBreak < 0 || minBreak > 120) {
       e.minBreakBetweenSessions = 'Break must be between 0 and 120 minutes'
     }
-    if (form.settings.preferredStartTime && form.settings.preferredEndTime) {
-      if (form.settings.preferredStartTime >= form.settings.preferredEndTime) {
-        e.preferredEndTime = 'End time must be after start time'
-      }
+
+    // 17. Preferred Start Time: Required, valid time format
+    if (!form.settings.preferredStartTime) {
+      e.preferredStartTime = 'Preferred start time is required'
+    } else if (!/^\d{2}:\d{2}$/.test(form.settings.preferredStartTime)) {
+      e.preferredStartTime = 'Please enter a valid time (HH:MM)'
     }
+
+    // 18. Preferred End Time: Required, valid time format, must be after start time
+    if (!form.settings.preferredEndTime) {
+      e.preferredEndTime = 'Preferred end time is required'
+    } else if (!/^\d{2}:\d{2}$/.test(form.settings.preferredEndTime)) {
+      e.preferredEndTime = 'Please enter a valid time (HH:MM)'
+    } else if (form.settings.preferredStartTime && form.settings.preferredStartTime >= form.settings.preferredEndTime) {
+      e.preferredEndTime = 'End time must be after start time'
+    }
+
+    // SECTION 5 - Publishing
+    // 19. Auto-Publish After Generation: Boolean, no validation needed
+    // 20. Notify Coaches on Publish: Boolean, no validation needed
 
     setFormErrors(e)
     return Object.keys(e).length === 0
@@ -314,6 +464,23 @@ export default function ProgramSchedulePage() {
         locationIds: form.locationIds,
         startDate: form.startDate,
         endDate: form.endDate,
+        // SECTION 1 - Basic Information
+        scheduleName: form.scheduleName,
+        description: form.description,
+        // SECTION 2 - Date Range & Preferences
+        preferredDays: form.preferredDays,
+        blackoutDates: form.blackoutDates,
+        // SECTION 3 - Generation Settings
+        conflictResolutionStrategy: form.conflictResolutionStrategy,
+        recurringPattern: form.recurringPattern,
+        maxWeeks: form.maxWeeks,
+        // SECTION 4 - Overrides
+        capacityOverride: form.capacityOverride,
+        priceOverride: form.priceOverride,
+        sessionTemplate: form.sessionTemplate,
+        // SECTION 5 - Publishing
+        autoPublishAfterGeneration: form.autoPublishAfterGeneration,
+        notifyCoachesOnPublish: form.notifyCoachesOnPublish,
         settings: form.settings,
       }
       if (form.coachIds.length > 0) payload.coachIds = form.coachIds
@@ -340,6 +507,23 @@ export default function ProgramSchedulePage() {
       coachIds: [],
       startDate: '',
       endDate: '',
+      // SECTION 1 - Basic Information
+      scheduleName: '',
+      description: '',
+      // SECTION 2 - Date Range & Preferences
+      preferredDays: [],
+      blackoutDates: [],
+      // SECTION 3 - Generation Settings
+      conflictResolutionStrategy: 'skip',
+      recurringPattern: 'weekly',
+      maxWeeks: 0,
+      // SECTION 4 - Overrides
+      capacityOverride: 0,
+      priceOverride: 0,
+      sessionTemplate: 'default',
+      // SECTION 5 - Publishing
+      autoPublishAfterGeneration: false,
+      notifyCoachesOnPublish: false,
       settings: {
         maxSessionsPerDay: 6,
         minBreakBetweenSessions: 15,
@@ -382,7 +566,7 @@ export default function ProgramSchedulePage() {
     setEditMode(false)
     setDetailLoading(true)
     try {
-      const res: any = await apiClient.get(`/scheduling/${id}`)
+      const res: any = await apiClient.get(`/admin/programs/schedule/${id}`)
       const d = res?.data ?? res
       setDetail(d)
       setEditForm({
@@ -755,21 +939,60 @@ export default function ProgramSchedulePage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1">
-                          <button id="btn-admin-programs-schedule-view" onClick={() => openDetail(s._id)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50 flex items-center gap-1" title="View / edit details">
-                            <Eye className="h-3.5 w-3.5" /> View
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            id="btn-admin-programs-schedule-view"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              openDetail(s._id)
+                            }}
+                            className="text-blue-600 hover:text-blue-800 px-3 py-1.5 text-sm rounded hover:bg-blue-50 flex items-center gap-1 font-medium transition-colors"
+                            title="View / edit details"
+                          >
+                            <Eye className="h-4 w-4" /> View
                           </button>
                           {s.status === 'draft' && (
-                            <button id="btn-admin-programs-schedule-6" onClick={() => handlePublish(s)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50 flex items-center gap-1">
-                              <Send className="h-3 w-3" /> Publish
+                            <button
+                              id="btn-admin-programs-schedule-publish"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handlePublish(s)
+                              }}
+                              className="text-green-600 hover:text-green-800 px-3 py-1.5 text-sm rounded hover:bg-green-50 flex items-center gap-1 font-medium transition-colors"
+                              title="Publish this schedule"
+                            >
+                              <Send className="h-4 w-4" /> Publish
                             </button>
                           )}
-                          <button id="btn-admin-programs-schedule-7" onClick={() => handleDetectConflicts(s)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50">
-                            Check
+                          {s.status === 'published' && (
+                            <span className="text-gray-400 px-3 py-1.5 text-sm text-xs">Published</span>
+                          )}
+                          <button
+                            id="btn-admin-programs-schedule-check"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDetectConflicts(s)
+                            }}
+                            className="text-yellow-600 hover:text-yellow-800 px-3 py-1.5 text-sm rounded hover:bg-yellow-50 flex items-center gap-1 font-medium transition-colors"
+                            title="Check for scheduling conflicts"
+                          >
+                            <AlertTriangle className="h-4 w-4" /> Check
                           </button>
-                          <button id="btn-admin-programs-schedule-8" onClick={() => setShowDeleteConfirm(s._id)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50">
-                            <Trash2 className="h-3.5 w-3.5" />
+                          <button
+                            id="btn-admin-programs-schedule-delete"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setShowDeleteConfirm(s._id)
+                            }}
+                            className="text-red-600 hover:text-red-800 px-3 py-1.5 text-sm rounded hover:bg-red-50 flex items-center gap-1 font-medium transition-colors"
+                            title="Delete this schedule"
+                          >
+                            <Trash2 className="h-4 w-4" /> Delete
                           </button>
                         </div>
                       </td>
@@ -1029,17 +1252,18 @@ export default function ProgramSchedulePage() {
                           : <p className="mt-1 text-xs text-gray-400">0-120 minutes</p>}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Preferred Start Time</label>
-                        <input id="input-time-admin-programs-schedule"
+                        <label className="block text-xs text-gray-500 mb-1">Preferred Start Time <span className="text-red-500">*</span></label>
+                        <input id="input-time-admin-programs-schedule-start"
                           type="time"
                           value={form.settings.preferredStartTime}
                           onChange={(e) => { setForm({ ...form, settings: { ...form.settings, preferredStartTime: e.target.value } }); if (formErrors.preferredStartTime) setFormErrors({ ...formErrors, preferredStartTime: '' }) }}
                           className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.preferredStartTime ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                         />
+                        {formErrors.preferredStartTime && <p className="mt-1 text-xs text-red-600">{formErrors.preferredStartTime}</p>}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Preferred End Time</label>
-                        <input id="input-time-admin-programs-schedule"
+                        <label className="block text-xs text-gray-500 mb-1">Preferred End Time <span className="text-red-500">*</span></label>
+                        <input id="input-time-admin-programs-schedule-end"
                           type="time"
                           value={form.settings.preferredEndTime}
                           onChange={(e) => { setForm({ ...form, settings: { ...form.settings, preferredEndTime: e.target.value } }); if (formErrors.preferredEndTime) setFormErrors({ ...formErrors, preferredEndTime: '' }) }}
@@ -1057,6 +1281,125 @@ export default function ProgramSchedulePage() {
                       />
                       <span className="text-sm text-gray-700">Avoid scheduling on weekends</span>
                     </label>
+
+                    {/* NEW FIELDS - Conflict Resolution & Recurring Pattern */}
+                    <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Conflict Resolution <span className="text-red-500">*</span></label>
+                        <select
+                          value={form.conflictResolutionStrategy}
+                          onChange={(e) => { setForm({ ...form, conflictResolutionStrategy: e.target.value as any }); if (formErrors.conflictResolutionStrategy) setFormErrors({ ...formErrors, conflictResolutionStrategy: '' }) }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.conflictResolutionStrategy ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'} bg-white`}
+                        >
+                          <option value="skip">Skip Conflicting Sessions</option>
+                          <option value="adjust">Adjust Time</option>
+                          <option value="waitlist">Use Waitlist</option>
+                          <option value="split">Split into Multiple Sessions</option>
+                        </select>
+                        {formErrors.conflictResolutionStrategy ? <p className="mt-1 text-xs text-red-600">{formErrors.conflictResolutionStrategy}</p> : <p className="mt-1 text-xs text-gray-400">How to handle scheduling conflicts</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Recurring Pattern <span className="text-red-500">*</span></label>
+                        <select
+                          value={form.recurringPattern}
+                          onChange={(e) => { setForm({ ...form, recurringPattern: e.target.value as any }); if (formErrors.recurringPattern) setFormErrors({ ...formErrors, recurringPattern: '' }) }}
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.recurringPattern ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'} bg-white`}
+                        >
+                          <option value="weekly">Weekly</option>
+                          <option value="bi-weekly">Bi-weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                        {formErrors.recurringPattern ? <p className="mt-1 text-xs text-red-600">{formErrors.recurringPattern}</p> : <p className="mt-1 text-xs text-gray-400">How often sessions repeat</p>}
+                      </div>
+                    </div>
+
+                    {/* Max Weeks */}
+                    <div className="mt-4">
+                      <label className="block text-xs text-gray-500 mb-1">Max Weeks (Optional)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.maxWeeks}
+                        onChange={(e) => { setForm({ ...form, maxWeeks: Math.max(0, Number(e.target.value)) }); if (formErrors.maxWeeks) setFormErrors({ ...formErrors, maxWeeks: '' }) }}
+                        placeholder="0 = No limit"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.maxWeeks ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                      />
+                      {formErrors.maxWeeks ? <p className="mt-1 text-xs text-red-600">{formErrors.maxWeeks}</p> : <p className="mt-1 text-xs text-gray-400">Limit number of weeks to generate (0 = no limit)</p>}
+                    </div>
+                  </div>
+
+                  {/* SECTION 4 - Overrides */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Overrides</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Capacity Override (Optional)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={form.capacityOverride}
+                          onChange={(e) => { setForm({ ...form, capacityOverride: Math.max(0, Number(e.target.value)) }); if (formErrors.capacityOverride) setFormErrors({ ...formErrors, capacityOverride: '' }) }}
+                          placeholder="0 = Use program capacity"
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.capacityOverride ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                        />
+                        {formErrors.capacityOverride ? <p className="mt-1 text-xs text-red-600">{formErrors.capacityOverride}</p> : <p className="mt-1 text-xs text-gray-400">Override program capacity (0 = use default)</p>}
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Price Override (Optional)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={form.priceOverride}
+                          onChange={(e) => { setForm({ ...form, priceOverride: Math.max(0, Number(e.target.value)) }); if (formErrors.priceOverride) setFormErrors({ ...formErrors, priceOverride: '' }) }}
+                          placeholder="0 = Use program price"
+                          className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.priceOverride ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                        />
+                        {formErrors.priceOverride ? <p className="mt-1 text-xs text-red-600">{formErrors.priceOverride}</p> : <p className="mt-1 text-xs text-gray-400">Override program price (0 = use default)</p>}
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-xs text-gray-500 mb-1">Session Template <span className="text-red-500">*</span></label>
+                      <select
+                        value={form.sessionTemplate}
+                        onChange={(e) => { setForm({ ...form, sessionTemplate: e.target.value as any }); if (formErrors.sessionTemplate) setFormErrors({ ...formErrors, sessionTemplate: '' }) }}
+                        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.sessionTemplate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'} bg-white`}
+                      >
+                        <option value="default">Default Session</option>
+                        <option value="advanced">Advanced Session</option>
+                        <option value="kids">Kids Session</option>
+                        <option value="beginner">Beginner Session</option>
+                      </select>
+                      {formErrors.sessionTemplate ? <p className="mt-1 text-xs text-red-600">{formErrors.sessionTemplate}</p> : <p className="mt-1 text-xs text-gray-400">Template to use for generated sessions</p>}
+                    </div>
+                  </div>
+
+                  {/* SECTION 5 - Publishing */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">Publishing</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.autoPublishAfterGeneration}
+                          onChange={(e) => setForm({ ...form, autoPublishAfterGeneration: e.target.checked })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">Auto-Publish After Generation</span>
+                      </label>
+                      <p className="text-xs text-gray-400 ml-6">Automatically publish schedule after generation</p>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.notifyCoachesOnPublish}
+                          onChange={(e) => setForm({ ...form, notifyCoachesOnPublish: e.target.checked })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">Notify Coaches on Publish</span>
+                      </label>
+                      <p className="text-xs text-gray-400 ml-6">Send email to coaches when schedule is published</p>
+                    </div>
                   </div>
                 </div>
               )}

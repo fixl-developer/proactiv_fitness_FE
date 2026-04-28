@@ -312,6 +312,17 @@ function flattenLocation(loc: any): any {
     if (!loc || typeof loc !== 'object') return loc
     const addr = loc.address || {}
     const contact = loc.contactInfo || {}
+    // Prefer the canonical `status` field — that's what backend reads/writes.
+    // The legacy `isActive` stray field exists on rows created before the
+    // status mapping was added and is only used as a last-resort hint.
+    let isActive: boolean
+    if (typeof loc.status === 'string' && loc.status) {
+        isActive = loc.status !== 'INACTIVE'
+    } else if (typeof loc.isActive === 'boolean') {
+        isActive = loc.isActive
+    } else {
+        isActive = true
+    }
     return {
         ...loc,
         address: typeof loc.address === 'string' ? loc.address : (addr.street || ''),
@@ -321,7 +332,7 @@ function flattenLocation(loc: any): any {
         postalCode: addr.postalCode || loc.postalCode || '',
         email: contact.email || loc.email || '',
         phone: contact.phone || loc.phone || '',
-        isActive: loc.isActive ?? (loc.status ? loc.status === 'ACTIVE' : true),
+        isActive,
     }
 }
 
@@ -349,7 +360,10 @@ export const LocationService = {
             countryId: d.countryId,
             capacity: Number(d.capacity) || 1,
             facilities: d.facilities,
-            isActive: d.isActive,
+            // Backend uses `status: 'ACTIVE' | 'INACTIVE' | 'COMING_SOON'`, not isActive.
+            // Without this mapping, the admin's Active toggle was ignored and every
+            // new location silently relied on the schema default.
+            status: d.isActive === false ? 'INACTIVE' : 'ACTIVE',
         }
         if (d.regionId) payload.regionId = d.regionId
         // Address: flat → nested if a string was passed (legacy forms)
@@ -400,7 +414,7 @@ export const LocationService = {
         }
         if (d.capacity !== undefined) payload.capacity = Number(d.capacity)
         if (d.facilities) payload.facilities = d.facilities
-        if (d.isActive !== undefined) payload.isActive = d.isActive
+        if (d.isActive !== undefined) payload.status = d.isActive ? 'ACTIVE' : 'INACTIVE'
         const body = await apiClient.put(`/locations/${id}`, payload)
         return unwrapItemResponse<Location>(body)
     },

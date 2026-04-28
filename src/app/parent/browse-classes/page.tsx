@@ -1,106 +1,244 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Search, MapPin, Clock, Users, DollarSign, Calendar, Filter, ChevronRight, AlertCircle, Loader, User } from 'lucide-react'
+import { toast } from 'sonner'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Loader, AlertCircle, Search, Filter, MapPin, Clock, User, DollarSign, RefreshCw, RotateCcw, Calendar, BookOpen } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api/client'
-import { filterAlphanumericInput } from '@/utils/validation'
 
-interface ClassItem {
+interface Class {
     id: string
-    source?: 'session' | 'program'
-    program: string
-    coach: string
-    level: string
-    location: string
+    name: string
+    description?: string
+    location: {
+        id: string
+        name: string
+        city: string
+    }
+    room: {
+        id: string
+        name: string
+        capacity: number
+    }
+    startTime: string
+    endTime: string
     date: string
-    time: string
-    duration: number | string
-    availableSpots: number
-    price: string | number
-    description: string
-    category?: string
+    price: number
+    currency: string
+    capacity: number
+    enrolled: number
+    instructor?: string
+    level?: string
+    ageGroup?: string
 }
 
-const BrowseClassesPage = () => {
+interface Child {
+    id: string
+    name: string
+    age: number
+    dateOfBirth: string
+}
+
+interface FilterOptions {
+    location: string
+    room: string
+    date: string
+    time: string
+    priceRange: [number, number]
+    level: string
+    ageGroup: string
+}
+
+export default function ParentBrowseClassesPage() {
     const router = useRouter()
-    const [classes, setClasses] = useState<ClassItem[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState('')
-    const [searchFilters, setSearchFilters] = useState({
-        location: '',
-        program: '',
-        level: '',
-        date: ''
-    })
     const { user, isAuthenticated } = useAuth()
+    const [classes, setClasses] = useState<Class[]>([])
+    const [filteredClasses, setFilteredClasses] = useState<Class[]>([])
+    const [children, setChildren] = useState<Child[]>([])
+    const [selectedChild, setSelectedChild] = useState<string>('')
+    const [loading, setLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [showFilters, setShowFilters] = useState(false)
+    const [filters, setFilters] = useState<FilterOptions>({
+        location: '',
+        room: '',
+        date: '',
+        time: '',
+        priceRange: [0, 1000],
+        level: '',
+        ageGroup: ''
+    })
+
+    const [locations, setLocations] = useState<any[]>([])
+    const [rooms, setRooms] = useState<any[]>([])
 
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/login')
             return
         }
-        fetchClasses()
+        loadChildren()
+        loadClasses()
+        loadLocations()
     }, [isAuthenticated, router])
 
-    const buildQueryString = useCallback((filters: typeof searchFilters) => {
-        const params = new URLSearchParams()
-        if (filters.location) params.append('location', filters.location)
-        if (filters.program) params.append('program', filters.program)
-        if (filters.level) params.append('level', filters.level)
-        if (filters.date) params.append('date', filters.date)
-        const qs = params.toString()
-        return qs ? `?${qs}` : ''
-    }, [])
+    useEffect(() => {
+        applyFilters()
+    }, [classes, filters, searchTerm])
 
-    const fetchClasses = async (filters?: typeof searchFilters) => {
+    const loadChildren = async () => {
         try {
-            setIsLoading(true)
-            setError('')
-            const qs = buildQueryString(filters || searchFilters)
-            const response = await apiClient.get<any>(`/parent/browse-classes${qs}`)
-            const result = response?.data || response || []
-            const classArray = Array.isArray(result) ? result : []
-            setClasses(classArray)
-        } catch (err: any) {
-            console.error('Error loading classes:', err)
-            setError(err.message || 'Failed to load classes')
+            const response = await apiClient.get<any>('/parent/children')
+            const list: any[] = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : [])
+            const mapped: Child[] = list.map((c) => ({
+                id: String(c.id ?? c._id ?? ''),
+                name: c.name || `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Child',
+                age: Number(c.age ?? 0),
+                dateOfBirth: c.dateOfBirth || '',
+            }))
+            setChildren(mapped)
+            if (mapped.length > 0) setSelectedChild(mapped[0].id)
+        } catch (error) {
+            console.error('Error loading children:', error)
+            setChildren([])
+        }
+    }
+
+    const loadClasses = async () => {
+        try {
+            setLoading(true)
+            const response = await apiClient.get<any>('/parent/browse-classes')
+            const list: any[] = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : [])
+            // Backend returns flat items (sessions + admin programs); reshape to the
+            // structure this page renders. Fields that aren't available from the
+            // backend fall through to safe defaults so the UI still renders.
+            const mapped: Class[] = list.map((it: any) => ({
+                id: String(it.id ?? it._id ?? ''),
+                name: it.program || it.name || 'Class',
+                description: it.description || '',
+                location: {
+                    id: String(it.locationId || it.location?.id || ''),
+                    name: typeof it.location === 'string' ? it.location : (it.location?.name || ''),
+                    city: typeof it.location === 'object' ? (it.location?.city || '') : '',
+                },
+                room: { id: '', name: '', capacity: 0 },
+                startTime: it.time || it.startTime || '',
+                endTime: it.endTime || '',
+                date: it.date || '',
+                price: Number(it.price ?? 0),
+                currency: it.currency || 'HK$',
+                capacity: Number(it.capacity ?? (it.availableSpots ?? 0)),
+                enrolled: Number(it.enrolled ?? 0),
+                instructor: it.coach || it.instructor || '',
+                level: it.level || '',
+                ageGroup: it.ageGroup || '',
+            }))
+            setClasses(mapped)
+        } catch (error) {
+            console.error('Error loading classes:', error)
             setClasses([])
+            toast.error('Failed to load classes')
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
     }
 
-    const handleSearch = () => {
-        fetchClasses(searchFilters)
-    }
-
-    const handleReset = () => {
-        const emptyFilters = { location: '', program: '', level: '', date: '' }
-        setSearchFilters(emptyFilters)
-        fetchClasses(emptyFilters)
-    }
-
-    const handleBook = (cls: ClassItem) => {
-        // Sessions go through the existing per-session detail page (which calls
-        // /parent/book-class). Admin Programs (no session yet) book directly via
-        // the generic /bookings/class endpoint — we pass the program id and let
-        // the backend treat it as a class booking.
-        if (cls.source === 'program') {
-            router.push(`/parent/book-class/${cls.id}?source=program`)
-        } else {
-            router.push(`/parent/book-class/${cls.id}`)
+    const loadLocations = async () => {
+        try {
+            const response = await apiClient.get<any>('/locations')
+            const payload = response?.data ?? response
+            const list: any[] = Array.isArray(payload?.locations)
+                ? payload.locations
+                : Array.isArray(payload?.items)
+                    ? payload.items
+                    : Array.isArray(payload)
+                        ? payload
+                        : []
+            setLocations(list)
+        } catch (error) {
+            console.error('Error loading locations:', error)
+            setLocations([])
         }
     }
 
-    const handleRetry = () => {
-        fetchClasses(searchFilters)
+    const loadRooms = async (locationId: string) => {
+        try {
+            const response = await apiClient.get<any>(`/rooms?locationId=${locationId}`)
+            const payload = response?.data ?? response
+            const list: any[] = Array.isArray(payload?.rooms)
+                ? payload.rooms
+                : Array.isArray(payload?.items)
+                    ? payload.items
+                    : Array.isArray(payload)
+                        ? payload
+                        : []
+            setRooms(list)
+        } catch (error) {
+            console.error('Error loading rooms:', error)
+            setRooms([])
+        }
     }
+
+    const applyFilters = () => {
+        let filtered = classes
+
+        if (searchTerm) {
+            filtered = filtered.filter(c =>
+                c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        if (filters.location) {
+            filtered = filtered.filter(c => c.location.id === filters.location)
+        }
+
+        if (filters.room) {
+            filtered = filtered.filter(c => c.room.id === filters.room)
+        }
+
+        if (filters.date) {
+            filtered = filtered.filter(c => c.date === filters.date)
+        }
+
+        if (filters.time) {
+            filtered = filtered.filter(c => c.startTime.startsWith(filters.time))
+        }
+
+        filtered = filtered.filter(c =>
+            c.price >= filters.priceRange[0] && c.price <= filters.priceRange[1]
+        )
+
+        if (filters.level) {
+            filtered = filtered.filter(c => c.level === filters.level)
+        }
+
+        if (filters.ageGroup) {
+            filtered = filtered.filter(c => c.ageGroup === filters.ageGroup)
+        }
+
+        setFilteredClasses(filtered)
+    }
+
+    const handleLocationChange = (locationId: string) => {
+        setFilters({ ...filters, location: locationId, room: '' })
+        if (locationId) {
+            loadRooms(locationId)
+        }
+    }
+
+    const getAvailableSeats = (classItem: Class) => {
+        return classItem.capacity - classItem.enrolled
+    }
+
+    const isClassFull = (classItem: Class) => {
+        return getAvailableSeats(classItem) <= 0
+    }
+
+    const selectedChildData = children.find(c => c.id === selectedChild)
 
     return (
         <div className="space-y-6">
@@ -108,225 +246,283 @@ const BrowseClassesPage = () => {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                className="mb-8"
             >
-                <h1 className="text-3xl font-bold text-gray-900">Browse Classes</h1>
-                <p className="text-gray-600 mt-2">Find and book the perfect class for your child</p>
+                <h1 className="text-4xl font-bold text-slate-900 mb-2">Browse Classes</h1>
+                <p className="text-slate-600">Find and book classes for your children</p>
             </motion.div>
 
-            {/* Search Filters */}
+            {/* Child Selection */}
+            {children.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white rounded-lg shadow-md p-6"
+                >
+                    <label className="block text-sm font-medium text-slate-900 mb-3">Select Child</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {children.map(child => (
+                            <button
+                                key={child.id}
+                                onClick={() => setSelectedChild(child.id)}
+                                className={`p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${selectedChild === child.id
+                                    ? 'border-blue-600 bg-blue-50'
+                                    : 'border-slate-200 hover:border-slate-300'
+                                    }`}
+                            >
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                                    {child.name.charAt(0)}
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-semibold text-slate-900">{child.name}</p>
+                                    <p className="text-xs text-slate-500">{child.age} years old</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Search and Filters */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
+                className="bg-white rounded-lg shadow-md p-6 space-y-4"
             >
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Filter className="w-5 h-5" />
-                            Search & Filter
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter location"
-                                    value={searchFilters.location}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, location: e.target.value })}
-                                    onKeyDown={filterAlphanumericInput}
-                                    maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter program"
-                                    value={searchFilters.program}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, program: e.target.value })}
-                                    onKeyDown={filterAlphanumericInput}
-                                    maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
-                                <select
-                                    value={searchFilters.level}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, level: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                >
-                                    <option value="">All levels</option>
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                                <input
-                                    type="date"
-                                    value={searchFilters.date}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, date: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Search classes by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                {/* Filter Toggle */}
+                <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                    <Filter className="w-4 h-4" />
+                    {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
+
+                {/* Filters */}
+                {showFilters && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-slate-200"
+                    >
+                        {/* Location Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Location</label>
+                            <select
+                                value={filters.location}
+                                onChange={(e) => handleLocationChange(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">All Locations</option>
+                                {locations.map(loc => (
+                                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="flex gap-3 mt-4">
-                            <Button id="btn-search-parent-browse-classes" onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
-                                <Search className="w-4 h-4 mr-2" />
-                                Search
-                            </Button>
-                            <Button id="btn-reset-parent-browse-classes" onClick={handleReset} variant="outline">
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Reset Filters
-                            </Button>
+
+                        {/* Room Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Room</label>
+                            <select
+                                value={filters.room}
+                                onChange={(e) => setFilters({ ...filters, room: e.target.value })}
+                                disabled={!filters.location}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                            >
+                                <option value="">All Rooms</option>
+                                {rooms.map(room => (
+                                    <option key={room.id} value={room.id}>{room.name}</option>
+                                ))}
+                            </select>
                         </div>
-                    </CardContent>
-                </Card>
+
+                        {/* Date Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Date</label>
+                            <input
+                                type="date"
+                                value={filters.date}
+                                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* Level Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Level</label>
+                            <select
+                                value={filters.level}
+                                onChange={(e) => setFilters({ ...filters, level: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">All Levels</option>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+
+                        {/* Age Group Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Age Group</label>
+                            <select
+                                value={filters.ageGroup}
+                                onChange={(e) => setFilters({ ...filters, ageGroup: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">All Ages</option>
+                                <option value="Kids (3-6)">Kids (3-6)</option>
+                                <option value="Kids (6-12)">Kids (6-12)</option>
+                                <option value="Teens (12-18)">Teens (12-18)</option>
+                                <option value="All Ages">All Ages</option>
+                            </select>
+                        </div>
+                    </motion.div>
+                )}
             </motion.div>
 
-            {/* Loading State */}
-            {isLoading && (
+            {/* Classes Grid */}
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+            ) : filteredClasses.length === 0 ? (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-16"
+                    className="bg-white rounded-lg shadow-md p-12 text-center"
                 >
-                    <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-                    <p className="text-gray-600 font-medium">Loading available classes...</p>
-                </motion.div>
-            )}
-
-            {/* Error State */}
-            {!isLoading && error && (
-                <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-6 bg-red-50 border border-red-200 rounded-lg flex flex-col items-center text-center"
-                >
-                    <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
-                    <p className="text-red-700 font-medium mb-1">Something went wrong</p>
-                    <p className="text-red-600 text-sm mb-4">{error}</p>
-                    <Button onClick={handleRetry} variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Try Again
-                    </Button>
-                </motion.div>
-            )}
-
-            {/* Empty State */}
-            {!isLoading && !error && classes.length === 0 && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <Card>
-                        <CardContent className="p-12 text-center">
-                            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Classes Found</h3>
-                            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                                No classes match your current search criteria. Try adjusting your filters or reset to see all available classes.
-                            </p>
-                            <Button onClick={handleReset} variant="outline">
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Reset Filters
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            )}
-
-            {/* Results */}
-            {!isLoading && !error && classes.length > 0 && (
-                <>
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-sm text-gray-500"
+                    <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-600 text-lg">No classes found matching your filters</p>
+                    <button
+                        onClick={() => {
+                            setSearchTerm('')
+                            setFilters({
+                                location: '',
+                                room: '',
+                                date: '',
+                                time: '',
+                                priceRange: [0, 1000],
+                                level: '',
+                                ageGroup: ''
+                            })
+                        }}
+                        className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
                     >
-                        Showing {classes.length} class{classes.length !== 1 ? 'es' : ''}
-                    </motion.p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {classes.map((cls, index) => (
-                            <motion.div
-                                key={cls.id || index}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05, duration: 0.3 }}
-                            >
-                                <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
-                                    <CardHeader>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <CardTitle className="text-lg">{cls.program || 'Class'}</CardTitle>
-                                                <p className="text-sm text-gray-600 mt-1">with {cls.coach || 'Coach'}</p>
-                                            </div>
-                                            <Badge className="bg-blue-100 text-blue-800">{cls.level || 'All Levels'}</Badge>
+                        Clear Filters
+                    </button>
+                </motion.div>
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    {filteredClasses.map((classItem, index) => (
+                        <motion.div
+                            key={classItem.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                        >
+                            {/* Class Header */}
+                            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 p-4 text-white">
+                                <h3 className="text-xl font-bold">{classItem.name}</h3>
+                                <p className="text-blue-100 text-sm mt-1">{classItem.description}</p>
+                            </div>
+
+                            {/* Class Details */}
+                            <div className="p-4 space-y-3">
+                                {/* Location */}
+                                <div className="flex items-start gap-3">
+                                    <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">{classItem.location.name}</p>
+                                        <p className="text-xs text-slate-500">{classItem.room.name}</p>
+                                    </div>
+                                </div>
+
+                                {/* Time */}
+                                <div className="flex items-center gap-3">
+                                    <Clock className="w-5 h-5 text-slate-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">
+                                            {classItem.startTime} - {classItem.endTime}
+                                        </p>
+                                        <p className="text-xs text-slate-500">{classItem.date}</p>
+                                    </div>
+                                </div>
+
+                                {/* Age Group */}
+                                <div className="flex items-center gap-3">
+                                    <User className="w-5 h-5 text-slate-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">{classItem.ageGroup}</p>
+                                    </div>
+                                </div>
+
+                                {/* Capacity */}
+                                <div className="flex items-center gap-3">
+                                    <Users className="w-5 h-5 text-slate-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">
+                                            {classItem.capacity - classItem.enrolled} / {classItem.capacity} seats
+                                        </p>
+                                        <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
+                                            <div
+                                                className="bg-blue-500 h-2 rounded-full"
+                                                style={{ width: `${(classItem.enrolled / classItem.capacity) * 100}%` }}
+                                            />
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 flex-1 flex flex-col">
-                                        {cls.description && (
-                                            <p className="text-sm text-gray-500 line-clamp-2">{cls.description}</p>
-                                        )}
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">{cls.location || 'Location TBD'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Calendar className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">
-                                                {(() => {
-                                                    if (!cls.date) return 'Date TBD'
-                                                    try {
-                                                        const d = new Date(cls.date)
-                                                        if (isNaN(d.getTime())) return 'Date TBD'
-                                                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                                                    } catch { return 'Date TBD' }
-                                                })()}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Clock className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">
-                                                {cls.time || 'Time TBD'}
-                                                {cls.duration ? ` (${cls.duration} min)` : ''}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <User className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">{cls.availableSpots ?? 0} spots available</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm font-semibold">{cls.price ?? 'Free'}</span>
-                                        </div>
-                                        <div className="mt-auto pt-4">
-                                            <Button
-                                                id={`parent-browse-classes-book-${cls.id}-btn`}
-                                                onClick={() => handleBook(cls)}
-                                                className="w-full bg-blue-600 hover:bg-blue-700"
-                                                disabled={cls.availableSpots === 0}
-                                            >
-                                                {cls.availableSpots === 0 ? 'Class Full' : 'Book Now'}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </div>
-                </>
+                                    </div>
+                                </div>
+
+                                {/* Price */}
+                                <div className="flex items-center gap-3 pt-2 border-t border-slate-200">
+                                    <DollarSign className="w-5 h-5 text-blue-600" />
+                                    <p className="text-lg font-bold text-slate-900">
+                                        {classItem.price} <span className="text-sm text-slate-500">{classItem.currency}</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Book Button */}
+                            <div className="px-4 pb-4">
+                                <Link
+                                    href={`/parent/book-class/${classItem.id}?childId=${selectedChild}`}
+                                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-medium transition-all ${isClassFull(classItem)
+                                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                >
+                                    {isClassFull(classItem) ? 'Class Full' : 'Book for ' + (selectedChildData?.name || 'Child')}
+                                    {!isClassFull(classItem) && <ChevronRight className="w-4 h-4" />}
+                                </Link>
+                            </div>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            )}
+
+            {/* Results Count */}
+            {!loading && filteredClasses.length > 0 && (
+                <div className="text-center text-slate-600 text-sm">
+                    Showing {filteredClasses.length} of {classes.length} classes
+                </div>
             )}
         </div>
     )
 }
-
-export default BrowseClassesPage

@@ -4,41 +4,26 @@ import React, { useState, useEffect } from 'react';
 import { supportTicketService, SupportTicket } from '@/services/supportTicketService';
 import { TicketComments } from '@/components/support/TicketComments';
 import { TicketHistoryComponent } from '@/components/support/TicketHistory';
-import { StaffAssignmentDropdown } from '@/components/support/StaffAssignmentDropdown';
 
-// Mock staff members - replace with actual API call
-const MOCK_STAFF = [
-    { id: '1', name: 'John Smith', email: 'john@example.com', department: 'Support' },
-    { id: '2', name: 'Jane Doe', email: 'jane@example.com', department: 'Support' },
-    { id: '3', name: 'Bob Johnson', email: 'bob@example.com', department: 'Technical' },
-];
-
-export default function AdminTicketsPage() {
+export default function StaffSupportPage() {
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
-    const [filters, setFilters] = useState({
-        status: '',
-        priority: '',
-        search: '',
-    });
+    const [statusFilter, setStatusFilter] = useState('');
+    const [stats, setStats] = useState({ open: 0, inProgress: 0, pending: 0, total: 0 });
     const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
 
     useEffect(() => {
         loadTickets();
-    }, [page, filters]);
+        loadStats();
+    }, [page, statusFilter]);
 
     const loadTickets = async () => {
         try {
             setLoading(true);
-            const filterObj: any = {};
-            if (filters.status) filterObj.status = filters.status;
-            if (filters.priority) filterObj.priority = filters.priority;
-            if (filters.search) filterObj.search = filters.search;
-
-            const response = await supportTicketService.getTickets(page, 20, filterObj);
+            const response = await supportTicketService.getAssignedTickets(page, 20, statusFilter || undefined);
             if (response.success) {
                 setTickets(response.data);
                 setTotal(response.pagination?.total || 0);
@@ -47,6 +32,17 @@ export default function AdminTicketsPage() {
             console.error('Error loading tickets:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadStats = async () => {
+        try {
+            const response = await supportTicketService.getStatistics();
+            if (response.success) {
+                setStats(response.data);
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
         }
     };
 
@@ -62,14 +58,6 @@ export default function AdminTicketsPage() {
         } catch (error) {
             console.error('Error updating ticket:', error);
         }
-    };
-
-    const handleStatusChange = (newStatus: string) => {
-        handleUpdateTicket({ status: newStatus as any });
-    };
-
-    const handlePriorityChange = (newPriority: string) => {
-        handleUpdateTicket({ priority: newPriority as any });
     };
 
     const getStatusColor = (status: string) => {
@@ -96,73 +84,93 @@ export default function AdminTicketsPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <h1 className="text-3xl font-bold mb-8">Support Tickets</h1>
+                <h1 className="text-3xl font-bold mb-8">My Support Tickets</h1>
+
+                {/* Stats */}
+                <div className="grid grid-cols-4 gap-4 mb-8">
+                    <div className="bg-white rounded-lg p-4">
+                        <p className="text-gray-600 text-sm">Total Assigned</p>
+                        <p className="text-2xl font-bold">{stats.total}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                        <p className="text-gray-600 text-sm">Open</p>
+                        <p className="text-2xl font-bold text-red-600">{stats.open}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                        <p className="text-gray-600 text-sm">In Progress</p>
+                        <p className="text-2xl font-bold text-yellow-600">{stats.inProgress}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                        <p className="text-gray-600 text-sm">Pending</p>
+                        <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     {/* Tickets List */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-lg p-4 sticky top-4">
-                            <h3 className="font-semibold mb-4">Filters</h3>
+                            <h3 className="font-semibold mb-4">Filter by Status</h3>
 
-                            {/* Search */}
-                            <div className="mb-4">
-                                <input
-                                    type="text"
-                                    placeholder="Search tickets..."
-                                    value={filters.search}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, search: e.target.value });
+                            <div className="space-y-2">
+                                <button
+                                    onClick={() => {
+                                        setStatusFilter('');
                                         setPage(1);
                                     }}
-                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
-
-                            {/* Status Filter */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium mb-2">Status</label>
-                                <select
-                                    value={filters.status}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, status: e.target.value });
-                                        setPage(1);
-                                    }}
-                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className={`w-full text-left px-3 py-2 rounded ${statusFilter === '' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                                        }`}
                                 >
-                                    <option value="">All</option>
-                                    <option value="open">Open</option>
-                                    <option value="in-progress">In Progress</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="resolved">Resolved</option>
-                                    <option value="closed">Closed</option>
-                                </select>
-                            </div>
-
-                            {/* Priority Filter */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium mb-2">Priority</label>
-                                <select
-                                    value={filters.priority}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, priority: e.target.value });
+                                    All Tickets
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setStatusFilter('open');
                                         setPage(1);
                                     }}
-                                    className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className={`w-full text-left px-3 py-2 rounded ${statusFilter === 'open' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                                        }`}
                                 >
-                                    <option value="">All</option>
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="critical">Critical</option>
-                                </select>
+                                    Open
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setStatusFilter('in-progress');
+                                        setPage(1);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded ${statusFilter === 'in-progress' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                                        }`}
+                                >
+                                    In Progress
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setStatusFilter('pending');
+                                        setPage(1);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded ${statusFilter === 'pending' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                                        }`}
+                                >
+                                    Pending
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setStatusFilter('resolved');
+                                        setPage(1);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded ${statusFilter === 'resolved' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                                        }`}
+                                >
+                                    Resolved
+                                </button>
                             </div>
 
                             {/* Tickets List */}
-                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                            <div className="space-y-2 mt-4 max-h-96 overflow-y-auto">
                                 {loading ? (
                                     <div className="text-center py-4">Loading...</div>
                                 ) : tickets.length === 0 ? (
-                                    <div className="text-center py-4 text-gray-500">No tickets found</div>
+                                    <div className="text-center py-4 text-gray-500">No tickets</div>
                                 ) : (
                                     tickets.map((ticket) => (
                                         <button
@@ -254,7 +262,7 @@ export default function AdminTicketsPage() {
                                         <label className="block text-sm font-medium mb-2">Status</label>
                                         <select
                                             value={selectedTicket.status}
-                                            onChange={(e) => handleStatusChange(e.target.value)}
+                                            onChange={(e) => handleUpdateTicket({ status: e.target.value as any })}
                                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="open">Open</option>
@@ -269,7 +277,7 @@ export default function AdminTicketsPage() {
                                         <label className="block text-sm font-medium mb-2">Priority</label>
                                         <select
                                             value={selectedTicket.priority}
-                                            onChange={(e) => handlePriorityChange(e.target.value)}
+                                            onChange={(e) => handleUpdateTicket({ priority: e.target.value as any })}
                                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="low">Low</option>
@@ -278,17 +286,6 @@ export default function AdminTicketsPage() {
                                             <option value="critical">Critical</option>
                                         </select>
                                     </div>
-                                </div>
-
-                                {/* Staff Assignment */}
-                                <div className="mb-6">
-                                    <StaffAssignmentDropdown
-                                        ticketId={selectedTicket._id || ''}
-                                        currentAssignedTo={selectedTicket.assignedTo}
-                                        currentAssignedToName={selectedTicket.assignedToName}
-                                        staffMembers={MOCK_STAFF}
-                                        onAssignmentChange={() => loadTickets()}
-                                    />
                                 </div>
 
                                 {/* Description */}

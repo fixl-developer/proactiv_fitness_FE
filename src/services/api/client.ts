@@ -1,20 +1,33 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios'
+import { getApiBaseUrl } from '@/utils/apiBaseUrl'
 
 // Unified API Client for entire application
 // All other client files re-export from here
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
-
 class ApiClient {
     private client: AxiosInstance
+    private baseUrl: string
 
     constructor() {
+        this.baseUrl = getApiBaseUrl()
         this.client = axios.create({
-            baseURL: BASE_URL,
+            baseURL: this.baseUrl,
             timeout: 30000,
         })
 
         this.setupInterceptors()
+    }
+
+    // Resolve again per-request from the request interceptor so the URL is
+    // always correct in the browser, even if this module was first evaluated
+    // during SSR (when window was undefined).
+    private resolveBaseUrl(): string {
+        const url = getApiBaseUrl()
+        if (url !== this.baseUrl) {
+            this.baseUrl = url
+            this.client.defaults.baseURL = url
+        }
+        return url
     }
 
     private isFormData(body: any): boolean {
@@ -26,6 +39,11 @@ class ApiClient {
         this.client.interceptors.request.use(
             (config) => {
                 if (typeof window !== 'undefined') {
+                    // Re-resolve base URL: the singleton may have been built during
+                    // SSR with the local URL. Sync to the browser-detected one.
+                    const url = this.resolveBaseUrl()
+                    config.baseURL = url
+
                     const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
                     if (token && config.headers) {
                         config.headers.Authorization = `Bearer ${token}`
@@ -63,7 +81,7 @@ class ApiClient {
                             const refreshToken = localStorage.getItem('refreshToken')
                             if (refreshToken) {
                                 const response = await axios.post(
-                                    `${BASE_URL}/auth/refresh-token`,
+                                    `${this.baseUrl}/auth/refresh-token`,
                                     { refreshToken }
                                 )
 

@@ -47,6 +47,22 @@ export function validateName(value: string, fieldLabel = 'Name'): string | null 
   return null
 }
 
+export function validateFirstName(value: string, fieldLabel = 'First name'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  if (value.trim().length < 2) return `${fieldLabel} must be at least 2 characters`
+  // First name: letters, hyphens, apostrophes only - NO SPACES
+  if (!/^[A-Za-z'-]+$/.test(value.trim())) return `${fieldLabel} can only contain letters, hyphens and apostrophes (no spaces)`
+  return null
+}
+
+export function validateLastName(value: string, fieldLabel = 'Last name'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  if (value.trim().length < 2) return `${fieldLabel} must be at least 2 characters`
+  // Last name: letters, hyphens, apostrophes only - NO SPACES
+  if (!/^[A-Za-z'-]+$/.test(value.trim())) return `${fieldLabel} can only contain letters, hyphens and apostrophes (no spaces)`
+  return null
+}
+
 export function validateEmail(value: string, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Email is required' : null
   if (!PATTERNS.emailFormat.test(value.trim())) return 'Please enter a valid email address (e.g. user@example.com)'
@@ -64,8 +80,16 @@ export function validatePhone(value: string, required = true): string | null {
 export function validatePhoneWithCountry(value: string, requiredDigits: number, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Phone number is required' : null
 
-  // Extract digits only
-  const digits = value.replace(/\D/g, '')
+  // Extract country code (e.g., "+91" from "+91 9876543210")
+  const countryCodeMatch = value.match(/^(\+\d{1,3})\s?(.*)/)
+  if (!countryCodeMatch) {
+    return 'Please include country code (e.g., +91)'
+  }
+
+  const phoneNumberPart = countryCodeMatch[2] || ''
+
+  // Extract digits ONLY from the phone number part (excluding country code)
+  const digits = phoneNumberPart.replace(/\D/g, '')
 
   // Check if digit count matches required
   if (digits.length !== requiredDigits) {
@@ -185,6 +209,22 @@ export function filterNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
   }
 }
 
+export function filterFirstNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  // First name: only letters, hyphens, apostrophes - NO SPACES
+  const allowed = /^[A-Za-z'-]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+export function filterLastNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  // Last name: only letters, hyphens, apostrophes - NO SPACES
+  const allowed = /^[A-Za-z'-]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
 export function filterPhoneInput(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = /^[0-9+\-() ]$/
   if (e.key.length === 1 && !allowed.test(e.key)) {
@@ -237,8 +277,8 @@ export function filterSchoolInput(e: React.KeyboardEvent<HTMLInputElement>) {
 // ─── Format Hints (shown below input fields) ────────────────
 export const FORMAT_HINTS: Record<string, string> = {
   name: 'Only letters, spaces, hyphens and apostrophes allowed',
-  firstName: 'Only letters allowed (e.g. John)',
-  lastName: 'Only letters allowed (e.g. Smith)',
+  firstName: 'Only letters, hyphens and apostrophes allowed (no spaces)',
+  lastName: 'Only letters, hyphens and apostrophes allowed (no spaces)',
   email: 'Format: user@example.com',
   phone: 'Only digits, +, -, spaces allowed (7-15 digits)',
   password: 'Min 8 chars: 1 uppercase, 1 lowercase, 1 number, 1 special character',
@@ -266,7 +306,7 @@ export const FORMAT_HINTS: Record<string, string> = {
 
 // ─── Convenience: validate a whole form object ───────────────
 export type FieldRule = {
-  type: 'name' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'date' | 'required' | 'select' | 'address' | 'zip' | 'url' | 'currency' | 'number' | 'textarea' | 'age'
+  type: 'name' | 'firstName' | 'lastName' | 'email' | 'phone' | 'password' | 'confirmPassword' | 'date' | 'required' | 'select' | 'address' | 'zip' | 'url' | 'currency' | 'number' | 'textarea' | 'age'
   label?: string
   required?: boolean
   min?: number
@@ -287,6 +327,12 @@ export function validateForm(
     switch (rule.type) {
       case 'name':
         error = validateName(value, rule.label || field)
+        break
+      case 'firstName':
+        error = validateFirstName(value, rule.label || field)
+        break
+      case 'lastName':
+        error = validateLastName(value, rule.label || field)
         break
       case 'email':
         error = validateEmail(value)

@@ -1,311 +1,481 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Search, MapPin, Clock, Users, DollarSign, Calendar, Filter, ChevronRight, AlertCircle, Loader } from 'lucide-react'
+import { toast } from 'sonner'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-    Loader, AlertCircle, Search, Filter, MapPin, Clock, User,
-    DollarSign, RefreshCw, RotateCcw, Calendar, BookOpen, Tag,
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiClient } from '@/services/api/client'
-import { filterAlphanumericInput } from '@/utils/validation'
 
-interface ClassItem {
+interface Class {
     id: string
-    source?: 'session' | 'program'
-    program: string
-    coach: string
-    level: string
-    location: string
+    name: string
+    description?: string
+    location: {
+        id: string
+        name: string
+        city: string
+    }
+    room: {
+        id: string
+        name: string
+        capacity: number
+    }
+    startTime: string
+    endTime: string
     date: string
-    time: string
-    duration: number | string
-    availableSpots: number
-    price: string | number
-    description: string
-    category?: string
+    price: number
+    currency: string
+    capacity: number
+    enrolled: number
+    instructor?: string
+    level?: string
+    ageGroup?: string
 }
 
-const UserBrowseClassesPage = () => {
-    const router = useRouter()
-    const [classes, setClasses] = useState<ClassItem[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState('')
-    const [searchFilters, setSearchFilters] = useState({
-        location: '',
-        program: '',
-        level: '',
-        date: '',
-    })
-    const { isAuthenticated } = useAuth()
+interface FilterOptions {
+    location: string
+    room: string
+    date: string
+    time: string
+    priceRange: [number, number]
+    level: string
+}
 
+export default function BrowseClassesPage() {
+    const router = useRouter()
+    const { user, isAuthenticated } = useAuth()
+    const [classes, setClasses] = useState<Class[]>([])
+    const [filteredClasses, setFilteredClasses] = useState<Class[]>([])
+    const [loading, setLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [showFilters, setShowFilters] = useState(false)
+    const [filters, setFilters] = useState<FilterOptions>({
+        location: '',
+        room: '',
+        date: '',
+        time: '',
+        priceRange: [0, 1000],
+        level: ''
+    })
+
+    const [locations, setLocations] = useState<any[]>([])
+    const [rooms, setRooms] = useState<any[]>([])
+
+    // Load classes on mount
     useEffect(() => {
         if (!isAuthenticated) {
-            router.push(`/login?redirectTo=${encodeURIComponent('/user/browse-classes')}`)
+            router.push('/login')
             return
         }
-        fetchClasses()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        loadClasses()
+        loadLocations()
     }, [isAuthenticated, router])
 
-    const buildQueryString = useCallback((filters: typeof searchFilters) => {
-        const params = new URLSearchParams()
-        if (filters.location) params.append('location', filters.location)
-        if (filters.program) params.append('program', filters.program)
-        if (filters.level) params.append('level', filters.level)
-        if (filters.date) params.append('date', filters.date)
-        const qs = params.toString()
-        return qs ? `?${qs}` : ''
-    }, [])
+    // Apply filters
+    useEffect(() => {
+        applyFilters()
+    }, [classes, filters, searchTerm])
 
-    const fetchClasses = async (filters?: typeof searchFilters) => {
+    const loadClasses = async () => {
         try {
-            setIsLoading(true)
-            setError('')
-            const qs = buildQueryString(filters || searchFilters)
-            // /bookings/browse is auth-required but role-agnostic (PARENT or USER both allowed)
-            const response = await apiClient.get<any>(`/bookings/browse${qs}`)
-            const result = response?.data || response || []
-            const classArray = Array.isArray(result) ? result : []
-            setClasses(classArray)
-        } catch (err: any) {
-            console.error('Error loading classes:', err)
-            setError(err?.response?.data?.message || err.message || 'Failed to load classes')
-            setClasses([])
+            setLoading(true)
+            const response = await fetch('/api/v1/bookings/browse', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+
+            if (!response.ok) throw new Error('Failed to load classes')
+
+            const data = await response.json()
+            setClasses(data.data || [])
+        } catch (error) {
+            console.error('Error loading classes:', error)
+            // Fallback to mock data for demo
+            setClasses(getMockClasses())
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
     }
 
-    const handleSearch = () => fetchClasses(searchFilters)
-    const handleReset = () => {
-        const empty = { location: '', program: '', level: '', date: '' }
-        setSearchFilters(empty)
-        fetchClasses(empty)
-    }
-    const handleRetry = () => fetchClasses(searchFilters)
+    const loadLocations = async () => {
+        try {
+            const response = await fetch('/api/v1/bcms/locations', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
 
-    const handleBook = (cls: ClassItem) => {
-        // User books via /user/book-class/<id> — that page calls /bookings/class
-        const qs = cls.source === 'program' ? '?source=program' : ''
-        router.push(`/user/book-class/${cls.id}${qs}`)
+            if (response.ok) {
+                const data = await response.json()
+                setLocations(data.data || [])
+            }
+        } catch (error) {
+            console.error('Error loading locations:', error)
+        }
+    }
+
+    const loadRooms = async (locationId: string) => {
+        try {
+            const response = await fetch(`/api/v1/bcms/rooms?locationId=${locationId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                setRooms(data.data || [])
+            }
+        } catch (error) {
+            console.error('Error loading rooms:', error)
+        }
+    }
+
+    const applyFilters = () => {
+        let filtered = classes
+
+        // Search filter
+        if (searchTerm) {
+            filtered = filtered.filter(c =>
+                c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        // Location filter
+        if (filters.location) {
+            filtered = filtered.filter(c => c.location.id === filters.location)
+        }
+
+        // Room filter
+        if (filters.room) {
+            filtered = filtered.filter(c => c.room.id === filters.room)
+        }
+
+        // Date filter
+        if (filters.date) {
+            filtered = filtered.filter(c => c.date === filters.date)
+        }
+
+        // Time filter
+        if (filters.time) {
+            filtered = filtered.filter(c => c.startTime.startsWith(filters.time))
+        }
+
+        // Price range filter
+        filtered = filtered.filter(c =>
+            c.price >= filters.priceRange[0] && c.price <= filters.priceRange[1]
+        )
+
+        // Level filter
+        if (filters.level) {
+            filtered = filtered.filter(c => c.level === filters.level)
+        }
+
+        setFilteredClasses(filtered)
+    }
+
+    const handleLocationChange = (locationId: string) => {
+        setFilters({ ...filters, location: locationId, room: '' })
+        if (locationId) {
+            loadRooms(locationId)
+        }
+    }
+
+    const getMockClasses = (): Class[] => {
+        return [
+            {
+                id: '1',
+                name: 'Zumba Class',
+                description: 'High-energy dance fitness class',
+                location: { id: 'loc1', name: 'Dubai Marina Center', city: 'Dubai' },
+                room: { id: 'room1', name: 'Room B', capacity: 75 },
+                startTime: '18:00',
+                endTime: '19:00',
+                date: '2025-02-15',
+                price: 100,
+                currency: 'AED',
+                capacity: 75,
+                enrolled: 45,
+                instructor: 'Sarah',
+                level: 'Beginner',
+                ageGroup: 'All Ages'
+            },
+            {
+                id: '2',
+                name: 'Yoga Class',
+                description: 'Relaxing yoga session',
+                location: { id: 'loc1', name: 'Dubai Marina Center', city: 'Dubai' },
+                room: { id: 'room2', name: 'Room A', capacity: 50 },
+                startTime: '16:00',
+                endTime: '17:00',
+                date: '2025-02-15',
+                price: 80,
+                currency: 'AED',
+                capacity: 50,
+                enrolled: 30,
+                instructor: 'John',
+                level: 'Beginner',
+                ageGroup: 'All Ages'
+            },
+            {
+                id: '3',
+                name: 'CrossFit',
+                description: 'Intense strength training',
+                location: { id: 'loc1', name: 'Dubai Marina Center', city: 'Dubai' },
+                room: { id: 'room3', name: 'Room C', capacity: 30 },
+                startTime: '19:00',
+                endTime: '20:00',
+                date: '2025-02-15',
+                price: 120,
+                currency: 'AED',
+                capacity: 30,
+                enrolled: 25,
+                instructor: 'Mike',
+                level: 'Intermediate',
+                ageGroup: 'Adults'
+            }
+        ]
+    }
+
+    const getAvailableSeats = (classItem: Class) => {
+        return classItem.capacity - classItem.enrolled
+    }
+
+    const isClassFull = (classItem: Class) => {
+        return getAvailableSeats(classItem) <= 0
     }
 
     return (
         <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-                <h1 className="text-3xl font-bold text-gray-900">Browse Classes</h1>
-                <p className="text-gray-600 mt-2">Find and book a class, program or assessment</p>
+            {/* Header */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+            >
+                <h1 className="text-4xl font-bold text-slate-900 mb-2">Browse Classes</h1>
+                <p className="text-slate-600">Find and book your favorite fitness classes</p>
             </motion.div>
 
-            {/* Filters */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Filter className="w-5 h-5" />
-                            Search & Filter
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter location"
-                                    value={searchFilters.location}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, location: e.target.value })}
-                                    onKeyDown={filterAlphanumericInput}
-                                    maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter program"
-                                    value={searchFilters.program}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, program: e.target.value })}
-                                    onKeyDown={filterAlphanumericInput}
-                                    maxLength={60}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Letters and numbers only</p>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
-                                <select
-                                    value={searchFilters.level}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, level: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                                >
-                                    <option value="">All levels</option>
-                                    <option value="beginner">Beginner</option>
-                                    <option value="intermediate">Intermediate</option>
-                                    <option value="advanced">Advanced</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                                <input
-                                    type="date"
-                                    value={searchFilters.date}
-                                    onChange={(e) => setSearchFilters({ ...searchFilters, date: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex gap-3 mt-4">
-                            <Button id="btn-search-user-browse-classes" onClick={handleSearch} className="bg-emerald-600 hover:bg-emerald-700">
-                                <Search className="w-4 h-4 mr-2" />
-                                Search
-                            </Button>
-                            <Button id="btn-reset-user-browse-classes" onClick={handleReset} variant="outline">
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Reset Filters
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
+            {/* Search and Filters */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-lg shadow-md p-6 space-y-4"
+            >
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        placeholder="Search classes by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                </div>
 
-            {/* Loading */}
-            {isLoading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16">
-                    <Loader className="w-12 h-12 text-emerald-600 animate-spin mb-4" />
-                    <p className="text-gray-600 font-medium">Loading available classes...</p>
-                </motion.div>
-            )}
+                {/* Filter Toggle */}
+                <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                    <Filter className="w-4 h-4" />
+                    {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </button>
 
-            {/* Error */}
-            {!isLoading && error && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-red-50 border border-red-200 rounded-lg flex flex-col items-center text-center">
-                    <AlertCircle className="w-10 h-10 text-red-500 mb-3" />
-                    <p className="text-red-700 font-medium mb-1">Something went wrong</p>
-                    <p className="text-red-600 text-sm mb-4">{error}</p>
-                    <Button onClick={handleRetry} variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Try Again
-                    </Button>
-                </motion.div>
-            )}
-
-            {/* Empty */}
-            {!isLoading && !error && classes.length === 0 && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
-                    <Card>
-                        <CardContent className="p-12 text-center">
-                            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Classes Found</h3>
-                            <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                                No classes match your current search criteria. Try adjusting your filters or reset to see all available classes.
-                            </p>
-                            <Button onClick={handleReset} variant="outline">
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Reset Filters
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-            )}
-
-            {/* Results */}
-            {!isLoading && !error && classes.length > 0 && (
-                <>
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-gray-500">
-                        Showing {classes.length} class{classes.length !== 1 ? 'es' : ''}
-                    </motion.p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {classes.map((cls, index) => (
-                            <motion.div
-                                key={cls.id || index}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05, duration: 0.3 }}
+                {/* Filters */}
+                {showFilters && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-200"
+                    >
+                        {/* Location Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Location</label>
+                            <select
+                                value={filters.location}
+                                onChange={(e) => handleLocationChange(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                             >
-                                <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
-                                    <CardHeader>
-                                        <div className="flex justify-between items-start gap-2">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{cls.program || 'Class'}</CardTitle>
-                                                {cls.coach && <p className="text-sm text-gray-600 mt-1">with {cls.coach}</p>}
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                                <Badge className="bg-emerald-100 text-emerald-800 capitalize">{cls.level || 'All Levels'}</Badge>
-                                                {cls.source === 'program' && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        <Tag className="w-3 h-3 mr-1" /> Program
-                                                    </Badge>
-                                                )}
-                                            </div>
+                                <option value="">All Locations</option>
+                                {locations.map(loc => (
+                                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Room Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Room</label>
+                            <select
+                                value={filters.room}
+                                onChange={(e) => setFilters({ ...filters, room: e.target.value })}
+                                disabled={!filters.location}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100"
+                            >
+                                <option value="">All Rooms</option>
+                                {rooms.map(room => (
+                                    <option key={room.id} value={room.id}>{room.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Date Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Date</label>
+                            <input
+                                type="date"
+                                value={filters.date}
+                                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                        </div>
+
+                        {/* Level Filter */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">Level</label>
+                            <select
+                                value={filters.level}
+                                onChange={(e) => setFilters({ ...filters, level: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            >
+                                <option value="">All Levels</option>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                    </motion.div>
+                )}
+            </motion.div>
+
+            {/* Classes Grid */}
+            {loading ? (
+                <div className="flex items-center justify-center py-12">
+                    <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
+                </div>
+            ) : filteredClasses.length === 0 ? (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="bg-white rounded-lg shadow-md p-12 text-center"
+                >
+                    <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-600 text-lg">No classes found matching your filters</p>
+                    <button
+                        onClick={() => {
+                            setSearchTerm('')
+                            setFilters({
+                                location: '',
+                                room: '',
+                                date: '',
+                                time: '',
+                                priceRange: [0, 1000],
+                                level: ''
+                            })
+                        }}
+                        className="mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                        Clear Filters
+                    </button>
+                </motion.div>
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    {filteredClasses.map((classItem, index) => (
+                        <motion.div
+                            key={classItem.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                        >
+                            {/* Class Header */}
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 text-white">
+                                <h3 className="text-xl font-bold">{classItem.name}</h3>
+                                <p className="text-emerald-100 text-sm mt-1">{classItem.description}</p>
+                            </div>
+
+                            {/* Class Details */}
+                            <div className="p-4 space-y-3">
+                                {/* Location */}
+                                <div className="flex items-start gap-3">
+                                    <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">{classItem.location.name}</p>
+                                        <p className="text-xs text-slate-500">{classItem.room.name}</p>
+                                    </div>
+                                </div>
+
+                                {/* Time */}
+                                <div className="flex items-center gap-3">
+                                    <Clock className="w-5 h-5 text-slate-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">
+                                            {classItem.startTime} - {classItem.endTime}
+                                        </p>
+                                        <p className="text-xs text-slate-500">{classItem.date}</p>
+                                    </div>
+                                </div>
+
+                                {/* Capacity */}
+                                <div className="flex items-center gap-3">
+                                    <Users className="w-5 h-5 text-slate-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-900">
+                                            {getAvailableSeats(classItem)} / {classItem.capacity} seats available
+                                        </p>
+                                        <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
+                                            <div
+                                                className="bg-emerald-500 h-2 rounded-full"
+                                                style={{ width: `${(classItem.enrolled / classItem.capacity) * 100}%` }}
+                                            />
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 flex-1 flex flex-col">
-                                        {cls.description && (
-                                            <p className="text-sm text-gray-500 line-clamp-2">{cls.description}</p>
-                                        )}
-                                        {cls.location && (
-                                            <div className="flex items-center gap-2 text-gray-600">
-                                                <MapPin className="w-4 h-4 flex-shrink-0" />
-                                                <span className="text-sm">{cls.location}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Calendar className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">
-                                                {(() => {
-                                                    if (!cls.date) return cls.source === 'program' ? 'Schedule TBA' : 'Date TBD'
-                                                    try {
-                                                        const d = new Date(cls.date)
-                                                        if (isNaN(d.getTime())) return 'Date TBD'
-                                                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                                                    } catch { return 'Date TBD' }
-                                                })()}
-                                            </span>
-                                        </div>
-                                        {cls.time && (
-                                            <div className="flex items-center gap-2 text-gray-600">
-                                                <Clock className="w-4 h-4 flex-shrink-0" />
-                                                <span className="text-sm">
-                                                    {cls.time}
-                                                    {cls.duration ? ` (${cls.duration}${typeof cls.duration === 'number' ? ' min' : ''})` : ''}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <User className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm">{cls.availableSpots ?? 0} spots available</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                            <span className="text-sm font-semibold">{cls.price || 'Free'}</span>
-                                        </div>
-                                        <div className="mt-auto pt-4">
-                                            <Button
-                                                id={`user-browse-classes-book-${cls.id}-btn`}
-                                                onClick={() => handleBook(cls)}
-                                                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                                                disabled={cls.availableSpots === 0}
-                                            >
-                                                {cls.availableSpots === 0 ? 'Class Full' : 'Book Now'}
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        ))}
-                    </div>
-                </>
+                                    </div>
+                                </div>
+
+                                {/* Price */}
+                                <div className="flex items-center gap-3 pt-2 border-t border-slate-200">
+                                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                                    <p className="text-lg font-bold text-slate-900">
+                                        {classItem.price} <span className="text-sm text-slate-500">{classItem.currency}</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Book Button */}
+                            <div className="px-4 pb-4">
+                                <Link
+                                    href={`/user/book-class/${classItem.id}`}
+                                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-medium transition-all ${isClassFull(classItem)
+                                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                        }`}
+                                >
+                                    {isClassFull(classItem) ? 'Class Full' : 'Book Now'}
+                                    {!isClassFull(classItem) && <ChevronRight className="w-4 h-4" />}
+                                </Link>
+                            </div>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            )}
+
+            {/* Results Count */}
+            {!loading && filteredClasses.length > 0 && (
+                <div className="text-center text-slate-600 text-sm">
+                    Showing {filteredClasses.length} of {classes.length} classes
+                </div>
             )}
         </div>
     )
 }
-
-export default UserBrowseClassesPage

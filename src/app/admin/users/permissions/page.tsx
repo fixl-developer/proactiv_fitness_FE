@@ -14,6 +14,9 @@ interface Permission {
     description?: string
     module: string
     action: string
+    resourceType?: string
+    status?: 'active' | 'inactive' | 'deprecated'
+    isSystemPermission?: boolean
     createdAt?: string
 }
 
@@ -34,6 +37,9 @@ export default function PermissionsPage() {
         description: '',
         module: '',
         action: '',
+        resourceType: '',
+        status: 'active' as 'active' | 'inactive' | 'deprecated',
+        isSystemPermission: false,
     })
 
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -56,6 +62,31 @@ export default function PermissionsPage() {
 
     // Available actions
     const actions = ['view', 'create', 'edit', 'delete', 'manage', 'approve', 'export']
+
+    // Available resource types
+    const resourceTypes = [
+        'User',
+        'Role',
+        'Permission',
+        'Booking',
+        'Payment',
+        'Report',
+        'Location',
+        'Staff',
+        'Student',
+        'Parent',
+        'Program',
+        'Schedule',
+        'Class',
+        'Session',
+    ]
+
+    // Status options
+    const statusOptions = [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'deprecated', label: 'Deprecated' },
+    ]
 
     // Load permissions
     const loadPermissions = async () => {
@@ -133,6 +164,9 @@ export default function PermissionsPage() {
             description: permission.description || '',
             module: permission.module,
             action: permission.action,
+            resourceType: permission.resourceType || '',
+            status: permission.status || 'active',
+            isSystemPermission: permission.isSystemPermission || false,
         })
         setEditingId(permission.id)
         setShowForm(true)
@@ -158,6 +192,9 @@ export default function PermissionsPage() {
             description: '',
             module: '',
             action: '',
+            resourceType: '',
+            status: 'active',
+            isSystemPermission: false,
         })
         setErrors({})
         setEditingId(null)
@@ -259,7 +296,9 @@ export default function PermissionsPage() {
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Permission Name</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Module</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Action</th>
-                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Description</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Resource Type</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Status</th>
+                                            <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Type</th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Actions</th>
                                         </tr>
                                     </thead>
@@ -277,7 +316,25 @@ export default function PermissionsPage() {
                                                         {permission.action}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-600">{permission.description || '-'}</td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                                        {permission.resourceType || '-'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${permission.status === 'active' ? 'bg-emerald-100 text-emerald-800' :
+                                                            permission.status === 'inactive' ? 'bg-slate-100 text-slate-800' :
+                                                                'bg-orange-100 text-orange-800'
+                                                        }`}>
+                                                        {permission.status || 'active'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${permission.isSystemPermission ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                        {permission.isSystemPermission ? 'System' : 'Custom'}
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-4 text-sm">
                                                     <div className="flex gap-2">
                                                         <button
@@ -288,7 +345,9 @@ export default function PermissionsPage() {
                                                         </button>
                                                         <button
                                                             onClick={() => setDeleteConfirm(permission.id)}
-                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                                            disabled={permission.isSystemPermission}
+                                                            className="p-2 text-red-600 hover:bg-red-50 rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            title={permission.isSystemPermission ? 'System permissions cannot be deleted' : 'Delete'}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -411,6 +470,65 @@ export default function PermissionsPage() {
                                 rows={3}
                                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                        </div>
+
+                        {/* Resource Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Resource Type
+                            </label>
+                            <select
+                                value={formData.resourceType}
+                                onChange={(e) => setFormData({ ...formData, resourceType: e.target.value })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select Resource Type</option>
+                                {resourceTypes.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500">Specifies what resource this permission applies to</p>
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-900 mb-2">
+                                Status
+                            </label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'deprecated' })}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                {statusOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {formData.status === 'active' && 'Permission is available for use'}
+                                {formData.status === 'inactive' && 'Permission is disabled'}
+                                {formData.status === 'deprecated' && 'Permission will be removed soon'}
+                            </p>
+                        </div>
+
+                        {/* Is System Permission */}
+                        <div>
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.isSystemPermission}
+                                    onChange={(e) => setFormData({ ...formData, isSystemPermission: e.target.checked })}
+                                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-sm font-medium text-slate-900">Mark as System Permission</span>
+                            </label>
+                            <p className="mt-2 text-xs text-slate-500">
+                                System permissions cannot be deleted and are protected from accidental removal
+                            </p>
                         </div>
 
                         {/* Submit Button */}

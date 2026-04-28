@@ -88,7 +88,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ userId: s
         try {
             setIsLoading(true)
             setError(null)
-            const response = await apiClient.get<any>(`/users/${userId}`)
+            const response = await apiClient.get<any>(`/admin/users/${userId}`)
             const user = response?.data || response
             if (user) {
                 setUserData({
