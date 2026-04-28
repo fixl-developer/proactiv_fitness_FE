@@ -45,7 +45,7 @@ class ProgramService {
      */
     async getAllPrograms(filters?: any): Promise<Program[]> {
         try {
-            const response = await apiClient.get<any>('/admin/programs/catalog', { params: filters })
+            const response = await apiClient.get<any>('/programs', { params: filters })
             return response?.data || response || []
         } catch (error) {
             console.error('Error fetching programs:', error)

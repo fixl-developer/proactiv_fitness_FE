@@ -95,7 +95,7 @@ export default function ProgramRulesPage() {
   const loadRules = useCallback(async () => {
     setLoading(true)
     try {
-      const res: any = await apiClient.get('/rules')
+      const res: any = await apiClient.get('/admin/programs/rules')
       const raw = res?.data?.data ?? res?.data?.rules ?? res?.data ?? res?.rules ?? res
       const list = Array.isArray(raw) ? raw : []
       setRules(list)

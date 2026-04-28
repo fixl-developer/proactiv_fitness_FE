@@ -377,29 +377,34 @@ export default function AdminDashboard() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                    { title: 'Total Locations', value: dashboardData?.totalLocations, icon: Building2, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: dashboardData?.totalLocations > 0 ? `${dashboardData.totalLocations} active` : 'No data' },
-                    { title: 'Total Students', value: dashboardData?.totalStudents?.toLocaleString(), icon: Users, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${dashboardData?.studentGrowth > 0 ? '+' : ''}${dashboardData?.studentGrowth || 0}%` },
-                    { title: 'Total Revenue', value: `$${((dashboardData?.totalRevenue || 0) / 1000).toFixed(0)}K`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `${dashboardData?.revenueGrowth > 0 ? '+' : ''}${dashboardData?.revenueGrowth || 0}%` },
-                    { title: 'Staff Members', value: dashboardData?.staffMembers, icon: Users, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `${dashboardData?.staffMembers || 0} active` },
-                    { title: 'Active Classes', value: dashboardData?.activeClasses, icon: Calendar, gradient: 'from-pink-500 to-pink-600', bgGradient: 'from-pink-50 to-pink-100', change: `${dashboardData?.activeClasses || 0} running` },
+                    { title: 'Total Locations', value: dashboardData?.totalLocations, icon: Building2, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-50 to-blue-100', change: dashboardData?.totalLocations > 0 ? `${dashboardData.totalLocations} active` : 'No data', href: '/admin/business-config/locations' },
+                    { title: 'Total Users', value: (sidebarStats?.users?.total ?? 0).toLocaleString(), icon: Users, gradient: 'from-green-500 to-emerald-600', bgGradient: 'from-green-50 to-emerald-100', change: `${sidebarStats?.users?.active ?? 0} active`, href: '/admin/users' },
+                    { title: 'Total Revenue', value: `$${((dashboardData?.totalRevenue || 0) / 1000).toFixed(0)}K`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-50 to-purple-100', change: `${dashboardData?.revenueGrowth > 0 ? '+' : ''}${dashboardData?.revenueGrowth || 0}%`, href: '/admin/finance' },
+                    { title: 'Staff Members', value: dashboardData?.staffMembers, icon: Users, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-50 to-orange-100', change: `${dashboardData?.staffMembers || 0} active`, href: '/admin/operations' },
+                    { title: 'Active Classes', value: dashboardData?.activeClasses, icon: Calendar, gradient: 'from-pink-500 to-pink-600', bgGradient: 'from-pink-50 to-pink-100', change: `${dashboardData?.activeClasses || 0} running`, href: '/admin/programs/catalog' },
                 ].map((metric, idx) => (
                     <motion.div key={idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}>
-                        <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient}`}>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md`}>
-                                        <metric.icon className="w-5 h-5 text-white" />
+                        <button
+                            onClick={() => router.push(metric.href)}
+                            className="w-full text-left group"
+                        >
+                            <Card className={`hover:shadow-lg transition-all border-0 bg-gradient-to-br ${metric.bgGradient} cursor-pointer group-hover:scale-105 transform duration-200`}>
+                                <CardContent className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className={`bg-gradient-to-br ${metric.gradient} p-2.5 rounded-lg shadow-md group-hover:shadow-lg transition-shadow`}>
+                                            <metric.icon className="w-5 h-5 text-white" />
+                                        </div>
+                                        <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                            {metric.change}
+                                        </span>
                                     </div>
-                                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                                        {metric.change}
-                                    </span>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    <div>
+                                        <p className="text-xs text-gray-600 font-medium mb-1">{metric.title}</p>
+                                        <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </button>
                     </motion.div>
                 ))}
             </div>
@@ -470,7 +475,7 @@ export default function AdminDashboard() {
                                     title: 'Programs & Scheduling',
                                     icon: Calendar,
                                     color: 'pink',
-                                    href: '/admin/programs',
+                                    href: '/admin/programs/catalog',
                                     main: { label: 'Programs', value: sidebarStats.programs?.programs ?? 0 },
                                     rows: [
                                         { label: 'Schedules', value: sidebarStats.programs?.schedules ?? 0 },

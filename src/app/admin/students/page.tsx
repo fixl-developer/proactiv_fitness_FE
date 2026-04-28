@@ -41,7 +41,7 @@ export default function StudentsPage() {
             if (statusFilter !== 'all') params.status = statusFilter
             if (searchTerm) params.search = searchTerm
 
-            const response = await apiClient.get<any>('/users', { params: { ...params, role: 'USER' } })
+            const response = await apiClient.get<any>('/admin/users', { params: { ...params, role: 'USER' } })
             const list = response?.users || response?.data || (Array.isArray(response) ? response : [])
             const totalCount = response?.total ?? response?.meta?.total ?? list.length
             const pages = response?.totalPages ?? response?.meta?.totalPages ?? Math.ceil(totalCount / limit)

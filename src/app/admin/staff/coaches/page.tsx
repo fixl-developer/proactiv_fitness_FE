@@ -124,7 +124,7 @@ export default function CoachesPage() {
                     params.businessUnitId = currentUser.organizationId
                 }
 
-                const data = await apiClient.get<any>('/locations', { params })
+                const data = await apiClient.get<any>('/admin/business-config/locations', { params })
                 const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
                 setLocations(list)
 

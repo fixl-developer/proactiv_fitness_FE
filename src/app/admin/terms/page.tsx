@@ -48,7 +48,7 @@ const TermsPage = () => {
         try {
             setIsLoading(true)
             setError('')
-            const response = await apiClient.get<any>('/terms')
+            const response = await apiClient.get<any>('/admin/business-config/terms')
             const list = response?.terms || response?.data || (Array.isArray(response) ? response : [])
             setTerms(list)
         } catch (err: any) {

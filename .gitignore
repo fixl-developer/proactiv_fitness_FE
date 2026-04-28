@@ -26,13 +26,14 @@ backend/dist/
 # Environment files
 .env
 .env.local
+.env.local.example
 .env.development.local
 .env.test.local
 .env.production.local
 frontend/.env*
 backend/.env*
 .env.example
-.env.local.example
+
 
 # Logs
 npm-debug.log*

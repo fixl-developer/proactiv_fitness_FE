@@ -218,7 +218,7 @@ export default function CreateUserPage() {
           }
         }
 
-        const data = await apiClient.get<any>('/locations', { params })
+        const data = await apiClient.get<any>('/admin/business-config/locations', { params })
         const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
         setLocations(list)
 
@@ -240,7 +240,7 @@ export default function CreateUserPage() {
     const fetchOrgs = async () => {
       setOrgsLoading(true)
       try {
-        const data = await apiClient.get<any>('/business-units')
+        const data = await apiClient.get<any>('/admin/business-config/units')
         const list = data?.businessUnits || data?.data || (Array.isArray(data) ? data : [])
         setOrganizations(list)
       } catch {
@@ -257,7 +257,7 @@ export default function CreateUserPage() {
     const fetchRegions = async () => {
       setRegionsLoading(true)
       try {
-        const data = await apiClient.get<any>('/regions')
+        const data = await apiClient.get<any>('/admin/business-config/regions')
         const list = data?.regions || data?.data || (Array.isArray(data) ? data : [])
         setRegions(list)
       } catch {
@@ -305,7 +305,7 @@ export default function CreateUserPage() {
       if (roleFilter !== 'all') params.role = roleFilter
       if (statusFilter !== 'all') params.status = statusFilter
 
-      const data = await apiClient.get<any>('/users', { params })
+      const data = await apiClient.get<any>('/admin/users', { params })
       const usersList = data?.users || data?.data || (Array.isArray(data) ? data : [])
       setUsers(usersList)
     } catch (error: any) {
@@ -592,9 +592,8 @@ export default function CreateUserPage() {
                     const err = validateName(e.target.value, 'First name')
                     setFieldErrors(prev => ({ ...prev, firstName: err || '' }))
                   }}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                    fieldErrors.firstName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                  }`}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.firstName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                    }`}
                   placeholder="Enter first name"
                 />
                 <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
@@ -613,9 +612,8 @@ export default function CreateUserPage() {
                     const err = validateName(e.target.value, 'Last name')
                     setFieldErrors(prev => ({ ...prev, lastName: err || '' }))
                   }}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                    fieldErrors.lastName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                  }`}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.lastName ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                    }`}
                   placeholder="Enter last name"
                 />
                 <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
@@ -634,9 +632,8 @@ export default function CreateUserPage() {
                     const err = validateEmail(e.target.value)
                     setFieldErrors(prev => ({ ...prev, email: err || '' }))
                   }}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                    fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                  }`}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.email ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                    }`}
                   placeholder="user@example.com"
                 />
                 <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
@@ -659,9 +656,8 @@ export default function CreateUserPage() {
                       setFieldErrors(prev => ({ ...prev, phone: '' }))
                     }
                   }}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                    fieldErrors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                  }`}
+                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.phone ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                    }`}
                   placeholder="+852 1234 5678"
                 />
                 <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors.phone} />
@@ -682,9 +678,8 @@ export default function CreateUserPage() {
                       const err = validatePasswordShared(e.target.value)
                       setFieldErrors(prev => ({ ...prev, password: err || '' }))
                     }}
-                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors ${
-                      fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.password ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
                     placeholder="Min 8 chars: uppercase, lowercase, number, special char"
                   />
                   <button id="admin-users-create-btn"
@@ -754,8 +749,8 @@ export default function CreateUserPage() {
                           if (fieldErrors.role) setFieldErrors(prev => ({ ...prev, role: '' }))
                         }}
                         className={`p-4 border-2 rounded-lg text-left transition-all ${formData.role === role.value
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
                           }`}
                       >
                         <Badge className={role.color}>{role.label}</Badge>
@@ -807,9 +802,8 @@ export default function CreateUserPage() {
                       setFormData({ ...formData, locationId: e.target.value })
                       if (fieldErrors.locationId) setFieldErrors(prev => ({ ...prev, locationId: '' }))
                     }}
-                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                      fieldErrors.locationId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.locationId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
                   >
                     <option value="">Select Location</option>
                     {locationsLoading ? (
@@ -855,9 +849,8 @@ export default function CreateUserPage() {
                       setFormData({ ...formData, organizationId: e.target.value })
                       if (fieldErrors.organizationId) setFieldErrors(prev => ({ ...prev, organizationId: '' }))
                     }}
-                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                      fieldErrors.organizationId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.organizationId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
                   >
                     <option value="">Select Organization</option>
                     {orgsLoading ? (
@@ -889,9 +882,8 @@ export default function CreateUserPage() {
                       setFormData({ ...formData, regionId: e.target.value })
                       if (fieldErrors.regionId) setFieldErrors(prev => ({ ...prev, regionId: '' }))
                     }}
-                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
-                      fieldErrors.regionId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
-                    }`}
+                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${fieldErrors.regionId ? 'border-red-400 focus:border-red-500' : 'border-gray-200 focus:border-blue-500'
+                      }`}
                   >
                     <option value="">Select Region</option>
                     {regionsLoading ? (
@@ -929,11 +921,10 @@ export default function CreateUserPage() {
                           setFormData({ ...formData, partnerType: option.value })
                           if (fieldErrors.partnerType) setFieldErrors(prev => ({ ...prev, partnerType: '' }))
                         }}
-                        className={`p-3 border-2 rounded-lg text-left transition-all ${
-                          formData.partnerType === option.value
-                            ? 'border-blue-500 bg-blue-50 shadow-sm'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`p-3 border-2 rounded-lg text-left transition-all ${formData.partnerType === option.value
+                          ? 'border-blue-500 bg-blue-50 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
                       >
                         <p className="text-sm font-semibold text-gray-900">{option.label}</p>
                         <p className="text-xs text-gray-500 mt-1">{option.description}</p>
@@ -1167,11 +1158,10 @@ export default function CreateUserPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
                           user.status === 'INACTIVE' ? 'bg-gray-100 text-gray-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                            'bg-red-100 text-red-800'
+                          }`}>
                           {user.status}
                         </span>
                       </td>
@@ -1201,11 +1191,10 @@ export default function CreateUserPage() {
                             <button id="btn-admin-users-create-3"
                               onClick={() => handleStatusChange(user.id, user.status, `${user.firstName} ${user.lastName}`)}
                               disabled={actionLoading === user.id}
-                              className={`p-1.5 rounded transition ${
-                                user.status === 'ACTIVE'
-                                  ? 'text-orange-600 hover:bg-orange-50'
-                                  : 'text-green-600 hover:bg-green-50'
-                              }`}
+                              className={`p-1.5 rounded transition ${user.status === 'ACTIVE'
+                                ? 'text-orange-600 hover:bg-orange-50'
+                                : 'text-green-600 hover:bg-green-50'
+                                }`}
                               title={user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                             >
                               {actionLoading === user.id ? (

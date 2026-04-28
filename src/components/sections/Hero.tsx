@@ -62,10 +62,14 @@ const AnimatedCounter = ({ end, duration = 2, suffix = '' }: { end: number; dura
 }
 
 // Unified slide shape used by the carousel — populated from CMS, with static fallback.
+// `fallbackImage` is the local /public asset to swap in if the CMS-provided image
+// fails to load (e.g. production DB has stale paths or a localhost: URL admin uploaded
+// from a dev machine that the deployed browser cannot reach).
 interface DisplaySlide {
     title: string
     subtitle: string
     image: string
+    fallbackImage: string
     fallbackGradient: string
     ctaText: string
     ctaLink: string
@@ -73,12 +77,30 @@ interface DisplaySlide {
 
 const DEFAULT_GRADIENT = 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800'
 
-// Static fallback data — used only when CMS has no slides or API is unreachable.
+// Returns a usable image src or '' if the CMS value is something the deployed
+// frontend definitely cannot serve (localhost-bound URL, missing scheme, blank).
+// Triggering '' makes the carousel fall through to the static fallback path.
+function sanitizeCmsImage(src: string | undefined): string {
+    if (!src) return ''
+    const trimmed = src.trim()
+    if (!trimmed) return ''
+    // Localhost / 127.0.0.1 URLs only resolve on a developer's machine — useless in prod.
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(trimmed)) return ''
+    // Accept absolute http(s), root-relative (/foo), data: URIs as-is.
+    if (/^(https?:|data:)/i.test(trimmed) || trimmed.startsWith('/')) return trimmed
+    // Bare filename or "images/..": coerce to root-relative so it lines up with /public.
+    return `/${trimmed.replace(/^\.?\/?/, '')}`
+}
+
+// Static fallback data — used as the canonical local-asset list. Bundled with the
+// frontend (frontend/public/images/hero/), so these paths are guaranteed to resolve
+// on any deployment regardless of what the CMS database currently holds.
 const staticHeroSlides: DisplaySlide[] = [
     {
         title: 'Build Strength Through Gymnastics',
         subtitle: 'Professional gymnastics training for all ages and skill levels in Hong Kong',
         image: '/images/hero/img1.png',
+        fallbackImage: '/images/hero/img1.png',
         fallbackGradient: 'bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800',
         ctaText: 'Book Free Trial',
         ctaLink: '/book-trial',
@@ -87,6 +109,7 @@ const staticHeroSlides: DisplaySlide[] = [
         title: 'Build Confidence Through Gymnastics',
         subtitle: 'Children excel with expert coaching and a safe, welcoming environment',
         image: '/images/hero/img2.jpg',
+        fallbackImage: '/images/hero/img2.jpg',
         fallbackGradient: 'bg-gradient-to-br from-green-600 via-blue-600 to-purple-800',
         ctaText: 'Book Free Trial',
         ctaLink: '/book-trial',
@@ -95,6 +118,7 @@ const staticHeroSlides: DisplaySlide[] = [
         title: 'Build Champions Through Gymnastics',
         subtitle: 'Expert coaching and individual attention from certified professionals',
         image: '/images/hero/img3.jpg',
+        fallbackImage: '/images/hero/img3.jpg',
         fallbackGradient: 'bg-gradient-to-br from-purple-600 via-pink-600 to-red-800',
         ctaText: 'Book Free Trial',
         ctaLink: '/book-trial',
@@ -108,12 +132,16 @@ const staticStats: SiteStat[] = [
 ]
 
 // Map a CMS slide -> the local DisplaySlide shape with sensible defaults.
-function adaptCmsSlide(s: CMSHeroSlide): DisplaySlide {
+// Each CMS slide is paired with a static fallback image (cycled by index) so a
+// stale/unreachable CMS image never leaves the hero blank in production.
+function adaptCmsSlide(s: CMSHeroSlide, index: number): DisplaySlide {
+    const fallback = staticHeroSlides[index % staticHeroSlides.length]
     return {
-        title: s.title || '',
-        subtitle: s.subtitle || '',
-        image: s.image || '',
-        fallbackGradient: s.fallbackGradient || DEFAULT_GRADIENT,
+        title: s.title || fallback.title,
+        subtitle: s.subtitle || fallback.subtitle,
+        image: sanitizeCmsImage(s.image),
+        fallbackImage: fallback.image,
+        fallbackGradient: s.fallbackGradient || fallback.fallbackGradient,
         ctaText: s.ctaText || 'Book Free Trial',
         ctaLink: s.ctaLink || '/book-trial',
     }
@@ -148,8 +176,8 @@ const Hero = () => {
                     const adapted = slidesRes.value
                         .slice()
                         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                        .map(adaptCmsSlide)
-                        .filter(s => s.title || s.image)
+                        .map((s, i) => adaptCmsSlide(s, i))
+                        .filter(s => s.title || s.image || s.fallbackImage)
                     if (adapted.length > 0) {
                         setHeroSlides(adapted)
                         setCurrentSlide(0)
@@ -195,6 +223,14 @@ const Hero = () => {
 
     const handleImageError = (src: string) => {
         setImageLoadStatus(prev => ({ ...prev, [src]: false }))
+    }
+
+    // Per slide, decide which src the <img> should actually request right now.
+    // Try the CMS-provided image first; if it has already errored (or sanitizer
+    // rejected it), fall back to the static /public asset for that slide index.
+    const resolveSlideSrc = (s: DisplaySlide): string => {
+        if (s.image && imageLoadStatus[s.image] !== false) return s.image
+        return s.fallbackImage || ''
     }
 
     const goToSlide = (index: number) => {
@@ -244,30 +280,39 @@ const Hero = () => {
                             animate={{ opacity: 1 }}
                             transition={{ duration: 1 }}
                         >
-                            {slide.image && (
-                                <img
-                                    src={slide.image}
-                                    alt={slide.title || 'Hero slide'}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                    style={{
-                                        display: imageLoadStatus[slide.image] === false ? 'none' : 'block',
-                                        objectPosition: 'center 40%'
-                                    }}
-                                    onLoad={() => handleImageLoad(slide.image)}
-                                    onError={() => handleImageError(slide.image)}
-                                />
-                            )}
+                            {(() => {
+                                const activeSrc = resolveSlideSrc(slide)
+                                const allFailed = !activeSrc || imageLoadStatus[activeSrc] === false
+                                return (
+                                    <>
+                                        {activeSrc && (
+                                            <img
+                                                key={activeSrc}
+                                                src={activeSrc}
+                                                alt={slide.title || 'Hero slide'}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                                style={{
+                                                    display: imageLoadStatus[activeSrc] === false ? 'none' : 'block',
+                                                    objectPosition: 'center 40%'
+                                                }}
+                                                onLoad={() => handleImageLoad(activeSrc)}
+                                                onError={() => handleImageError(activeSrc)}
+                                            />
+                                        )}
 
-                            {/* Image Failed to Load Indicator */}
-                            {slide.image && imageLoadStatus[slide.image] === false && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="text-center text-white/80 px-4">
-                                        <div className="text-4xl sm:text-6xl mb-4">🤸‍♀️</div>
-                                        <p className="text-base sm:text-lg font-medium">Gymnastics Excellence</p>
-                                        <p className="text-sm opacity-75">Professional Training</p>
-                                    </div>
-                                </div>
-                            )}
+                                        {/* Both CMS and static-fallback images failed: show themed placeholder. */}
+                                        {allFailed && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <div className="text-center text-white/80 px-4">
+                                                    <div className="text-4xl sm:text-6xl mb-4">🤸‍♀️</div>
+                                                    <p className="text-base sm:text-lg font-medium">Gymnastics Excellence</p>
+                                                    <p className="text-sm opacity-75">Professional Training</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )
+                            })()}
                         </motion.div>
 
                         {/* Enhanced Overlay for Better Text Readability */}

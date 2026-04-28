@@ -105,11 +105,11 @@ export default function KnowledgeBasePage() {
         else if (content.length < 20) newErrors.content = 'Content must be at least 20 characters'
         else if (content.length > 20000) newErrors.content = 'Content is too long'
 
-        // Tags optional, but each tag must be a sane slug-ish word
+        // Tags optional, but each tag must be a sane slug-ish word (letters, spaces, hyphens, underscores only)
         if (formData.tags.trim()) {
             const tagList = formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
-            const bad = tagList.find((t) => !/^[A-Za-z0-9][A-Za-z0-9 _-]{0,29}$/.test(t))
-            if (bad) newErrors.tags = `Invalid tag: "${bad}". Use letters/numbers/spaces (max 30 chars).`
+            const bad = tagList.find((t) => !/^[A-Za-z][A-Za-z _-]{0,29}$/.test(t))
+            if (bad) newErrors.tags = `Invalid tag: "${bad}". Use letters/spaces/hyphens only (max 30 chars).`
         }
 
         setErrors(newErrors)
@@ -295,10 +295,10 @@ export default function KnowledgeBasePage() {
                                                 <td className="px-6 py-4 text-sm">
                                                     <span
                                                         className={`px-3 py-1 rounded-full text-xs font-medium ${article.status === 'published'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : article.status === 'archived'
-                                                                    ? 'bg-slate-200 text-slate-700'
-                                                                    : 'bg-gray-100 text-gray-800'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : article.status === 'archived'
+                                                                ? 'bg-slate-200 text-slate-700'
+                                                                : 'bg-gray-100 text-gray-800'
                                                             }`}
                                                     >
                                                         {article.status
@@ -377,14 +377,16 @@ export default function KnowledgeBasePage() {
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, title: e.target.value })
+                                    // Strip any digits from title field
+                                    const cleaned = e.target.value.replace(/[0-9]/g, '')
+                                    setFormData({ ...formData, title: cleaned })
                                     if (errors.title) setErrors({ ...errors, title: '' })
                                 }}
                                 placeholder="e.g., How to book a class"
                                 maxLength={200}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.title
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-slate-300 focus:ring-blue-500'
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-slate-300 focus:ring-blue-500'
                                     }`}
                             />
                             {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
@@ -405,8 +407,8 @@ export default function KnowledgeBasePage() {
                                     if (errors.category) setErrors({ ...errors, category: '' })
                                 }}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.category
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-slate-300 focus:ring-blue-500'
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-slate-300 focus:ring-blue-500'
                                     }`}
                             >
                                 <option value="faq">FAQ</option>
@@ -425,14 +427,16 @@ export default function KnowledgeBasePage() {
                             <textarea
                                 value={formData.content}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, content: e.target.value })
+                                    // Strip any digits from content field
+                                    const cleaned = e.target.value.replace(/[0-9]/g, '')
+                                    setFormData({ ...formData, content: cleaned })
                                     if (errors.content) setErrors({ ...errors, content: '' })
                                 }}
                                 placeholder="Write the article content here..."
                                 rows={6}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.content
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-slate-300 focus:ring-blue-500'
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-slate-300 focus:ring-blue-500'
                                     }`}
                             />
                             {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
@@ -448,13 +452,15 @@ export default function KnowledgeBasePage() {
                                 type="text"
                                 value={formData.tags}
                                 onChange={(e) => {
-                                    setFormData({ ...formData, tags: e.target.value })
+                                    // Strip any digits from tags field
+                                    const cleaned = e.target.value.replace(/[0-9]/g, '')
+                                    setFormData({ ...formData, tags: cleaned })
                                     if (errors.tags) setErrors({ ...errors, tags: '' })
                                 }}
                                 placeholder="e.g., booking, class, schedule (comma-separated)"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.tags
-                                        ? 'border-red-500 focus:ring-red-500'
-                                        : 'border-slate-300 focus:ring-blue-500'
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-slate-300 focus:ring-blue-500'
                                     }`}
                             />
                             {errors.tags && <p className="mt-1 text-sm text-red-600">{errors.tags}</p>}
@@ -477,8 +483,8 @@ export default function KnowledgeBasePage() {
                                     >
                                         <div
                                             className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform mt-0.5 ${formData.isPublished
-                                                    ? 'translate-x-5.5 ml-[22px]'
-                                                    : 'translate-x-0.5 ml-0.5'
+                                                ? 'translate-x-5.5 ml-[22px]'
+                                                : 'translate-x-0.5 ml-0.5'
                                                 }`}
                                         />
                                     </div>

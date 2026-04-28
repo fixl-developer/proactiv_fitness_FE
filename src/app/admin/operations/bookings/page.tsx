@@ -84,11 +84,11 @@ export default function BookingManagementPage() {
 
   // Load customers + programs once for the create/edit drawer dropdowns
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       try {
         const [usersRes, programsRes] = await Promise.all([
-          apiClient.get<any>('/users', { params: { limit: 200 } }),
-          apiClient.get<any>('/programs', { params: { limit: 200 } }),
+          apiClient.get<any>('/admin/users', { params: { limit: 100 } }),
+          apiClient.get<any>('/admin/programs', { params: { limit: 200 } }),
         ])
 
         // Customers = end users + parents only. Showing admins/coaches/managers

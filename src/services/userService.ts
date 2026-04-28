@@ -45,6 +45,11 @@ export interface Role {
     name: string
     description?: string
     permissions: string[]
+    roleType?: 'admin' | 'manager' | 'staff' | 'user' | 'custom'
+    status?: 'active' | 'inactive' | 'deprecated'
+    assignedLocations?: string[]
+    assignedBusinessUnits?: string[]
+    isSystem?: boolean
     createdAt?: string
     updatedAt?: string
 }
@@ -55,6 +60,9 @@ export interface Permission {
     description?: string
     module: string
     action: string
+    resourceType?: string
+    status?: 'active' | 'inactive' | 'deprecated'
+    isSystemPermission?: boolean
     createdAt?: string
     updatedAt?: string
 }
@@ -186,71 +194,116 @@ export const UserService = {
 }
 
 // =============================================
-// ROLE MANAGEMENT
+// ROLE MANAGEMENT (Updated for Priority 1 Fields)
 // =============================================
 
 export const RoleService = {
-    getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<ListResponse<Role>> => {
+    getAll: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        status?: string;
+        roleType?: string;
+    }): Promise<ListResponse<Role>> => {
         const cleaned: Record<string, string | number> = {}
         if (params?.page) cleaned.page = params.page
         if (params?.limit) cleaned.limit = params.limit
         if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
-        const body = await apiClient.get('/iam/roles', { params: cleaned })
+        if (params?.status) cleaned.status = params.status
+        if (params?.roleType) cleaned.roleType = params.roleType
+        const body = await apiClient.get('/roles', { params: cleaned })
         return unwrapListResponse<Role>(body, params)
     },
 
     getById: async (id: string): Promise<Role> => {
-        const body = await apiClient.get(`/iam/roles/${id}`)
+        const body = await apiClient.get(`/roles/${id}`)
         return unwrapItemResponse<Role>(body)
     },
 
-    create: async (data: { name: string; description?: string; permissions?: string[] }): Promise<Role> => {
-        const body = await apiClient.post('/iam/roles', data)
+    create: async (data: {
+        name: string;
+        description?: string;
+        permissions?: string[];
+        roleType?: string;
+        status?: string;
+        assignedLocations?: string[];
+        assignedBusinessUnits?: string[];
+    }): Promise<Role> => {
+        const body = await apiClient.post('/roles', data)
         return unwrapItemResponse<Role>(body)
     },
 
-    update: async (id: string, data: { name?: string; description?: string; permissions?: string[] }): Promise<Role> => {
-        const body = await apiClient.put(`/iam/roles/${id}`, data)
+    update: async (id: string, data: {
+        name?: string;
+        description?: string;
+        permissions?: string[];
+        roleType?: string;
+        status?: string;
+        assignedLocations?: string[];
+        assignedBusinessUnits?: string[];
+    }): Promise<Role> => {
+        const body = await apiClient.put(`/roles/${id}`, data)
         return unwrapItemResponse<Role>(body)
     },
 
     delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/iam/roles/${id}`)
+        await apiClient.delete(`/roles/${id}`)
     },
 }
 
 // =============================================
-// PERMISSION MANAGEMENT
+// PERMISSION MANAGEMENT (Updated for Priority 1 Fields)
 // =============================================
 
 export const PermissionService = {
-    getAll: async (params?: { page?: number; limit?: number; search?: string; module?: string }): Promise<ListResponse<Permission>> => {
+    getAll: async (params?: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        module?: string;
+        status?: string;
+        resourceType?: string;
+    }): Promise<ListResponse<Permission>> => {
         const cleaned: Record<string, string | number> = {}
         if (params?.page) cleaned.page = params.page
         if (params?.limit) cleaned.limit = params.limit
         if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
         if (params?.module) cleaned.module = params.module
-        const body = await apiClient.get('/iam/permissions', { params: cleaned })
+        if (params?.status) cleaned.status = params.status
+        if (params?.resourceType) cleaned.resourceType = params.resourceType
+        const body = await apiClient.get('/permissions', { params: cleaned })
         return unwrapListResponse<Permission>(body, params)
     },
 
     getById: async (id: string): Promise<Permission> => {
-        const body = await apiClient.get(`/iam/permissions/${id}`)
+        const body = await apiClient.get(`/permissions/${id}`)
         return unwrapItemResponse<Permission>(body)
     },
 
-    create: async (data: { name: string; description?: string; module: string; action: string }): Promise<Permission> => {
-        const body = await apiClient.post('/iam/permissions', data)
+    create: async (data: {
+        name: string;
+        description?: string;
+        module: string;
+        action: string;
+        resourceType?: string;
+        status?: string;
+        isSystemPermission?: boolean;
+    }): Promise<Permission> => {
+        const body = await apiClient.post('/permissions', data)
         return unwrapItemResponse<Permission>(body)
     },
 
-    update: async (id: string, data: { name?: string; description?: string; module?: string; action?: string }): Promise<Permission> => {
-        const body = await apiClient.put(`/iam/permissions/${id}`, data)
+    update: async (id: string, data: {
+        description?: string;
+        resourceType?: string;
+        status?: string;
+    }): Promise<Permission> => {
+        const body = await apiClient.put(`/permissions/${id}`, data)
         return unwrapItemResponse<Permission>(body)
     },
 
     delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/iam/permissions/${id}`)
+        await apiClient.delete(`/permissions/${id}`)
     },
 }
 
