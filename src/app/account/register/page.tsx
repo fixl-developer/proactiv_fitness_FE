@@ -2,12 +2,23 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Calendar, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Calendar, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/modules/auth.service';
-import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateDateOfBirth, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation';
+import {
+    validateFirstName,
+    validateLastName,
+    validateEmail,
+    validatePassword,
+    validateConfirmPassword,
+    validateDateOfBirth,
+    filterFirstNameInput,
+    filterLastNameInput,
+    FORMAT_HINTS,
+} from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 
 export default function UserRegisterPage() {
     return (
@@ -24,6 +35,7 @@ function UserRegisterContent() {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [phoneValid, setPhoneValid] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -43,16 +55,13 @@ function UserRegisterContent() {
 
         switch (field) {
             case 'firstName':
-                error = validateName(value, 'First name');
+                error = validateFirstName(value, 'First name');
                 break;
             case 'lastName':
-                error = validateName(value, 'Last name');
+                error = validateLastName(value, 'Last name');
                 break;
             case 'email':
                 error = validateEmail(value);
-                break;
-            case 'phone':
-                error = validatePhone(value, false);
                 break;
             case 'dateOfBirth':
                 error = validateDateOfBirth(value, false);
@@ -84,6 +93,29 @@ function UserRegisterContent() {
         setFormErrors(newErrors);
     };
 
+    const handlePhoneChange = (value: string) => {
+        setFormData((prev) => ({ ...prev, phone: value }));
+        // Clear stale phone error — PhoneInput handles its own visual state via onValidityChange
+        setErrors((prev) => {
+            const next = { ...prev };
+            delete next.phone;
+            return next;
+        });
+        setFormErrors((prev) => {
+            const next = { ...prev };
+            delete next.phone;
+            return next;
+        });
+    };
+
+    const handlePhoneValidity = (isValid: boolean, error: string | null) => {
+        setPhoneValid(isValid);
+        // Surface phone error in formErrors only at submit time, not on every keystroke
+        if (!isValid && error && formData.phone) {
+            // keep silent until submit
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -92,14 +124,15 @@ function UserRegisterContent() {
 
         // Validate ALL fields using shared validators
         const submitErrors: Record<string, string> = {};
-        const firstNameErr = validateName(formData.firstName, 'First name');
+        const firstNameErr = validateFirstName(formData.firstName, 'First name');
         if (firstNameErr) submitErrors.firstName = firstNameErr;
-        const lastNameErr = validateName(formData.lastName, 'Last name');
+        const lastNameErr = validateLastName(formData.lastName, 'Last name');
         if (lastNameErr) submitErrors.lastName = lastNameErr;
         const emailErr = validateEmail(formData.email);
         if (emailErr) submitErrors.email = emailErr;
-        const phoneErr = validatePhone(formData.phone, false);
-        if (phoneErr) submitErrors.phone = phoneErr;
+        if (formData.phone && !phoneValid) {
+            submitErrors.phone = 'Please enter a valid phone number for the selected country';
+        }
         const dobErr = validateDateOfBirth(formData.dateOfBirth, false);
         if (dobErr) submitErrors.dateOfBirth = dobErr;
         const passwordErr = validatePassword(formData.password);
@@ -204,8 +237,9 @@ function UserRegisterContent() {
                                         <input id="input-text-account-register"
                                             type="text"
                                             value={formData.firstName}
-                                            onKeyDown={filterNameInput}
+                                            onKeyDown={filterFirstNameInput}
                                             onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                                            maxLength={50}
                                             className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                             placeholder="John"
                                         />
@@ -219,8 +253,9 @@ function UserRegisterContent() {
                                         <input id="input-text-account-register"
                                             type="text"
                                             value={formData.lastName}
-                                            onKeyDown={filterNameInput}
+                                            onKeyDown={filterLastNameInput}
                                             onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                                            maxLength={50}
                                             className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                             placeholder="Doe"
                                         />
@@ -249,18 +284,13 @@ function UserRegisterContent() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-gray-700">Phone Number</label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" />
-                                        <input id="input-tel-account-register"
-                                            type="tel"
-                                            value={formData.phone}
-                                            onKeyDown={filterPhoneInput}
-                                            onChange={(e) => handleFieldChange('phone', e.target.value)}
-                                            className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
-                                            placeholder="+919876543210"
-                                        />
-                                    </div>
-                                    <FormFieldHint hint={FORMAT_HINTS.phone} error={errors.phone} />
+                                    <PhoneInput
+                                        value={formData.phone}
+                                        onChange={handlePhoneChange}
+                                        onValidityChange={handlePhoneValidity}
+                                        error={errors.phone}
+                                        placeholder="9876543210"
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-xs font-semibold text-gray-700">Date of Birth</label>

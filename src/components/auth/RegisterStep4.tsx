@@ -10,11 +10,13 @@ import {
     type RegisterStep4Data,
 } from '@/lib/validations/auth';
 import {
-    validateName,
+    validateFirstName,
+    validateLastName,
     validateDateOfBirth,
     validateSelect,
     validateTextArea,
-    filterNameInput,
+    filterFirstNameInput,
+    filterLastNameInput,
     filterSchoolInput,
     FORMAT_HINTS,
 } from '@/utils/validation';
@@ -79,10 +81,10 @@ export function RegisterStep4({
         let error: string | null = null;
         switch (field) {
             case 'firstName':
-                error = validateName(value, 'First name');
+                error = validateFirstName(value, 'First name');
                 break;
             case 'lastName':
-                error = validateName(value, 'Last name');
+                error = validateLastName(value, 'Last name');
                 break;
             case 'dateOfBirth':
                 error = validateDateOfBirth(value);
@@ -113,9 +115,9 @@ export function RegisterStep4({
     const handleFormSubmit = (data: RegisterStep4Data) => {
         const errs: Record<string, string> = {};
         (data.students ?? []).forEach((student, index) => {
-            const fnErr = validateName(student.firstName, 'First name');
+            const fnErr = validateFirstName(student.firstName, 'First name');
             if (fnErr) errs[`students.${index}.firstName`] = fnErr;
-            const lnErr = validateName(student.lastName, 'Last name');
+            const lnErr = validateLastName(student.lastName, 'Last name');
             if (lnErr) errs[`students.${index}.lastName`] = lnErr;
             const dobErr = validateDateOfBirth(student.dateOfBirth);
             if (dobErr) errs[`students.${index}.dateOfBirth`] = dobErr;
@@ -181,7 +183,8 @@ export function RegisterStep4({
                                         {...register(`students.${index}.firstName`, {
                                             onChange: (e) => validateField(index, 'firstName', e.target.value),
                                         })}
-                                        onKeyDown={filterNameInput}
+                                        onKeyDown={filterFirstNameInput}
+                                        maxLength={50}
                                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.students?.[index]?.firstName || fieldErrors[`students.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
@@ -207,7 +210,8 @@ export function RegisterStep4({
                                         {...register(`students.${index}.lastName`, {
                                             onChange: (e) => validateField(index, 'lastName', e.target.value),
                                         })}
-                                        onKeyDown={filterNameInput}
+                                        onKeyDown={filterLastNameInput}
+                                        maxLength={50}
                                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.students?.[index]?.lastName || fieldErrors[`students.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
