@@ -160,27 +160,87 @@ export default function ProgramCatalogPage() {
       params.set('page', String(page))
       params.set('limit', '20')
       if (search) params.set('search', search)
-      if (filterType) params.set('type', filterType)
-      if (filterLevel) params.set('level', filterLevel)
-      if (filterStatus) params.set('status', filterStatus)
+      // Backend programQueryValidation accepts `programType` / `skillLevel` /
+      // `isActive`+`isPublic` — NOT the flat `type`/`level`/`status` keys the
+      // UI used. Without this translation, every filter selection was a no-op
+      // (Joi dropped the unknown params and the list returned all rows).
+      // Type:
+      //   gymnastics/tumbling/ninja are stored as category in admin-created
+      //   programs (programType is hard-mapped to 'regular' on create), so
+      //   filtering on category preserves the user's mental model. The other
+      //   options are real ProgramType values, so we route them via programType.
+      if (filterType) {
+        const categoryAliases = new Set(['gymnastics', 'tumbling', 'ninja'])
+        if (categoryAliases.has(filterType)) {
+          params.set('category', filterType)
+        } else {
+          params.set('programType', filterType)
+        }
+      }
+      if (filterLevel) params.set('skillLevel', filterLevel)
+      if (filterStatus) {
+        // active  → published & active   (isActive=true,  isPublic=true)
+        // inactive→ archived/disabled    (isActive=false)
+        // draft   → unpublished, alive   (isActive=true,  isPublic=false)
+        if (filterStatus === 'active') {
+          params.set('isActive', 'true')
+          params.set('isPublic', 'true')
+        } else if (filterStatus === 'inactive') {
+          params.set('isActive', 'false')
+        } else if (filterStatus === 'draft') {
+          params.set('isActive', 'true')
+          params.set('isPublic', 'false')
+        }
+      }
 
       const res: any = await apiClient.get(`/admin/programs?${params.toString()}`)
       const list = extractList<any>(res)
-      // Normalize: backend mixes _id / id across list endpoints — collapse to _id
-      // so the table key (and edit/delete actions) always have a stable identifier.
-      const normalized: Program[] = list.map((p: any) => ({
-        _id: p._id || p.id || '',
-        name: p.name || '',
-        type: p.type || '',
-        level: p.level || '',
-        ageGroup: p.ageGroup || '',
-        description: p.description || '',
-        capacity: Number(p.capacity) || 0,
-        price: Number(p.price) || 0,
-        status: p.status || 'active',
-        enrolledCount: p.enrolledCount,
-        createdAt: p.createdAt,
-      })).filter((p: Program) => p._id)
+      // Backend stores programs in a NESTED shape (programType, ageGroups[],
+      // skillLevels[], capacityRules.maxParticipants, pricingModel.basePrice,
+      // isActive boolean) — the frontend table + edit form expect FLAT fields
+      // (type, level, ageGroup, capacity, price, status string). Without this
+      // unwrap, every column rendered "—" / 0 / $0 and clicking Edit opened
+      // the form with empty values, so saving overwrote the program with
+      // blanks. The spread keeps nested fields available for startEdit to
+      // hydrate the rest of the form (availableDays, capacityRules.*, etc.).
+      const normalized: Program[] = list.map((p: any) => {
+        const ag0 = Array.isArray(p.ageGroups) && p.ageGroups[0] ? p.ageGroups[0] : null
+        const ageGroupStr = p.ageGroup
+          || (ag0 && Number.isFinite(ag0.minAge) && Number.isFinite(ag0.maxAge) ? `${ag0.minAge}-${ag0.maxAge}` : '')
+        const capacity = Number(
+          p.capacity
+          ?? p.capacityRules?.maxParticipants
+          ?? p.capacityRules?.maxCapacity
+          ?? 0
+        ) || 0
+        const price = Number(
+          p.price
+          ?? p.pricingModel?.basePrice
+          ?? 0
+        ) || 0
+        // Status: backend stores isActive (bool) + isPublic (bool). Map back to
+        // tri-state: active (active+public), draft (active+private), inactive.
+        let status: 'active' | 'inactive' | 'draft' = p.status as any
+        if (!status) {
+          if (p.isActive === false) status = 'inactive'
+          else if (p.isPublic === false) status = 'draft'
+          else status = 'active'
+        }
+        return {
+          ...p,
+          _id: p._id || p.id || '',
+          name: p.name || '',
+          type: p.type || p.programType || '',
+          level: p.level || (Array.isArray(p.skillLevels) && p.skillLevels[0]) || '',
+          ageGroup: ageGroupStr,
+          description: p.description || '',
+          capacity,
+          price,
+          status,
+          enrolledCount: p.enrolledCount,
+          createdAt: p.createdAt,
+        }
+      }).filter((p: Program) => p._id)
       setPrograms(normalized)
       setTotalPages(extractPagination(res).totalPages)
       setApiFailed(false)
@@ -494,8 +554,14 @@ export default function ProgramCatalogPage() {
     setSubmitting(true)
     try {
       if (editingId) {
-        // Strip dropdown fields from update payload — backend update schema doesn't expect them
-        const { businessUnitId: _bu, locationIds: _loc, ...updatePayload } = formData
+        // Backend stores programs in a NESTED shape (capacityRules,
+        // pricingModel, ageGroups[], classTemplates[]…). Sending FLAT formData
+        // here used to drop every rich field — admin's edits to capacity, price,
+        // currency, learning objectives, etc. silently never persisted because
+        // the backend adapter only translates a handful of top-level fields.
+        // Reuse the same builder as create so updates round-trip every field
+        // the form exposes.
+        const { businessUnitId: _bu, locationIds: _loc, ...updatePayload } = buildCreatePayload()
         await apiClient.put(`/programs/${editingId}`, updatePayload)
         toast.success('Program updated successfully')
       } else {
@@ -517,37 +583,61 @@ export default function ProgramCatalogPage() {
   }
 
   const startEdit = (p: Program) => {
+    // Source of truth: the spread-back raw doc from loadPrograms includes the
+    // nested backend fields (capacityRules, pricingModel, ageGroups, etc.) so
+    // we hydrate from those when present, falling back to the flat normalised
+    // fields for legacy rows.
+    const raw: any = p
+    const cr = raw.capacityRules || {}
+    const pm = raw.pricingModel || {}
+    const er = raw.eligibilityRules || {}
+    const tpl0 = Array.isArray(raw.classTemplates) && raw.classTemplates[0] ? raw.classTemplates[0] : {}
     setEditingId(p._id)
     setFormData({
       name: p.name,
-      type: p.type,
-      level: p.level,
+      type: p.type || raw.programType || '',
+      level: p.level || (Array.isArray(raw.skillLevels) && raw.skillLevels[0]) || 'beginner',
       ageGroup: p.ageGroup,
       description: p.description,
       capacity: p.capacity,
       price: p.price,
       status: p.status,
-      businessUnitId: (p as any).businessUnitId || '',
-      locationIds: Array.isArray((p as any).locationIds) ? (p as any).locationIds : [],
-      category: (p as any).category || 'general',
-      shortDescription: (p as any).shortDescription || '',
-      duration: (p as any).duration || 60,
-      sessionsPerWeek: (p as any).sessionsPerWeek || 1,
-      termDuration: (p as any).termDuration || 12,
-      availableDays: Array.isArray((p as any).availableDays) ? (p as any).availableDays : ['monday', 'wednesday', 'friday'],
-      availableTimeSlots: Array.isArray((p as any).availableTimeSlots) ? (p as any).availableTimeSlots : [{ id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
-      coachIds: Array.isArray((p as any).coachIds) ? (p as any).coachIds : [],
-      minParticipants: (p as any).minParticipants || 1,
-      waitlistCapacity: (p as any).waitlistCapacity || 5,
-      coachToParticipantRatio: (p as any).coachToParticipantRatio || 10,
-      allowOverbooking: (p as any).allowOverbooking || false,
-      currency: (p as any).currency || 'USD',
-      pricingType: (p as any).pricingType || 'per_term',
-      medicalClearanceRequired: (p as any).medicalClearanceRequired || false,
-      parentalConsentRequired: (p as any).parentalConsentRequired || true,
-      skillLevels: Array.isArray((p as any).skillLevels) ? (p as any).skillLevels : ['beginner'],
-      learningObjectives: Array.isArray((p as any).learningObjectives) ? (p as any).learningObjectives : ['Skill development', 'Safety awareness'],
-      activities: Array.isArray((p as any).activities) ? (p as any).activities : ['Warm-up', 'Skill practice', 'Cool-down'],
+      businessUnitId: raw.businessUnitId || '',
+      locationIds: Array.isArray(raw.locationIds) ? raw.locationIds : [],
+      category: raw.category || 'general',
+      shortDescription: raw.shortDescription || '',
+      duration: raw.duration || raw.sessionDuration || tpl0.duration || 60,
+      sessionsPerWeek: raw.sessionsPerWeek || 1,
+      termDuration: raw.termDuration || 12,
+      availableDays: Array.isArray(raw.availableDays) ? raw.availableDays : ['monday', 'wednesday', 'friday'],
+      availableTimeSlots: Array.isArray(raw.availableTimeSlots) && raw.availableTimeSlots.length > 0
+        ? raw.availableTimeSlots.map((s: any, i: number) => ({
+            id: s.id || String(i + 1),
+            startTime: s.startTime || '16:00',
+            endTime: s.endTime || '17:00',
+            days: Array.isArray(s.days) ? s.days : (Array.isArray(raw.availableDays) ? raw.availableDays : []),
+          }))
+        : [{ id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
+      coachIds: Array.isArray(raw.coachIds) ? raw.coachIds : [],
+      minParticipants: cr.minParticipants ?? raw.minParticipants ?? 1,
+      waitlistCapacity: cr.waitlistCapacity ?? raw.waitlistCapacity ?? 5,
+      coachToParticipantRatio: cr.coachToParticipantRatio ?? raw.coachToParticipantRatio ?? 10,
+      allowOverbooking: cr.allowOverbooking ?? raw.allowOverbooking ?? false,
+      currency: pm.currency || raw.currency || 'USD',
+      pricingType: pm.pricingType || raw.pricingType || 'per_term',
+      medicalClearanceRequired: er.medicalClearanceRequired ?? raw.medicalClearanceRequired ?? false,
+      parentalConsentRequired: er.parentalConsentRequired ?? raw.parentalConsentRequired ?? true,
+      skillLevels: Array.isArray(raw.skillLevels) && raw.skillLevels.length > 0 ? raw.skillLevels : ['beginner'],
+      learningObjectives: Array.isArray(tpl0.learningObjectives) && tpl0.learningObjectives.length > 0
+        ? tpl0.learningObjectives
+        : (Array.isArray(raw.learningObjectives) && raw.learningObjectives.length > 0
+            ? raw.learningObjectives
+            : ['Skill development', 'Safety awareness']),
+      activities: Array.isArray(tpl0.activities) && tpl0.activities.length > 0
+        ? tpl0.activities
+        : (Array.isArray(raw.activities) && raw.activities.length > 0
+            ? raw.activities
+            : ['Warm-up', 'Skill practice', 'Cool-down']),
     })
     setShowForm(true)
   }
