@@ -133,7 +133,7 @@ const CyberportLocationPage = () => {
     return (
         <div>
             {/* Hero Section */}
-            <section className="relative h-[500px] sm:h-[550px] md:h-[600px] text-white overflow-hidden flex items-center justify-center">
+            <section className="relative h-[400px] sm:h-[450px] md:h-[500px] text-white overflow-hidden flex items-center justify-center">
                 {/* Animated Gradient Background - Cyberport Specific */}
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-cyan-600 via-blue-700 to-indigo-900">
                     {/* Base Animated Gradient */}

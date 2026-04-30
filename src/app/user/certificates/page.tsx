@@ -8,7 +8,8 @@ import { Card } from '@/components/ui/card'
 import { apiClient } from '@/services/api/client'
 
 interface Certificate {
-    _id: string
+    _id?: string
+    id?: string
     title: string
     issueDate: string
     expiryDate?: string
@@ -74,14 +75,15 @@ export default function CertificatesPage() {
 
         // Fallback: fetch blob from API
         try {
-            const res: any = await apiClient.get(`/user/certificates/${cert._id}/download`, {
+            const certId = cert._id || cert.id
+            const res: any = await apiClient.get(`/user/certificates/${certId}/download`, {
                 responseType: 'blob'
             })
             const blob = res instanceof Blob ? res : new Blob([res])
             const blobUrl = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.href = blobUrl
-            link.download = `certificate-${cert.certificateNumber || cert._id}.pdf`
+            link.download = `certificate-${cert.certificateNumber || certId}.pdf`
             document.body.appendChild(link)
             link.click()
             link.remove()
@@ -189,7 +191,7 @@ export default function CertificatesPage() {
                     <div className="grid gap-4">
                         {certificates.map((cert, index) => (
                             <motion.div
-                                key={cert._id}
+                                key={cert._id || cert.id || cert.certificateNumber || index}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
