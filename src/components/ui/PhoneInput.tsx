@@ -113,7 +113,9 @@ export function PhoneInput({
   }, [search])
 
   function emit(nextCountry: CountryCode, nextNational: string) {
-    const full = nextNational ? `${nextCountry.dialCode} ${nextNational}` : ''
+    // Emit E.164 format with NO separator — backend phone validator
+    // is strict (/^\+?[1-9]\d{1,14}$/) and rejects spaces/dashes.
+    const full = nextNational ? `${nextCountry.dialCode}${nextNational}` : ''
     onChange(full)
   }
 

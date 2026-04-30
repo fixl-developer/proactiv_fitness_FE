@@ -255,16 +255,20 @@ export default function ProgramSchedulePage() {
       // userId — the userId is what Session.coachAssignments.coachId expects,
       // so we surface that as the option's `_id` and the human name as the
       // label.
+      // /admin/business-config/* is NOT mounted in the backend — only
+      // /locations and /terms exist (admin Locations / Terms pages use those
+      // directly via LocationService/TermService). Calling the wrong path
+      // silently 404'd and the dropdown rendered "No locations found".
       const [programsRes, locationsRes, termsRes, coachesRes] = await Promise.allSettled([
         apiClient.get('/admin/programs'),
-        apiClient.get('/admin/business-config/locations'),
-        apiClient.get('/admin/business-config/terms'),
+        apiClient.get('/locations', { params: { limit: 200 } }),
+        apiClient.get('/terms', { params: { limit: 200 } }),
         apiClient.get('/admin/operations/staff/coaches', { params: { limit: 200, status: 'active' } }),
       ])
 
       // /programs returns `{data: {programs: [...], totalCount, filters}}`,
-      // /locations returns `{data: {data: [...], pagination}}`,
-      // /terms returns `{data: [...]}` — extractList handles all three shapes.
+      // /locations returns `{success, data: [...]}` (array under .data),
+      // /terms returns `{success, data: [...]}` — extractList handles all shapes.
       if (programsRes.status === 'fulfilled') {
         console.log('Programs Response:', programsRes.value)
         const list = extractList<any>(programsRes.value)
