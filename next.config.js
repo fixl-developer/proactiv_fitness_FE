@@ -8,7 +8,7 @@ function resolveBackendOrigin() {
         // Strip any trailing /api or /api/v1 to get the bare origin.
         return explicit.replace(/\/api(\/v\d+)?\/?$/, '').replace(/\/$/, '')
     }
-    return 'https://proactiv-fitness-backend.onrender.com'
+    return 'https://proactiv-fitness-be-new.onrender.com'
 }
 
 const BACKEND_ORIGIN = resolveBackendOrigin()

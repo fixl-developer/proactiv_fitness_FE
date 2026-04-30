@@ -1,8 +1,8 @@
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, User, Phone, Mail, Heart } from 'lucide-react';
+import { Plus, Trash2, User, Mail, Heart } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -10,15 +10,16 @@ import {
     type RegisterStep5Data,
 } from '@/lib/validations/auth';
 import {
-    validateName,
-    validatePhone,
+    validateFirstName,
+    validateLastName,
     validateEmail,
     validateRequired,
-    filterNameInput,
-    filterPhoneInput,
+    filterFirstNameInput,
+    filterLastNameInput,
     FORMAT_HINTS,
 } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 
 interface RegisterStep5Props {
     onComplete: (data: RegisterStep5Data) => void;
@@ -79,13 +80,10 @@ export function RegisterStep5({
         let error: string | null = null;
         switch (field) {
             case 'firstName':
-                error = validateName(value, 'First name');
+                error = validateFirstName(value, 'First name');
                 break;
             case 'lastName':
-                error = validateName(value, 'Last name');
-                break;
-            case 'phone':
-                error = validatePhone(value);
+                error = validateLastName(value, 'Last name');
                 break;
             case 'email':
                 error = validateEmail(value);
@@ -108,16 +106,15 @@ export function RegisterStep5({
     const handleFormSubmit = (data: RegisterStep5Data) => {
         const errs: Record<string, string> = {};
         (data.guardians ?? []).forEach((guardian, index) => {
-            const fnErr = validateName(guardian.firstName, 'First name');
+            const fnErr = validateFirstName(guardian.firstName, 'First name');
             if (fnErr) errs[`guardians.${index}.firstName`] = fnErr;
-            const lnErr = validateName(guardian.lastName, 'Last name');
+            const lnErr = validateLastName(guardian.lastName, 'Last name');
             if (lnErr) errs[`guardians.${index}.lastName`] = lnErr;
             const relErr = validateRequired(guardian.relationship, 'Relationship');
             if (relErr) errs[`guardians.${index}.relationship`] = relErr;
-            const phErr = validatePhone(guardian.phone);
-            if (phErr) errs[`guardians.${index}.phone`] = phErr;
             const emErr = validateEmail(guardian.email);
             if (emErr) errs[`guardians.${index}.email`] = emErr;
+            // Phone validation handled by Zod (country-aware) — surfaces via errors.guardians[i].phone
         });
 
         if (Object.keys(errs).length > 0) {
@@ -180,7 +177,8 @@ export function RegisterStep5({
                                         {...register(`guardians.${index}.firstName`, {
                                             onChange: (e) => validateField(index, 'firstName', e.target.value),
                                         })}
-                                        onKeyDown={filterNameInput}
+                                        onKeyDown={filterFirstNameInput}
+                                        maxLength={50}
                                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.guardians?.[index]?.firstName || fieldErrors[`guardians.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
@@ -206,7 +204,8 @@ export function RegisterStep5({
                                         {...register(`guardians.${index}.lastName`, {
                                             onChange: (e) => validateField(index, 'lastName', e.target.value),
                                         })}
-                                        onKeyDown={filterNameInput}
+                                        onKeyDown={filterLastNameInput}
+                                        maxLength={50}
                                         className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.guardians?.[index]?.lastName || fieldErrors[`guardians.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
@@ -259,26 +258,18 @@ export function RegisterStep5({
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Phone Number
                                 </label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="tel"
-                                        {...register(`guardians.${index}.phone`, {
-                                            onChange: (e) => validateField(index, 'phone', e.target.value),
-                                        })}
-                                        onKeyDown={filterPhoneInput}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-                                            errors.guardians?.[index]?.phone || fieldErrors[`guardians.${index}.phone`] ? 'border-red-500' : 'border-gray-300'
-                                        }`}
-                                        placeholder="+1234567890"
-                                    />
-                                </div>
-                                {errors.guardians?.[index]?.phone && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.guardians[index]?.phone?.message}
-                                    </p>
-                                )}
-                                <FormFieldHint hint={FORMAT_HINTS.phone} error={fieldErrors[`guardians.${index}.phone`]} />
+                                <Controller
+                                    control={control}
+                                    name={`guardians.${index}.phone`}
+                                    render={({ field }) => (
+                                        <PhoneInput
+                                            value={field.value || ''}
+                                            onChange={field.onChange}
+                                            error={errors.guardians?.[index]?.phone?.message}
+                                            placeholder="9876543210"
+                                        />
+                                    )}
+                                />
                             </div>
 
                             <div>

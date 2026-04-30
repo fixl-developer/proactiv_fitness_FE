@@ -2,39 +2,67 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Clock, Users, Trash2, AlertCircle, Loader, CheckCircle, XCircle } from 'lucide-react'
+import { Calendar, MapPin, Clock, Trash2, AlertCircle, Loader, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { apiClient } from '@/services/api/client'
 
 interface Booking {
     id: string
-    classId: string
+    bookingId: string
     className: string
-    location: {
-        name: string
-        city: string
-    }
-    room: {
-        name: string
-    }
+    location: string
     date: string
     startTime: string
     endTime: string
     price: number
     currency: string
-    status: 'confirmed' | 'cancelled' | 'completed'
+    status: 'confirmed' | 'cancelled' | 'completed' | 'pending'
     bookedAt: string
     instructor?: string
+    bookingType?: string
 }
 
 type FilterStatus = 'all' | 'confirmed' | 'cancelled' | 'completed'
 
+const parseSpecial = (b: any): Record<string, string> => {
+    const out: Record<string, string> = {}
+    ;(b?.specialRequests || []).forEach((r: string) => {
+        if (typeof r === 'string' && r.includes(':')) {
+            const [k, ...v] = r.split(':')
+            out[k] = v.join(':')
+        }
+    })
+    return out
+}
+
+const mapBooking = (b: any): Booking => {
+    const sp = parseSpecial(b)
+    const main = Array.isArray(b?.participants) && b.participants[0] ? b.participants[0] : null
+    return {
+        id: String(b._id || b.id || b.bookingId),
+        bookingId: b.bookingId || '',
+        className: sp.program || sp.className || b.programName || (b.bookingType === 'assessment' ? 'Assessment' : b.bookingType === 'trial' ? 'Trial Class' : 'Class'),
+        location: sp.location || b.location || '',
+        date: b.sessionDate || b.date || b.createdAt || '',
+        startTime: b.sessionTime?.startTime || sp.timeSlot || b.time || '',
+        endTime: b.sessionTime?.endTime || '',
+        price: b.payment?.amount ?? 0,
+        currency: b.payment?.currency || 'HKD',
+        status: (String(b.status || 'pending').toLowerCase() as any) || 'pending',
+        bookedAt: b.createdAt || '',
+        instructor: b.coachName || sp.coach || '',
+        bookingType: b.bookingType || '',
+    }
+}
+
 export default function BookingsPage() {
-    const { user, isAuthenticated } = useAuth()
+    const { isAuthenticated } = useAuth()
     const [bookings, setBookings] = useState<Booking[]>([])
     const [filteredBookings, setFilteredBookings] = useState<Booking[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
     const [cancellingId, setCancellingId] = useState<string | null>(null)
 
@@ -50,19 +78,14 @@ export default function BookingsPage() {
     const loadBookings = async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/v1/bookings/my-bookings', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-
-            if (!response.ok) throw new Error('Failed to load bookings')
-
-            const data = await response.json()
-            setBookings(data.data || [])
-        } catch (error) {
-            console.error('Error loading bookings:', error)
-            setBookings(getMockBookings())
+            setError(null)
+            const response = await apiClient.get<any>('/bookings/my-bookings')
+            const list = Array.isArray(response?.data) ? response.data : []
+            setBookings(list.map(mapBooking))
+        } catch (err: any) {
+            console.error('Error loading bookings:', err)
+            setError(err?.message || 'Failed to load bookings')
+            setBookings([])
         } finally {
             setLoading(false)
         }
@@ -81,61 +104,15 @@ export default function BookingsPage() {
     const handleCancelBooking = async (bookingId: string) => {
         try {
             setCancellingId(bookingId)
-
-            const response = await fetch(`/api/v1/bookings/${bookingId}/cancel`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ reason: 'user_request' })
-            })
-
-            if (!response.ok) throw new Error('Failed to cancel booking')
-
+            await apiClient.patch(`/bookings/${bookingId}/cancel`, { reason: 'user_request' })
             toast.success('Booking cancelled successfully')
             await loadBookings()
-        } catch (error) {
-            console.error('Error cancelling booking:', error)
-            toast.error('Failed to cancel booking')
+        } catch (err: any) {
+            console.error('Error cancelling booking:', err)
+            toast.error(err?.response?.data?.message || err?.message || 'Failed to cancel booking')
         } finally {
             setCancellingId(null)
         }
-    }
-
-    const getMockBookings = (): Booking[] => {
-        return [
-            {
-                id: 'book1',
-                classId: '1',
-                className: 'Zumba Class',
-                location: { name: 'Dubai Marina Center', city: 'Dubai' },
-                room: { name: 'Room B' },
-                date: '2025-02-15',
-                startTime: '18:00',
-                endTime: '19:00',
-                price: 100,
-                currency: 'AED',
-                status: 'confirmed',
-                bookedAt: '2025-02-01',
-                instructor: 'Sarah'
-            },
-            {
-                id: 'book2',
-                classId: '2',
-                className: 'Yoga Class',
-                location: { name: 'Dubai Marina Center', city: 'Dubai' },
-                room: { name: 'Room A' },
-                date: '2025-02-10',
-                startTime: '16:00',
-                endTime: '17:00',
-                price: 80,
-                currency: 'AED',
-                status: 'completed',
-                bookedAt: '2025-02-01',
-                instructor: 'John'
-            }
-        ]
     }
 
     const getStatusColor = (status: string) => {
@@ -179,6 +156,13 @@ export default function BookingsPage() {
                 <h1 className="text-4xl font-bold text-slate-900 mb-2">My Bookings</h1>
                 <p className="text-slate-600">View and manage your class bookings</p>
             </motion.div>
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <p className="text-red-700">{error}</p>
+                </div>
+            )}
 
             {/* Filters */}
             <motion.div
@@ -257,7 +241,7 @@ export default function BookingsPage() {
                                             <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                             <div>
                                                 <p className="text-xs text-slate-500">Location</p>
-                                                <p className="text-sm font-medium text-slate-900">{booking.location.name}</p>
+                                                <p className="text-sm font-medium text-slate-900">{booking.location || 'TBA'}</p>
                                             </div>
                                         </div>
 
@@ -281,7 +265,7 @@ export default function BookingsPage() {
                                             <div>
                                                 <p className="text-xs text-slate-500">Time</p>
                                                 <p className="text-sm font-medium text-slate-900">
-                                                    {booking.startTime} - {booking.endTime}
+                                                    {booking.startTime || 'TBA'}{booking.endTime ? ` - ${booking.endTime}` : ''}
                                                 </p>
                                             </div>
                                         </div>

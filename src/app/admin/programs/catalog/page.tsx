@@ -56,6 +56,7 @@ interface FormState extends Omit<Program, '_id'> {
   shortDescription: string
   duration: number
   sessionsPerWeek: number
+  termDuration: number
   availableDays: string[]
   availableTimeSlots: TimeSlot[]
   coachIds: string[]
@@ -88,6 +89,7 @@ const EMPTY_FORM: FormState = {
   shortDescription: '',
   duration: 60,
   sessionsPerWeek: 1,
+  termDuration: 12,
   availableDays: ['monday', 'wednesday', 'friday'],
   availableTimeSlots: [
     { id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }
@@ -276,6 +278,8 @@ export default function ProgramCatalogPage() {
         coachToParticipantRatio: formData.coachToParticipantRatio,
         waitlistCapacity: formData.waitlistCapacity,
         allowOverbooking: formData.allowOverbooking,
+        // Add overbookingPercentage - required when allowOverbooking is true
+        overbookingPercentage: formData.allowOverbooking ? 10 : 0,
       },
       eligibilityRules: {
         ageRestrictions: ageGroup,
@@ -296,13 +300,15 @@ export default function ProgramCatalogPage() {
       }],
       sessionDuration: formData.duration,
       sessionsPerWeek: formData.sessionsPerWeek,
+      // Use termDuration from form instead of hardcoded value
+      termDuration: formData.termDuration || 12,
       availableDays: formData.availableDays,
       availableTimeSlots: formData.availableTimeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
         days: slot.days,
       })),
-      coachIds: formData.coachIds,
+      // Remove coachIds - not allowed in create payload
       isActive: formData.status === 'active',
       isPublic: formData.status !== 'draft',
     }
@@ -390,6 +396,11 @@ export default function ProgramCatalogPage() {
     // 13. Sessions Per Week: Required, 1-7
     if (!formData.sessionsPerWeek || formData.sessionsPerWeek < 1 || formData.sessionsPerWeek > 7) {
       e.sessionsPerWeek = 'Sessions per week must be between 1 and 7'
+    }
+
+    // 14. Term Duration: Required, 1-52 weeks
+    if (!formData.termDuration || formData.termDuration < 1 || formData.termDuration > 52) {
+      e.termDuration = 'Term duration must be between 1 and 52 weeks'
     }
 
     // 14. Available Days: Required, at least 1 day selected
@@ -522,6 +533,7 @@ export default function ProgramCatalogPage() {
       shortDescription: (p as any).shortDescription || '',
       duration: (p as any).duration || 60,
       sessionsPerWeek: (p as any).sessionsPerWeek || 1,
+      termDuration: (p as any).termDuration || 12,
       availableDays: Array.isArray((p as any).availableDays) ? (p as any).availableDays : ['monday', 'wednesday', 'friday'],
       availableTimeSlots: Array.isArray((p as any).availableTimeSlots) ? (p as any).availableTimeSlots : [{ id: '1', startTime: '16:00', endTime: '17:00', days: ['monday', 'wednesday', 'friday'] }],
       coachIds: Array.isArray((p as any).coachIds) ? (p as any).coachIds : [],
@@ -1017,115 +1029,121 @@ export default function ProgramCatalogPage() {
                   </select>
                   {errors.sessionsPerWeek && <p className="mt-1 text-sm text-red-600">{errors.sessionsPerWeek}</p>}
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
-                  Available Days <span className="text-red-500">*</span>
-                </label>
-                <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border rounded-lg ${errors.availableDays ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
-                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
-                    <label key={day} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.availableDays.includes(day)}
-                        onChange={() => {
-                          const updated = formData.availableDays.includes(day)
-                            ? formData.availableDays.filter(d => d !== day)
-                            : [...formData.availableDays, day]
-                          setFormData({ ...formData, availableDays: updated })
-                          if (errors.availableDays) setErrors({ ...errors, availableDays: '' })
-                        }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm capitalize">{day}</span>
-                    </label>
-                  ))}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Term Duration (weeks) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="52"
+                    value={formData.termDuration}
+                    onChange={(e) => { setFormData({ ...formData, termDuration: Math.min(52, Math.max(1, Number(e.target.value))) }); if (errors.termDuration) setErrors({ ...errors, termDuration: '' }) }}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.termDuration ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    placeholder="e.g., 12"
+                  />
+                  {errors.termDuration
+                    ? <p className="mt-1 text-sm text-red-600">{errors.termDuration}</p>
+                    : <p className="mt-1 text-xs text-gray-500">How many weeks the program runs (1-52)</p>
+                  }
                 </div>
-                {errors.availableDays && <p className="mt-1 text-sm text-red-600">{errors.availableDays}</p>}
-              </div>
+              </div>              </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">
-                  Available Time Slots <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-3">
-                  {formData.availableTimeSlots.map((slot, idx) => (
-                    <div key={slot.id} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-300">
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium mb-1">Start Time</label>
-                        <input
-                          type="time"
-                          value={slot.startTime}
-                          onChange={(e) => {
-                            const updated = [...formData.availableTimeSlots]
-                            updated[idx].startTime = e.target.value
-                            setFormData({ ...formData, availableTimeSlots: updated })
-                            if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-xs font-medium mb-1">End Time</label>
-                        <input
-                          type="time"
-                          value={slot.endTime}
-                          onChange={(e) => {
-                            const updated = [...formData.availableTimeSlots]
-                            updated[idx].endTime = e.target.value
-                            setFormData({ ...formData, availableTimeSlots: updated })
-                            if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = formData.availableTimeSlots.filter((_, i) => i !== idx)
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Available Days <span className="text-red-500">*</span>
+              </label>
+              <div className={`grid grid-cols-2 md:grid-cols-4 gap-2 p-3 border rounded-lg ${errors.availableDays ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
+                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                  <label key={day} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.availableDays.includes(day)}
+                      onChange={() => {
+                        const updated = formData.availableDays.includes(day)
+                          ? formData.availableDays.filter(d => d !== day)
+                          : [...formData.availableDays, day]
+                        setFormData({ ...formData, availableDays: updated })
+                        if (errors.availableDays) setErrors({ ...errors, availableDays: '' })
+                      }}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm capitalize">{day}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.availableDays && <p className="mt-1 text-sm text-red-600">{errors.availableDays}</p>}
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Available Time Slots <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-3">
+                {formData.availableTimeSlots.map((slot, idx) => (
+                  <div key={slot.id} className="flex gap-2 items-end p-3 bg-gray-50 rounded-lg border border-gray-300">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium mb-1">Start Time</label>
+                      <input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) => {
+                          const updated = [...formData.availableTimeSlots]
+                          updated[idx].startTime = e.target.value
                           setFormData({ ...formData, availableTimeSlots: updated })
                           if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
                         }}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
-                      >
-                        Remove
-                      </button>
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSlot: TimeSlot = {
-                        id: Date.now().toString(),
-                        startTime: '16:00',
-                        endTime: '17:00',
-                        days: formData.availableDays
-                      }
-                      setFormData({ ...formData, availableTimeSlots: [...formData.availableTimeSlots, newSlot] })
-                      if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
-                    }}
-                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium"
-                  >
-                    + Add Time Slot
-                  </button>
-                </div>
-                {errors.availableTimeSlots && <p className="mt-1 text-sm text-red-600">{errors.availableTimeSlots}</p>}
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium mb-1">End Time</label>
+                      <input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) => {
+                          const updated = [...formData.availableTimeSlots]
+                          updated[idx].endTime = e.target.value
+                          setFormData({ ...formData, availableTimeSlots: updated })
+                          if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = formData.availableTimeSlots.filter((_, i) => i !== idx)
+                        setFormData({ ...formData, availableTimeSlots: updated })
+                        if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                      }}
+                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newSlot: TimeSlot = {
+                      id: Date.now().toString(),
+                      startTime: '16:00',
+                      endTime: '17:00',
+                      days: formData.availableDays
+                    }
+                    setFormData({ ...formData, availableTimeSlots: [...formData.availableTimeSlots, newSlot] })
+                    if (errors.availableTimeSlots) setErrors({ ...errors, availableTimeSlots: '' })
+                  }}
+                  className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium"
+                >
+                  + Add Time Slot
+                </button>
               </div>
+              {errors.availableTimeSlots && <p className="mt-1 text-sm text-red-600">{errors.availableTimeSlots}</p>}
             </div>
 
-            {/* SECTION 3: INSTRUCTORS */}
-            <div className="border-t pt-4 mt-4">
-              <h3 className="text-lg font-semibold mb-4">Instructors</h3>
-              <div>
-                <label className="block text-sm font-medium mb-2">Coach Assignment</label>
-                <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 text-sm text-gray-600">
-                  Coach selection coming soon - multi-select dropdown
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 4: CAPACITY & PRICING */}
+            {/* SECTION 3: CAPACITY & PRICING */}
             <div className="border-t pt-4 mt-4">
               <h3 className="text-lg font-semibold mb-4">Capacity & Pricing</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -1221,7 +1239,7 @@ export default function ProgramCatalogPage() {
               </div>
             </div>
 
-            {/* SECTION 5: REQUIREMENTS */}
+            {/* SECTION 4: REQUIREMENTS */}
             <div className="border-t pt-4 mt-4">
               <h3 className="text-lg font-semibold mb-4">Requirements</h3>
               <div className="space-y-3">
@@ -1395,121 +1413,126 @@ export default function ProgramCatalogPage() {
               </button>
             </div>
           </form>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Programs table */}
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading programs...</div>
-      ) : programs.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
-          No programs found. Create your first program to get started.
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Type</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Level</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Age Group</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Capacity</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Price</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {programs.map((p, idx) => (
-                  <tr key={p._id || `program-${idx}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{p.name}</div>
-                      {p.description && <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description}</div>}
-                    </td>
-                    <td className="px-4 py-3 capitalize text-sm">{p.type}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${levelColor(p.level)}`}>
-                        {p.level}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{p.ageGroup}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {p.enrolledCount !== undefined ? `${p.enrolledCount}/` : ''}{p.capacity}
-                    </td>
-                    <td className="px-4 py-3 text-sm">${p.price}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(p.status)}`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button id="btn-admin-programs-catalog-3" onClick={() => startEdit(p)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50" title="Edit">
-                          Edit
-                        </button>
-                        <button id="btn-admin-programs-catalog-4" onClick={() => toggleStatus(p)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50" title="Toggle Status">
-                          {p.status === 'active' ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button id="btn-admin-programs-catalog-5" onClick={() => duplicateProgram(p)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50" title="Duplicate">
-                          Duplicate
-                        </button>
-                        <button id="btn-admin-programs-catalog-6" onClick={() => setDeleteTarget(p)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50" title="Delete">
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {
+        loading ? (
+          <div className="text-center py-12 text-gray-500">Loading programs...</div>
+        ) : programs.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
+            No programs found. Create your first program to get started.
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-4 py-3">
-              <button id="btn-admin-programs-catalog-7"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {page} of {totalPages}
-              </span>
-              <button id="btn-admin-programs-catalog-8"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
-              >
-                Next
-              </button>
+        ) : (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Level</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Age Group</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Capacity</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Price</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">Status</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {programs.map((p, idx) => (
+                    <tr key={p._id || `program-${idx}`} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{p.name}</div>
+                        {p.description && <div className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description}</div>}
+                      </td>
+                      <td className="px-4 py-3 capitalize text-sm">{p.type}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${levelColor(p.level)}`}>
+                          {p.level}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{p.ageGroup}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {p.enrolledCount !== undefined ? `${p.enrolledCount}/` : ''}{p.capacity}
+                      </td>
+                      <td className="px-4 py-3 text-sm">${p.price}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(p.status)}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button id="btn-admin-programs-catalog-3" onClick={() => startEdit(p)} className="text-blue-600 hover:text-blue-800 px-2 py-1 text-sm rounded hover:bg-blue-50" title="Edit">
+                            Edit
+                          </button>
+                          <button id="btn-admin-programs-catalog-4" onClick={() => toggleStatus(p)} className="text-yellow-600 hover:text-yellow-800 px-2 py-1 text-sm rounded hover:bg-yellow-50" title="Toggle Status">
+                            {p.status === 'active' ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button id="btn-admin-programs-catalog-5" onClick={() => duplicateProgram(p)} className="text-green-600 hover:text-green-800 px-2 py-1 text-sm rounded hover:bg-green-50" title="Duplicate">
+                            Duplicate
+                          </button>
+                          <button id="btn-admin-programs-catalog-6" onClick={() => setDeleteTarget(p)} className="text-red-600 hover:text-red-800 px-2 py-1 text-sm rounded hover:bg-red-50" title="Delete">
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <button id="btn-admin-programs-catalog-7"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {page} of {totalPages}
+                </span>
+                <button id="btn-admin-programs-catalog-8"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      }
 
       {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button id="btn-admin-programs-catalog-9" onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                Cancel
-              </button>
-              <button id="btn-admin-programs-catalog-10" onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                Delete
-              </button>
+      {
+        deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+              <h3 className="text-lg font-semibold mb-2">Confirm Delete</h3>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button id="btn-admin-programs-catalog-9" onClick={() => setDeleteTarget(null)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button id="btn-admin-programs-catalog-10" onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
