@@ -717,7 +717,7 @@ export default function ProgramSchedulePage() {
     return scheduleColors[idx % scheduleColors.length]
   }
 
-  const toggleArrayItem = (arr: string[], item: string) =>
+  const toggleArrayItem = <T extends string | number>(arr: T[], item: T): T[] =>
     arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item]
 
   const openGenerateModal = () => {
@@ -1052,6 +1052,50 @@ export default function ProgramSchedulePage() {
                 </div>
               ) : (
                 <div className="px-6 py-5 space-y-6">
+                  {/* Schedule Name — required by validateGenerateForm.
+                      Without this input rendered, the form silently failed on
+                      submit ("please fix the highlighted field" toast with
+                      nothing actually highlighted, because the JSX never
+                      surfaced the error). */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Schedule Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="input-admin-programs-schedule-name"
+                      type="text"
+                      value={form.scheduleName}
+                      maxLength={100}
+                      placeholder="e.g., Spring 2026 Karate Schedule"
+                      onChange={(e) => {
+                        setForm({ ...form, scheduleName: e.target.value })
+                        if (formErrors.scheduleName) setFormErrors({ ...formErrors, scheduleName: '' })
+                      }}
+                      className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${formErrors.scheduleName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    />
+                    {formErrors.scheduleName
+                      ? <p className="mt-1 text-xs text-red-600">{formErrors.scheduleName}</p>
+                      : <p className="mt-1 text-xs text-gray-400">3-100 characters. Helps you identify this schedule later.</p>}
+                  </div>
+
+                  {/* Description (Optional, max 500) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <textarea
+                      id="input-admin-programs-schedule-description"
+                      value={form.description}
+                      maxLength={500}
+                      rows={2}
+                      placeholder="Optional notes about this schedule"
+                      onChange={(e) => {
+                        setForm({ ...form, description: e.target.value })
+                        if (formErrors.description) setFormErrors({ ...formErrors, description: '' })
+                      }}
+                      className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${formErrors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                    />
+                    {formErrors.description && <p className="mt-1 text-xs text-red-600">{formErrors.description}</p>}
+                  </div>
+
                   {/* Term Selection */}
                   {terms.length > 0 && (
                     <div>
@@ -1348,6 +1392,46 @@ export default function ProgramSchedulePage() {
                       />
                       {formErrors.maxWeeks ? <p className="mt-1 text-xs text-red-600">{formErrors.maxWeeks}</p> : <p className="mt-1 text-xs text-gray-400">Limit number of weeks to generate (0 = no limit)</p>}
                     </div>
+                  </div>
+
+                  {/* Preferred Days — sits AFTER Schedule Settings so the
+                      admin first locks in session timings/recurrence and then
+                      picks the weekdays those sessions should land on. */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Preferred Days <span className="text-red-500">*</span>
+                      <span className="text-xs text-gray-400 ml-2">({form.preferredDays.length} selected)</span>
+                    </label>
+                    <div className={`flex flex-wrap gap-2 ${formErrors.preferredDays ? 'p-2 border border-red-500 rounded-lg' : ''}`}>
+                      {[
+                        { v: 1, l: 'Mon' },
+                        { v: 2, l: 'Tue' },
+                        { v: 3, l: 'Wed' },
+                        { v: 4, l: 'Thu' },
+                        { v: 5, l: 'Fri' },
+                        { v: 6, l: 'Sat' },
+                        { v: 0, l: 'Sun' },
+                      ].map((d) => {
+                        const active = form.preferredDays.includes(d.v)
+                        return (
+                          <button
+                            key={d.v}
+                            id={`btn-admin-programs-schedule-day-${d.v}`}
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, preferredDays: toggleArrayItem(form.preferredDays, d.v) })
+                              if (formErrors.preferredDays) setFormErrors({ ...formErrors, preferredDays: '' })
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition border ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                          >
+                            {d.l}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {formErrors.preferredDays
+                      ? <p className="mt-1 text-xs text-red-600">{formErrors.preferredDays}</p>
+                      : <p className="mt-1 text-xs text-gray-400">Pick at least one day of the week to schedule classes on.</p>}
                   </div>
 
                   {/* SECTION 4 - Overrides */}
