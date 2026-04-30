@@ -63,6 +63,18 @@ export function validateLastName(value: string, fieldLabel = 'Last name'): strin
   return null
 }
 
+// Place names (city, state, country): single spaces between words, no leading/trailing space, no digits
+export function validatePlaceName(value: string, fieldLabel = 'This field'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < 2) return `${fieldLabel} must be at least 2 characters`
+  if (/\d/.test(trimmed)) return `${fieldLabel} cannot contain digits`
+  if (/\s{2,}/.test(trimmed)) return `${fieldLabel} cannot contain consecutive spaces`
+  if (!/^[A-Za-z][A-Za-z\s'-]*[A-Za-z]$|^[A-Za-z]$/.test(trimmed))
+    return `${fieldLabel} can only contain letters, single spaces, hyphens and apostrophes`
+  return null
+}
+
 export function validateEmail(value: string, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Email is required' : null
   if (!PATTERNS.emailFormat.test(value.trim())) return 'Please enter a valid email address (e.g. user@example.com)'

@@ -179,9 +179,12 @@ export default function ProgramSchedulePage() {
       // session feed (for Calendar grid) in parallel — each serves a different
       // view and they share no work.
       const [schedRes, sessRes]: any = await Promise.all([
-        apiClient.get('/admin/programs/schedule'),
-        apiClient.get('/admin/programs/schedule/sessions').catch(() => ({ data: [] })),
+        apiClient.get('/scheduling'),
+        apiClient.get('/scheduling/all-sessions').catch(() => ({ data: [] })),
       ])
+
+      console.log('Schedule Response:', schedRes)
+      console.log('Sessions Response:', sessRes)
 
       const list = extractList<any>(schedRes)
       // The backend now denormalises programNames/coachNames/locationNames +
@@ -263,18 +266,22 @@ export default function ProgramSchedulePage() {
       // /locations returns `{data: {data: [...], pagination}}`,
       // /terms returns `{data: [...]}` — extractList handles all three shapes.
       if (programsRes.status === 'fulfilled') {
+        console.log('Programs Response:', programsRes.value)
         const list = extractList<any>(programsRes.value)
         setPrograms(list.map((p: any) => ({ _id: p._id || p.id, name: p.name })).filter((p: any) => p._id))
       }
       if (locationsRes.status === 'fulfilled') {
+        console.log('Locations Response:', locationsRes.value)
         const list = extractList<any>(locationsRes.value)
         setLocations(list.map((l: any) => ({ _id: l._id || l.id, name: l.name })).filter((l: any) => l._id))
       }
       if (termsRes.status === 'fulfilled') {
+        console.log('Terms Response:', termsRes.value)
         const list = extractList<any>(termsRes.value)
         setTerms(list.map((t: any) => ({ _id: t._id || t.id, name: t.name || t.termName })).filter((t: any) => t._id))
       }
       if (coachesRes.status === 'fulfilled') {
+        console.log('Coaches Response:', coachesRes.value)
         const list = extractList<any>(coachesRes.value)
         // The User._id (coach.userId) is what gets stored in
         // Session.coachAssignments.coachId. Fall back to staff._id only if
@@ -566,7 +573,7 @@ export default function ProgramSchedulePage() {
     setEditMode(false)
     setDetailLoading(true)
     try {
-      const res: any = await apiClient.get(`/admin/programs/schedule/${id}`)
+      const res: any = await apiClient.get(`/scheduling/${id}`)
       const d = res?.data ?? res
       setDetail(d)
       setEditForm({
@@ -892,7 +899,7 @@ export default function ProgramSchedulePage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {schedules.map((s) => {
+                {schedules.map((s, index) => {
                   const dateRange = s.startDate && s.endDate
                     ? `${new Date(s.startDate).toLocaleDateString()} – ${new Date(s.endDate).toLocaleDateString()}`
                     : '-'
@@ -917,7 +924,7 @@ export default function ProgramSchedulePage() {
                     )
                   }
                   return (
-                    <tr key={s._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openDetail(s._id)}>
+                    <tr key={s._id || `schedule-${index}`} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="font-medium text-blue-700 hover:text-blue-900">{s.name || '-'}</div>
                         {s.startTime && s.endTime && (
@@ -946,9 +953,10 @@ export default function ProgramSchedulePage() {
                             onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
-                              openDetail(s._id)
+                              console.log('View clicked, s._id:', s._id, 's.name:', s.name, 's:', s)
+                              openDetail(s._id || s.name)
                             }}
-                            className="text-blue-600 hover:text-blue-800 px-3 py-1.5 text-sm rounded hover:bg-blue-50 flex items-center gap-1 font-medium transition-colors"
+                            className="text-blue-600 hover:text-blue-800 px-3 py-1.5 text-sm rounded hover:bg-blue-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                             title="View / edit details"
                           >
                             <Eye className="h-4 w-4" /> View
@@ -961,7 +969,7 @@ export default function ProgramSchedulePage() {
                                 e.stopPropagation()
                                 handlePublish(s)
                               }}
-                              className="text-green-600 hover:text-green-800 px-3 py-1.5 text-sm rounded hover:bg-green-50 flex items-center gap-1 font-medium transition-colors"
+                              className="text-green-600 hover:text-green-800 px-3 py-1.5 text-sm rounded hover:bg-green-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                               title="Publish this schedule"
                             >
                               <Send className="h-4 w-4" /> Publish
@@ -977,7 +985,7 @@ export default function ProgramSchedulePage() {
                               e.stopPropagation()
                               handleDetectConflicts(s)
                             }}
-                            className="text-yellow-600 hover:text-yellow-800 px-3 py-1.5 text-sm rounded hover:bg-yellow-50 flex items-center gap-1 font-medium transition-colors"
+                            className="text-yellow-600 hover:text-yellow-800 px-3 py-1.5 text-sm rounded hover:bg-yellow-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                             title="Check for scheduling conflicts"
                           >
                             <AlertTriangle className="h-4 w-4" /> Check
@@ -987,9 +995,9 @@ export default function ProgramSchedulePage() {
                             onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
-                              setShowDeleteConfirm(s._id)
+                              setShowDeleteConfirm(s._id || s.name)
                             }}
-                            className="text-red-600 hover:text-red-800 px-3 py-1.5 text-sm rounded hover:bg-red-50 flex items-center gap-1 font-medium transition-colors"
+                            className="text-red-600 hover:text-red-800 px-3 py-1.5 text-sm rounded hover:bg-red-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                             title="Delete this schedule"
                           >
                             <Trash2 className="h-4 w-4" /> Delete
@@ -1176,11 +1184,21 @@ export default function ProgramSchedulePage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       <User className="h-4 w-4 inline mr-1.5 text-gray-400" />
-                      Coaches
+                      Coaches (Optional)
                       <span className="text-xs text-gray-400 ml-2">
-                        ({form.coachIds.length} selected — leave empty to auto-assign any active coach)
+                        ({form.coachIds.length} selected)
                       </span>
                     </label>
+
+                    {/* Warning banner when no coaches selected */}
+                    {form.coachIds.length === 0 && (
+                      <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-yellow-800">
+                          <span className="font-semibold">No coaches selected.</span> System will automatically assign available active coaches to generated sessions.
+                        </p>
+                      </div>
+                    )}
                     {coaches.length > 0 ? (
                       <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
                         <button

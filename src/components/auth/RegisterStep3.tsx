@@ -11,7 +11,7 @@ import {
 } from '@/lib/validations/auth';
 import {
     validateAddress,
-    validateName,
+    validatePlaceName,
     validateZipCode,
     filterNameInput,
     filterZipCodeInput,
@@ -49,16 +49,16 @@ export function RegisterStep3({
                 error = validateAddress(value, 'Street address');
                 break;
             case 'city':
-                error = validateName(value, 'City');
+                error = validatePlaceName(value, 'City');
                 break;
             case 'state':
-                error = validateName(value, 'State');
+                error = validatePlaceName(value, 'State');
                 break;
             case 'zipCode':
                 error = validateZipCode(value);
                 break;
             case 'country':
-                error = validateName(value, 'Country');
+                error = validatePlaceName(value, 'Country');
                 break;
         }
         setFieldErrors((prev) => {
@@ -76,13 +76,13 @@ export function RegisterStep3({
         const errs: Record<string, string> = {};
         const streetErr = validateAddress(data.address.street, 'Street address');
         if (streetErr) errs.street = streetErr;
-        const cityErr = validateName(data.address.city, 'City');
+        const cityErr = validatePlaceName(data.address.city, 'City');
         if (cityErr) errs.city = cityErr;
-        const stateErr = validateName(data.address.state, 'State');
+        const stateErr = validatePlaceName(data.address.state, 'State');
         if (stateErr) errs.state = stateErr;
         const zipErr = validateZipCode(data.address.zipCode);
         if (zipErr) errs.zipCode = zipErr;
-        const countryErr = validateName(data.address.country, 'Country');
+        const countryErr = validatePlaceName(data.address.country, 'Country');
         if (countryErr) errs.country = countryErr;
 
         if (Object.keys(errs).length > 0) {

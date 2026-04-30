@@ -7,8 +7,8 @@
 // hostname and switches to the Render backend so the UI works without
 // requiring env vars to be perfectly configured on every deploy.
 
-const PROD_API_URL = 'https://proactiv-fitness-backend.onrender.com/api/v1'
-const PROD_SOCKET_URL = 'https://proactiv-fitness-backend.onrender.com'
+const PROD_API_URL = 'https://proactiv-fitness-be-new.onrender.com/api/v1'
+const PROD_SOCKET_URL = 'https://proactiv-fitness-be-new.onrender.com'
 const LOCAL_API_URL = 'http://localhost:5000/api/v1'
 const LOCAL_SOCKET_URL = 'http://localhost:5000'
 
