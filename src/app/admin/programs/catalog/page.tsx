@@ -423,17 +423,13 @@ export default function ProgramCatalogPage() {
     const statusErr = validateSelect(formData.status, 'Status')
     if (statusErr) e.status = statusErr
 
-    // 8. Business Unit: Required (for create only)
-    if (!editingId) {
-      const buErr = validateSelect(formData.businessUnitId, 'Business unit')
-      if (buErr) e.businessUnitId = buErr
-    }
+    // 8. Business Unit: Required for both create and edit
+    const buErr = validateSelect(formData.businessUnitId, 'Business unit')
+    if (buErr) e.businessUnitId = buErr
 
     // 9. Locations: Required, at least 1 selected
-    if (!editingId) {
-      if (!formData.locationIds || formData.locationIds.length === 0) {
-        e.locationIds = 'Select at least one location'
-      }
+    if (!formData.locationIds || formData.locationIds.length === 0) {
+      e.locationIds = 'Select at least one location'
     }
 
     // 10. Category: Required, must be valid category
@@ -560,9 +556,10 @@ export default function ProgramCatalogPage() {
         // currency, learning objectives, etc. silently never persisted because
         // the backend adapter only translates a handful of top-level fields.
         // Reuse the same builder as create so updates round-trip every field
-        // the form exposes.
-        const { businessUnitId: _bu, locationIds: _loc, ...updatePayload } = buildCreatePayload()
-        await apiClient.put(`/programs/${editingId}`, updatePayload)
+        // the form exposes — including businessUnitId and locationIds, which
+        // updateProgramValidation accepts as optional and program.service
+        // re-validates against the BU+Location module.
+        await apiClient.put(`/programs/${editingId}`, buildCreatePayload())
         toast.success('Program updated successfully')
       } else {
         await apiClient.post('/programs', buildCreatePayload())
@@ -602,8 +599,18 @@ export default function ProgramCatalogPage() {
       capacity: p.capacity,
       price: p.price,
       status: p.status,
-      businessUnitId: raw.businessUnitId || '',
-      locationIds: Array.isArray(raw.locationIds) ? raw.locationIds : [],
+      // BU+Location refs may come back as plain ObjectId strings OR populated
+      // objects ({ _id, name, ... }) depending on which list endpoint hydrated
+      // the row — extract the id either way so the <select>/checkbox values
+      // match the dropdown options.
+      businessUnitId: typeof raw.businessUnitId === 'object' && raw.businessUnitId
+        ? String(raw.businessUnitId._id || raw.businessUnitId.id || '')
+        : String(raw.businessUnitId || ''),
+      locationIds: Array.isArray(raw.locationIds)
+        ? raw.locationIds.map((l: any) =>
+            typeof l === 'object' && l ? String(l._id || l.id || '') : String(l || '')
+          ).filter(Boolean)
+        : [],
       category: raw.category || 'general',
       shortDescription: raw.shortDescription || '',
       duration: raw.duration || raw.sessionDuration || tpl0.duration || 60,
@@ -963,9 +970,8 @@ export default function ProgramCatalogPage() {
               </div>
             </div>
 
-            {/* Business Unit + Locations — required by backend */}
-            {!editingId && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Business Unit + Locations — required by backend (shown for both create and edit) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Business Unit <span className="text-red-500">*</span>
@@ -1039,8 +1045,7 @@ export default function ProgramCatalogPage() {
                   })()}
                   {errors.locationIds && <p className="mt-1 text-sm text-red-600">{errors.locationIds}</p>}
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* SECTION 1: BASIC INFORMATION */}
             <div className="border-t pt-4 mt-4">
