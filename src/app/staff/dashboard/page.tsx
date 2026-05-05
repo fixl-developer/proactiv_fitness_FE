@@ -329,30 +329,45 @@ export default function StaffDashboard() {
                             <tbody>
                                 {recentTickets.length === 0 ? (
                                     <tr><td colSpan={5} className="py-8 text-center text-gray-500">No recent tickets found</td></tr>
-                                ) : recentTickets.map((ticket) => (
-                                    <tr key={ticket.id} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => router.push('/staff/tickets')}>
-                                        <td className="py-3 px-4 text-blue-600 font-medium">{ticket.ticketNumber || ticket.id}</td>
-                                        <td className="py-3 px-4 text-gray-900">{ticket.subject}</td>
-                                        <td className="py-3 px-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                ticket.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                                ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-green-100 text-green-800'
-                                            }`}>{ticket.priority}</span>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
-                                                ticket.status === 'in-progress' ? 'bg-purple-100 text-purple-800' :
-                                                ticket.status === 'pending' ? 'bg-orange-100 text-orange-800' :
-                                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>{ticket.status}</span>
-                                        </td>
-                                        <td className="py-3 px-4 text-gray-600">{ticket.customer || ticket.assignedTo || 'Unknown'}</td>
-                                    </tr>
-                                ))}
+                                ) : recentTickets.map((ticket, idx) => {
+                                    const rowKey = ticket?.id || ticket?._id || ticket?.ticketNumber || `ticket-${idx}`
+                                    const ticketRef = ticket?.ticketNumber || ticket?.id || ticket?._id || '—'
+                                    const subject = typeof ticket?.subject === 'string' ? ticket.subject : (ticket?.title || '—')
+                                    const priorityRaw = ticket?.priority
+                                    const priority = typeof priorityRaw === 'string' ? priorityRaw : (priorityRaw?.name || priorityRaw?.label || '—')
+                                    const statusRaw = ticket?.status
+                                    const status = typeof statusRaw === 'string' ? statusRaw : (statusRaw?.name || statusRaw?.label || '—')
+                                    const customerSrc = ticket?.customer ?? ticket?.assignedTo ?? ticket?.createdBy ?? ticket?.user
+                                    const customer = typeof customerSrc === 'string'
+                                        ? customerSrc
+                                        : (customerSrc?.name || customerSrc?.fullName || customerSrc?.email || 'Unknown')
+                                    const priorityLc = String(priority).toLowerCase()
+                                    const statusLc = String(status).toLowerCase()
+                                    return (
+                                        <tr key={rowKey} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => router.push('/staff/tickets')}>
+                                            <td className="py-3 px-4 text-blue-600 font-medium">{ticketRef}</td>
+                                            <td className="py-3 px-4 text-gray-900">{subject}</td>
+                                            <td className="py-3 px-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                    priorityLc === 'critical' ? 'bg-red-100 text-red-800' :
+                                                    priorityLc === 'high' ? 'bg-orange-100 text-orange-800' :
+                                                    priorityLc === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-green-100 text-green-800'
+                                                }`}>{priority}</span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                    statusLc === 'open' ? 'bg-blue-100 text-blue-800' :
+                                                    statusLc === 'in-progress' || statusLc === 'in_progress' ? 'bg-purple-100 text-purple-800' :
+                                                    statusLc === 'pending' ? 'bg-orange-100 text-orange-800' :
+                                                    statusLc === 'resolved' ? 'bg-green-100 text-green-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>{status}</span>
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-600">{customer}</td>
+                                        </tr>
+                                    )
+                                })}
                             </tbody>
                         </table>
                     </div>
