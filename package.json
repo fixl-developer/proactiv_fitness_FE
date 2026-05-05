@@ -3,8 +3,9 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
-        "build": "next build",
+        "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev",
+        "dev:webpack": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev --turbopack=false",
+        "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
         "start": "next start",
         "lint": "next lint"
     },
@@ -44,6 +45,7 @@
         "@types/react": "^18.3.28",
         "@types/react-dom": "^18.3.7",
         "autoprefixer": "^10.4.17",
+        "cross-env": "^7.0.3",
         "eslint": "^9.0.0",
         "eslint-config-next": "^16.1.6",
         "postcss": "^8.4.33",
