@@ -10,7 +10,7 @@ import NotificationBell from '@/components/shared/NotificationBell'
 import {
     LayoutDashboard, Ticket, Settings, BarChart3,
     HelpCircle, MessageSquare, LogOut, Menu,
-    Calendar, FileText, Zap, Shield,
+    Calendar, FileText, Zap,
     Headphones, UserCheck, TrendingUp, Mail,
     User, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react'
@@ -27,7 +27,6 @@ const navigation = [
     { name: 'Training', href: '/staff/training', icon: UserCheck },
     { name: 'Reports', href: '/staff/reports', icon: FileText },
     { name: 'Automation', href: '/staff/automation', icon: Zap },
-    { name: 'Quality Assurance', href: '/staff/quality', icon: Shield },
     { name: 'Communication', href: '/staff/communication', icon: Mail },
     { name: 'Settings', href: '/staff/settings', icon: Settings },
 ]

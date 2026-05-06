@@ -221,9 +221,20 @@ export default function StaffDashboard() {
         <div>
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-1">Support Dashboard</h1>
-                    <p className="text-gray-600">Welcome back, {user?.name || 'Support Staff'}</p>
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-1">Support Dashboard</h1>
+                        <p className="text-gray-600">Welcome back, {user?.name || 'Support Staff'}</p>
+                    </div>
+                    <button
+                        id="staff-dashboard-btn-refresh"
+                        onClick={loadDashboardData}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm font-medium hover:bg-cyan-700 disabled:opacity-50 transition-colors shadow-sm"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </button>
                 </div>
 
                 {error && (
