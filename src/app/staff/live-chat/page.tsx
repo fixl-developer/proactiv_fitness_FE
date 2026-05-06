@@ -12,6 +12,33 @@ import {
 import { validateName, validateEmail, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
+// Backend often returns Mongo _id and populated User objects ({name,email,userId}).
+// Coerce to flat strings so JSX rendering doesn't crash.
+const stringify = (v: any): string => {
+    if (v == null) return ''
+    if (typeof v === 'string') return v
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+    if (typeof v === 'object') return v.name || v.fullName || v.email || v.label || ''
+    return ''
+}
+const normalizeSession = (raw: any): ChatSession => ({
+    id: raw?.id || raw?._id || '',
+    customerName: stringify(raw?.customerName) || stringify(raw?.customer) || stringify(raw?.user) || 'Customer',
+    customerEmail: stringify(raw?.customerEmail) || stringify(raw?.customer?.email),
+    lastMessage: stringify(raw?.lastMessage) || stringify(raw?.lastMessage?.message) || '',
+    status: (stringify(raw?.status) as ChatSession['status']) || 'active',
+    updatedAt: raw?.updatedAt || raw?.updated || '',
+    createdAt: raw?.createdAt || raw?.created || '',
+    unreadCount: typeof raw?.unreadCount === 'number' ? raw.unreadCount : 0,
+})
+const normalizeMessage = (raw: any, idx: number): ChatMessage => ({
+    id: raw?.id || raw?._id || `msg-${idx}`,
+    sender: stringify(raw?.sender) || stringify(raw?.from) || stringify(raw?.user),
+    senderType: (stringify(raw?.senderType) as ChatMessage['senderType']) || (raw?.isAgent ? 'agent' : 'customer'),
+    message: stringify(raw?.message) || stringify(raw?.text) || stringify(raw?.body),
+    createdAt: raw?.createdAt || raw?.created || raw?.timestamp || '',
+})
+
 interface ChatSession {
     id: string
     customerName: string
@@ -92,7 +119,8 @@ export default function LiveChat() {
         try {
             const data = await supportStaffService.getChatSessions()
             const list = data?.sessions || data
-            setSessions(Array.isArray(list) ? list : [])
+            const arr = Array.isArray(list) ? list : []
+            setSessions(arr.map(normalizeSession).filter(s => s.id))
         } catch {
             if (!silent) setSessions([])
         } finally {
@@ -105,7 +133,8 @@ export default function LiveChat() {
         try {
             const data = await supportStaffService.getChatMessages(chatId)
             const list = data?.messages || data
-            setMessages(Array.isArray(list) ? list : [])
+            const arr = Array.isArray(list) ? list : []
+            setMessages(arr.map(normalizeMessage))
         } catch {
             if (!silent) setMessages([])
         } finally {
