@@ -271,7 +271,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/escalations')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching escalations:', error)
+            console.warn('Error fetching escalations:', error)
             // Return mock data for development
             return {
                 escalations: [
@@ -315,7 +315,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/schedules-advanced')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching schedules:', error)
+            console.warn('Error fetching schedules:', error)
             // Return mock data for development
             return {
                 schedules: [
@@ -360,7 +360,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/training/modules')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching training modules:', error)
+            console.warn('Error fetching training modules:', error)
             // Return mock data for development
             return {
                 modules: [
@@ -385,7 +385,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/training/paths')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching training paths:', error)
+            console.warn('Error fetching training paths:', error)
             return { paths: [] }
         }
     }
@@ -395,7 +395,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/training/progress')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching user progress:', error)
+            console.warn('Error fetching user progress:', error)
             return {
                 totalModules: 4,
                 completedModules: 2,
@@ -413,7 +413,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>(`/staff/reports/${type}`)
             return response.data || response
         } catch (error) {
-            console.error('Error fetching reports:', error)
+            console.warn('Error fetching reports:', error)
             return { reports: [] }
         }
     }
@@ -434,7 +434,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/automation/rules')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching automation rules:', error)
+            console.warn('Error fetching automation rules:', error)
             return { rules: [] }
         }
     }
@@ -455,7 +455,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/quality/metrics')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching quality metrics:', error)
+            console.warn('Error fetching quality metrics:', error)
             return { metrics: [] }
         }
     }
@@ -465,7 +465,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/quality/reviews')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching quality reviews:', error)
+            console.warn('Error fetching quality reviews:', error)
             return { reviews: [] }
         }
     }
@@ -476,7 +476,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/communication/announcements')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching announcements:', error)
+            console.warn('Error fetching announcements:', error)
             return { announcements: [] }
         }
     }
@@ -486,7 +486,7 @@ class SupportStaffService {
             const response = await apiClient.get<{ success: boolean; data: any }>('/staff/communication/messages')
             return response.data || response
         } catch (error) {
-            console.error('Error fetching team messages:', error)
+            console.warn('Error fetching team messages:', error)
             return { messages: [] }
         }
     }
