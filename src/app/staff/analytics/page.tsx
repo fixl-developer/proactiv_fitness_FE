@@ -7,7 +7,7 @@ import { supportStaffService, SupportAnalytics } from '@/services/supportStaffSe
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts'
-import { AlertCircle, Zap, Target, Star, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { AlertCircle, Zap, Target, Star, Clock, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react'
 
 type Period = '7d' | '30d' | '90d'
 
@@ -142,25 +142,40 @@ export default function Analytics() {
     if (!isAuthenticated) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div>
             <div className="max-w-7xl mx-auto">
                 {/* Header with period selector */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-                    <h1 className="text-4xl font-bold text-gray-900">Analytics</h1>
-                    <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm p-1">
-                        {(['7d', '30d', '90d'] as Period[]).map((p) => (
-                            <button
-                                key={p}
-                                onClick={() => handlePeriodChange(p)}
-                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                                    period === p
-                                        ? 'bg-blue-600 text-white shadow-md'
-                                        : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                            >
-                                {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : '90 Days'}
-                            </button>
-                        ))}
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Analytics</h1>
+                        <p className="text-sm text-gray-500 mt-1">Performance metrics and ticket insights</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            id="staff-analytics-btn-refresh"
+                            onClick={() => loadAnalytics(period)}
+                            disabled={loading}
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                        <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm p-1 border border-gray-200">
+                            {(['7d', '30d', '90d'] as Period[]).map((p) => (
+                                <button
+                                    key={p}
+                                    id={`staff-analytics-period-${p}`}
+                                    onClick={() => handlePeriodChange(p)}
+                                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                        period === p
+                                            ? 'bg-cyan-600 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : '90 Days'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

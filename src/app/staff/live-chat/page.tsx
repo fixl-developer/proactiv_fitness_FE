@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import { validateName, validateEmail, validateTextArea, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { toast } from 'sonner'
 
 // Backend often returns Mongo _id and populated User objects ({name,email,userId}).
 // Coerce to flat strings so JSX rendering doesn't crash.
@@ -184,24 +186,23 @@ export default function LiveChat() {
         setChatFormErrors(newErrors)
         if (Object.keys(newErrors).length > 0) return
         try {
-            // Try to create a new chat session via the service
-            const data = await supportStaffService.createChatSession?.({
-                customerName: newChatForm.customerName,
-                customerEmail: newChatForm.customerEmail,
-                initialMessage: newChatForm.initialMessage
+            const data: any = await supportStaffService.createChatSession({
+                customerName: newChatForm.customerName.trim(),
+                customerEmail: newChatForm.customerEmail.trim(),
+                initialMessage: newChatForm.initialMessage.trim(),
             })
             setShowNewChatModal(false)
             setNewChatForm({ customerName: '', customerEmail: '', initialMessage: '' })
+            toast.success('Chat session started')
             await loadSessions()
-            // Auto-select the new session if returned
-            if (data?.session) {
-                handleSelectSession(data.session)
+            // Auto-select newly created session
+            const created = data?.session || data
+            if (created?.sessionId || created?._id) {
+                const newSession = normalizeSession(created)
+                handleSelectSession(newSession)
             }
-        } catch {
-            // If createChatSession is not implemented, show info
-            setError('New chat session feature will be available soon. Customers can initiate chats from the website.')
-            setShowNewChatModal(false)
-            setNewChatForm({ customerName: '', customerEmail: '', initialMessage: '' })
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to start chat session')
         }
     }
 
@@ -685,85 +686,78 @@ export default function LiveChat() {
                 </div>
             </div>
 
-            {/* New Chat Modal */}
-            {showNewChatModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-                        <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-blue-100 rounded-lg p-2">
-                                    <UserPlus className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-900">New Chat Session</h3>
-                            </div>
-                            <button onClick={() => setShowNewChatModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                                <X className="w-5 h-5 text-gray-400" />
-                            </button>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Customer Name *</label>
-                                <input
-                                    type="text"
-                                    value={newChatForm.customerName}
-                                    onKeyDown={filterNameInput}
-                                    onChange={(e) => {
-                                        setNewChatForm(prev => ({ ...prev, customerName: e.target.value }))
-                                        const err = validateName(e.target.value, 'Customer Name')
-                                        setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerName = err; else delete n.customerName; return n })
-                                    }}
-                                    placeholder="Enter customer name"
-                                    className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${chatFormErrors.customerName ? 'border-red-500' : 'border-gray-200'}`}
-                                />
-                                <FormFieldHint hint={FORMAT_HINTS.name} error={chatFormErrors.customerName} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Customer Email</label>
-                                <input
-                                    type="email"
-                                    value={newChatForm.customerEmail}
-                                    onChange={(e) => {
-                                        setNewChatForm(prev => ({ ...prev, customerEmail: e.target.value }))
-                                        if (e.target.value) {
-                                            const err = validateEmail(e.target.value)
-                                            setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerEmail = err; else delete n.customerEmail; return n })
-                                        }
-                                    }}
-                                    placeholder="customer@example.com"
-                                    className={`w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${chatFormErrors.customerEmail ? 'border-red-500' : 'border-gray-200'}`}
-                                />
-                                <FormFieldHint hint={FORMAT_HINTS.email} error={chatFormErrors.customerEmail} />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Initial Message</label>
-                                <textarea
-                                    value={newChatForm.initialMessage}
-                                    onChange={(e) => setNewChatForm(prev => ({ ...prev, initialMessage: e.target.value }))}
-                                    placeholder="Type an optional welcome message..."
-                                    rows={3}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
-                                />
-                                <FormFieldHint hint={FORMAT_HINTS.message} />
-                            </div>
-                        </div>
-                        <div className="flex gap-3 p-5 border-t border-gray-100">
-                            <button
-                                onClick={() => setShowNewChatModal(false)}
-                                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleNewChat}
-                                disabled={!newChatForm.customerName.trim()}
-                                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium shadow-md"
-                            >
-                                Start Chat
-                            </button>
-                        </div>
+            {/* New Chat Drawer (right side) */}
+            <SlideInDrawer
+                isOpen={showNewChatModal}
+                onClose={() => { setShowNewChatModal(false); setChatFormErrors({}) }}
+                title="New Chat Session"
+                description="Start a new conversation with a customer"
+                size="md"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => setShowNewChatModal(false)}
+                            className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+                        >Cancel</button>
+                        <button
+                            onClick={handleNewChat}
+                            disabled={!newChatForm.customerName.trim()}
+                            className="px-5 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 text-sm font-medium inline-flex items-center gap-2"
+                        >
+                            <UserPlus className="w-4 h-4" /> Start Chat
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-5">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            value={newChatForm.customerName}
+                            onKeyDown={filterNameInput}
+                            onChange={(e) => {
+                                setNewChatForm(prev => ({ ...prev, customerName: e.target.value }))
+                                const err = validateName(e.target.value, 'Customer Name')
+                                setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerName = err; else delete n.customerName; return n })
+                            }}
+                            placeholder="Customer's full name"
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${chatFormErrors.customerName ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={chatFormErrors.customerName} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Customer Email</label>
+                        <input
+                            type="email"
+                            value={newChatForm.customerEmail}
+                            onChange={(e) => {
+                                setNewChatForm(prev => ({ ...prev, customerEmail: e.target.value }))
+                                if (e.target.value) {
+                                    const err = validateEmail(e.target.value)
+                                    setChatFormErrors(prev => { const n = { ...prev }; if (err) n.customerEmail = err; else delete n.customerEmail; return n })
+                                } else {
+                                    setChatFormErrors(prev => { const n = { ...prev }; delete n.customerEmail; return n })
+                                }
+                            }}
+                            placeholder="customer@example.com"
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${chatFormErrors.customerEmail ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.email} error={chatFormErrors.customerEmail} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Initial Message</label>
+                        <textarea
+                            value={newChatForm.initialMessage}
+                            onChange={(e) => setNewChatForm(prev => ({ ...prev, initialMessage: e.target.value }))}
+                            placeholder="Type an optional welcome message..."
+                            rows={4}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-sm resize-none"
+                        />
+                        <FormFieldHint hint="Optional first message from customer's side" />
                     </div>
                 </div>
-            )}
+            </SlideInDrawer>
         </div>
     )
 }

@@ -335,23 +335,18 @@ class SupportStaffService {
     }
 
     async createSchedule(scheduleData: any): Promise<any> {
-        try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/staff/schedules', scheduleData)
-            return response.data || response
-        } catch (error) {
-            console.error('Error creating schedule:', error)
-            throw error
-        }
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/schedules-advanced', scheduleData)
+        return response.data || response
     }
 
     async updateSchedule(scheduleId: string, updates: any): Promise<any> {
-        try {
-            const response = await apiClient.put<{ success: boolean; data: any }>(`/staff/schedules/${scheduleId}`, updates)
-            return response.data || response
-        } catch (error) {
-            console.error('Error updating schedule:', error)
-            throw error
-        }
+        const response = await apiClient.put<{ success: boolean; data: any }>(`/staff/schedules-advanced/${scheduleId}`, updates)
+        return response.data || response
+    }
+
+    async deleteSchedule(scheduleId: string): Promise<any> {
+        const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/schedules-advanced/${scheduleId}`)
+        return response.data || response
     }
 
     // Training Methods
@@ -419,13 +414,13 @@ class SupportStaffService {
     }
 
     async generateReport(reportConfig: any): Promise<any> {
-        try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/staff/reports/generate', reportConfig)
-            return response.data || response
-        } catch (error) {
-            console.error('Error generating report:', error)
-            throw error
-        }
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/reports/generate', reportConfig)
+        return response.data || response
+    }
+
+    async deleteReport(reportId: string): Promise<any> {
+        const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/reports/${reportId}`)
+        return response.data || response
     }
 
     // Automation Methods
@@ -440,13 +435,18 @@ class SupportStaffService {
     }
 
     async createAutomationRule(ruleData: any): Promise<any> {
-        try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/staff/automation/rules', ruleData)
-            return response.data || response
-        } catch (error) {
-            console.error('Error creating automation rule:', error)
-            throw error
-        }
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/automation/rules', ruleData)
+        return response.data || response
+    }
+
+    async updateAutomationRule(ruleId: string, updates: any): Promise<any> {
+        const response = await apiClient.put<{ success: boolean; data: any }>(`/staff/automation/rules/${ruleId}`, updates)
+        return response.data || response
+    }
+
+    async deleteAutomationRule(ruleId: string): Promise<any> {
+        const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/automation/rules/${ruleId}`)
+        return response.data || response
     }
 
     // Quality Assurance Methods
@@ -492,13 +492,23 @@ class SupportStaffService {
     }
 
     async sendTeamMessage(messageData: any): Promise<any> {
-        try {
-            const response = await apiClient.post<{ success: boolean; data: any }>('/staff/communication/messages', messageData)
-            return response.data || response
-        } catch (error) {
-            console.error('Error sending team message:', error)
-            throw error
-        }
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/communication/messages', messageData)
+        return response.data || response
+    }
+
+    async createAnnouncement(data: any): Promise<any> {
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/communication/announcements', data)
+        return response.data || response
+    }
+
+    async deleteAnnouncement(announcementId: string): Promise<any> {
+        const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/communication/announcements/${announcementId}`)
+        return response.data || response
+    }
+
+    async deleteTeamMessage(messageId: string): Promise<any> {
+        const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/communication/messages/${messageId}`)
+        return response.data || response
     }
 }
 

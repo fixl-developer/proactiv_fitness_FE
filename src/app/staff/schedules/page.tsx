@@ -4,10 +4,15 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService } from '@/services/supportStaffService'
-import { AlertCircle, Plus, Calendar, Sun, Sunset, CheckCircle, X, Edit2 } from 'lucide-react'
+import { AlertCircle, Plus, Calendar, Sun, Sunset, CheckCircle, Edit2, Trash2, RefreshCw } from 'lucide-react'
+import { validateRequired, validateName, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
+import { toast } from 'sonner'
 
 interface Schedule {
     id: string
+    scheduleId?: string
     staffName: string
     date: string
     startTime: string
@@ -27,17 +32,20 @@ const emptyForm = {
     status: 'pending',
 }
 
+const SHIFT_TYPES = ['morning', 'evening', 'night', 'full-day'] as const
+const STATUSES = ['confirmed', 'pending', 'cancelled'] as const
+
 export default function Schedules() {
     const router = useRouter()
     const { isAuthenticated } = useAuth()
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [schedules, setSchedules] = useState<Schedule[]>([])
-    const [showNewModal, setShowNewModal] = useState(false)
-    const [showEditModal, setShowEditModal] = useState(false)
-    const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
-    const [formData, setFormData] = useState(emptyForm)
+    const [drawerOpen, setDrawerOpen] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
+    const [form, setForm] = useState(emptyForm)
     const [submitting, setSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     const loadSchedules = async () => {
         setLoading(true)
@@ -45,18 +53,16 @@ export default function Schedules() {
         try {
             const data = await supportStaffService.getSchedules()
             setSchedules(data?.schedules || [])
-        } catch {
+        } catch (err: any) {
             setSchedules([])
+            setError(err?.response?.data?.message || 'Failed to load schedules')
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-            return
-        }
+        if (!isAuthenticated) { router.push('/login'); return }
         loadSchedules()
     }, [isAuthenticated, router])
 
@@ -64,56 +70,81 @@ export default function Schedules() {
     const eveningCount = schedules.filter(s => s.shiftType === 'evening').length
     const confirmedCount = schedules.filter(s => s.status === 'confirmed').length
 
-    const handleOpenNew = () => {
-        setFormData(emptyForm)
-        setShowNewModal(true)
+    const validateForm = (): Record<string, string> => {
+        const errs: Record<string, string> = {}
+        const sn = validateName(form.staffName, 'Staff Name'); if (sn) errs.staffName = sn
+        if (!form.date) errs.date = 'Date is required'
+        if (!form.startTime) errs.startTime = 'Start time is required'
+        if (!form.endTime) errs.endTime = 'End time is required'
+        if (form.startTime && form.endTime && form.startTime >= form.endTime) errs.endTime = 'End time must be after start time'
+        const loc = validateRequired(form.location, 'Location'); if (loc) errs.location = loc
+        return errs
     }
 
-    const handleOpenEdit = (schedule: Schedule) => {
-        setEditingSchedule(schedule)
-        setFormData({
-            staffName: schedule.staffName,
-            date: schedule.date,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            shiftType: schedule.shiftType,
-            location: schedule.location,
-            status: schedule.status,
+    const openCreate = () => {
+        setEditingId(null)
+        setForm(emptyForm)
+        setFormErrors({})
+        setDrawerOpen(true)
+    }
+
+    const openEdit = (schedule: Schedule) => {
+        setEditingId(schedule.scheduleId || schedule.id)
+        setForm({
+            staffName: schedule.staffName || '',
+            date: schedule.date || '',
+            startTime: schedule.startTime || '',
+            endTime: schedule.endTime || '',
+            shiftType: schedule.shiftType || 'morning',
+            location: schedule.location || '',
+            status: schedule.status || 'pending',
         })
-        setShowEditModal(true)
+        setFormErrors({})
+        setDrawerOpen(true)
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+        const { name, value } = e.target
+        setForm(prev => ({ ...prev, [name]: value }))
+        // Clear errors for this field
+        setFormErrors(prev => { const n = { ...prev }; delete n[name]; return n })
     }
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        const errs = validateForm()
+        setFormErrors(errs)
+        if (Object.keys(errs).length > 0) return
         setSubmitting(true)
         try {
-            await supportStaffService.createSchedule(formData)
-            setShowNewModal(false)
+            const payload = { ...form, staffName: form.staffName.trim(), location: form.location.trim() }
+            if (editingId) {
+                await supportStaffService.updateSchedule(editingId, payload)
+                toast.success('Schedule updated')
+            } else {
+                await supportStaffService.createSchedule(payload)
+                toast.success('Schedule created')
+            }
+            setDrawerOpen(false)
+            setForm(emptyForm)
+            setEditingId(null)
             await loadSchedules()
-        } catch {
-            setError('Failed to create schedule.')
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to save schedule')
         } finally {
             setSubmitting(false)
         }
     }
 
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!editingSchedule) return
-        setSubmitting(true)
+    const handleDelete = async (schedule: Schedule) => {
+        if (!confirm(`Delete this schedule for ${schedule.staffName}?`)) return
         try {
-            await supportStaffService.updateSchedule(editingSchedule.id, formData)
-            setShowEditModal(false)
-            setEditingSchedule(null)
+            const id = schedule.scheduleId || schedule.id
+            await (supportStaffService as any).deleteSchedule(id)
+            toast.success('Schedule deleted')
             await loadSchedules()
-        } catch {
-            setError('Failed to update schedule.')
-        } finally {
-            setSubmitting(false)
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to delete schedule')
         }
     }
 
@@ -124,171 +155,75 @@ export default function Schedules() {
             cancelled: 'bg-red-100 text-red-800',
         }
         return (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+                {status}
             </span>
         )
     }
 
-    const renderFormFields = () => (
-        <>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Staff Name</label>
-                <input
-                    type="text"
-                    name="staffName"
-                    value={formData.staffName}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                    <input
-                        type="time"
-                        name="startTime"
-                        value={formData.startTime}
-                        onChange={handleChange}
-                        required
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                    <input
-                        type="time"
-                        name="endTime"
-                        value={formData.endTime}
-                        onChange={handleChange}
-                        required
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Shift Type</label>
-                <select
-                    name="shiftType"
-                    value={formData.shiftType}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                    <option value="morning">Morning</option>
-                    <option value="evening">Evening</option>
-                    <option value="night">Night</option>
-                    <option value="full-day">Full Day</option>
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                    <option value="confirmed">Confirmed</option>
-                    <option value="pending">Pending</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            </div>
-        </>
-    )
-
     if (!isAuthenticated) return null
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div>
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-900">Staff Schedules</h1>
-                    <button
-                        id="staff-schedules-new-btn"
-                        onClick={handleOpenNew}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
-                    >
-                        <Plus className="w-5 h-5" />
-                        New Schedule
-                    </button>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Staff Schedules</h1>
+                        <p className="text-sm text-gray-500 mt-1">Manage support team work shifts</p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={loadSchedules}
+                            disabled={loading}
+                            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                        <button
+                            id="staff-schedules-btn-create"
+                            onClick={openCreate}
+                            className="bg-cyan-600 text-white px-5 py-2 rounded-lg hover:bg-cyan-700 inline-flex items-center gap-2 text-sm font-medium shadow-sm"
+                        >
+                            <Plus className="w-4 h-4" /> New Schedule
+                        </button>
+                    </div>
                 </div>
 
-                {/* Error */}
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
                         <AlertCircle className="w-5 h-5 text-red-600" />
-                        <p className="text-red-800">{error}</p>
-                        <button onClick={() => setError(null)} className="ml-auto text-red-600 hover:text-red-800">
-                            <X className="w-4 h-4" />
-                        </button>
+                        <p className="text-red-800 text-sm">{error}</p>
                     </div>
                 )}
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {/* Total Schedules */}
-                    <div className="rounded-xl border-0 bg-gradient-to-br from-blue-50 to-blue-100 p-5 hover:shadow-lg transition-all duration-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md">
-                                <Calendar className="w-5 h-5 text-white" />
-                            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                    <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-5 hover:shadow-lg transition-all">
+                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 rounded-lg shadow-md inline-flex mb-3">
+                            <Calendar className="w-5 h-5 text-white" />
                         </div>
                         <p className="text-xs text-gray-600 font-medium mb-1">Total Schedules</p>
                         <p className="text-2xl font-bold text-gray-900">{schedules.length}</p>
                     </div>
-
-                    {/* Morning Shifts */}
-                    <div className="rounded-xl border-0 bg-gradient-to-br from-orange-50 to-orange-100 p-5 hover:shadow-lg transition-all duration-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md">
-                                <Sun className="w-5 h-5 text-white" />
-                            </div>
+                    <div className="rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 p-5 hover:shadow-lg transition-all">
+                        <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2.5 rounded-lg shadow-md inline-flex mb-3">
+                            <Sun className="w-5 h-5 text-white" />
                         </div>
                         <p className="text-xs text-gray-600 font-medium mb-1">Morning Shifts</p>
                         <p className="text-2xl font-bold text-gray-900">{morningCount}</p>
                     </div>
-
-                    {/* Evening Shifts */}
-                    <div className="rounded-xl border-0 bg-gradient-to-br from-purple-50 to-purple-100 p-5 hover:shadow-lg transition-all duration-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
-                                <Sunset className="w-5 h-5 text-white" />
-                            </div>
+                    <div className="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 p-5 hover:shadow-lg transition-all">
+                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md inline-flex mb-3">
+                            <Sunset className="w-5 h-5 text-white" />
                         </div>
                         <p className="text-xs text-gray-600 font-medium mb-1">Evening Shifts</p>
                         <p className="text-2xl font-bold text-gray-900">{eveningCount}</p>
                     </div>
-
-                    {/* Confirmed */}
-                    <div className="rounded-xl border-0 bg-gradient-to-br from-green-50 to-emerald-100 p-5 hover:shadow-lg transition-all duration-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="bg-gradient-to-br from-green-500 to-green-600 p-2.5 rounded-lg shadow-md">
-                                <CheckCircle className="w-5 h-5 text-white" />
-                            </div>
+                    <div className="rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 p-5 hover:shadow-lg transition-all">
+                        <div className="bg-gradient-to-br from-green-500 to-green-600 p-2.5 rounded-lg shadow-md inline-flex mb-3">
+                            <CheckCircle className="w-5 h-5 text-white" />
                         </div>
                         <p className="text-xs text-gray-600 font-medium mb-1">Confirmed</p>
                         <p className="text-2xl font-bold text-gray-900">{confirmedCount}</p>
@@ -298,52 +233,55 @@ export default function Schedules() {
                 {/* Table */}
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading schedules...</p>
-                        </div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
                     </div>
                 ) : (
                     <div className="bg-white rounded-lg shadow-md overflow-hidden">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Staff Name</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Date</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Start Time</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">End Time</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Shift Type</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Status</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Location</th>
-                                    <th className="text-left py-3 px-6 font-semibold text-gray-700">Actions</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Staff Name</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Date</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Start Time</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">End Time</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Shift Type</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Status</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Location</th>
+                                    <th className="text-left py-3 px-6 font-semibold text-gray-700 text-sm">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {schedules.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="py-12 text-center text-gray-500">
+                                        <td colSpan={8} className="py-12 text-center text-gray-500 text-sm">
                                             No schedules found. Click &quot;New Schedule&quot; to create one.
                                         </td>
                                     </tr>
                                 ) : (
                                     schedules.map((schedule) => (
                                         <tr key={schedule.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="py-3 px-6 text-gray-900 font-medium">{schedule.staffName}</td>
-                                            <td className="py-3 px-6 text-gray-600">{schedule.date}</td>
-                                            <td className="py-3 px-6 text-gray-600">{schedule.startTime}</td>
-                                            <td className="py-3 px-6 text-gray-600">{schedule.endTime}</td>
-                                            <td className="py-3 px-6 text-gray-600 capitalize">{schedule.shiftType}</td>
+                                            <td className="py-3 px-6 text-gray-900 font-medium text-sm">{schedule.staffName}</td>
+                                            <td className="py-3 px-6 text-gray-600 text-sm">{schedule.date}</td>
+                                            <td className="py-3 px-6 text-gray-600 text-sm">{schedule.startTime}</td>
+                                            <td className="py-3 px-6 text-gray-600 text-sm">{schedule.endTime}</td>
+                                            <td className="py-3 px-6 text-gray-600 text-sm capitalize">{schedule.shiftType}</td>
                                             <td className="py-3 px-6">{statusBadge(schedule.status)}</td>
-                                            <td className="py-3 px-6 text-gray-600">{schedule.location}</td>
+                                            <td className="py-3 px-6 text-gray-600 text-sm">{schedule.location}</td>
                                             <td className="py-3 px-6">
-                                                <button
-                                                    id={`staff-schedules-edit-${schedule.id}-btn`}
-                                                    onClick={() => handleOpenEdit(schedule)}
-                                                    className="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                    Edit
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => openEdit(schedule)}
+                                                        className="text-cyan-600 hover:text-cyan-800 inline-flex items-center gap-1 text-sm"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(schedule)}
+                                                        className="text-red-600 hover:text-red-800 inline-flex items-center gap-1 text-sm"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -354,74 +292,121 @@ export default function Schedules() {
                 )}
             </div>
 
-            {/* New Schedule Modal */}
-            {showNewModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-900">New Schedule</h2>
-                            <button onClick={() => setShowNewModal(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCreate} className="p-6 space-y-4">
-                            {renderFormFields()}
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewModal(false)}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                                >
-                                    {submitting ? 'Creating...' : 'Create Schedule'}
-                                </button>
-                            </div>
-                        </form>
+            {/* CREATE / EDIT DRAWER (right side) */}
+            <SlideInDrawer
+                isOpen={drawerOpen}
+                onClose={() => { setDrawerOpen(false); setEditingId(null); setForm(emptyForm); setFormErrors({}) }}
+                title={editingId ? 'Edit Schedule' : 'New Schedule'}
+                description={editingId ? 'Update the schedule details below' : 'Add a new staff shift'}
+                size="md"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => { setDrawerOpen(false); setForm(emptyForm); setEditingId(null) }}
+                            className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+                        >Cancel</button>
+                        <button
+                            type="submit"
+                            form="schedule-form"
+                            disabled={submitting}
+                            className="px-5 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                            {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />}
+                            {submitting ? 'Saving…' : (editingId ? 'Save Changes' : 'Create Schedule')}
+                        </button>
                     </div>
-                </div>
-            )}
+                }
+            >
+                <form id="schedule-form" onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Staff Name <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="staffName"
+                            value={form.staffName}
+                            onKeyDown={filterNameInput}
+                            onChange={handleChange}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.staffName ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="Staff member's full name"
+                        />
+                        <FormFieldHint hint={FORMAT_HINTS.name} error={formErrors.staffName} />
+                    </div>
 
-            {/* Edit Schedule Modal */}
-            {showEditModal && editingSchedule && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-900">Edit Schedule</h2>
-                            <button
-                                onClick={() => { setShowEditModal(false); setEditingSchedule(null) }}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleUpdate} className="p-6 space-y-4">
-                            {renderFormFields()}
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowEditModal(false); setEditingSchedule(null) }}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                                >
-                                    {submitting ? 'Updating...' : 'Update Schedule'}
-                                </button>
-                            </div>
-                        </form>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date <span className="text-red-500">*</span></label>
+                        <input
+                            type="date"
+                            name="date"
+                            value={form.date}
+                            onChange={handleChange}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.date ? 'border-red-500' : 'border-gray-300'}`}
+                        />
+                        <FormFieldHint hint="" error={formErrors.date} />
                     </div>
-                </div>
-            )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Time <span className="text-red-500">*</span></label>
+                            <input
+                                type="time"
+                                name="startTime"
+                                value={form.startTime}
+                                onChange={handleChange}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.startTime ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            <FormFieldHint hint="" error={formErrors.startTime} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Time <span className="text-red-500">*</span></label>
+                            <input
+                                type="time"
+                                name="endTime"
+                                value={form.endTime}
+                                onChange={handleChange}
+                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.endTime ? 'border-red-500' : 'border-gray-300'}`}
+                            />
+                            <FormFieldHint hint="" error={formErrors.endTime} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Shift Type <span className="text-red-500">*</span></label>
+                        <select
+                            name="shiftType"
+                            value={form.shiftType}
+                            onChange={handleChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 capitalize"
+                        >
+                            {SHIFT_TYPES.map(s => <option key={s} value={s} className="capitalize">{s.replace('-', ' ')}</option>)}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="location"
+                            value={form.location}
+                            onChange={handleChange}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.location ? 'border-red-500' : 'border-gray-300'}`}
+                            placeholder="e.g. Main Office, Remote"
+                        />
+                        <FormFieldHint hint="" error={formErrors.location} />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
+                        <select
+                            name="status"
+                            value={form.status}
+                            onChange={handleChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 capitalize"
+                        >
+                            {STATUSES.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+                        </select>
+                    </div>
+                </form>
+            </SlideInDrawer>
         </div>
     )
 }
