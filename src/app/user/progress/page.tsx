@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
-import { validateRequired, validateSelect, validateTextArea, validateNumber } from '@/utils/validation'
+import { validateRequired, validateSelect, validateTextArea, validateNumber, validatePlainText } from '@/utils/validation'
 import aiCoachService from '@/services/aiCoachService'
 
 const FALLBACK_AI_TIPS = [
@@ -194,7 +194,7 @@ export default function ProgressPage() {
 
         const targetErr = goalForm.goalType === 'weight' || goalForm.goalType === 'attendance' || goalForm.goalType === 'performance'
             ? validateNumber(goalForm.target, 'Target', 0)
-            : validateRequired(goalForm.target, 'Target')
+            : validatePlainText(goalForm.target, 'Target', 2, 200)
         if (targetErr) errs.target = targetErr
 
         if (!goalForm.deadline) {

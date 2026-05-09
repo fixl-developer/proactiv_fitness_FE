@@ -20,6 +20,35 @@ export const PATTERNS = {
   cardExpiry: /^(0[1-9]|1[0-2])\/([0-9]{2})$/,
 }
 
+// Reject placeholder garbage like "fff", "f f f f", "a b c d" — values that pass
+// regex shape checks but are obviously not a real name/place.
+// Why: form regex only enforces character class, so single-letter words separated
+// by spaces and single-letter repeats slip through. Used by city/state/country/name.
+export function looksMeaningful(value: string): boolean {
+  const trimmed = value.trim()
+  const lettersOnly = trimmed.replace(/[^A-Za-z]/g, '').toLowerCase()
+  if (lettersOnly.length < 2) return false
+  if (new Set(lettersOnly).size < 2) return false  // "fff", "aaaa", "fff fff"
+  const words = trimmed.split(/\s+/).filter(Boolean)
+  if (words.every((w) => w.length <= 1)) return false  // "f f f f", "a b c"
+  return true
+}
+
+// Address variant — also allows digits to count toward meaningfulness.
+// Requires at least one alphabetic "word" of 3+ letters (e.g. "Main", "Elm",
+// "Street") so gibberish like "47 uj 89 jk" fails even though it has 4 words.
+export function looksMeaningfulAddress(value: string): boolean {
+  const trimmed = value.trim()
+  const alnum = trimmed.replace(/[^A-Za-z0-9]/g, '')
+  if (alnum.length < 3) return false
+  const letters = trimmed.replace(/[^A-Za-z]/g, '').toLowerCase()
+  if (letters.length < 3) return false
+  if (new Set(letters).size < 2) return false
+  const alphaWords = trimmed.split(/\s+/).filter((w) => /^[A-Za-z]+$/.test(w))
+  if (!alphaWords.some((w) => w.length >= 3)) return false
+  return true
+}
+
 // ─── Password Strength ───────────────────────────────────────
 export const PASSWORD_RULES = {
   minLength: 8,
@@ -50,28 +79,30 @@ export function validateName(value: string, fieldLabel = 'Name'): string | null 
 export function validateFirstName(value: string, fieldLabel = 'First name'): string | null {
   if (!value || !value.trim()) return `${fieldLabel} is required`
   if (value.trim().length < 2) return `${fieldLabel} must be at least 2 characters`
-  // First name: letters, hyphens, apostrophes only - NO SPACES
-  if (!/^[A-Za-z'-]+$/.test(value.trim())) return `${fieldLabel} can only contain letters, hyphens and apostrophes (no spaces)`
+  // First name: letters only — no spaces, no hyphens, no apostrophes, no digits
+  if (!/^[A-Za-z]+$/.test(value.trim())) return `${fieldLabel} can only contain alphabets (no spaces, digits or symbols)`
+  if (!looksMeaningful(value)) return `${fieldLabel} does not look like a real name`
   return null
 }
 
 export function validateLastName(value: string, fieldLabel = 'Last name'): string | null {
   if (!value || !value.trim()) return `${fieldLabel} is required`
   if (value.trim().length < 2) return `${fieldLabel} must be at least 2 characters`
-  // Last name: letters, hyphens, apostrophes only - NO SPACES
-  if (!/^[A-Za-z'-]+$/.test(value.trim())) return `${fieldLabel} can only contain letters, hyphens and apostrophes (no spaces)`
+  // Last name: letters only — no spaces, no hyphens, no apostrophes, no digits
+  if (!/^[A-Za-z]+$/.test(value.trim())) return `${fieldLabel} can only contain alphabets (no spaces, digits or symbols)`
+  if (!looksMeaningful(value)) return `${fieldLabel} does not look like a real name`
   return null
 }
 
 // Place names (city, state, country): single spaces between words, no leading/trailing space, no digits
 export function validatePlaceName(value: string, fieldLabel = 'This field'): string | null {
   if (!value || !value.trim()) return `${fieldLabel} is required`
-  const trimmed = value.trim()
+  const trimmed = value.trim().replace(/\s+/g, ' ')
   if (trimmed.length < 2) return `${fieldLabel} must be at least 2 characters`
   if (/\d/.test(trimmed)) return `${fieldLabel} cannot contain digits`
-  if (/\s{2,}/.test(trimmed)) return `${fieldLabel} cannot contain consecutive spaces`
   if (!/^[A-Za-z][A-Za-z\s'-]*[A-Za-z]$|^[A-Za-z]$/.test(trimmed))
     return `${fieldLabel} can only contain letters, single spaces, hyphens and apostrophes`
+  if (!looksMeaningful(trimmed)) return `Please enter a valid ${fieldLabel.toLowerCase()}`
   return null
 }
 
@@ -116,14 +147,24 @@ export function validatePhoneWithCountry(value: string, requiredDigits: number, 
   return null
 }
 
-export function validateDateOfBirth(value: string, required = true): string | null {
+export function validateDateOfBirth(
+  value: string,
+  required = true,
+  minAge?: number,
+  maxAge?: number
+): string | null {
   if (!value) return required ? 'Date of birth is required' : null
   const date = new Date(value)
   if (isNaN(date.getTime())) return 'Please enter a valid date'
   const today = new Date()
   if (date > today) return 'Date of birth cannot be in the future'
-  const age = today.getFullYear() - date.getFullYear()
+  // Calendar-aware age: subtract one if birthday hasn't occurred yet this year.
+  let age = today.getFullYear() - date.getFullYear()
+  const m = today.getMonth() - date.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < date.getDate())) age--
   if (age > 120) return 'Please enter a valid date of birth'
+  if (minAge !== undefined && age < minAge) return `You must be at least ${minAge} years old`
+  if (maxAge !== undefined && age > maxAge) return `You must be ${maxAge} years old or younger`
   return null
 }
 
@@ -146,13 +187,42 @@ export function validateSelect(value: string, fieldLabel = 'This field'): string
 
 export function validateAddress(value: string, fieldLabel = 'Address'): string | null {
   if (!value || !value.trim()) return `${fieldLabel} is required`
-  if (value.trim().length < 3) return `${fieldLabel} must be at least 3 characters`
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  if (trimmed.length < 3) return `${fieldLabel} must be at least 3 characters`
+  if (!/^[A-Za-z0-9\s.,'#\/-]+$/.test(trimmed)) return `${fieldLabel} contains invalid characters`
+  if (!looksMeaningfulAddress(trimmed)) return `Please enter a valid ${fieldLabel.toLowerCase()}`
   return null
 }
 
 export function validateZipCode(value: string, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Zip/postal code is required' : null
-  if (!PATTERNS.zipCode.test(value.trim())) return 'Please enter a valid zip/postal code'
+  const trimmed = value.trim()
+  if (!PATTERNS.zipCode.test(trimmed)) return 'Zip code may only contain letters, digits, spaces and hyphens (3-10 chars)'
+  if (!/\d/.test(trimmed)) return 'Zip code must contain at least one digit'
+  return null
+}
+
+// School name: letters and single spaces only, must look meaningful
+export function validateSchoolName(value: string, required = false): string | null {
+  if (!value || !value.trim()) return required ? 'School name is required' : null
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  if (trimmed.length < 2) return 'School name must be at least 2 characters'
+  if (trimmed.length > 100) return 'School name is too long'
+  if (!/^[A-Za-z][A-Za-z\s]*[A-Za-z]$|^[A-Za-z]$/.test(trimmed))
+    return 'School name can only contain alphabets and single spaces (no digits or symbols)'
+  if (!looksMeaningful(trimmed)) return 'Please enter a valid school name'
+  return null
+}
+
+// Medical conditions: letters and single spaces only (no digits/special chars)
+export function validateMedicalConditions(value: string, required = false): string | null {
+  if (!value || !value.trim()) return required ? 'Medical conditions are required' : null
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  if (trimmed.length < 2) return 'Medical condition must be at least 2 characters'
+  if (trimmed.length > 500) return 'Medical conditions must be under 500 characters'
+  if (!/^[A-Za-z][A-Za-z\s]*[A-Za-z]$|^[A-Za-z]$/.test(trimmed))
+    return 'Medical condition can only contain alphabets and single spaces (no digits or symbols)'
+  if (!looksMeaningful(trimmed)) return 'Please enter a valid medical condition'
   return null
 }
 
@@ -213,6 +283,29 @@ export function validateTextArea(value: string, fieldLabel = 'This field', minLe
   return null
 }
 
+// Free-text title/subject/name field that must contain real letters (not just symbols).
+// Allows letters, digits, spaces, and a small set of safe punctuation; rejects strings
+// like "@@@###" that pass length checks but are obviously not valid input.
+export function validatePlainText(
+  value: string,
+  fieldLabel = 'This field',
+  minLength = 2,
+  maxLength = 200
+): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < minLength) return `${fieldLabel} must be at least ${minLength} characters`
+  if (trimmed.length > maxLength) return `${fieldLabel} must be less than ${maxLength} characters`
+  // Reject if no letters at all
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters`
+  // Allowed: letters, digits, spaces, .,'-_:&%/() — reject other special characters like @ # $ * etc.
+  if (!/^[A-Za-z0-9\s.,'\-_:&%/()]+$/.test(trimmed))
+    return `${fieldLabel} contains invalid special characters`
+  // Heuristic: require at least 2 letters in a row somewhere (so "a@b@c" still fails)
+  if (!/[A-Za-z]{2,}/.test(trimmed)) return `Please enter a valid ${fieldLabel.toLowerCase()}`
+  return null
+}
+
 // ─── Input Filters (for onKeyDown / onChange prevention) ─────
 export function filterNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = /^[A-Za-z\s'-]$/
@@ -222,16 +315,16 @@ export function filterNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
 }
 
 export function filterFirstNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
-  // First name: only letters, hyphens, apostrophes - NO SPACES
-  const allowed = /^[A-Za-z'-]$/
+  // First name: alphabets only — no spaces, hyphens, apostrophes, or digits
+  const allowed = /^[A-Za-z]$/
   if (e.key.length === 1 && !allowed.test(e.key)) {
     e.preventDefault()
   }
 }
 
 export function filterLastNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
-  // Last name: only letters, hyphens, apostrophes - NO SPACES
-  const allowed = /^[A-Za-z'-]$/
+  // Last name: alphabets only — no spaces, hyphens, apostrophes, or digits
+  const allowed = /^[A-Za-z]$/
   if (e.key.length === 1 && !allowed.test(e.key)) {
     e.preventDefault()
   }
@@ -266,6 +359,7 @@ export function filterCardNumberInput(e: React.KeyboardEvent<HTMLInputElement>) 
 }
 
 export function filterZipCodeInput(e: React.KeyboardEvent<HTMLInputElement>) {
+  // Alphanumeric, spaces and hyphens (international postal codes)
   const allowed = /^[A-Za-z0-9\s-]$/
   if (e.key.length === 1 && !allowed.test(e.key)) {
     e.preventDefault()
@@ -280,7 +374,16 @@ export function filterStreetInput(e: React.KeyboardEvent<HTMLInputElement>) {
 }
 
 export function filterSchoolInput(e: React.KeyboardEvent<HTMLInputElement>) {
-  const allowed = /^[A-Za-z0-9\s.'-]$/
+  // Alphabets and single space — no digits, no special chars
+  const allowed = /^[A-Za-z\s]$/
+  if (e.key.length === 1 && !allowed.test(e.key)) {
+    e.preventDefault()
+  }
+}
+
+export function filterMedicalInput(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  // Alphabets and single space — no digits, no special chars
+  const allowed = /^[A-Za-z\s]$/
   if (e.key.length === 1 && !allowed.test(e.key)) {
     e.preventDefault()
   }
@@ -289,8 +392,8 @@ export function filterSchoolInput(e: React.KeyboardEvent<HTMLInputElement>) {
 // ─── Format Hints (shown below input fields) ────────────────
 export const FORMAT_HINTS: Record<string, string> = {
   name: 'Only letters, spaces, hyphens and apostrophes allowed',
-  firstName: 'Only letters, hyphens and apostrophes allowed (no spaces)',
-  lastName: 'Only letters, hyphens and apostrophes allowed (no spaces)',
+  firstName: 'Alphabets only (no spaces, digits or symbols)',
+  lastName: 'Alphabets only (no spaces, digits or symbols)',
   email: 'Format: user@example.com',
   phone: 'Only digits, +, -, spaces allowed (7-15 digits)',
   password: 'Min 8 chars: 1 uppercase, 1 lowercase, 1 number, 1 special character',
@@ -298,10 +401,10 @@ export const FORMAT_HINTS: Record<string, string> = {
   dateOfBirth: 'Select your date of birth',
   age: 'Enter age in years (numbers only)',
   address: 'Enter your full street address',
-  city: 'Only letters and spaces allowed',
-  state: 'Only letters and spaces allowed',
-  zipCode: 'Letters, numbers, spaces and hyphens (e.g. 10001)',
-  country: 'Select your country',
+  city: 'Letters only with single spaces between words',
+  state: 'Letters only with single spaces between words',
+  zipCode: 'Alphanumeric, must contain at least one digit (e.g. 10001 or K1A 0B1)',
+  country: 'Letters only with single spaces between words',
   url: 'Must start with http:// or https://',
   amount: 'Enter amount (e.g. 99.99)',
   cardNumber: '13-19 digit card number',
@@ -310,7 +413,8 @@ export const FORMAT_HINTS: Record<string, string> = {
   description: 'Enter a brief description',
   subject: 'Only letters, numbers and spaces allowed',
   message: 'Enter your message',
-  school: 'Only letters, numbers and spaces allowed',
+  school: 'Alphabets and single spaces only (no digits or symbols)',
+  medicalConditions: 'Alphabets and single spaces only (no digits or symbols)',
   capacity: 'Numbers only',
   gender: 'Select gender',
   relationship: 'Select relationship type',

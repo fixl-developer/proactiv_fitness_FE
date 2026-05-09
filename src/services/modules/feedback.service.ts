@@ -7,11 +7,24 @@ interface FeedbackData {
     rating: number
 }
 
+// apiClient methods already return the response BODY ({ success, data, message }) — not the
+// axios envelope. The previous version of this file did `response.data?.data` which is a
+// double-unwrap that returned `undefined` for every endpoint, so the feedback list was
+// always empty after a successful submit (BUG_024).
+const normalizeFeedback = (raw: any) => {
+    if (!raw || typeof raw !== 'object') return raw
+    return {
+        ...raw,
+        id: raw.id || raw._id || raw.feedbackId || '',
+    }
+}
+
 const feedbackService = {
     async getFeedback(): Promise<any[]> {
         try {
-            const response = await apiClient.get('/feedback')
-            return response.data?.data || []
+            const body: any = await apiClient.get('/feedback')
+            const list = Array.isArray(body?.data) ? body.data : Array.isArray(body) ? body : []
+            return list.map(normalizeFeedback)
         } catch (error) {
             console.error('Failed to fetch feedback:', error)
             return []
@@ -20,8 +33,8 @@ const feedbackService = {
 
     async submitFeedback(feedback: FeedbackData): Promise<any> {
         try {
-            const response = await apiClient.post('/feedback', feedback)
-            return response.data?.data || {}
+            const body: any = await apiClient.post('/feedback', feedback)
+            return normalizeFeedback(body?.data || body || {})
         } catch (error) {
             console.error('Failed to submit feedback:', error)
             throw error
@@ -30,8 +43,8 @@ const feedbackService = {
 
     async getFeedbackById(id: string): Promise<any> {
         try {
-            const response = await apiClient.get(`/feedback/${id}`)
-            return response.data?.data || {}
+            const body: any = await apiClient.get(`/feedback/${id}`)
+            return normalizeFeedback(body?.data || {})
         } catch (error) {
             console.error('Failed to fetch feedback:', error)
             return {}
@@ -40,8 +53,8 @@ const feedbackService = {
 
     async updateFeedback(id: string, data: any): Promise<any> {
         try {
-            const response = await apiClient.put(`/feedback/${id}`, data)
-            return response.data?.data || {}
+            const body: any = await apiClient.put(`/feedback/${id}`, data)
+            return normalizeFeedback(body?.data || {})
         } catch (error) {
             console.error('Failed to update feedback:', error)
             throw error
@@ -59,8 +72,8 @@ const feedbackService = {
 
     async getFeedbackStats(): Promise<any> {
         try {
-            const response = await apiClient.get('/feedback/stats')
-            return response.data?.data || {}
+            const body: any = await apiClient.get('/feedback/stats')
+            return body?.data || {}
         } catch (error) {
             console.error('Failed to fetch feedback stats:', error)
             return {}

@@ -340,6 +340,40 @@ export default function BookClassPage() {
                     <div className="bg-white rounded-lg shadow-md p-6 sticky top-24 space-y-4">
                         <h3 className="text-lg font-bold text-slate-900">Booking Summary</h3>
 
+                        {/* Selected program / date / time block — bug report wanted these clearly visible before confirmation */}
+                        <div className="space-y-2 pb-4 border-b border-slate-200">
+                            <div>
+                                <p className="text-xs text-slate-500">Program</p>
+                                <p className="text-sm font-semibold text-slate-900">{classDetails.program}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500">Date</p>
+                                <p className="text-sm font-medium text-slate-900">
+                                    {classDetails.date
+                                        ? new Date(classDetails.date).toLocaleDateString('en-US', {
+                                              weekday: 'short',
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                          })
+                                        : 'TBA'}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-500">Time</p>
+                                <p className="text-sm font-medium text-slate-900">
+                                    {classDetails.time || 'TBA'}
+                                    {classDetails.endTime ? ` - ${classDetails.endTime}` : ''}
+                                </p>
+                            </div>
+                            {classDetails.location && (
+                                <div>
+                                    <p className="text-xs text-slate-500">Location</p>
+                                    <p className="text-sm font-medium text-slate-900">{classDetails.location}</p>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="space-y-3 pb-4 border-b border-slate-200">
                             <div className="flex justify-between">
                                 <span className="text-slate-600">Class Price</span>

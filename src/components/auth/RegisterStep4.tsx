@@ -12,12 +12,13 @@ import {
 import {
     validateFirstName,
     validateLastName,
-    validateDateOfBirth,
     validateSelect,
-    validateTextArea,
+    validateSchoolName,
+    validateMedicalConditions,
     filterFirstNameInput,
     filterLastNameInput,
     filterSchoolInput,
+    filterMedicalInput,
     FORMAT_HINTS,
 } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
@@ -26,12 +27,38 @@ interface RegisterStep4Props {
     onComplete: (data: RegisterStep4Data) => void;
     onBack: () => void;
     initialData?: Partial<RegisterStep4Data>;
+    parentDateOfBirth?: string;
+}
+
+const STUDENT_MIN_AGE = 3;
+const STUDENT_MAX_AGE = 18;
+
+function validateStudentDob(value: string, parentDob?: string): string | null {
+    if (!value) return 'Date of birth is required';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return 'Please enter a valid date';
+    const today = new Date();
+    if (date > today) return 'Date of birth cannot be in the future';
+    let age = today.getFullYear() - date.getFullYear();
+    const m = today.getMonth() - date.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < date.getDate())) age--;
+    if (age < STUDENT_MIN_AGE || age > STUDENT_MAX_AGE) {
+        return `Student must be between ${STUDENT_MIN_AGE} and ${STUDENT_MAX_AGE} years old`;
+    }
+    if (parentDob) {
+        const parentDate = new Date(parentDob);
+        if (!isNaN(parentDate.getTime()) && date <= parentDate) {
+            return 'Student date of birth must be after the parent date of birth';
+        }
+    }
+    return null;
 }
 
 export function RegisterStep4({
     onComplete,
     onBack,
     initialData,
+    parentDateOfBirth,
 }: RegisterStep4Props) {
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -87,18 +114,16 @@ export function RegisterStep4({
                 error = validateLastName(value, 'Last name');
                 break;
             case 'dateOfBirth':
-                error = validateDateOfBirth(value);
+                error = validateStudentDob(value, parentDateOfBirth);
                 break;
             case 'gender':
                 error = validateSelect(value, 'Gender');
                 break;
             case 'school':
-                if (value && !/^[A-Za-z0-9\s.'-]+$/.test(value)) {
-                    error = 'School name can only contain letters, numbers and spaces';
-                }
+                error = validateSchoolName(value, false);
                 break;
             case 'medicalConditions':
-                error = validateTextArea(value, 'Medical conditions', 0, 500);
+                error = validateMedicalConditions(value, false);
                 break;
         }
         setFieldErrors((prev) => {
@@ -119,10 +144,14 @@ export function RegisterStep4({
             if (fnErr) errs[`students.${index}.firstName`] = fnErr;
             const lnErr = validateLastName(student.lastName, 'Last name');
             if (lnErr) errs[`students.${index}.lastName`] = lnErr;
-            const dobErr = validateDateOfBirth(student.dateOfBirth);
+            const dobErr = validateStudentDob(student.dateOfBirth, parentDateOfBirth);
             if (dobErr) errs[`students.${index}.dateOfBirth`] = dobErr;
             const gErr = validateSelect(student.gender, 'Gender');
             if (gErr) errs[`students.${index}.gender`] = gErr;
+            const schoolErr = validateSchoolName(student.school || '', false);
+            if (schoolErr) errs[`students.${index}.school`] = schoolErr;
+            const medErr = validateMedicalConditions(student.medicalConditions || '', false);
+            if (medErr) errs[`students.${index}.medicalConditions`] = medErr;
         });
 
         if (Object.keys(errs).length > 0) {
@@ -133,9 +162,9 @@ export function RegisterStep4({
     };
 
     return (
-        <form id="form-components-auth-RegisterStep4" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Student Information</h2>
+        <form id="form-components-auth-RegisterStep4" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3">
+            <div className="text-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">Student Information</h2>
                 <p className="text-gray-600 mt-2">
                     Add students who will be attending classes
                 </p>
@@ -149,7 +178,7 @@ export function RegisterStep4({
             </div>
 
             {/* Students */}
-            <div className="space-y-6">
+            <div className="space-y-3">
                 {fields.map((field, index) => (
                     <div
                         key={field.id}
@@ -185,7 +214,7 @@ export function RegisterStep4({
                                         })}
                                         onKeyDown={filterFirstNameInput}
                                         maxLength={50}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.students?.[index]?.firstName || fieldErrors[`students.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="First name"
@@ -212,7 +241,7 @@ export function RegisterStep4({
                                         })}
                                         onKeyDown={filterLastNameInput}
                                         maxLength={50}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.students?.[index]?.lastName || fieldErrors[`students.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="Last name"
@@ -237,10 +266,20 @@ export function RegisterStep4({
                                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="date"
+                                        min={(() => {
+                                            const d = new Date();
+                                            d.setFullYear(d.getFullYear() - STUDENT_MAX_AGE);
+                                            return d.toISOString().split('T')[0];
+                                        })()}
+                                        max={(() => {
+                                            const d = new Date();
+                                            d.setFullYear(d.getFullYear() - STUDENT_MIN_AGE);
+                                            return d.toISOString().split('T')[0];
+                                        })()}
                                         {...register(`students.${index}.dateOfBirth`, {
                                             onChange: (e) => validateField(index, 'dateOfBirth', e.target.value),
                                         })}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.students?.[index]?.dateOfBirth || fieldErrors[`students.${index}.dateOfBirth`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                     />
@@ -250,7 +289,7 @@ export function RegisterStep4({
                                         {errors.students[index]?.dateOfBirth?.message}
                                     </p>
                                 )}
-                                <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={fieldErrors[`students.${index}.dateOfBirth`]} />
+                                <FormFieldHint hint={`Student must be ${STUDENT_MIN_AGE}–${STUDENT_MAX_AGE} years old`} error={fieldErrors[`students.${index}.dateOfBirth`]} />
                             </div>
 
                             <div>
@@ -263,7 +302,7 @@ export function RegisterStep4({
                                         {...register(`students.${index}.gender`, {
                                             onChange: (e) => validateField(index, 'gender', e.target.value),
                                         })}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
                                             errors.students?.[index]?.gender || fieldErrors[`students.${index}.gender`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                     >
@@ -290,7 +329,7 @@ export function RegisterStep4({
                                     })}
                                     onKeyDown={filterSchoolInput}
                                     maxLength={100}
-                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                         fieldErrors[`students.${index}.school`] ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="School name"
@@ -310,15 +349,16 @@ export function RegisterStep4({
                                     {...register(`students.${index}.medicalConditions`, {
                                         onChange: (e) => validateField(index, 'medicalConditions', e.target.value),
                                     })}
+                                    onKeyDown={filterMedicalInput}
                                     rows={3}
                                     maxLength={500}
-                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                         fieldErrors[`students.${index}.medicalConditions`] ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Any allergies, medical conditions, or special needs..."
                                 />
                             </div>
-                            <FormFieldHint hint="Max 500 characters" error={fieldErrors[`students.${index}.medicalConditions`]} />
+                            <FormFieldHint hint={FORMAT_HINTS.medicalConditions} error={fieldErrors[`students.${index}.medicalConditions`]} />
                         </div>
                     </div>
                 ))}
@@ -339,13 +379,13 @@ export function RegisterStep4({
                 <button id="auth-register-step4-btn-back"
                     type="button"
                     onClick={onBack}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
                 <button id="auth-register-step4-btn-continue"
                     type="submit"
-                    className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    className="flex-1 bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >
                     Continue
                 </button>

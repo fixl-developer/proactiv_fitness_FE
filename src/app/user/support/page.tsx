@@ -28,6 +28,7 @@ import {
     validateName,
     validateEmail,
     validatePhone,
+    validatePlainText,
     filterNameInput,
     filterPhoneInput
 } from '@/utils/validation'
@@ -120,14 +121,8 @@ export default function SupportPage() {
 
     const validateTicket = (): boolean => {
         const errors: Record<string, string> = {}
-        const subjectErr = validateRequired(newTicket.subject, 'Subject')
-        if (subjectErr) {
-            errors.subject = subjectErr
-        } else if (newTicket.subject.trim().length < 5) {
-            errors.subject = 'Subject must be at least 5 characters'
-        } else if (newTicket.subject.trim().length > 100) {
-            errors.subject = 'Subject must be less than 100 characters'
-        }
+        const subjectErr = validatePlainText(newTicket.subject, 'Subject', 5, 100)
+        if (subjectErr) errors.subject = subjectErr
 
         const categoryErr = validateSelect(newTicket.category, 'Category')
         if (categoryErr) errors.category = categoryErr
@@ -181,7 +176,7 @@ export default function SupportPage() {
             const phoneErr = validatePhone(contactForm.phone, false)
             if (phoneErr) errors.phone = phoneErr
         }
-        const subjectErr = validateRequired(contactForm.subject, 'Subject')
+        const subjectErr = validatePlainText(contactForm.subject, 'Subject', 3, 100)
         if (subjectErr) errors.subject = subjectErr
         const messageErr = validateTextArea(contactForm.message, 'Message', 10, 2000)
         if (messageErr) errors.message = messageErr

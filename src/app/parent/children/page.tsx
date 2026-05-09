@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
 import { formatAIResponse } from '@/utils/formatAIResponse'
 import { validateName, validateDateOfBirth, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
@@ -43,6 +43,12 @@ const ParentChildrenPage = () => {
 
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    // ?childId=xxx narrows the page to a single child + their upcoming
+    // classes. Drives BUG_003 + BUG_006 once we land here from "View Details".
+    const focusedChildId = searchParams?.get('childId') || null
+    const [upcomingClasses, setUpcomingClasses] = useState<any[]>([])
+    const [upcomingLoading, setUpcomingLoading] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -51,6 +57,29 @@ const ParentChildrenPage = () => {
         }
         loadChildren()
     }, [isAuthenticated, router])
+
+    // Pull per-child upcoming classes whenever a child filter is set so the
+    // section stops mixing siblings together.
+    useEffect(() => {
+        if (!isAuthenticated || !focusedChildId) {
+            setUpcomingClasses([])
+            return
+        }
+        let cancelled = false
+        setUpcomingLoading(true)
+        apiClient.get(`/parent/dashboard?timeRange=30d&childId=${encodeURIComponent(focusedChildId)}`)
+            .then((response: any) => {
+                if (cancelled) return
+                const data = response?.data || response || {}
+                setUpcomingClasses(Array.isArray(data.upcomingClasses) ? data.upcomingClasses : [])
+            })
+            .catch((err) => {
+                console.error('Failed to load child-specific upcoming classes:', err)
+                if (!cancelled) setUpcomingClasses([])
+            })
+            .finally(() => { if (!cancelled) setUpcomingLoading(false) })
+        return () => { cancelled = true }
+    }, [isAuthenticated, focusedChildId])
 
     const loadChildren = async () => {
         try {
@@ -202,15 +231,30 @@ const ParentChildrenPage = () => {
         }
     }
 
-    const totalChildren = children.length
-    const activePrograms = new Set(children.map((c: any) => c.program).filter(Boolean)).size
-    const totalClasses = children.reduce((sum: number, c: any) => sum + (c.totalClasses || 0), 0)
-    const avgAttendance = children.length > 0
-        ? Math.round(children.reduce((sum: number, c: any) => {
+    // When a child is focused (?childId=...), the rest of the page narrows to
+    // that one record. Falls back to the full list when no filter is set.
+    const visibleChildren = focusedChildId
+        ? children.filter((c: any) => (c.id || c._id) === focusedChildId)
+        : children
+
+    const totalChildren = visibleChildren.length
+    // Active Programs (BUG_008): count distinct programs children are
+    // genuinely enrolled in. The previous calculation included placeholder
+    // values like "Not Enrolled" / "Enrolled" / "N/A" which inflated the
+    // count by 1 even when no real program existed.
+    const PROGRAM_PLACEHOLDERS = new Set(['', 'n/a', 'na', 'none', 'not enrolled', 'enrolled', 'tbd'])
+    const activePrograms = new Set(
+        visibleChildren
+            .map((c: any) => String(c.program || '').trim().toLowerCase())
+            .filter((p: string) => p && !PROGRAM_PLACEHOLDERS.has(p))
+    ).size
+    const totalClasses = visibleChildren.reduce((sum: number, c: any) => sum + (c.totalClasses || 0), 0)
+    const avgAttendance = visibleChildren.length > 0
+        ? Math.round(visibleChildren.reduce((sum: number, c: any) => {
             const attended = c.attendedClasses || 0
             const total = c.totalClasses || 1
             return sum + (attended / total) * 100
-        }, 0) / children.length)
+        }, 0) / visibleChildren.length)
         : 0
 
     const metricCards = [
@@ -488,9 +532,27 @@ const ParentChildrenPage = () => {
                 ))}
             </div>
 
+            {/* Focused-child banner — visible when arriving from a "View
+                Details" click on the dashboard. */}
+            {focusedChildId && visibleChildren.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                        Showing details for <strong>{visibleChildren[0].name}</strong> only.
+                    </p>
+                    <Button
+                        id="parent-children-clear-filter-btn"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/parent/children')}
+                    >
+                        Show all children
+                    </Button>
+                </div>
+            )}
+
             {/* Children Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {children.map((child: any, index: number) => {
+                {visibleChildren.map((child: any, index: number) => {
                     const childId = child.id || child._id || `child-${index}`
                     return (
                         <motion.div
@@ -605,7 +667,7 @@ const ParentChildrenPage = () => {
                                                 className="flex-1"
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => router.push('/parent/children')}
+                                                onClick={() => router.push(`/parent/children?childId=${encodeURIComponent(childId)}`)}
                                             >
                                                 <Eye className="w-4 h-4 mr-2" />
                                                 View Details
@@ -824,6 +886,53 @@ const ParentChildrenPage = () => {
                 })}
             </div>
 
+            {/* Per-child Upcoming Classes (only when a child is focused). */}
+            {focusedChildId && (
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-blue-600" />
+                            <CardTitle>Upcoming Classes</CardTitle>
+                            <Badge>
+                                {upcomingLoading ? '…' : `${upcomingClasses.length} classes`}
+                            </Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {upcomingLoading ? (
+                            <div className="text-center py-6 text-gray-400 text-sm">
+                                <Loader className="w-5 h-5 animate-spin mx-auto mb-2" />
+                                Loading upcoming classes…
+                            </div>
+                        ) : upcomingClasses.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm font-medium">No upcoming classes for this child</p>
+                                <p className="text-xs text-gray-400 mt-1">Book a class to see it here.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {upcomingClasses.map((session: any) => (
+                                    <div
+                                        key={session.id}
+                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                                    >
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900 text-sm">{session.program || 'Class'}</h4>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                {session.date} {session.time ? `at ${session.time}` : ''}
+                                                {session.location ? ` · ${session.location}` : ''}
+                                            </p>
+                                        </div>
+                                        <Badge className="bg-blue-50 text-blue-700">{session.status || 'confirmed'}</Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Empty State */}
             {children.length === 0 && !error && (
                 <Card className="p-8 text-center">
@@ -866,7 +975,7 @@ const ParentChildrenPage = () => {
                             id="parent-children-quick-assessment-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Feature coming soon')}
+                            onClick={() => router.push('/parent/browse-classes?type=assessment')}
                         >
                             <Star className="w-6 h-6" />
                             <span>Assessment</span>
@@ -875,7 +984,22 @@ const ParentChildrenPage = () => {
                             id="parent-children-quick-progress-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Feature coming soon')}
+                            onClick={() => {
+                                // Open AI insights for the focused child if we
+                                // have one, else for the first child on file.
+                                const targetId = focusedChildId
+                                    || (visibleChildren[0]?.id || visibleChildren[0]?._id)
+                                if (!targetId) {
+                                    toast.info('Add a child first to generate a progress report.')
+                                    return
+                                }
+                                setAiInsightsOpen(prev => ({ ...prev, [targetId]: true }))
+                                handleAiReport(targetId)
+                                requestAnimationFrame(() => {
+                                    document.getElementById(`parent-children-ai-toggle-${targetId}-btn`)
+                                        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                })
+                            }}
                         >
                             <Activity className="w-6 h-6" />
                             <span>Progress Report</span>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
-    CheckCircle2, Clock, Calendar, TrendingUp, AlertCircle, Download, Flame, RefreshCw, MessageSquare,
+    CheckCircle2, Clock, Calendar, TrendingUp, AlertCircle, Download, Flame, RefreshCw, MessageSquare, Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -84,6 +84,7 @@ export default function AttendancePage() {
     const [excuseReason, setExcuseReason] = useState('')
     const [excuseError, setExcuseError] = useState<string | null>(null)
     const [submittingExcuse, setSubmittingExcuse] = useState(false)
+    const [detailRecord, setDetailRecord] = useState<AttendanceRecord | null>(null)
 
     const effectiveRange = useMemo(() => {
         return computeRangeFromPreset(datePreset, customRange)
@@ -445,7 +446,11 @@ export default function AttendancePage() {
                                                     {record.checkInTime || '-'}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
+                                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                                                <Button variant="outline" size="sm" className="mr-2" onClick={() => setDetailRecord(record)}>
+                                                    <Eye className="w-3.5 h-3.5 mr-1" />
+                                                    View Details
+                                                </Button>
                                                 {record.status === 'absent' && (
                                                     <Button variant="outline" size="sm" onClick={() => openExcuseDrawer(record)}>
                                                         <MessageSquare className="w-3.5 h-3.5 mr-1" />
@@ -510,6 +515,70 @@ export default function AttendancePage() {
                         </div>
                     </div>
                 </div>
+            </SlideInDrawer>
+
+            {/* View Details Drawer */}
+            <SlideInDrawer
+                isOpen={!!detailRecord}
+                onClose={() => setDetailRecord(null)}
+                title="Attendance Details"
+                description={detailRecord ? `${detailRecord.date}${detailRecord.className ? ' • ' + detailRecord.className : ''}` : undefined}
+                size="md"
+                footer={
+                    <div className="flex gap-3 justify-end">
+                        <Button variant="outline" onClick={() => setDetailRecord(null)}>Close</Button>
+                        {detailRecord?.status === 'absent' && (
+                            <Button
+                                onClick={() => {
+                                    openExcuseDrawer(detailRecord)
+                                    setDetailRecord(null)
+                                }}
+                            >
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Request Excuse
+                            </Button>
+                        )}
+                    </div>
+                }
+            >
+                {detailRecord && (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p className="text-xs text-gray-500">Date</p>
+                            <p className="font-medium text-gray-900">{detailRecord.date}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Status</p>
+                            <Badge className={getStatusStyles(detailRecord.status)}>
+                                {detailRecord.status.charAt(0).toUpperCase() + detailRecord.status.slice(1)}
+                            </Badge>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Class</p>
+                            <p className="font-medium text-gray-900">{detailRecord.className || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Coach</p>
+                            <p className="font-medium text-gray-900">{detailRecord.coach || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Program</p>
+                            <p className="font-medium text-gray-900">{detailRecord.program || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Check-in</p>
+                            <p className="font-medium text-gray-900">{detailRecord.checkInTime || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Check-out</p>
+                            <p className="font-medium text-gray-900">{detailRecord.checkOutTime || '-'}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500">Duration</p>
+                            <p className="font-medium text-gray-900">{detailRecord.duration || '-'}</p>
+                        </div>
+                    </div>
+                )}
             </SlideInDrawer>
         </div>
     )

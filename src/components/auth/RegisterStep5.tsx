@@ -125,9 +125,9 @@ export function RegisterStep5({
     };
 
     return (
-        <form id="form-components-auth-RegisterStep5" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+        <form id="form-components-auth-RegisterStep5" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3">
+            <div className="text-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">
                     Guardian & Emergency Contacts
                 </h2>
                 <p className="text-gray-600 mt-2">
@@ -143,7 +143,7 @@ export function RegisterStep5({
             </div>
 
             {/* Guardians */}
-            <div className="space-y-6">
+            <div className="space-y-3">
                 {fields.map((field, index) => (
                     <div
                         key={field.id}
@@ -179,7 +179,7 @@ export function RegisterStep5({
                                         })}
                                         onKeyDown={filterFirstNameInput}
                                         maxLength={50}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.guardians?.[index]?.firstName || fieldErrors[`guardians.${index}.firstName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="First name"
@@ -206,7 +206,7 @@ export function RegisterStep5({
                                         })}
                                         onKeyDown={filterLastNameInput}
                                         maxLength={50}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.guardians?.[index]?.lastName || fieldErrors[`guardians.${index}.lastName`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="Last name"
@@ -232,7 +232,7 @@ export function RegisterStep5({
                                     {...register(`guardians.${index}.relationship`, {
                                         onChange: (e) => validateField(index, 'relationship', e.target.value),
                                     })}
-                                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
+                                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none ${
                                         errors.guardians?.[index]?.relationship || fieldErrors[`guardians.${index}.relationship`] ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 >
@@ -283,7 +283,7 @@ export function RegisterStep5({
                                         {...register(`guardians.${index}.email`, {
                                             onChange: (e) => validateField(index, 'email', e.target.value),
                                         })}
-                                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                                             errors.guardians?.[index]?.email || fieldErrors[`guardians.${index}.email`] ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="email@example.com"
@@ -328,13 +328,13 @@ export function RegisterStep5({
                 <button id="auth-register-step5-btn-back"
                     type="button"
                     onClick={onBack}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                 >
                     Back
                 </button>
                 <button id="auth-register-step5-btn-continue"
                     type="submit"
-                    className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                    className="flex-1 bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                 >
                     Continue
                 </button>

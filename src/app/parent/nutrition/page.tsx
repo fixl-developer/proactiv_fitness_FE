@@ -27,12 +27,23 @@ interface Recipe {
     tags?: string[]
 }
 
+// localStorage key holding the most recent AI recipe results so they survive
+// a hard refresh (BUG_012). Scoped per-user to keep accounts isolated.
+const recipesStorageKey = (userId?: string) => `parent_nutrition_recipes_v1:${userId || 'anon'}`
+
 export default function ParentNutritionPage() {
     const { user } = useAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [mealPlans, setMealPlans] = useState<any[]>([])
     const [recommendations, setRecommendations] = useState<any[]>([])
-    const [recipes, setRecipes] = useState<Recipe[]>([])
+    const [recipes, setRecipes] = useState<Recipe[]>(() => {
+        if (typeof window === 'undefined') return []
+        try {
+            // We don't have user.id at module init; the per-user rehydrate
+            // runs in an effect below. Start empty here.
+            return []
+        } catch { return [] }
+    })
     const [error, setError] = useState<string | null>(null)
     const [generating, setGenerating] = useState(false)
     const [loadingRecipes, setLoadingRecipes] = useState(false)
@@ -97,11 +108,9 @@ export default function ParentNutritionPage() {
             } catch (err) {
                 console.error('Failed to load nutrition:', err)
                 setError('Failed to load nutrition data')
-                setRecommendations([
-                    { id: '1', title: 'Stay Hydrated', description: 'Ensure your child drinks at least 8 glasses of water daily, especially before and after swimming.', priority: 'high' },
-                    { id: '2', title: 'Protein Rich Meals', description: 'Include lean protein in every meal to support muscle recovery after training sessions.', priority: 'medium' },
-                    { id: '3', title: 'Pre-Training Snack', description: 'A banana or energy bar 30 minutes before class helps maintain energy levels.', priority: 'medium' },
-                ])
+                // Empty list lets the UI render its real empty state instead
+                // of showing fake "Stay Hydrated / Protein Rich Meals" cards.
+                setRecommendations([])
             }
         }
 
@@ -201,6 +210,16 @@ export default function ParentNutritionPage() {
             const data = response?.data || response || {}
             const recipeList = Array.isArray(data) ? data : (data.recipes || [])
             setRecipes(recipeList)
+            // Persist so a refresh keeps the latest AI recipes (BUG_012).
+            try {
+                if (typeof window !== 'undefined') {
+                    const userId = (user as any)?.id || (user as any)?._id
+                    localStorage.setItem(
+                        recipesStorageKey(userId),
+                        JSON.stringify({ savedAt: Date.now(), recipes: recipeList }),
+                    )
+                }
+            } catch {/* storage may be unavailable */}
             if (recipeList.length === 0) {
                 setRecipesError('No recipes returned. Try again later.')
             }
@@ -215,6 +234,28 @@ export default function ParentNutritionPage() {
     useEffect(() => {
         loadData()
     }, [loadData])
+
+    // Rehydrate persisted recipes once we know the user id (BUG_012). We keep
+    // a 24h freshness window — older blobs get cleared so we don't show stale
+    // AI output indefinitely.
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        const userId = (user as any)?.id || (user as any)?._id
+        const key = recipesStorageKey(userId)
+        try {
+            const raw = localStorage.getItem(key)
+            if (!raw) return
+            const parsed = JSON.parse(raw)
+            const ageMs = Date.now() - (parsed?.savedAt || 0)
+            if (ageMs > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(key)
+                return
+            }
+            if (Array.isArray(parsed?.recipes) && parsed.recipes.length > 0) {
+                setRecipes(parsed.recipes)
+            }
+        } catch {/* invalid JSON — ignore */}
+    }, [user])
 
     if (isLoading) {
         return (
@@ -316,15 +357,12 @@ export default function ParentNutritionPage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                <Apple className="w-5 h-5 text-emerald-600 mt-0.5" />
-                                <p className="text-sm text-gray-700">Ensure a balanced diet with proteins, carbs, and healthy fats for young athletes</p>
-                            </div>
-                            <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                <Droplets className="w-5 h-5 text-cyan-600 mt-0.5" />
-                                <p className="text-sm text-gray-700">Your child should drink 6-8 glasses of water daily, especially during training days</p>
-                            </div>
+                        <div className="text-center py-6 text-gray-500">
+                            <Apple className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                            <p className="text-sm font-medium">No recommendations yet</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Generate an AI meal plan for your child to see personalised guidance here.
+                            </p>
                         </div>
                     )}
                 </CardContent>
