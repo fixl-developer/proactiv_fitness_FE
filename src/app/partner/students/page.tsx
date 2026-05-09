@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { revenueIntelligenceService } from '@/services/advancedAIServices'
 import { validateName, validateEmail, validatePhone, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 const emptyForm = { name: '', email: '', phone: '', enrolledPrograms: '', status: 'active' }
 
@@ -39,9 +40,15 @@ export default function Students() {
         if (nameErr) newErrors.name = nameErr
         const emailErr = validateEmail(editForm.email)
         if (emailErr) newErrors.email = emailErr
-        if (editForm.phone) {
-            const phoneErr = validatePhone(editForm.phone, false)
-            if (phoneErr) newErrors.phone = phoneErr
+        // Phone is required and must be 7-15 digits per requirements
+        const phoneErr = validatePhone(editForm.phone, true)
+        if (phoneErr) newErrors.phone = phoneErr
+        // Enrolled programs: must be a positive integer (zero rejected)
+        if (editForm.enrolledPrograms !== '' && editForm.enrolledPrograms !== undefined && editForm.enrolledPrograms !== null) {
+            const programsNum = Number(editForm.enrolledPrograms)
+            if (isNaN(programsNum) || programsNum < 1) {
+                newErrors.enrolledPrograms = 'Enrolled Programs must be at least 1'
+            }
         }
         setFormErrors(newErrors)
         return Object.keys(newErrors).length === 0
@@ -128,34 +135,43 @@ export default function Students() {
     }
 
     const handleEditSave = async () => {
-        if (!validateStudentForm()) return
+        if (!validateStudentForm()) {
+            toast.error('Please fix the highlighted errors before saving.')
+            return
+        }
         try {
             setSubmitting(true)
-            const updated = await PartnerPortalService.updatePartnerStudent(partnerId, selectedStudent.id, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 0 } as any)
+            const updated = await PartnerPortalService.updatePartnerStudent(partnerId, selectedStudent.id, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 1 } as any)
             setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, ...updated } : s))
             setShowEditModal(false)
             setSelectedStudent(null)
+            toast.success('Participant updated successfully!')
         } catch (err) {
             console.error('Error updating student:', err)
-            alert('Failed to update student. Please try again.')
+            toast.error('Failed to update participant. Please try again.')
         } finally {
             setSubmitting(false)
         }
     }
 
     const handleAddStudent = async () => {
-        if (!validateStudentForm()) return
+        if (!validateStudentForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
         try {
             setSubmitting(true)
-            const newStudent = await PartnerPortalService.createPartnerStudent(partnerId, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 0 } as any)
+            const newStudent = await PartnerPortalService.createPartnerStudent(partnerId, { ...editForm, enrolledPrograms: Number(editForm.enrolledPrograms) || 1 } as any)
             if (newStudent) {
                 setStudents(prev => [...prev, newStudent])
             }
             setShowAddModal(false)
             setEditForm(emptyForm)
+            setFormErrors({})
+            toast.success('Participant added successfully!')
         } catch (err) {
             console.error('Error creating student:', err)
-            alert('Failed to add student. Please try again.')
+            toast.error('Failed to add participant. Please try again.')
         } finally {
             setSubmitting(false)
         }
@@ -221,17 +237,15 @@ export default function Students() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
                     <input
                         type="tel"
                         value={editForm.phone}
                         onKeyDown={filterPhoneInput}
                         onChange={e => {
                             setEditForm(prev => ({ ...prev, phone: e.target.value }))
-                            if (e.target.value) {
-                                const err = validatePhone(e.target.value, false)
-                                setFormErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
-                            }
+                            const err = validatePhone(e.target.value, true)
+                            setFormErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
                         }}
                         placeholder="+91 98765 43210"
                         className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
@@ -242,13 +256,22 @@ export default function Students() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Enrolled Programs</label>
                     <input
                         type="number"
-                        min="0"
+                        min="1"
                         value={editForm.enrolledPrograms}
                         onKeyDown={filterNumberInput}
-                        onChange={e => setEditForm(prev => ({ ...prev, enrolledPrograms: e.target.value }))}
-                        placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, enrolledPrograms: e.target.value }))
+                            const num = Number(e.target.value)
+                            if (e.target.value !== '' && (isNaN(num) || num < 1)) {
+                                setFormErrors(prev => ({ ...prev, enrolledPrograms: 'Enrolled Programs must be at least 1' }))
+                            } else {
+                                setFormErrors(prev => { const n = { ...prev }; delete n.enrolledPrograms; return n })
+                            }
+                        }}
+                        placeholder="1"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.enrolledPrograms ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint="Must be 1 or more" error={formErrors.enrolledPrograms} />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>

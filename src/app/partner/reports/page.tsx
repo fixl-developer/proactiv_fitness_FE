@@ -15,6 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { apiClient } from '@/services/api/client'
+import { validatePlainText, validateTextArea } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 interface ReportSummary {
     totalReports: number
@@ -124,6 +127,7 @@ export default function PartnerReportsPage() {
     const [deletingReportId, setDeletingReportId] = useState<string | null>(null)
     const [aiReportInsights, setAiReportInsights] = useState<any>(null)
     const [aiLoading, setAiLoading] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     const loadAiReportInsights = async () => {
         setAiLoading(true)
@@ -194,8 +198,28 @@ export default function PartnerReportsPage() {
         setShowGenerateModal(true)
     }
 
+    const validateReportForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nameErr = validatePlainText(formData.reportName, 'Report Name', 3, 150)
+        if (nameErr) errs.reportName = nameErr
+        if (formData.description) {
+            const descErr = validateTextArea(formData.description, 'Description', 0, 2000)
+            if (descErr) errs.description = descErr
+        }
+        if (formData.dateFrom && formData.dateTo) {
+            const from = new Date(formData.dateFrom)
+            const to = new Date(formData.dateTo)
+            if (from > to) errs.dateTo = 'Date To must be on or after Date From'
+        }
+        setFormErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
     const handleGenerateReport = async () => {
-        if (!formData.reportName.trim()) return
+        if (!validateReportForm()) {
+            toast.error('Please fix the highlighted errors before generating.')
+            return
+        }
 
         try {
             setIsGenerating(true)
@@ -209,11 +233,14 @@ export default function PartnerReportsPage() {
             })
 
             setShowGenerateModal(false)
+            setFormErrors({})
+            toast.success('Report generated successfully!')
             // Refresh reports list
             await fetchReports(selectedPeriod)
         } catch (err) {
             console.error('Error generating report:', err)
             setError('Failed to generate report. Please try again.')
+            toast.error('Failed to generate report. Please try again.')
         } finally {
             setIsGenerating(false)
             setGeneratingTemplate(null)
@@ -656,10 +683,15 @@ export default function PartnerReportsPage() {
                                     <input
                                         type="text"
                                         value={formData.reportName}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, reportName: e.target.value }))}
+                                        onChange={(e) => {
+                                            setFormData(prev => ({ ...prev, reportName: e.target.value }))
+                                            const err = validatePlainText(e.target.value, 'Report Name', 3, 150)
+                                            setFormErrors(prev => { const n = { ...prev }; if (err) n.reportName = err; else delete n.reportName; return n })
+                                        }}
                                         placeholder="e.g., Monthly Performance Report"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.reportName ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint="3-150 characters, letters/numbers/basic punctuation only" error={formErrors.reportName} />
                                 </div>
 
                                 {/* Report Type */}
@@ -704,9 +736,18 @@ export default function PartnerReportsPage() {
                                         <input
                                             type="date"
                                             value={formData.dateTo}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, dateTo: e.target.value }))}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            min={formData.dateFrom || undefined}
+                                            onChange={(e) => {
+                                                setFormData(prev => ({ ...prev, dateTo: e.target.value }))
+                                                if (formData.dateFrom && e.target.value && new Date(e.target.value) < new Date(formData.dateFrom)) {
+                                                    setFormErrors(prev => ({ ...prev, dateTo: 'Date To must be on or after Date From' }))
+                                                } else {
+                                                    setFormErrors(prev => { const n = { ...prev }; delete n.dateTo; return n })
+                                                }
+                                            }}
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.dateTo ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint="Must be on or after Date From" error={formErrors.dateTo} />
                                     </div>
                                 </div>
 

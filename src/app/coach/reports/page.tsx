@@ -15,39 +15,19 @@ import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService, CoachReportData } from '@/services/modules/coach.service'
 
-// ==================== MOCK DATA ====================
-
-const MOCK_REPORT_DATA: CoachReportData = {
-    totalClasses: 48,
-    totalStudents: 45,
-    avgAttendance: 92,
-    avgRating: 4.7,
-    classDistribution: [
-        { name: 'Beginner', count: 18, percentage: 38 },
-        { name: 'Intermediate', count: 20, percentage: 42 },
-        { name: 'Advanced', count: 10, percentage: 20 }
-    ],
-    studentProgress: [
-        { name: 'Aarav Patel', progress: 75, trend: 'up' },
-        { name: 'Priya Singh', progress: 85, trend: 'up' },
-        { name: 'Rohan Kumar', progress: 92, trend: 'up' },
-        { name: 'Ananya Sharma', progress: 65, trend: 'stable' },
-        { name: 'Vikram Desai', progress: 78, trend: 'up' }
-    ],
-    attendanceByDay: [
-        { day: 'Monday', attended: 42, total: 45, percentage: 93 },
-        { day: 'Tuesday', attended: 41, total: 45, percentage: 91 },
-        { day: 'Wednesday', attended: 44, total: 45, percentage: 98 },
-        { day: 'Thursday', attended: 40, total: 45, percentage: 89 },
-        { day: 'Friday', attended: 43, total: 45, percentage: 96 },
-        { day: 'Saturday', attended: 38, total: 40, percentage: 95 }
-    ],
-    performanceMetrics: [
-        { metric: 'Student Satisfaction', value: 94 },
-        { metric: 'Class Completion Rate', value: 98 },
-        { metric: 'Skill Improvement', value: 87 },
-        { metric: 'Attendance Consistency', value: 92 }
-    ]
+// ==================== EMPTY STATE ====================
+// Backend `/coach/reports` is the source of truth — using empty zeros as the
+// initial/fallback shape so the UI never displays fabricated values like
+// "48 classes / 92% attendance" when the API fails or hasn't responded yet.
+const EMPTY_REPORT_DATA: CoachReportData = {
+    totalClasses: 0,
+    totalStudents: 0,
+    avgAttendance: 0,
+    avgRating: 0,
+    classDistribution: [],
+    studentProgress: [],
+    attendanceByDay: [],
+    performanceMetrics: [],
 }
 
 // ==================== HELPERS ====================
@@ -202,13 +182,13 @@ const CoachReportsPage = () => {
     const [isSwitching, setIsSwitching] = useState(false)
     const [reportType, setReportType] = useState('overview')
     const [dateRange, setDateRange] = useState('month')
-    const [reportData, setReportData] = useState<CoachReportData>(MOCK_REPORT_DATA)
+    const [reportData, setReportData] = useState<CoachReportData>(EMPTY_REPORT_DATA)
     const [isExporting, setIsExporting] = useState<string | null>(null)
 
     const loadReportData = useCallback(async (type: string, range: string) => {
         const coachId = user?.id || ''
         if (!coachId) {
-            setReportData(MOCK_REPORT_DATA)
+            setReportData(EMPTY_REPORT_DATA)
             setIsLoading(false)
             setIsSwitching(false)
             return
@@ -228,7 +208,7 @@ const CoachReportsPage = () => {
             })
         } catch (error) {
             console.error('Error loading report data, using mock:', error)
-            setReportData(MOCK_REPORT_DATA)
+            setReportData(EMPTY_REPORT_DATA)
         } finally {
             setIsLoading(false)
             setIsSwitching(false)

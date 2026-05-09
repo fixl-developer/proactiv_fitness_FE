@@ -139,6 +139,24 @@ export function validateRequired(value: string, fieldLabel = 'This field'): stri
   return null
 }
 
+// Subject / title validator — must contain letters, doesn't allow strings made
+// entirely of special characters (@#$%, !@#, etc), and rejects gibberish like
+// repeated single chars. Used by ticket / inquiry / announcement forms.
+export function validateSubject(value: string, fieldLabel = 'Subject'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < 5) return `${fieldLabel} must be at least 5 characters`
+  if (trimmed.length > 200) return `${fieldLabel} cannot exceed 200 characters`
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters, not only symbols or numbers`
+  // Reject input that is mostly special characters (>40% non-alphanumeric, non-space).
+  const specials = (trimmed.match(/[^A-Za-z0-9\s]/g) || []).length
+  if (specials / trimmed.length > 0.4) return `${fieldLabel} contains too many special characters`
+  if (!looksMeaningful(trimmed.replace(/[^A-Za-z\s]/g, ' '))) {
+    return `Please enter a meaningful ${fieldLabel.toLowerCase()}`
+  }
+  return null
+}
+
 export function validateSelect(value: string, fieldLabel = 'This field'): string | null {
   if (!value || value === '' || value === 'select') return `Please select a ${fieldLabel.toLowerCase()}`
   return null

@@ -48,13 +48,41 @@ export default function CurriculumPage() {
 
     useEffect(() => { load() }, [searchTerm])
 
+    // Reusable: must contain letters and at least one alphabetic word; reject
+    // pure-symbol or pure-numeric input. Used by Title/Program/Skills/Drills.
+    const isWordy = (v: string): boolean => {
+        const t = v.trim()
+        if (!t) return false
+        if (!/[A-Za-z]/.test(t)) return false
+        if (!/^[A-Za-z0-9\s.,'&()\-/]+$/.test(t)) return false
+        return true
+    }
+    // Comma list — every entry must be wordy (letters + safe punctuation only).
+    const validateCommaList = (v: string, label: string): string | null => {
+        if (!v.trim()) return null // empty is allowed (optional fields)
+        const parts = v.split(',').map(s => s.trim()).filter(Boolean)
+        if (parts.length === 0) return null
+        for (const p of parts) {
+            if (!isWordy(p)) return `${label} entry "${p}" is invalid — letters required`
+        }
+        return null
+    }
+
     const validate = () => {
         const e: Record<string, string> = {}
         if (!form.title.trim()) e.title = 'Title is required'
         else if (form.title.trim().length < 3) e.title = 'Title must be at least 3 characters'
         else if (form.title.length > 120) e.title = 'Title must be 120 chars or fewer'
+        else if (!isWordy(form.title)) e.title = 'Title must contain letters — no symbol/number-only input'
         if (!form.week || form.week < 1 || form.week > 52) e.week = 'Week must be between 1 and 52'
         if (!form.duration || form.duration < 15) e.duration = 'Duration must be at least 15 minutes'
+        if (form.programName.trim() && !isWordy(form.programName)) {
+            e.programName = 'Program name must contain letters — no symbol/number-only input'
+        }
+        const skillsErr = validateCommaList(form.skills, 'Skills')
+        if (skillsErr) e.skills = skillsErr
+        const drillsErr = validateCommaList(form.drills, 'Drills')
+        if (drillsErr) e.drills = drillsErr
         if (form.objectives && form.objectives.length > 1000) e.objectives = 'Objectives too long (max 1000)'
         setErrors(e)
         return Object.keys(e).length === 0
@@ -281,30 +309,34 @@ export default function CurriculumPage() {
                                 <input
                                     type="text"
                                     value={form.programName}
-                                    onChange={e => setForm({ ...form, programName: e.target.value })}
+                                    onChange={e => { setForm({ ...form, programName: e.target.value }); if (errors.programName) setErrors({ ...errors, programName: '' }) }}
                                     placeholder="e.g., Tumbling Level 1"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    maxLength={120}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.programName ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
                                 />
+                                {errors.programName && <p className="mt-1 text-xs text-red-600">{errors.programName}</p>}
                             </div>
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-slate-900 mb-1">Skills (comma-separated)</label>
                                 <input
                                     type="text"
                                     value={form.skills}
-                                    onChange={e => setForm({ ...form, skills: e.target.value })}
+                                    onChange={e => { setForm({ ...form, skills: e.target.value }); if (errors.skills) setErrors({ ...errors, skills: '' }) }}
                                     placeholder="e.g., balance, agility, flexibility"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.skills ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
                                 />
+                                {errors.skills && <p className="mt-1 text-xs text-red-600">{errors.skills}</p>}
                             </div>
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-slate-900 mb-1">Drills (comma-separated)</label>
                                 <input
                                     type="text"
                                     value={form.drills}
-                                    onChange={e => setForm({ ...form, drills: e.target.value })}
+                                    onChange={e => { setForm({ ...form, drills: e.target.value }); if (errors.drills) setErrors({ ...errors, drills: '' }) }}
                                     placeholder="e.g., warm-up jog, mat rolls, cool-down stretch"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.drills ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-indigo-500'}`}
                                 />
+                                {errors.drills && <p className="mt-1 text-xs text-red-600">{errors.drills}</p>}
                             </div>
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-slate-900 mb-1">Objectives</label>
