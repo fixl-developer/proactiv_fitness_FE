@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import {
     Users, Plus, RefreshCw, Eye, Edit, Calendar, Star, TrendingUp,
@@ -1011,4 +1011,14 @@ const ParentChildrenPage = () => {
     )
 }
 
-export default ParentChildrenPage
+export default function ParentChildrenPageWithSuspense() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        }>
+            <ParentChildrenPage />
+        </Suspense>
+    )
+}
