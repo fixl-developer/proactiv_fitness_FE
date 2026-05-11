@@ -13,8 +13,9 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { validateRequired, validateTextArea, validateEmail, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateTextArea, validateEmail, validateSubject, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function PartnerCommunicationPage() {
     const router = useRouter()
@@ -33,6 +34,10 @@ export default function PartnerCommunicationPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [sendingMessage, setSendingMessage] = useState(false)
     const [composeErrors, setComposeErrors] = useState<Record<string, string>>({})
+    const [showFilters, setShowFilters] = useState(false)
+    const [filterPriority, setFilterPriority] = useState('ALL')
+    const [filterType, setFilterType] = useState('ALL')
+    const [filterStatus, setFilterStatus] = useState('ALL')
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -55,8 +60,37 @@ export default function PartnerCommunicationPage() {
                 PartnerPortalService.getPartnerNotifications(partnerId).catch(() => ({ notifications: [], total: 0 }))
             ])
 
-            const fetchedMessages = (messagesRes as any)?.data?.messages || (messagesRes as any)?.messages || []
-            setMessages(fetchedMessages)
+            const rawMessages = (messagesRes as any)?.data?.messages || (messagesRes as any)?.messages || []
+            // Normalize backend message shape into the UI shape this page expects
+            const normalized = rawMessages.map((m: any) => ({
+                id: m.id || m._id,
+                type: m.type || m.fromType?.toUpperCase() || 'SUPPORT',
+                subject: m.subject || '',
+                from: m.from || m.fromEmail || 'Support Team',
+                fromEmail: m.fromEmail || m.from || '',
+                timestamp: m.createdAt ? new Date(m.createdAt).toLocaleString() : (m.timestamp || ''),
+                status: m.isRead ? 'READ' : 'UNREAD',
+                priority: m.priority || 'MEDIUM',
+                preview: (m.body || m.preview || '').substring(0, 80) + ((m.body || '').length > 80 ? '...' : ''),
+                starred: m.starred || false,
+                messages: [
+                    {
+                        id: `${m.id || m._id}-msg-0`,
+                        sender: m.from || 'Support',
+                        content: m.body || m.preview || '',
+                        timestamp: m.createdAt ? new Date(m.createdAt).toLocaleString() : '',
+                        isOwn: false,
+                    },
+                    ...((m.replies || []).map((r: any, idx: number) => ({
+                        id: r.id || `${m.id || m._id}-rpl-${idx}`,
+                        sender: r.sender,
+                        content: r.message || r.content,
+                        timestamp: r.createdAt ? new Date(r.createdAt).toLocaleString() : '',
+                        isOwn: r.sender === 'Partner Admin' || r.sender === 'You',
+                    }))),
+                ],
+            }))
+            setMessages(normalized)
 
             const fetchedNotifications = (notificationsRes as any)?.notifications || []
             setNotifications(fetchedNotifications)
@@ -146,7 +180,7 @@ export default function PartnerCommunicationPage() {
 
     const handleComposeMessage = async () => {
         const newErrors: Record<string, string> = {}
-        const subErr = validateRequired(composeSubject, 'Subject')
+        const subErr = validateSubject(composeSubject, 'Subject')
         if (subErr) newErrors.composeSubject = subErr
         const bodyErr = validateTextArea(composeBody, 'Message', 1, 5000)
         if (bodyErr) newErrors.composeBody = bodyErr
@@ -155,47 +189,55 @@ export default function PartnerCommunicationPage() {
             if (recErr) newErrors.composeRecipient = recErr
         }
         setComposeErrors(newErrors)
-        if (Object.keys(newErrors).length > 0) return
+        if (Object.keys(newErrors).length > 0) {
+            toast.error('Please fix the highlighted errors before sending.')
+            return
+        }
 
         setSendingMessage(true)
         try {
             const partnerId = user?.id || 'partner-1'
-            await apiClient.post(`/partner/${partnerId}/messages`, {
-                subject: composeSubject,
-                recipient: composeRecipient,
-                content: composeBody,
-                type: 'SUPPORT'
-            }).catch(() => null)
-
-            // Add to local state
-            const newMessage = {
-                id: `msg-${Date.now()}`,
-                type: 'SUPPORT',
+            const response: any = await apiClient.post(`/partner/${partnerId}/messages`, {
                 subject: composeSubject,
                 from: composeRecipient || 'Support Team',
-                fromEmail: composeRecipient,
-                timestamp: new Date().toLocaleString(),
-                status: 'READ',
+                fromType: 'partner',
+                body: composeBody,
                 priority: 'MEDIUM',
-                preview: composeBody.substring(0, 80) + '...',
+            })
+
+            const saved = response?.data || {}
+            const newMessage = {
+                id: saved.id || `msg-${Date.now()}`,
+                type: 'SUPPORT',
+                subject: saved.subject || composeSubject,
+                from: saved.from || composeRecipient || 'Support Team',
+                fromEmail: composeRecipient,
+                timestamp: saved.createdAt ? new Date(saved.createdAt).toLocaleString() : new Date().toLocaleString(),
+                status: 'READ',
+                priority: saved.priority || 'MEDIUM',
+                preview: composeBody.substring(0, 80) + (composeBody.length > 80 ? '...' : ''),
+                starred: false,
                 messages: [
                     {
                         id: `m-${Date.now()}`,
                         sender: 'You',
                         content: composeBody,
                         timestamp: new Date().toLocaleString(),
-                        isOwn: true
-                    }
-                ]
+                        isOwn: true,
+                    },
+                ],
             }
             setMessages(prev => [newMessage, ...prev])
             setComposeOpen(false)
             setComposeSubject('')
             setComposeRecipient('')
             setComposeBody('')
+            setComposeErrors({})
             setSelectedConversation(newMessage.id)
-        } catch (err) {
+            toast.success('Message sent successfully!')
+        } catch (err: any) {
             console.error('Error composing message:', err)
+            toast.error(err?.response?.data?.error || 'Failed to send message. Please try again.')
         } finally {
             setSendingMessage(false)
         }
@@ -247,11 +289,21 @@ export default function PartnerCommunicationPage() {
         ))
     }
 
-    const filteredMessages = messages.filter(msg =>
-        msg.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        msg.from?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        msg.preview?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredMessages = messages.filter(msg => {
+        // Search filter
+        const q = searchQuery.toLowerCase()
+        const matchesSearch = !q || msg.subject?.toLowerCase().includes(q) ||
+            msg.from?.toLowerCase().includes(q) ||
+            msg.preview?.toLowerCase().includes(q)
+        if (!matchesSearch) return false
+        // Priority filter
+        if (filterPriority !== 'ALL' && (msg.priority || '').toUpperCase() !== filterPriority) return false
+        // Type filter
+        if (filterType !== 'ALL' && (msg.type || '').toUpperCase() !== filterType) return false
+        // Status filter
+        if (filterStatus !== 'ALL' && (msg.status || '').toUpperCase() !== filterStatus) return false
+        return true
+    })
 
     if (isLoading) {
         return (
@@ -443,10 +495,67 @@ export default function PartnerCommunicationPage() {
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                             </div>
-                            <button id="partner-communication-filter-btn" className="p-2 hover:bg-gray-100 rounded-lg">
-                                <Filter className="w-4 h-4 text-gray-600" />
+                            <button
+                                id="partner-communication-filter-btn"
+                                onClick={() => setShowFilters(prev => !prev)}
+                                className={`p-2 rounded-lg ${showFilters ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-600'}`}
+                                title="Toggle filters"
+                            >
+                                <Filter className="w-4 h-4" />
                             </button>
                         </div>
+
+                        {showFilters && (
+                            <div className="mb-4 p-3 bg-gray-50 rounded-lg space-y-2 border border-gray-200">
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Priority</label>
+                                    <select
+                                        value={filterPriority}
+                                        onChange={e => setFilterPriority(e.target.value)}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="LOW">Low</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                                    <select
+                                        value={filterType}
+                                        onChange={e => setFilterType(e.target.value)}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="SUPPORT">Support</option>
+                                        <option value="BILLING">Billing</option>
+                                        <option value="MARKETING">Marketing</option>
+                                        <option value="SYSTEM">System</option>
+                                        <option value="COMMISSION">Commission</option>
+                                        <option value="ENROLLMENT">Enrollment</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        value={filterStatus}
+                                        onChange={e => setFilterStatus(e.target.value)}
+                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded"
+                                    >
+                                        <option value="ALL">All</option>
+                                        <option value="UNREAD">Unread</option>
+                                        <option value="READ">Read</option>
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={() => { setFilterPriority('ALL'); setFilterType('ALL'); setFilterStatus('ALL') }}
+                                    className="text-xs text-blue-600 hover:underline"
+                                >
+                                    Clear filters
+                                </button>
+                            </div>
+                        )}
 
                         {filteredMessages.map((message, idx) => {
                             const TypeIcon = getTypeIcon(message.type)

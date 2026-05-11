@@ -177,7 +177,7 @@ const HolidayCampsPage = () => {
                                     </div>
 
                                     <Link id="holiday-camps-nav-book-this-camp"
-                                        href={`/book-camp?type=${camp.id}`}
+                                        href={camp.id === 'multi-activity' ? '/camps/multi-activity' : camp.id === 'elite' ? '/camps/shenzhen-competitive' : '/camps/gymnastics#upcoming-camps'}
                                         className="w-full btn-primary text-center block"
                                     >
                                         Book This Camp
@@ -280,7 +280,7 @@ const HolidayCampsPage = () => {
                         Spaces fill up quickly! Secure your child's spot today.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Link id="book-camp" href="/book-camp" className="btn-secondary">
+                        <Link id="book-camp" href="/camps/gymnastics#upcoming-camps" className="btn-secondary">
                             Book Camp Now
                         </Link>
                         <Link id="contact" href="/contact" className="btn-outline border-white text-white hover:bg-white hover:text-blue-600">

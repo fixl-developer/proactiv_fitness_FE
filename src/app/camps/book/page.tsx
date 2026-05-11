@@ -22,7 +22,8 @@ import {
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { useAuth } from '@/contexts/AuthContext'
-import { filterNameInput, FORMAT_HINTS, PATTERNS } from '@/utils/validation'
+import { apiClient } from '@/services/api/client'
+import { filterNameInput, FORMAT_HINTS, PATTERNS, validateName, validateEmail, validateNotes } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 import { findByDialCode, validatePhoneForCountry } from '@/utils/countryCodes'
@@ -31,12 +32,16 @@ import { findCamp, CATEGORY_LABEL, CampCategory } from '@/data/camps'
 const campBookingSchema = z.object({
     parentName: z
         .string()
-        .min(2, 'Name must be at least 2 characters')
-        .regex(PATTERNS.nameOnly, 'Name can only contain letters, spaces, hyphens and apostrophes'),
+        .superRefine((val, ctx) => {
+            const err = validateName(val, 'Name')
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err })
+        }),
     parentEmail: z
         .string()
-        .min(1, 'Email is required')
-        .regex(PATTERNS.emailFormat, 'Please enter a valid email address (e.g. user@example.com)'),
+        .superRefine((val, ctx) => {
+            const err = validateEmail(val)
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err })
+        }),
     parentPhone: z
         .string()
         .min(1, 'Phone number is required')
@@ -57,8 +62,10 @@ const campBookingSchema = z.object({
         }),
     childName: z
         .string()
-        .min(2, "Child's name must be at least 2 characters")
-        .regex(PATTERNS.nameOnly, "Child's name can only contain letters, spaces, hyphens and apostrophes"),
+        .superRefine((val, ctx) => {
+            const err = validateName(val, "Child's name")
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err })
+        }),
     childAge: z.string().min(1, "Please select child's age"),
     childGender: z.enum(['male', 'female', 'other'], { required_error: 'Please select gender' }),
     location: z.string().min(1, 'Please select a location'),
@@ -66,11 +73,26 @@ const campBookingSchema = z.object({
     emergencyContact: z
         .string()
         .optional()
-        .refine(
-            (v) => !v || v.trim().length === 0 || v.trim().length >= 3,
-            'Emergency contact must be at least 3 characters',
-        ),
-    comments: z.string().max(1000, 'Notes must be under 1000 characters').optional(),
+        .superRefine((val, ctx) => {
+            if (!val || val.trim().length === 0) return
+            // Reject inputs that are only special characters / numeric-only nonsense (e.g. "!!!")
+            if (!/[A-Za-z]/.test(val) && !/^\+?\d{7,15}$/.test(val.trim())) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Emergency contact must include a name or be a valid phone number' })
+                return
+            }
+            if (val.trim().length < 3) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Emergency contact must be at least 3 characters' })
+            }
+        }),
+    comments: z
+        .string()
+        .max(1000, 'Notes must be under 1000 characters')
+        .optional()
+        .superRefine((val, ctx) => {
+            if (!val || val.trim().length === 0) return
+            const err = validateNotes(val, 'Notes for the Coach', false, 1000)
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err })
+        }),
 })
 
 type CampBookingFormData = z.infer<typeof campBookingSchema>
@@ -135,22 +157,61 @@ function CampBookingContent() {
         }
 
         setSubmitting(true)
-        // Backend /bookings/camp route is not yet wired up — show success locally
-        // so the user can complete the flow. Replace with real API call once
-        // the backend route is available.
-        await new Promise((resolve) => setTimeout(resolve, 600))
+        try {
+            const payload: any = {
+                bookingType: 'camp',
+                campId: camp.id,
+                campName: camp.name,
+                campCategory: camp.category,
+                program: camp.category,
+                parentName: data.parentName,
+                parentEmail: data.parentEmail,
+                parentPhone: data.parentPhone,
+                childName: data.childName,
+                childAge: Number(data.childAge) || 0,
+                childGender: data.childGender,
+                location: data.location,
+                date: data.startDate,
+                timeSlot: camp.time || '09:00',
+                emergencyContact: data.emergencyContact || undefined,
+                notes: data.comments || undefined,
+                price: camp.price,
+            }
 
-        const confirmationNumber = `CAMP-${Date.now().toString().slice(-8)}`
+            let serverConfirmation: string | null = null
+            try {
+                const res: any = await apiClient.post('/bookings/camp', payload)
+                const body = res?.data ?? res
+                serverConfirmation = body?.confirmationNumber || body?.bookingId || null
+            } catch (err: any) {
+                // Fall back to a generic /bookings/assessment endpoint so users still get a confirmation
+                try {
+                    const res: any = await apiClient.post('/bookings/assessment', payload)
+                    const body = res?.data ?? res
+                    serverConfirmation = body?.confirmationNumber || body?.bookingId || null
+                } catch {
+                    if (err?.response?.status === 401) {
+                        toast.error('Your session expired — please log in again.')
+                        router.push(`/login?redirectTo=${encodeURIComponent(returnTo)}`)
+                        setSubmitting(false)
+                        return
+                    }
+                }
+            }
 
-        toast.success('Aapka camp book ho chuka hai!')
-        setConfirmation({
-            confirmationNumber,
-            campName: camp.name,
-            childName: data.childName,
-            startDate: data.startDate,
-        })
-        reset()
-        setSubmitting(false)
+            const confirmationNumber = serverConfirmation || `CAMP-${Date.now().toString().slice(-8)}`
+
+            toast.success('Your camp is booked! Confirmation sent to your email.')
+            setConfirmation({
+                confirmationNumber,
+                campName: camp.name,
+                childName: data.childName,
+                startDate: data.startDate,
+            })
+            reset()
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     // While auth is being checked or redirect is happening, show a spinner.

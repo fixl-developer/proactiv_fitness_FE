@@ -13,6 +13,9 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { validateSubject, validateTextArea } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function PartnerSupportPage() {
     const router = useRouter()
@@ -36,6 +39,9 @@ export default function PartnerSupportPage() {
         preferredDate: '',
         additionalNotes: ''
     })
+    const [ticketErrors, setTicketErrors] = useState<Record<string, string>>({})
+
+    const todayISO = new Date().toISOString().split('T')[0]
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -115,8 +121,31 @@ export default function PartnerSupportPage() {
         setShowCreateTicketModal(true)
     }
 
+    const validateTicketForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        if (!ticketForm.resourceType) errs.resourceType = 'Please select a resource type'
+        const subErr = validateSubject(ticketForm.subject, 'Subject')
+        if (subErr) errs.subject = subErr
+        const descErr = validateTextArea(ticketForm.description, 'Description', 5, 5000)
+        if (descErr) errs.description = descErr
+        if (ticketForm.preferredDate) {
+            const today = new Date(); today.setHours(0, 0, 0, 0)
+            const picked = new Date(ticketForm.preferredDate)
+            if (picked < today) errs.preferredDate = 'Preferred Date cannot be in the past'
+        }
+        if (ticketForm.quantity) {
+            const qty = Number(ticketForm.quantity)
+            if (isNaN(qty) || qty < 1) errs.quantity = 'Quantity must be at least 1'
+        }
+        setTicketErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
     const handleSubmitTicket = async () => {
-        if (!ticketForm.subject.trim() || !ticketForm.description.trim() || !ticketForm.resourceType) return
+        if (!validateTicketForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
         try {
             setCreatingTicket(true)
             const partnerId = user?.id || 'partner-1'
@@ -128,9 +157,12 @@ export default function PartnerSupportPage() {
             })
             setShowCreateTicketModal(false)
             setTicketForm({ resourceType: '', subject: '', description: '', priority: 'MEDIUM', quantity: '1', preferredDate: '', additionalNotes: '' })
-            fetchSupportData()
-        } catch (err) {
+            setTicketErrors({})
+            await fetchSupportData()
+            toast.success('Support ticket submitted successfully!')
+        } catch (err: any) {
             console.error('Error creating ticket:', err)
+            toast.error(err?.response?.data?.error || 'Failed to submit ticket. Please try again.')
         } finally {
             setCreatingTicket(false)
         }
@@ -605,11 +637,16 @@ export default function PartnerSupportPage() {
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">Subject *</label>
                                 <input
                                     type="text"
-                                    placeholder="Brief title for your resource request"
+                                    placeholder="Brief title for your resource request (min 5 chars, must contain letters)"
                                     value={ticketForm.subject}
-                                    onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    onChange={(e) => {
+                                        setTicketForm(prev => ({ ...prev, subject: e.target.value }))
+                                        const err = validateSubject(e.target.value, 'Subject')
+                                        setTicketErrors(prev => { const n = { ...prev }; if (err) n.subject = err; else delete n.subject; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${ticketErrors.subject ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint="5-200 characters, must contain letters (no symbols-only)" error={ticketErrors.subject} />
                             </div>
 
                             {/* Description */}
@@ -619,9 +656,14 @@ export default function PartnerSupportPage() {
                                     placeholder="Describe what resources you need and why..."
                                     rows={4}
                                     value={ticketForm.description}
-                                    onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                    onChange={(e) => {
+                                        setTicketForm(prev => ({ ...prev, description: e.target.value }))
+                                        const err = validateTextArea(e.target.value, 'Description', 5, 5000)
+                                        setTicketErrors(prev => { const n = { ...prev }; if (err) n.description = err; else delete n.description; return n })
+                                    }}
+                                    className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${ticketErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint="Minimum 5 characters" error={ticketErrors.description} />
                             </div>
 
                             {/* Priority & Quantity Row */}
@@ -645,18 +687,41 @@ export default function PartnerSupportPage() {
                                         type="number"
                                         min="1"
                                         value={ticketForm.quantity}
-                                        onChange={(e) => setTicketForm(prev => ({ ...prev, quantity: e.target.value }))}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        onChange={(e) => {
+                                            setTicketForm(prev => ({ ...prev, quantity: e.target.value }))
+                                            const qty = Number(e.target.value)
+                                            if (e.target.value !== '' && (isNaN(qty) || qty < 1)) {
+                                                setTicketErrors(prev => ({ ...prev, quantity: 'Quantity must be at least 1' }))
+                                            } else {
+                                                setTicketErrors(prev => { const n = { ...prev }; delete n.quantity; return n })
+                                            }
+                                        }}
+                                        className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${ticketErrors.quantity ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint="Minimum 1" error={ticketErrors.quantity} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Date</label>
                                     <input
                                         type="date"
+                                        min={todayISO}
                                         value={ticketForm.preferredDate}
-                                        onChange={(e) => setTicketForm(prev => ({ ...prev, preferredDate: e.target.value }))}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        onChange={(e) => {
+                                            setTicketForm(prev => ({ ...prev, preferredDate: e.target.value }))
+                                            if (e.target.value) {
+                                                const today = new Date(); today.setHours(0, 0, 0, 0)
+                                                if (new Date(e.target.value) < today) {
+                                                    setTicketErrors(prev => ({ ...prev, preferredDate: 'Preferred Date cannot be in the past' }))
+                                                } else {
+                                                    setTicketErrors(prev => { const n = { ...prev }; delete n.preferredDate; return n })
+                                                }
+                                            } else {
+                                                setTicketErrors(prev => { const n = { ...prev }; delete n.preferredDate; return n })
+                                            }
+                                        }}
+                                        className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${ticketErrors.preferredDate ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint="Cannot be in the past" error={ticketErrors.preferredDate} />
                                 </div>
                             </div>
 

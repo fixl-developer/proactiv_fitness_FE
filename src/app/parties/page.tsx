@@ -323,12 +323,12 @@ const PartiesPage = () => {
                                     ))}
                                 </div>
 
-                                <Link id="parties-nav-contact"
-                                    href="/contact"
+                                <Link id="parties-nav-book-package"
+                                    href={`/book-party?package=${encodeURIComponent(pkg.name)}`}
                                     className={`w-full text-center block ${pkg.popular ? 'btn-primary' : 'btn-outline'
                                         }`}
                                 >
-                                    Book This Package
+                                    Select Package
                                 </Link>
                             </motion.div>
                         ))}

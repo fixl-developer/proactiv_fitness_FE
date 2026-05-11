@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalLocation, PaginatedResponse } from '@/services/regionalAdminService'
-import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateName, validateEmail, validatePhone, validateAddress, validateZipCode, validateNumber, validateLocationCode, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
@@ -66,6 +66,7 @@ function LocationFormDrawer({
         setForm(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
         if (field === 'name') error = validateName(value, 'Name')
+        else if (field === 'code') error = validateLocationCode(value, 'Code')
         else if (field === 'address') error = validateAddress(value, 'Address')
         else if (field === 'city') error = validateName(value, 'City')
         else if (field === 'state') error = validateName(value, 'State')
@@ -87,7 +88,7 @@ function LocationFormDrawer({
         const phoneErr = validatePhone(form.phone); if (phoneErr) newErrors.phone = phoneErr
         const emailErr = validateEmail(form.email); if (emailErr) newErrors.email = emailErr
         if (form.capacity) { const ce = validateNumber(form.capacity, 'Capacity', 1, 10000); if (ce) newErrors.capacity = ce }
-        if (!form.code || !form.code.trim()) newErrors.code = 'Code is required (e.g. LOC-001)'
+        const codeErr = validateLocationCode(form.code, 'Code'); if (codeErr) newErrors.code = codeErr
         setErrors(newErrors)
         if (Object.keys(newErrors).length > 0) return
         onSubmit(form)
@@ -104,8 +105,8 @@ function LocationFormDrawer({
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
-                        <Input value={form.code} onChange={e => handleChange('code', e.target.value.toUpperCase())} placeholder="LOC-001" className={errors.code ? 'border-red-500' : ''} />
-                        <FormFieldHint hint="Unique code (letters/numbers/hyphen)" error={errors.code} />
+                        <Input value={form.code} onChange={e => handleChange('code', e.target.value.toUpperCase())} placeholder="LOC-001" maxLength={20} className={errors.code ? 'border-red-500' : ''} />
+                        <FormFieldHint hint="Uppercase letters, digits, and hyphens only (e.g. LOC-001)" error={errors.code} />
                     </div>
                 </div>
                 <div>

@@ -14,7 +14,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { RegionalAdminService } from '@/services/regionalAdminService'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
-import { validateRequired, validateNumber, filterNumberInput } from '@/utils/validation'
+import { validateRequired, validateNumber, validateTitle, filterNumberInput } from '@/utils/validation'
 
 interface BenchmarkMetric {
     id: string
@@ -106,8 +106,8 @@ export default function RegionalBenchmarksPage() {
 
     const validateForm = (): boolean => {
         const errs: Record<string, string> = {}
-        const metricErr = validateRequired(form.metric, 'Metric name'); if (metricErr) errs.metric = metricErr
-        else if (form.metric.trim().length < 3) errs.metric = 'Metric name must be at least 3 characters'
+        // Metric name — reject "@@@###"-style input (must start with a letter).
+        const metricErr = validateTitle(form.metric, 'Metric name', 120); if (metricErr) errs.metric = metricErr
         const targetErr = validateNumber(form.target, 'Target value', 0, 100000000); if (targetErr) errs.target = targetErr
         if (form.unit && form.unit.length > 20) errs.unit = 'Unit must be less than 20 characters'
         if (form.notes && form.notes.length > 500) errs.notes = 'Notes must be less than 500 characters'
@@ -393,11 +393,15 @@ export default function RegionalBenchmarksPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Metric Name *</label>
                         <Input
                             value={form.metric}
-                            onChange={(e) => setForm(prev => ({ ...prev, metric: e.target.value }))}
+                            onChange={(e) => {
+                                setForm(prev => ({ ...prev, metric: e.target.value }))
+                                if (formErrors.metric) setFormErrors(prev => { const n = { ...prev }; delete n.metric; return n })
+                            }}
                             placeholder="e.g. Revenue/Location"
+                            maxLength={120}
                             className={formErrors.metric ? 'border-red-500' : ''}
                         />
-                        <FormFieldHint hint="Min 3 characters" error={formErrors.metric} />
+                        <FormFieldHint hint="Must start with a letter — no symbol-only input" error={formErrors.metric} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Target Value *</label>

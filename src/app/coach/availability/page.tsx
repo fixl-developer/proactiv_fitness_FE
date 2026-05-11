@@ -100,10 +100,27 @@ const CoachAvailabilityPage = () => {
         }
     }
 
-    const handleResetToDefaults = () => {
-        setAvailability({ ...DEFAULT_AVAILABILITY })
+    const handleResetToDefaults = async () => {
+        // Deep-clone defaults so day objects aren't shared with the constant.
+        const fresh: CoachAvailability = JSON.parse(JSON.stringify(DEFAULT_AVAILABILITY))
+        setAvailability(fresh)
         setSaveSuccess(false)
         setSaveError(null)
+        // Persist immediately — pre-fix the button only mutated local state
+        // and the change vanished on navigation. Now Reset = Reset + Save.
+        if (!coachId) return
+        try {
+            setIsSaving(true)
+            await coachService.saveAvailability(coachId, fresh)
+            originalAvailabilityRef.current = JSON.stringify(fresh)
+            setSaveSuccess(true)
+            setTimeout(() => setSaveSuccess(false), 5000)
+        } catch (error) {
+            console.error('Error resetting availability:', error)
+            setSaveError('Reset applied locally but saving to server failed. Click Save to retry.')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']

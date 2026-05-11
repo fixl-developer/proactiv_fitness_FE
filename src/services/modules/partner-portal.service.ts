@@ -327,6 +327,32 @@ export class PartnerPortalService {
     }
 
     /**
+     * Download a partner document by id. Returns the metadata { url, name, ... }.
+     */
+    static async downloadPartnerDocument(partnerId: string, documentId: string): Promise<any> {
+        try {
+            const response = await apiClient.get(`/partner/${partnerId}/documents/${documentId}/download`)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error downloading document:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Submit a resource request (becomes a support ticket, category 'Resource Request')
+     */
+    static async requestResource(partnerId: string, payload: any): Promise<any> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/resources/request`, payload)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error submitting resource request:', error)
+            throw error
+        }
+    }
+
+    /**
      * Get partner contacts
      */
     static async getPartnerContacts(partnerId: string): Promise<PartnerContact[]> {
@@ -373,6 +399,19 @@ export class PartnerPortalService {
             return (response as any)?.data || { campaigns: [], total: 0 }
         } catch (error) {
             console.error('Error fetching marketing campaigns:', error)
+            throw error
+        }
+    }
+
+    /**
+     * Create marketing campaign
+     */
+    static async createMarketingCampaign(partnerId: string, data: any): Promise<any> {
+        try {
+            const response = await apiClient.post(`/partner/${partnerId}/marketing/campaigns`, data)
+            return (response as any)?.data
+        } catch (error) {
+            console.error('Error creating marketing campaign:', error)
             throw error
         }
     }

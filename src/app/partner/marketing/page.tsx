@@ -18,8 +18,9 @@ import { Progress } from '@/components/ui/progress'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { contentEngineService } from '@/services/advancedAIServices'
 import { apiClient } from '@/services/api/client'
-import { validateRequired, validateTextArea, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateTextArea, validateNumber, validatePlainText, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function PartnerMarketingPage() {
     const router = useRouter()
@@ -150,43 +151,66 @@ export default function PartnerMarketingPage() {
     const handleCreateCampaign = async (e: React.FormEvent) => {
         e.preventDefault()
         const newErrors: Record<string, string> = {}
-        const nameErr = validateRequired(createForm.name, 'Campaign Name')
+        const nameErr = validatePlainText(createForm.name, 'Campaign Name', 2, 150)
         if (nameErr) newErrors.name = nameErr
-        if (createForm.budget && validateNumber(createForm.budget, 'Budget', 0)) {
+        if (createForm.description) {
+            const descErr = validateTextArea(createForm.description, 'Description', 0, 2000)
+            if (descErr) newErrors.description = descErr
+        }
+        if (createForm.budget) {
             const budgetErr = validateNumber(createForm.budget, 'Budget', 0)
             if (budgetErr) newErrors.budget = budgetErr
         }
+        if (createForm.targetAudience) {
+            const taErr = validatePlainText(createForm.targetAudience, 'Target Audience', 2, 200)
+            if (taErr) newErrors.targetAudience = taErr
+        }
+        if (createForm.startDate && createForm.endDate) {
+            if (new Date(createForm.endDate) < new Date(createForm.startDate)) {
+                newErrors.endDate = 'End Date must be on or after Start Date'
+            }
+        }
         setFormErrors(newErrors)
-        if (Object.keys(newErrors).length > 0) return
+        if (Object.keys(newErrors).length > 0) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
 
         setCreateSubmitting(true)
+        let saved: any = null
         try {
             const partnerId = user?.id || 'partner-1'
-            await (PartnerPortalService as any).createMarketingCampaign?.(partnerId, createForm)
-        } catch {
-            // API may not exist yet, continue with local add
+            saved = await PartnerPortalService.createMarketingCampaign(partnerId, createForm)
+        } catch (err) {
+            // If backend save fails we still surface error and abort to avoid silent UI-only state
+            console.error('Error creating campaign:', err)
+            toast.error('Failed to create campaign. Please try again.')
+            setCreateSubmitting(false)
+            return
         }
 
         const newCampaign = {
-            id: `camp-${Date.now()}`,
-            name: createForm.name,
-            type: createForm.type,
-            status: createForm.status,
-            startDate: createForm.startDate,
-            endDate: createForm.endDate,
-            budget: Number(createForm.budget) || 0,
-            spent: 0,
-            impressions: 0,
-            clicks: 0,
-            conversions: 0,
+            id: saved?.id || `camp-${Date.now()}`,
+            name: saved?.name || createForm.name,
+            type: saved?.type || createForm.type,
+            status: saved?.status || createForm.status,
+            startDate: saved?.startDate || createForm.startDate,
+            endDate: saved?.endDate || createForm.endDate,
+            budget: saved?.budget ?? (Number(createForm.budget) || 0),
+            spent: saved?.spent || 0,
+            impressions: saved?.impressions || 0,
+            clicks: saved?.clicks || 0,
+            conversions: saved?.conversions || 0,
             ctr: 0,
             conversionRate: 0,
-            roi: 0,
+            roi: saved?.roi || 0,
         }
         setCampaigns(prev => [...prev, newCampaign])
         setShowCreateModal(false)
         setCreateForm({ name: '', type: 'Email', status: 'ACTIVE', startDate: '', endDate: '', budget: '', targetAudience: '', description: '' })
+        setFormErrors({})
         setCreateSubmitting(false)
+        toast.success('Campaign created successfully!')
     }
 
     if (isLoading) {
@@ -584,13 +608,13 @@ export default function PartnerMarketingPage() {
                                     value={createForm.name}
                                     onChange={e => {
                                         setCreateForm(prev => ({ ...prev, name: e.target.value }))
-                                        const err = validateRequired(e.target.value, 'Campaign Name')
+                                        const err = validatePlainText(e.target.value, 'Campaign Name', 2, 150)
                                         setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
                                     }}
                                     placeholder="e.g., Summer Fitness Promo"
                                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                                 />
-                                <FormFieldHint hint="Enter campaign name" error={formErrors.name} />
+                                <FormFieldHint hint="2-150 characters, letters/numbers/basic punctuation only" error={formErrors.name} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -647,9 +671,18 @@ export default function PartnerMarketingPage() {
                                     <input
                                         type="date"
                                         value={createForm.endDate}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, endDate: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        min={createForm.startDate || undefined}
+                                        onChange={e => {
+                                            setCreateForm(prev => ({ ...prev, endDate: e.target.value }))
+                                            if (createForm.startDate && e.target.value && new Date(e.target.value) < new Date(createForm.startDate)) {
+                                                setFormErrors(prev => ({ ...prev, endDate: 'End Date must be on or after Start Date' }))
+                                            } else {
+                                                setFormErrors(prev => { const n = { ...prev }; delete n.endDate; return n })
+                                            }
+                                        }}
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.endDate ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint="Must be on or after Start Date" error={formErrors.endDate} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -677,10 +710,19 @@ export default function PartnerMarketingPage() {
                                     <input
                                         type="text"
                                         value={createForm.targetAudience}
-                                        onChange={e => setCreateForm(prev => ({ ...prev, targetAudience: e.target.value }))}
+                                        onChange={e => {
+                                            setCreateForm(prev => ({ ...prev, targetAudience: e.target.value }))
+                                            if (e.target.value) {
+                                                const err = validatePlainText(e.target.value, 'Target Audience', 2, 200)
+                                                setFormErrors(prev => { const n = { ...prev }; if (err) n.targetAudience = err; else delete n.targetAudience; return n })
+                                            } else {
+                                                setFormErrors(prev => { const n = { ...prev }; delete n.targetAudience; return n })
+                                            }
+                                        }}
                                         placeholder="e.g., Parents, Athletes"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.targetAudience ? 'border-red-500' : 'border-gray-300'}`}
                                     />
+                                    <FormFieldHint hint="2-200 characters, letters/numbers/basic punctuation only" error={formErrors.targetAudience} />
                                 </div>
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t">

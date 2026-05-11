@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { RegionalAdminService, RegionalSettings } from '@/services/regionalAdminService'
+import { apiClient } from '@/services/api/client'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateUrl, validateNumber, filterNameInput, filterPhoneInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
@@ -25,17 +26,22 @@ export default function RegionalSettingsPage() {
     const [webhookResult, setWebhookResult] = useState<string | null>(null)
     const [passwordData, setPasswordData] = useState({ current: '', newPass: '', confirm: '' })
     const [passwordSuccess, setPasswordSuccess] = useState(false)
+    const [passwordError, setPasswordError] = useState<string | null>(null)
+    const [savingPassword, setSavingPassword] = useState(false)
     const [settingsErrors, setSettingsErrors] = useState<Record<string, string>>({})
     const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
 
     const originalSettingsRef = useRef<string>('')
 
+    // Empty starting shape — real values come from GET /settings. Pre-fix this
+    // was hardcoded "Northeast Region / John Smith / john.smith@proactiv.com",
+    // which leaked into the UI before the fetch completed.
     const [settings, setSettings] = useState<RegionalSettings>({
-        regionName: 'Northeast Region',
-        regionCode: 'NE-001',
-        regionManager: 'John Smith',
-        managerEmail: 'john.smith@proactiv.com',
-        managerPhone: '+1 (617) 555-0100',
+        regionName: '',
+        regionCode: '',
+        regionManager: '',
+        managerEmail: '',
+        managerPhone: '',
         timezone: 'America/New_York',
         currency: 'USD',
         language: 'English',
@@ -43,11 +49,11 @@ export default function RegionalSettingsPage() {
         notificationsSMS: true,
         notificationsPush: true,
         maintenanceMode: false,
-        apiKey: process.env.NEXT_PUBLIC_STRIPE_LIVE_KEY || '••••••••••••••••••••••••••••••••',
-        webhookUrl: 'https://api.proactiv.com/webhooks/regional',
-        maxLocations: 10,
-        maxStaff: 100,
-        maxStudents: 5000,
+        apiKey: '',
+        webhookUrl: '',
+        maxLocations: 0,
+        maxStaff: 0,
+        maxStudents: 0,
     })
 
     useEffect(() => {
@@ -472,21 +478,44 @@ export default function RegionalSettingsPage() {
                                 <FormFieldHint hint={FORMAT_HINTS.confirmPassword} error={passwordErrors.confirm} />
                             </div>
 
-                            <button id="admin-regional-settings-btn-3" onClick={() => {
-                                const errs: Record<string, string> = {}
-                                if (!passwordData.current) errs.current = 'Current password is required'
-                                const npErr = validatePassword(passwordData.newPass); if (npErr) errs.newPass = npErr
-                                const cpErr = validateConfirmPassword(passwordData.newPass, passwordData.confirm); if (cpErr) errs.confirm = cpErr
-                                setPasswordErrors(errs)
-                                if (Object.keys(errs).length > 0) return
-                                setPasswordSuccess(true)
-                                setPasswordData({ current: '', newPass: '', confirm: '' })
-                                setPasswordErrors({})
-                                setTimeout(() => setPasswordSuccess(false), 3000)
-                            }} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                Update Password
+                            <button
+                                id="admin-regional-settings-btn-3"
+                                disabled={savingPassword}
+                                onClick={async () => {
+                                    const errs: Record<string, string> = {}
+                                    if (!passwordData.current) errs.current = 'Current password is required'
+                                    const npErr = validatePassword(passwordData.newPass); if (npErr) errs.newPass = npErr
+                                    const cpErr = validateConfirmPassword(passwordData.newPass, passwordData.confirm); if (cpErr) errs.confirm = cpErr
+                                    setPasswordErrors(errs)
+                                    if (Object.keys(errs).length > 0) return
+                                    // Persist to backend via shared auth/change-password endpoint
+                                    // (was a non-functional toast pre-fix).
+                                    setSavingPassword(true)
+                                    setPasswordError(null)
+                                    setPasswordSuccess(false)
+                                    try {
+                                        await apiClient.post('/auth/change-password', {
+                                            currentPassword: passwordData.current,
+                                            newPassword: passwordData.newPass,
+                                            confirmPassword: passwordData.confirm,
+                                        })
+                                        setPasswordSuccess(true)
+                                        setPasswordData({ current: '', newPass: '', confirm: '' })
+                                        setPasswordErrors({})
+                                        setTimeout(() => setPasswordSuccess(false), 5000)
+                                    } catch (err: any) {
+                                        const msg = err?.response?.data?.message || err?.message || 'Failed to change password'
+                                        setPasswordError(msg)
+                                    } finally {
+                                        setSavingPassword(false)
+                                    }
+                                }}
+                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                            >
+                                {savingPassword ? 'Updating…' : 'Update Password'}
                             </button>
                             {passwordSuccess && <p className="text-sm text-green-600 mt-2">Password updated successfully!</p>}
+                            {passwordError && <p className="text-sm text-red-600 mt-2">{passwordError}</p>}
                         </CardContent>
                     </Card>
 
@@ -500,10 +529,34 @@ export default function RegionalSettingsPage() {
                                     <p className="font-medium text-gray-900">Enable 2FA</p>
                                     <p className="text-sm text-gray-600">Add an extra layer of security</p>
                                 </div>
-                                <Badge variant="secondary">Not Enabled</Badge>
+                                <Badge variant={(settings as any).twoFactorEnabled ? 'default' : 'secondary'}>
+                                    {(settings as any).twoFactorEnabled ? 'Enabled' : 'Not Enabled'}
+                                </Badge>
                             </div>
-                            <button id="admin-regional-settings-btn-4" onClick={() => alert('2FA setup is coming soon!')} className="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium">
-                                Enable 2FA
+                            <button
+                                id="admin-regional-settings-btn-4"
+                                disabled={isSaving}
+                                onClick={async () => {
+                                    // Toggle 2FA flag via the standard settings PUT so the change
+                                    // persists. Pre-fix this was an alert("coming soon") stub.
+                                    const next = !(settings as any).twoFactorEnabled
+                                    setIsSaving(true)
+                                    setError(null)
+                                    try {
+                                        const updated = await RegionalAdminService.updateSettings({ ...settings, twoFactorEnabled: next } as any)
+                                        setSettings(updated)
+                                        originalSettingsRef.current = JSON.stringify(updated)
+                                        setSaveSuccess(true)
+                                        setTimeout(() => setSaveSuccess(false), 4000)
+                                    } catch (err: any) {
+                                        setError(err?.message || 'Failed to update 2FA preference')
+                                    } finally {
+                                        setIsSaving(false)
+                                    }
+                                }}
+                                className="mt-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-medium disabled:opacity-50"
+                            >
+                                {(settings as any).twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                             </button>
                         </CardContent>
                     </Card>

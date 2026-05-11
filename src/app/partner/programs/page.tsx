@@ -10,8 +10,9 @@ import { AlertCircle, Plus, BookOpen, CheckCircle, Users, DollarSign, Edit, Eye,
 import { usePartnerConfig } from '@/contexts/PartnerContext'
 import { Badge } from '@/components/ui/badge'
 import { revenueIntelligenceService } from '@/services/advancedAIServices'
-import { validateRequired, validateTextArea, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateTextArea, validateNumber, validatePlainText, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 interface ProgramForm {
     name: string
@@ -50,18 +51,17 @@ export default function Programs() {
 
     const validateProgramForm = (): boolean => {
         const newErrors: Record<string, string> = {}
-        const nameErr = validateRequired(editForm.name, 'Program Name')
+        const nameErr = validatePlainText(editForm.name, 'Program Name', 2, 100)
         if (nameErr) newErrors.name = nameErr
-        const descErr = validateTextArea(editForm.description, 'Description', 0, 2000)
+        const catErr = validatePlainText(editForm.category, 'Category', 2, 50)
+        if (catErr) newErrors.category = catErr
+        const descErr = validateTextArea(editForm.description, 'Description', 5, 2000)
         if (descErr) newErrors.description = descErr
-        if (editForm.enrolledStudents) {
-            const studErr = validateNumber(editForm.enrolledStudents, 'Enrolled Students', 0)
-            if (studErr) newErrors.enrolledStudents = studErr
-        }
-        if (editForm.revenue) {
-            const revErr = validateNumber(editForm.revenue, 'Revenue', 0)
-            if (revErr) newErrors.revenue = revErr
-        }
+        if (!editForm.status) newErrors.status = 'Status is required'
+        const studErr = validateNumber(editForm.enrolledStudents || '0', 'Enrolled Students', 0)
+        if (studErr) newErrors.enrolledStudents = studErr
+        const revErr = validateNumber(editForm.revenue || '0', 'Revenue', 0)
+        if (revErr) newErrors.revenue = revErr
         setFormErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -140,7 +140,10 @@ export default function Programs() {
     }
 
     const handleEditSave = async () => {
-        if (!validateProgramForm()) return
+        if (!validateProgramForm()) {
+            toast.error('Please fix the highlighted errors before saving.')
+            return
+        }
         try {
             setSaving(true)
             const updated = await PartnerPortalService.updatePartnerProgram(partnerId, selectedProgram.id, {
@@ -151,16 +154,20 @@ export default function Programs() {
             setPrograms(prev => prev.map(p => p.id === selectedProgram.id ? { ...p, ...updated } : p))
             setShowEditModal(false)
             setSelectedProgram(null)
+            toast.success('Program updated successfully!')
         } catch (err) {
             console.error('Error updating program:', err)
-            alert('Failed to update program. Please try again.')
+            toast.error('Failed to update program. Please try again.')
         } finally {
             setSaving(false)
         }
     }
 
     const handleAddProgram = async () => {
-        if (!validateProgramForm()) return
+        if (!validateProgramForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
         try {
             setSaving(true)
             const newProgram = await PartnerPortalService.createPartnerProgram(partnerId, {
@@ -173,9 +180,11 @@ export default function Programs() {
             }
             setShowAddModal(false)
             setEditForm({ ...emptyForm })
+            setFormErrors({})
+            toast.success('Program created successfully!')
         } catch (err) {
             console.error('Error creating program:', err)
-            alert('Failed to create program. Please try again.')
+            toast.error('Failed to create program. Please try again.')
         } finally {
             setSaving(false)
         }
@@ -194,13 +203,13 @@ export default function Programs() {
         <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
                     <input
                         type="text"
                         value={editForm.name}
                         onChange={e => {
                             setEditForm(prev => ({ ...prev, name: e.target.value }))
-                            const err = validateRequired(e.target.value, 'Program Name')
+                            const err = validatePlainText(e.target.value, 'Program Name', 2, 100)
                             setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
                         }}
                         placeholder="Program name"
@@ -209,27 +218,32 @@ export default function Programs() {
                     <FormFieldHint hint="Enter program name" error={formErrors.name} />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
                     <input
                         type="text"
                         value={editForm.category}
-                        onChange={e => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                        onChange={e => {
+                            setEditForm(prev => ({ ...prev, category: e.target.value }))
+                            const err = validatePlainText(e.target.value, 'Category', 2, 50)
+                            setFormErrors(prev => { const n = { ...prev }; if (err) n.category = err; else delete n.category; return n })
+                        }}
                         placeholder="e.g. Fitness, Yoga, CrossFit"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.category ? 'border-red-500' : 'border-gray-300'}`}
                     />
+                    <FormFieldHint hint="Letters, numbers and basic punctuation only (no @ # $ * etc.)" error={formErrors.category} />
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
                 <textarea
                     value={editForm.description}
                     onChange={e => {
                         setEditForm(prev => ({ ...prev, description: e.target.value }))
-                        const err = validateTextArea(e.target.value, 'Description', 0, 2000)
+                        const err = validateTextArea(e.target.value, 'Description', 5, 2000)
                         setFormErrors(prev => { const n = { ...prev }; if (err) n.description = err; else delete n.description; return n })
                     }}
                     rows={2}
-                    placeholder="Program description"
+                    placeholder="Program description (min 5 characters)"
                     className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                 />
                 <FormFieldHint hint={FORMAT_HINTS.description} error={formErrors.description} />

@@ -45,13 +45,46 @@ export default function EquipmentPage() {
 
     useEffect(() => { load() }, [searchTerm])
 
+    const todayISO = () => {
+        const d = new Date()
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+        return d.toISOString().slice(0, 10)
+    }
+
     const validate = () => {
         const e: Record<string, string> = {}
+        // Name — required, length, must contain letters, no all-symbol input.
         if (!form.name.trim()) e.name = 'Equipment name is required'
+        else if (form.name.trim().length < 2) e.name = 'Name must be at least 2 characters'
         else if (form.name.length > 100) e.name = 'Name must be 100 chars or fewer'
-        if (form.quantity < 0) e.quantity = 'Quantity cannot be negative'
+        else if (!/[A-Za-z]/.test(form.name)) e.name = 'Name must contain letters'
+        else if (!/^[A-Za-z0-9\s.,'&()\-/]+$/.test(form.name.trim())) {
+            e.name = 'Name has invalid characters (letters, digits, spaces, .,&\'()- only)'
+        }
+        // Quantity — must be ≥ 1 (zero is meaningless for inventory).
+        if (form.quantity === undefined || form.quantity === null || isNaN(Number(form.quantity))) {
+            e.quantity = 'Quantity is required'
+        } else if (form.quantity < 1) {
+            e.quantity = 'Quantity must be at least 1'
+        } else if (form.quantity > 10000) {
+            e.quantity = 'Quantity is unrealistically large'
+        }
+        // Status — required (always defaults to "available", but be explicit)
+        if (!form.status) e.status = 'Status is required'
+        // Location — must contain letters when provided
+        if (form.location.trim() && !/[A-Za-z]/.test(form.location)) {
+            e.location = 'Location must contain letters'
+        }
+        // Purchase Date — cannot be in the future.
+        if (form.purchaseDate && form.purchaseDate > todayISO()) {
+            e.purchaseDate = 'Purchase date cannot be in the future'
+        }
+        // Maintenance vs purchase
         if (form.purchaseDate && form.lastMaintenanceDate && form.lastMaintenanceDate < form.purchaseDate) {
             e.lastMaintenanceDate = 'Maintenance date cannot be before purchase date'
+        }
+        if (form.lastMaintenanceDate && form.lastMaintenanceDate > todayISO()) {
+            e.lastMaintenanceDate = 'Maintenance date cannot be in the future'
         }
         setErrors(e)
         return Object.keys(e).length === 0
@@ -238,7 +271,8 @@ export default function EquipmentPage() {
                                 <label className="block text-sm font-medium text-slate-900 mb-1">Quantity <span className="text-red-500">*</span></label>
                                 <input
                                     type="number"
-                                    min={0}
+                                    min={1}
+                                    max={10000}
                                     value={form.quantity}
                                     onChange={e => { setForm({ ...form, quantity: Number(e.target.value) }); if (errors.quantity) setErrors({ ...errors, quantity: '' }) }}
                                     className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.quantity ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
@@ -261,10 +295,11 @@ export default function EquipmentPage() {
                             <input
                                 type="text"
                                 value={form.location}
-                                onChange={e => setForm({ ...form, location: e.target.value })}
+                                onChange={e => { setForm({ ...form, location: e.target.value }); if (errors.location) setErrors({ ...errors, location: '' }) }}
                                 placeholder="e.g., Storage Room A"
-                                className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.location ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                             />
+                            {errors.location && <p className="mt-1 text-xs text-red-600">{errors.location}</p>}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div>
@@ -272,15 +307,19 @@ export default function EquipmentPage() {
                                 <input
                                     type="date"
                                     value={form.purchaseDate}
-                                    onChange={e => setForm({ ...form, purchaseDate: e.target.value })}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    max={todayISO()}
+                                    onChange={e => { setForm({ ...form, purchaseDate: e.target.value }); if (errors.purchaseDate) setErrors({ ...errors, purchaseDate: '' }) }}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.purchaseDate ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                                 />
+                                {errors.purchaseDate && <p className="mt-1 text-xs text-red-600">{errors.purchaseDate}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-900 mb-1">Last Maintenance</label>
                                 <input
                                     type="date"
                                     value={form.lastMaintenanceDate}
+                                    max={todayISO()}
+                                    min={form.purchaseDate || undefined}
                                     onChange={e => { setForm({ ...form, lastMaintenanceDate: e.target.value }); if (errors.lastMaintenanceDate) setErrors({ ...errors, lastMaintenanceDate: '' }) }}
                                     className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.lastMaintenanceDate ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-orange-500'}`}
                                 />

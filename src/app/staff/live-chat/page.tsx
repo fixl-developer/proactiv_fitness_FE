@@ -24,13 +24,18 @@ const stringify = (v: any): string => {
     return ''
 }
 const normalizeSession = (raw: any): ChatSession => ({
-    id: raw?.id || raw?._id || '',
+    // Backend uses `sessionId` (e.g. "CHAT-XYZ") for all message lookups —
+    // pulling Mongo `_id` first made every getChatMessages call 404.
+    id: raw?.sessionId || raw?.id || raw?._id || '',
     customerName: stringify(raw?.customerName) || stringify(raw?.customer) || stringify(raw?.user) || 'Customer',
     customerEmail: stringify(raw?.customerEmail) || stringify(raw?.customer?.email),
-    lastMessage: stringify(raw?.lastMessage) || stringify(raw?.lastMessage?.message) || '',
+    lastMessage: stringify(raw?.lastMessage) || stringify(raw?.lastMessage?.message)
+        || (Array.isArray(raw?.messages) && raw.messages.length > 0
+            ? stringify(raw.messages[raw.messages.length - 1]?.message)
+            : ''),
     status: (stringify(raw?.status) as ChatSession['status']) || 'active',
     updatedAt: raw?.updatedAt || raw?.updated || '',
-    createdAt: raw?.createdAt || raw?.created || '',
+    createdAt: raw?.createdAt || raw?.created || raw?.startTime || '',
     unreadCount: typeof raw?.unreadCount === 'number' ? raw.unreadCount : 0,
 })
 const normalizeMessage = (raw: any, idx: number): ChatMessage => ({
@@ -195,11 +200,12 @@ export default function LiveChat() {
             setNewChatForm({ customerName: '', customerEmail: '', initialMessage: '' })
             toast.success('Chat session started')
             await loadSessions()
-            // Auto-select newly created session
-            const created = data?.session || data
-            if (created?.sessionId || created?._id) {
+            // Auto-select newly created session. Backend wraps the doc in
+            // `data` so we accept either shape.
+            const created = data?.session || data?.data || data
+            if (created?.sessionId || created?._id || created?.id) {
                 const newSession = normalizeSession(created)
-                handleSelectSession(newSession)
+                if (newSession.id) handleSelectSession(newSession)
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to start chat session')

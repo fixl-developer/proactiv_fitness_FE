@@ -20,29 +20,26 @@ import { toast } from 'sonner'
 import { validateName, validateEmail, validatePhone, validateTextArea, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
-// ==================== MOCK DATA ====================
-
-const MOCK_PROFILE: CoachProfile = {
+// Empty starting profile — was a hardcoded "Coach Sarah Johnson / Mumbai /
+// 4.8 rating / 45 students" placeholder, which leaked into the dashboard
+// when the API hadn't responded yet. Real data comes from `/coach/profile`.
+const EMPTY_PROFILE: CoachProfile = {
     id: '',
     staffId: '',
-    name: 'Coach Sarah Johnson',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah.johnson@proactiv.com',
-    phone: '+91-9876543210',
-    location: 'Mumbai, India',
-    bio: 'Certified gymnastics coach with 10+ years of experience. Specializing in beginner and intermediate level training.',
-    specializations: ['Gymnastics', 'Tumbling', 'Flexibility Training'],
-    certifications: [
-        { name: 'Level 3 Gymnastics Coach', status: 'valid', issuingOrganization: 'National Gymnastics Federation', expiryDate: '2027-06-15' },
-        { name: 'First Aid Certified', status: 'valid', issuingOrganization: 'Red Cross', expiryDate: '2026-12-01' },
-        { name: 'Sports Nutrition', status: 'valid', issuingOrganization: 'ISSA', expiryDate: '2027-03-20' },
-    ],
-    skills: ['Coaching', 'Mentoring', 'Program Design', 'Student Assessment'],
-    experienceYears: 10,
-    rating: 4.8,
-    totalStudents: 45,
-    totalClasses: 48,
+    name: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
+    specializations: [],
+    certifications: [],
+    skills: [],
+    experienceYears: 0,
+    rating: 0,
+    totalStudents: 0,
+    totalClasses: 0,
     status: 'active',
 }
 
@@ -53,8 +50,8 @@ const CoachProfilePage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
-    const [profile, setProfile] = useState<CoachProfile>(MOCK_PROFILE)
-    const [editedProfile, setEditedProfile] = useState<CoachProfile>(MOCK_PROFILE)
+    const [profile, setProfile] = useState<CoachProfile>(EMPTY_PROFILE)
+    const [editedProfile, setEditedProfile] = useState<CoachProfile>(EMPTY_PROFILE)
 
     // Inline input states for adding items
     const [newSpecialization, setNewSpecialization] = useState('')
@@ -117,13 +114,24 @@ const CoachProfilePage = () => {
             const data = profileRes.status === 'fulfilled' ? profileRes.value : null
             const perfData = performanceRes.status === 'fulfilled' ? performanceRes.value : null
 
-            // If the API returned essentially empty data, fall back to mock
-            if (!data || (!data.name && !data.firstName && !data.email)) {
-                setProfile(MOCK_PROFILE)
-                setEditedProfile(MOCK_PROFILE)
-            } else {
+            // Use API data when present; otherwise pre-fill the user's auth
+            // identity so the page doesn't sit blank. Real data only — no
+            // fabricated locations, ratings, or certifications.
+            if (data && (data.name || data.firstName || data.email)) {
                 setProfile(data)
                 setEditedProfile(data)
+            } else {
+                const u = user as any
+                const seeded: CoachProfile = {
+                    ...EMPTY_PROFILE,
+                    id: u?.id || '',
+                    name: u?.name || '',
+                    firstName: u?.firstName || (u?.name?.split(' ')[0] || ''),
+                    lastName: u?.lastName || (u?.name?.split(' ').slice(1).join(' ') || ''),
+                    email: u?.email || '',
+                }
+                setProfile(seeded)
+                setEditedProfile(seeded)
             }
 
             // Generate dynamic goals based on performance data
@@ -147,30 +155,27 @@ const CoachProfilePage = () => {
                 }
             }
 
-            if (dynamicGoals.length === 0) {
-                // Default goals if no performance data
-                dynamicGoals.push(
-                    'Maintain high student satisfaction rating',
-                    'Complete all scheduled classes on time',
-                    'Continue professional development',
-                    'Mentor and support student growth'
-                )
-            }
+            // No fake "default" goals when no performance data exists — UI
+            // will render an empty-state hint instead.
             setGoals(dynamicGoals)
         } catch (error) {
             console.error('Error loading profile:', error)
-            setProfile(MOCK_PROFILE)
-            setEditedProfile(MOCK_PROFILE)
-            setGoals([
-                'Maintain high student satisfaction rating',
-                'Complete all scheduled classes on time',
-                'Continue professional development',
-                'Mentor and support student growth'
-            ])
+            const u = user as any
+            const seeded: CoachProfile = {
+                ...EMPTY_PROFILE,
+                id: u?.id || '',
+                name: u?.name || '',
+                firstName: u?.firstName || (u?.name?.split(' ')[0] || ''),
+                lastName: u?.lastName || (u?.name?.split(' ').slice(1).join(' ') || ''),
+                email: u?.email || '',
+            }
+            setProfile(seeded)
+            setEditedProfile(seeded)
+            setGoals([])
         } finally {
             setIsLoading(false)
         }
-    }, [coachId])
+    }, [coachId, user])
 
     useEffect(() => {
         if (!isAuthenticated && !localStorage.getItem('token')) {

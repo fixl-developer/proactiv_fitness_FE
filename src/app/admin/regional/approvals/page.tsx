@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { RegionalAdminService } from '@/services/regionalAdminService'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { validateAlphaText } from '@/utils/validation'
 
 const APPROVAL_TYPES = [
     { value: 'STAFF_HIRING', label: 'Staff Hiring' },
@@ -116,6 +117,12 @@ export default function RegionalApprovalsPage() {
         else if (newForm.title.trim().length < 3) errs.title = 'Title must be at least 3 characters'
         if (newForm.description && newForm.description.length > 500) errs.description = 'Description must be less than 500 characters'
         if (!newForm.priority) errs.priority = 'Priority is required'
+        // Location — when provided, must be alphabetic only (no "Boston@123"
+        // style input). Optional, so empty is allowed.
+        if (newForm.location && newForm.location.trim()) {
+            const locErr = validateAlphaText(newForm.location, 'Location', 80)
+            if (locErr) errs.location = locErr
+        }
         setNewErrors(errs)
         return Object.keys(errs).length === 0
     }
@@ -405,9 +412,15 @@ export default function RegionalApprovalsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <Input
                             value={newForm.location}
-                            onChange={(e) => setNewForm(prev => ({ ...prev, location: e.target.value }))}
+                            onChange={(e) => {
+                                setNewForm(prev => ({ ...prev, location: e.target.value }))
+                                if (newErrors.location) setNewErrors(prev => { const n = { ...prev }; delete n.location; return n })
+                            }}
                             placeholder="e.g. Boston Downtown"
+                            maxLength={80}
+                            className={newErrors.location ? 'border-red-500' : ''}
                         />
+                        <FormFieldHint hint="Letters and basic punctuation only — no digits or special characters" error={newErrors.location} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>

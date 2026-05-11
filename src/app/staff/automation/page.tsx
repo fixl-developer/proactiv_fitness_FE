@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService } from '@/services/supportStaffService'
-import { Plus, AlertCircle, Zap, CheckCircle, PauseCircle, Activity, Edit2, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, AlertCircle, Zap, CheckCircle, PauseCircle, Activity, Edit2, Trash2, RefreshCw, Sparkles, Loader2 } from 'lucide-react'
 import { validateRequired } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
@@ -67,6 +67,12 @@ export default function Automation() {
     const [submitting, setSubmitting] = useState(false)
     const [form, setForm] = useState(emptyForm)
     const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+    // AI Generate state — separate drawer so the parent can describe the
+    // rule in plain language and get a starter form pre-filled.
+    const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
+    const [aiDescription, setAiDescription] = useState('')
+    const [aiGenerating, setAiGenerating] = useState(false)
+    const [aiNotice, setAiNotice] = useState<string | null>(null)
 
     const loadRules = useCallback(async () => {
         setLoading(true)
@@ -180,6 +186,43 @@ export default function Automation() {
         }
     }
 
+    const handleAiGenerate = async () => {
+        const goal = aiDescription.trim()
+        if (goal.length < 10) {
+            toast.error('Describe what the rule should do in at least 10 characters.')
+            return
+        }
+        setAiGenerating(true)
+        setAiNotice(null)
+        try {
+            const res: any = await (supportStaffService as any).aiSuggestAutomationRule(goal)
+            const suggestion = res?.rule || res
+            const aiPowered = res?.aiPowered !== false
+            setForm({
+                name: suggestion?.name || goal.slice(0, 60),
+                description: suggestion?.description || goal,
+                trigger: suggestion?.trigger || 'ticket_created',
+                conditionField: suggestion?.conditions?.[0]?.field || '',
+                conditionOperator: suggestion?.conditions?.[0]?.operator || 'equals',
+                conditionValue: suggestion?.conditions?.[0]?.value || '',
+                actionType: suggestion?.actions?.[0]?.type || 'assign',
+                actionValue: suggestion?.actions?.[0]?.value || '',
+                isActive: suggestion?.isActive !== false,
+            })
+            setEditingId(null)
+            setFormErrors({})
+            setAiDrawerOpen(false)
+            setAiDescription('')
+            setDrawerOpen(true)
+            setAiNotice(aiPowered ? null : 'AI is unavailable right now — review the starter values and edit before saving.')
+            toast.success(aiPowered ? 'AI rule suggestion ready' : 'Starter rule created — AI was unavailable')
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Failed to generate rule suggestion')
+        } finally {
+            setAiGenerating(false)
+        }
+    }
+
     const totalRules = rules.length
     const activeRules = rules.filter((r) => r.isActive).length
     const inactiveRules = rules.filter((r) => !r.isActive).length
@@ -203,6 +246,13 @@ export default function Automation() {
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             Refresh
+                        </button>
+                        <button
+                            id="staff-automation-btn-ai-generate"
+                            onClick={() => { setAiDescription(''); setAiNotice(null); setAiDrawerOpen(true) }}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-5 py-2 rounded-lg hover:from-indigo-600 hover:to-purple-700 inline-flex items-center gap-2 text-sm font-medium shadow-sm"
+                        >
+                            <Sparkles className="w-4 h-4" /> AI Generate
                         </button>
                         <button
                             id="staff-automation-btn-create"
@@ -470,6 +520,58 @@ export default function Automation() {
                         <span className="text-sm font-medium text-gray-700">Activate this rule immediately</span>
                     </label>
                 </form>
+            </SlideInDrawer>
+
+            {/* AI Generate drawer — describe a goal in plain language and the
+                backend AI fills in trigger/condition/action fields. The user
+                still confirms via the standard Create drawer. */}
+            <SlideInDrawer
+                isOpen={aiDrawerOpen}
+                onClose={() => { setAiDrawerOpen(false); setAiDescription(''); setAiNotice(null) }}
+                title="AI Generate Automation Rule"
+                description="Describe what the rule should do — AI suggests a starter rule you can edit."
+                size="md"
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={() => { setAiDrawerOpen(false); setAiDescription('') }}
+                            className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+                        >Cancel</button>
+                        <button
+                            onClick={handleAiGenerate}
+                            disabled={aiGenerating || aiDescription.trim().length < 10}
+                            className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm font-medium"
+                        >
+                            {aiGenerating ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+                            ) : (
+                                <><Sparkles className="w-4 h-4" /> Generate</>
+                            )}
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Describe the rule <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            value={aiDescription}
+                            onChange={(e) => setAiDescription(e.target.value)}
+                            rows={5}
+                            maxLength={1000}
+                            placeholder="e.g. When a billing ticket comes in from a high-priority customer, notify the finance team and escalate within 1 hour"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+                        />
+                        <FormFieldHint hint="At least 10 characters — be specific about trigger, condition, and action." />
+                    </div>
+                    {aiNotice && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                            {aiNotice}
+                        </div>
+                    )}
+                </div>
             </SlideInDrawer>
         </div>
     )
