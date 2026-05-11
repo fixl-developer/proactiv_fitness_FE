@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress'
 import { RegionalAdminService } from '@/services/regionalAdminService'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
-import { validateRequired, validateNumber, filterNumberInput } from '@/utils/validation'
+import { validateRequired, validateNumber, validateTitle, validateFutureOrToday, todayISODate, filterNumberInput } from '@/utils/validation'
 
 const CATEGORIES = ['SAFETY', 'PERSONNEL', 'FACILITY', 'INSURANCE', 'DATA', 'FINANCIAL', 'OTHER']
 
@@ -101,12 +101,14 @@ export default function RegionalCompliancePage() {
     const validateForm = (): boolean => {
         const errs: Record<string, string> = {}
         if (!CATEGORIES.includes(form.category)) errs.category = 'Please select a valid category'
-        const titleErr = validateRequired(form.title, 'Title'); if (titleErr) errs.title = titleErr
-        else if (form.title.trim().length < 3) errs.title = 'Title must be at least 3 characters'
+        // Title — reject "12@2jkn"-style input (must start with a letter and
+        // contain only safe characters).
+        const titleErr = validateTitle(form.title, 'Title', 200); if (titleErr) errs.title = titleErr
         const rateErr = validateNumber(form.completionRate, 'Completion rate', 0, 100); if (rateErr) errs.completionRate = rateErr
+        // Due date — must be today or in the future when provided.
         if (form.dueDate) {
-            const d = new Date(form.dueDate)
-            if (isNaN(d.getTime())) errs.dueDate = 'Invalid date'
+            const dateErr = validateFutureOrToday(form.dueDate, 'Due date')
+            if (dateErr) errs.dueDate = dateErr
         }
         if (form.notes && form.notes.length > 500) errs.notes = 'Notes must be less than 500 characters'
         setFormErrors(errs)
@@ -377,11 +379,15 @@ export default function RegionalCompliancePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                         <Input
                             value={form.title}
-                            onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+                            onChange={(e) => {
+                                setForm(prev => ({ ...prev, title: e.target.value }))
+                                if (formErrors.title) setFormErrors(prev => { const n = { ...prev }; delete n.title; return n })
+                            }}
                             placeholder="e.g. Safety Certifications"
+                            maxLength={200}
                             className={formErrors.title ? 'border-red-500' : ''}
                         />
-                        <FormFieldHint hint="Minimum 3 characters" error={formErrors.title} />
+                        <FormFieldHint hint="Must start with a letter — no symbol-only or number-only input" error={formErrors.title} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Completion Rate (%) *</label>
@@ -401,10 +407,14 @@ export default function RegionalCompliancePage() {
                         <Input
                             type="date"
                             value={form.dueDate}
-                            onChange={(e) => setForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                            min={todayISODate()}
+                            onChange={(e) => {
+                                setForm(prev => ({ ...prev, dueDate: e.target.value }))
+                                if (formErrors.dueDate) setFormErrors(prev => { const n = { ...prev }; delete n.dueDate; return n })
+                            }}
                             className={formErrors.dueDate ? 'border-red-500' : ''}
                         />
-                        <FormFieldHint hint="Optional - when this must be complete" error={formErrors.dueDate} />
+                        <FormFieldHint hint="Today or a future date — past dates are rejected" error={formErrors.dueDate} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

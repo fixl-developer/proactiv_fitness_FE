@@ -1,25 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { validateName, validateSelect, filterNameInput, FORMAT_HINTS } from '@/utils/validation';
+import { validateName, validateSelect, validateAge, filterNameInput, FORMAT_HINTS, todayISODate } from '@/utils/validation';
 
 interface ChildDetailsProps {
     childName: string;
     childAge: string;
     childGender: string;
-    onUpdate: (data: { childName?: string; childAge?: string; childGender?: string }) => void;
-    errors?: { childName?: string; childAge?: string; childGender?: string };
+    childDOB?: string;
+    onUpdate: (data: { childName?: string; childAge?: string; childGender?: string; childDOB?: string }) => void;
+    errors?: { childName?: string; childAge?: string; childGender?: string; childDOB?: string };
 }
 
-export default function ChildDetails({ childName, childAge, childGender, onUpdate, errors }: ChildDetailsProps) {
+export default function ChildDetails({ childName, childAge, childGender, childDOB, onUpdate, errors }: ChildDetailsProps) {
     const ageOptions = Array.from({ length: 16 }, (_, i) => i + 3); // Ages 3-18
 
-    const [touched, setTouched] = useState<{ name?: boolean; age?: boolean; gender?: boolean }>({});
+    const [touched, setTouched] = useState<{ name?: boolean; age?: boolean; gender?: boolean; dob?: boolean }>({});
 
     // Inline errors: prefer errors prop (driven by BookingFlow), else compute on touch
     const nameErr = errors?.childName ?? (touched.name ? validateName(childName, "Child's name") : null);
-    const ageErr = errors?.childAge ?? (touched.age ? validateSelect(childAge, "Child's age") : null);
+    const ageErr = errors?.childAge ?? (touched.age ? (childAge ? validateAge(childAge, 3, 18) : validateSelect(childAge, "Child's age")) : null);
     const genderErr = errors?.childGender ?? (touched.gender ? validateSelect(childGender, "Gender") : null);
+    const dobErr = errors?.childDOB ?? (touched.dob && childDOB ? (() => {
+        const d = new Date(childDOB);
+        const today = new Date(); today.setHours(23, 59, 59, 999);
+        if (isNaN(d.getTime())) return 'Please enter a valid date of birth';
+        if (d > today) return 'Date of birth cannot be in the future';
+        return null;
+    })() : null);
+
+    const onPasteName = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        // Strip invalid characters from pasted input before it lands in the field
+        const pasted = e.clipboardData.getData('text');
+        const cleaned = pasted.replace(/[^A-Za-z\s'-]/g, '').replace(/\s{2,}/g, ' ');
+        if (cleaned !== pasted) {
+            e.preventDefault();
+            onUpdate({ childName: cleaned });
+        }
+    };
 
     return (
         <div>
@@ -43,6 +61,7 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                         onChange={(e) => onUpdate({ childName: e.target.value })}
                         onBlur={() => setTouched(t => ({ ...t, name: true }))}
                         onKeyDown={filterNameInput}
+                        onPaste={onPasteName}
                         maxLength={50}
                         placeholder="Enter your child's first name"
                         autoComplete="off"
@@ -73,7 +92,26 @@ export default function ChildDetails({ childName, childAge, childGender, onUpdat
                         ))}
                     </select>
                     <p className={`text-xs mt-1 ${ageErr ? 'text-red-600' : 'text-gray-500'}`}>
-                        {ageErr || 'Required for age-appropriate activities'}
+                        {ageErr || 'Required for age-appropriate activities (3-18 years)'}
+                    </p>
+                </div>
+
+                {/* Child Date of Birth (optional, cross-validates with age) */}
+                <div>
+                    <label htmlFor="childDOB" className="block text-sm font-medium text-gray-700 mb-2">
+                        Child's Date of Birth <span className="text-gray-400 text-xs">(optional)</span>
+                    </label>
+                    <input
+                        type="date"
+                        id="childDOB"
+                        value={childDOB || ''}
+                        max={todayISODate()}
+                        onChange={(e) => onUpdate({ childDOB: e.target.value })}
+                        onBlur={() => setTouched(t => ({ ...t, dob: true }))}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${dobErr ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    <p className={`text-xs mt-1 ${dobErr ? 'text-red-600' : 'text-gray-500'}`}>
+                        {dobErr || 'Used to verify the age you selected above'}
                     </p>
                 </div>
 

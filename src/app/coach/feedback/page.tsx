@@ -19,47 +19,9 @@ import type { CoachStudent, CoachFeedback } from '@/services/modules/coach.servi
 import { validateTextArea, validateSelect, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
-// Mock fallback data
-const mockStudents: Pick<CoachStudent, 'id' | 'name' | 'level'>[] = [
-    { id: '1', name: 'Aarav Patel', level: 'beginner' },
-    { id: '2', name: 'Priya Singh', level: 'intermediate' },
-    { id: '3', name: 'Rohan Kumar', level: 'advanced' },
-    { id: '4', name: 'Ananya Sharma', level: 'beginner' },
-    { id: '5', name: 'Vikram Desai', level: 'intermediate' }
-]
-
-const mockFeedback: CoachFeedback[] = [
-    {
-        id: '1',
-        studentId: '1',
-        studentName: 'Aarav Patel',
-        coachId: '',
-        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        rating: 4,
-        text: 'Great improvement in balance! Keep practicing the stretches.',
-        type: 'positive'
-    },
-    {
-        id: '2',
-        studentId: '2',
-        studentName: 'Priya Singh',
-        coachId: '',
-        date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        rating: 5,
-        text: 'Excellent performance today! Your tumbling skills are impressive.',
-        type: 'positive'
-    },
-    {
-        id: '3',
-        studentId: '3',
-        studentName: 'Rohan Kumar',
-        coachId: '',
-        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        rating: 3,
-        text: 'Need to focus more on form. Let\'s work on technique next class.',
-        type: 'constructive'
-    }
-]
+// Source of truth: `/coach/students` and `/coach/feedback`. We removed
+// hardcoded student/feedback fallbacks so the page never fabricates names
+// like "Aarav Patel" / "Priya Singh" when the API is empty.
 
 interface Notification {
     type: 'success' | 'error'
@@ -129,15 +91,11 @@ const CoachFeedbackPage = () => {
         if (!coachId) return
         try {
             const data = await coachService.getMyStudents(coachId)
-            if (data && data.length > 0) {
-                setStudents(data.map(s => ({ id: s.id, name: s.name, level: s.level })))
-            } else {
-                // No students found from API - show fallback for demo
-                setStudents(mockStudents)
-            }
+            const list = Array.isArray(data) ? data : []
+            setStudents(list.map(s => ({ id: s.id, name: s.name, level: s.level })))
         } catch (error) {
             console.error('Error loading students:', error)
-            setStudents(mockStudents)
+            setStudents([])
         }
     }, [coachId])
 
@@ -145,10 +103,10 @@ const CoachFeedbackPage = () => {
         if (!coachId) return
         try {
             const data = await coachService.getFeedbackHistory(coachId)
-            setFeedbackHistory(data ?? [])
+            setFeedbackHistory(Array.isArray(data) ? data : [])
         } catch (error) {
             console.error('Error loading feedback:', error)
-            setFeedbackHistory(mockFeedback.map(f => ({ ...f, coachId })))
+            setFeedbackHistory([])
         }
     }, [coachId])
 

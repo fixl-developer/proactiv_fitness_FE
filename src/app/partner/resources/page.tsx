@@ -12,6 +12,9 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { validatePlainText, validateTextArea } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function PartnerResourcesPage() {
     const router = useRouter()
@@ -34,6 +37,7 @@ export default function PartnerResourcesPage() {
         description: '',
         purpose: '',
     })
+    const [requestErrors, setRequestErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -100,37 +104,39 @@ export default function PartnerResourcesPage() {
     const handleDownload = useCallback(async (resource: any) => {
         try {
             setDownloadingIds(prev => new Set(prev).add(resource.id))
-            if (resource.url) {
-                const link = document.createElement('a')
-                link.href = resource.url
-                link.download = resource.title || 'download'
-                link.target = '_blank'
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-            } else {
-                const partnerId = user?.id || 'partner-1'
-                try {
-                    const blob = await (PartnerPortalService as any).downloadPartnerDocument(partnerId, resource.id)
-                    const url = window.URL.createObjectURL(blob as Blob)
-                    const link = document.createElement('a')
-                    link.href = url
-                    link.download = resource.title || 'download'
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                    window.URL.revokeObjectURL(url)
-                } catch {
-                    alert(`Download started for: ${resource.title}`)
-                }
+            const partnerId = user?.id || 'partner-1'
+            // Hit the backend download endpoint to record the download + retrieve URL
+            let url: string | undefined = resource.url
+            try {
+                const meta = await PartnerPortalService.downloadPartnerDocument(partnerId, resource.id)
+                if (meta?.url) url = meta.url
+            } catch (err) {
+                // If backend lookup fails but local URL exists, still proceed
+                if (!url) throw err
             }
+
+            if (!url) {
+                toast.info(`No downloadable file for: ${resource.title}`)
+                return
+            }
+
+            const link = document.createElement('a')
+            link.href = url
+            link.download = resource.title || 'download'
+            link.target = '_blank'
+            link.rel = 'noopener'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
             // Increment local download count
             setResources(prev => prev.map(r =>
-                r.id === resource.id ? { ...r, downloads: r.downloads + 1 } : r
+                r.id === resource.id ? { ...r, downloads: (r.downloads || 0) + 1 } : r
             ))
+            toast.success(`Download started: ${resource.title}`)
         } catch (err) {
             console.error('Download error:', err)
-            alert('Failed to download resource. Please try again.')
+            toast.error('Failed to download resource. Please try again.')
         } finally {
             setDownloadingIds(prev => {
                 const next = new Set(prev)
@@ -152,24 +158,45 @@ export default function PartnerResourcesPage() {
         })
     }, [])
 
+    const validateRequestForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nameErr = validatePlainText(requestForm.resourceName, 'Resource Name', 3, 150)
+        if (nameErr) errs.resourceName = nameErr
+        const descErr = validateTextArea(requestForm.description, 'Description', 5, 2000)
+        if (descErr) errs.description = descErr
+        if (requestForm.purpose) {
+            const purposeErr = validatePlainText(requestForm.purpose, 'Purpose', 2, 200)
+            if (purposeErr) errs.purpose = purposeErr
+        }
+        setRequestErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
     const handleRequestResource = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!requestForm.resourceName.trim()) return
+        if (!validateRequestForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
 
         setRequestSubmitting(true)
         try {
             const partnerId = user?.id || 'partner-1'
-            await (PartnerPortalService as any).requestResource?.(partnerId, requestForm)
-        } catch {
-            // API may not exist yet
+            await PartnerPortalService.requestResource(partnerId, requestForm)
+            setRequestSubmitting(false)
+            setRequestSuccess(true)
+            toast.success('Resource request submitted! The admin team will review it shortly.')
+            setTimeout(() => {
+                setShowRequestModal(false)
+                setRequestSuccess(false)
+                setRequestForm({ resourceName: '', category: 'Training Material', format: 'PDF', priority: 'Medium', description: '', purpose: '' })
+                setRequestErrors({})
+            }, 2000)
+        } catch (err: any) {
+            console.error('Error submitting resource request:', err)
+            toast.error(err?.response?.data?.error || 'Failed to submit request. Please try again.')
+            setRequestSubmitting(false)
         }
-        setRequestSubmitting(false)
-        setRequestSuccess(true)
-        setTimeout(() => {
-            setShowRequestModal(false)
-            setRequestSuccess(false)
-            setRequestForm({ resourceName: '', category: 'Training Material', format: 'PDF', priority: 'Medium', description: '', purpose: '' })
-        }, 2000)
     }
 
     // Computed metrics from actual data
@@ -387,10 +414,15 @@ export default function PartnerResourcesPage() {
                                             type="text"
                                             required
                                             value={requestForm.resourceName}
-                                            onChange={e => setRequestForm(prev => ({ ...prev, resourceName: e.target.value }))}
+                                            onChange={e => {
+                                                setRequestForm(prev => ({ ...prev, resourceName: e.target.value }))
+                                                const err = validatePlainText(e.target.value, 'Resource Name', 3, 150)
+                                                setRequestErrors(prev => { const n = { ...prev }; if (err) n.resourceName = err; else delete n.resourceName; return n })
+                                            }}
                                             placeholder="e.g., Gym Equipment Setup Guide, Marketing Banner Templates"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${requestErrors.resourceName ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint="3-150 characters, letters/numbers/basic punctuation only" error={requestErrors.resourceName} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -452,21 +484,35 @@ export default function PartnerResourcesPage() {
                                         <textarea
                                             required
                                             value={requestForm.description}
-                                            onChange={e => setRequestForm(prev => ({ ...prev, description: e.target.value }))}
-                                            placeholder="Describe what content the resource should contain..."
+                                            onChange={e => {
+                                                setRequestForm(prev => ({ ...prev, description: e.target.value }))
+                                                const err = validateTextArea(e.target.value, 'Description', 5, 2000)
+                                                setRequestErrors(prev => { const n = { ...prev }; if (err) n.description = err; else delete n.description; return n })
+                                            }}
+                                            placeholder="Describe what content the resource should contain (min 5 characters)..."
                                             rows={3}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none ${requestErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint="Minimum 5 characters" error={requestErrors.description} />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Purpose / Use Case</label>
                                         <input
                                             type="text"
                                             value={requestForm.purpose}
-                                            onChange={e => setRequestForm(prev => ({ ...prev, purpose: e.target.value }))}
+                                            onChange={e => {
+                                                setRequestForm(prev => ({ ...prev, purpose: e.target.value }))
+                                                if (e.target.value) {
+                                                    const err = validatePlainText(e.target.value, 'Purpose', 2, 200)
+                                                    setRequestErrors(prev => { const n = { ...prev }; if (err) n.purpose = err; else delete n.purpose; return n })
+                                                } else {
+                                                    setRequestErrors(prev => { const n = { ...prev }; delete n.purpose; return n })
+                                                }
+                                            }}
                                             placeholder="e.g., Staff onboarding, Client marketing, Compliance training"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${requestErrors.purpose ? 'border-red-500' : 'border-gray-300'}`}
                                         />
+                                        <FormFieldHint hint="Optional. 2-200 characters, letters/numbers/basic punctuation only" error={requestErrors.purpose} />
                                     </div>
                                     <div className="flex justify-end gap-3 pt-4 border-t">
                                         <button

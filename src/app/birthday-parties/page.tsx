@@ -484,7 +484,7 @@ const BirthdayPartiesPage = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: index * 0.15, duration: 0.5 }}
                                     whileHover={{ y: -8, scale: 1.05 }}
-                                    className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-100 hover:border-purple-300 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+                                    className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-100 hover:border-purple-300 shadow-md hover:shadow-xl transition-all duration-300 group"
                                 >
                                     <div className="flex items-center mb-4">
                                         <motion.div
@@ -502,13 +502,13 @@ const BirthdayPartiesPage = () => {
                                         </div>
                                     </div>
                                     <p className="text-gray-600 text-sm leading-relaxed">{addon.description}</p>
-                                    <motion.div
-                                        className="mt-4 pt-4 border-t border-purple-200 text-purple-600 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                                        initial={{ y: 10 }}
-                                        whileHover={{ y: 0 }}
+                                    <Link
+                                        id={`birthday-parties-addon-${addon.id}-learn-more`}
+                                        href={`/book-party?addon=${encodeURIComponent(addon.name)}`}
+                                        className="mt-4 pt-4 border-t border-purple-200 text-purple-600 font-semibold text-sm flex items-center hover:text-purple-800 transition-colors"
                                     >
                                         Learn more →
-                                    </motion.div>
+                                    </Link>
                                 </motion.div>
                             ))}
                         </div>
@@ -622,8 +622,8 @@ const BirthdayPartiesPage = () => {
                             viewport={{ once: true }}
                         >
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link id="birthday-parties-nav-contact-2"
-                                    href="/contact"
+                                <Link id="birthday-parties-nav-book-party"
+                                    href="/book-party"
                                     className="inline-block bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-lg hover:shadow-xl"
                                 >
                                     Get Quote & Book Party

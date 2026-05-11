@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { supportStaffService, SupportTicket } from '@/services/supportStaffService'
 import { Plus, Search, Ticket, AlertCircle, Clock, CheckCircle, ChevronDown, RefreshCw } from 'lucide-react'
-import { validateRequired, validateEmail, validateTextArea, validateName, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateEmail, validateTextArea, validateName, validateSubject, filterNameInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { toast } from 'sonner'
@@ -122,7 +122,8 @@ export default function SupportTickets() {
 
     const validateForm = (): Record<string, string> => {
         const errs: Record<string, string> = {}
-        const sub = validateRequired(form.subject, 'Subject'); if (sub) errs.subject = sub
+        // Subject: reject special-character-only / gibberish strings (BUG_002).
+        const sub = validateSubject(form.subject, 'Subject'); if (sub) errs.subject = sub
         const desc = validateTextArea(form.description, 'Description', 5, 5000); if (desc) errs.description = desc
         const cust = validateName(form.customer, 'Customer Name'); if (cust) errs.customer = cust
         const em = validateEmail(form.customerEmail); if (em) errs.customerEmail = em
@@ -501,13 +502,14 @@ export default function SupportTickets() {
                             value={form.subject}
                             onChange={(e) => {
                                 setForm({ ...form, subject: e.target.value })
-                                const err = validateRequired(e.target.value, 'Subject')
+                                const err = validateSubject(e.target.value, 'Subject')
                                 setFormErrors(p => { const n = { ...p }; if (err) n.subject = err; else delete n.subject; return n })
                             }}
                             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 ${formErrors.subject ? 'border-red-500' : 'border-gray-300'}`}
                             placeholder="Brief summary of the issue"
+                            maxLength={200}
                         />
-                        <FormFieldHint hint="Short, descriptive title" error={formErrors.subject} />
+                        <FormFieldHint hint="5–200 characters, avoid special-character-only input" error={formErrors.subject} />
                     </div>
 
                     <div>

@@ -15,9 +15,12 @@ import {
     validateName,
     validateSelect,
     validateEmail,
-    validatePhone,
+    validatePhone10,
     validateRequired,
+    validateAge,
 } from '@/utils/validation';
+
+const STORAGE_KEY = 'proactiv:bookAssessmentDraft'
 
 interface BookingFlowProps {
     onComplete: (data: any) => void;
@@ -35,13 +38,38 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
         childName: '',
         childAge: '',
         childGender: '',
+        childDOB: '',
         location: '',
         date: '',
         timeSlot: '',
         parentName: '',
         parentEmail: '',
-        parentPhone: ''
+        parentPhone: '',
+        emergencyContact: '',
+        agreeToReceive: false,
     });
+
+    // Restore form draft from sessionStorage (survives a tab refresh)
+    const [hydrated, setHydrated] = useState(false);
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const saved = JSON.parse(raw);
+                if (saved?.bookingData) setBookingData(prev => ({ ...prev, ...saved.bookingData }));
+                if (typeof saved?.currentStep === 'number') setCurrentStep(saved.currentStep);
+            }
+        } catch { /* ignore parse errors */ }
+        setHydrated(true);
+    }, []);
+
+    // Persist draft on every change once we've hydrated
+    useEffect(() => {
+        if (!hydrated) return;
+        try {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ bookingData, currentStep }));
+        } catch { /* ignore quota errors */ }
+    }, [bookingData, currentStep, hydrated]);
 
     // Auto-fill parent details from logged-in user
     useEffect(() => {
@@ -91,10 +119,29 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
             case 2: {
                 const nameErr = validateName(bookingData.childName, "Child's name");
                 if (nameErr) errs.childName = nameErr;
-                const ageErr = validateSelect(bookingData.childAge, "Child's age");
+                const ageErr = bookingData.childAge ? validateAge(bookingData.childAge, 3, 18) : validateSelect(bookingData.childAge, "Child's age");
                 if (ageErr) errs.childAge = ageErr;
                 const genderErr = validateSelect(bookingData.childGender, 'Gender');
                 if (genderErr) errs.childGender = genderErr;
+                // Optional DOB but if present, must be valid + match age
+                if (bookingData.childDOB) {
+                    const dob = new Date(bookingData.childDOB);
+                    if (isNaN(dob.getTime())) errs.childDOB = 'Please enter a valid date of birth';
+                    else {
+                        const today = new Date();
+                        today.setHours(23, 59, 59, 999);
+                        if (dob > today) errs.childDOB = 'Date of birth cannot be in the future';
+                        else if (bookingData.childAge) {
+                            let computedAge = today.getFullYear() - dob.getFullYear();
+                            const m = today.getMonth() - dob.getMonth();
+                            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) computedAge--;
+                            const entered = parseInt(bookingData.childAge, 10);
+                            if (!isNaN(entered) && Math.abs(computedAge - entered) > 1) {
+                                errs.childDOB = `Age (${entered}) does not match Date of Birth (~${computedAge} years)`;
+                            }
+                        }
+                    }
+                }
                 break;
             }
             case 3: {
@@ -113,6 +160,18 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                 }
                 const timeErr = validateRequired(bookingData.timeSlot, 'Time slot');
                 if (timeErr) errs.timeSlot = timeErr;
+                // If selecting today, also reject past times
+                else if (bookingData.date && bookingData.timeSlot) {
+                    const today = new Date();
+                    const picked = new Date(bookingData.date);
+                    if (picked.toDateString() === today.toDateString()) {
+                        const [hh] = bookingData.timeSlot.split(':');
+                        const slotHour = parseInt(hh, 10);
+                        if (!isNaN(slotHour) && slotHour <= today.getHours()) {
+                            errs.timeSlot = 'Time slot has already passed';
+                        }
+                    }
+                }
                 break;
             }
             case 5: {
@@ -120,8 +179,15 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                 if (nameErr) errs.parentName = nameErr;
                 const emailErr = validateEmail(bookingData.parentEmail);
                 if (emailErr) errs.parentEmail = emailErr;
-                const phoneErr = validatePhone(bookingData.parentPhone, true);
+                const phoneErr = validatePhone10(bookingData.parentPhone, true, 'Phone number');
                 if (phoneErr) errs.parentPhone = phoneErr;
+                if (bookingData.emergencyContact) {
+                    const emErr = validatePhone10(bookingData.emergencyContact, false, 'Emergency contact');
+                    if (emErr) errs.emergencyContact = emErr;
+                }
+                if (!bookingData.agreeToReceive) {
+                    errs.agreeToReceive = 'Please agree to receive booking confirmations to continue';
+                }
                 break;
             }
             case 6:
@@ -168,6 +234,8 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
             toast.error(firstError || 'Please complete all required fields');
             return;
         }
+        // Clear draft once we successfully submit (handled by parent)
+        try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
         onComplete(bookingData);
     };
 
@@ -186,6 +254,7 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         childName={bookingData.childName}
                         childAge={bookingData.childAge}
                         childGender={bookingData.childGender}
+                        childDOB={bookingData.childDOB}
                         onUpdate={updateBookingData}
                         errors={stepErrors}
                     />
@@ -211,6 +280,8 @@ export default function BookingFlow({ onComplete, onBack }: BookingFlowProps) {
                         parentName={bookingData.parentName}
                         parentEmail={bookingData.parentEmail}
                         parentPhone={bookingData.parentPhone}
+                        emergencyContact={bookingData.emergencyContact}
+                        agreeToReceive={bookingData.agreeToReceive}
                         onUpdate={updateBookingData}
                         errors={stepErrors}
                     />

@@ -54,13 +54,29 @@ export default function GoalsPage() {
 
     useEffect(() => { load() }, [searchTerm])
 
+    // Reusable: must contain letters, basic punctuation. Used for Title/Metric/Unit.
+    const isAlphaText = (v: string): boolean => {
+        const t = v.trim()
+        if (!t) return false
+        if (!/[A-Za-z]/.test(t)) return false
+        if (!/^[A-Za-z0-9\s.,'%/+\-]+$/.test(t)) return false
+        return true
+    }
+
     const validate = () => {
         const e: Record<string, string> = {}
         if (!form.title.trim()) e.title = 'Title is required'
+        else if (form.title.trim().length < 3) e.title = 'Title must be at least 3 characters'
         else if (form.title.length > 120) e.title = 'Title too long (max 120)'
+        else if (!isAlphaText(form.title)) e.title = 'Title must contain letters — no symbol-only input'
         if (!form.metric.trim()) e.metric = 'Metric is required (e.g. classes, students, satisfaction)'
+        else if (!isAlphaText(form.metric)) e.metric = 'Metric must contain letters — no symbol/number-only input'
         if (form.targetValue <= 0) e.targetValue = 'Target value must be greater than 0'
+        else if (form.targetValue <= form.currentValue) e.targetValue = 'Target must be greater than current value'
         if (form.currentValue < 0) e.currentValue = 'Current value cannot be negative'
+        if (form.unit.trim() && !/^[A-Za-z%/.0-9\s-]+$/.test(form.unit.trim())) {
+            e.unit = 'Unit can only contain letters, digits, %, /, and basic punctuation'
+        }
         if (!form.deadline) e.deadline = 'Deadline is required'
         else if (form.deadline < today()) e.deadline = 'Deadline must be today or later'
         setErrors(e)
@@ -295,10 +311,12 @@ export default function GoalsPage() {
                                 <input
                                     type="text"
                                     value={form.unit}
-                                    onChange={e => setForm({ ...form, unit: e.target.value })}
+                                    onChange={e => { setForm({ ...form, unit: e.target.value }); if (errors.unit) setErrors({ ...errors, unit: '' }) }}
                                     placeholder="e.g., %, /5"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                    maxLength={20}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 ${errors.unit ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-pink-500'}`}
                                 />
+                                {errors.unit && <p className="mt-1 text-xs text-red-600">{errors.unit}</p>}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
