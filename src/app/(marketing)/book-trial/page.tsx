@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Calendar, User, Mail, MapPin, Users, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { filterNameInput, FORMAT_HINTS, PATTERNS } from '@/utils/validation';
+import { filterNameInput, FORMAT_HINTS, PATTERNS, validateName, validateEmail, validateNotes } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { findByDialCode, validatePhoneForCountry } from '@/utils/countryCodes';
@@ -19,13 +19,16 @@ const NAME_REGEX = PATTERNS.nameOnly;
 const bookTrialSchema = z.object({
     parentName: z
         .string()
-        .min(2, 'Name must be at least 2 characters')
-        .max(60, 'Name must be at most 60 characters')
-        .regex(NAME_REGEX, 'Only letters, spaces, hyphens and apostrophes allowed'),
+        .superRefine((val, ctx) => {
+            const err = validateName(val, 'Name');
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        }),
     email: z
         .string()
-        .min(1, 'Email is required')
-        .regex(PATTERNS.emailFormat, 'Please enter a valid email (e.g. user@example.com)'),
+        .superRefine((val, ctx) => {
+            const err = validateEmail(val);
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        }),
     phone: z
         .string()
         .min(1, 'Phone number is required')
@@ -46,9 +49,10 @@ const bookTrialSchema = z.object({
         }),
     childName: z
         .string()
-        .min(2, 'Child name must be at least 2 characters')
-        .max(60, 'Child name must be at most 60 characters')
-        .regex(NAME_REGEX, 'Only letters, spaces, hyphens and apostrophes allowed'),
+        .superRefine((val, ctx) => {
+            const err = validateName(val, "Child's name");
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        }),
     childAge: z
         .string()
         .min(1, 'Please select age')
@@ -74,7 +78,12 @@ const bookTrialSchema = z.object({
     comments: z
         .string()
         .max(500, 'Comments must be 500 characters or fewer')
-        .optional(),
+        .optional()
+        .superRefine((val, ctx) => {
+            if (!val || val.trim().length === 0) return;
+            const err = validateNotes(val, 'Comments', false, 500);
+            if (err) ctx.addIssue({ code: z.ZodIssueCode.custom, message: err });
+        }),
 });
 
 type BookTrialFormData = z.infer<typeof bookTrialSchema>;
@@ -91,11 +100,15 @@ export default function BookTrialPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [confirmation, setConfirmation] = useState<{ confirmationNumber: string; childName: string; date: string } | null>(null);
 
+    const TRIAL_STORAGE_KEY = 'proactiv:bookTrialDraft';
+
     const {
         register,
         handleSubmit,
         reset,
         control,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm<BookTrialFormData>({
         resolver: zodResolver(bookTrialSchema),
@@ -106,6 +119,28 @@ export default function BookTrialPage() {
             phone: '',
         },
     });
+
+    // Restore form from sessionStorage on mount (survives tab refresh)
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem(TRIAL_STORAGE_KEY);
+            if (raw) {
+                const draft = JSON.parse(raw);
+                Object.entries(draft).forEach(([k, v]) => {
+                    if (v !== undefined && v !== null) setValue(k as keyof BookTrialFormData, v as any);
+                });
+            }
+        } catch { /* ignore */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Persist on every change so the tab refresh doesn't lose data
+    const watchedValues = watch();
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify(watchedValues));
+        } catch { /* ignore quota */ }
+    }, [watchedValues]);
 
     const onSubmit = async (data: BookTrialFormData) => {
         if (!isAuthenticated) {
@@ -132,6 +167,7 @@ export default function BookTrialPage() {
             const created = res?.data ?? res;
 
             toast.success('Trial class booked successfully!');
+            try { sessionStorage.removeItem(TRIAL_STORAGE_KEY); } catch { /* ignore */ }
             setConfirmation({
                 confirmationNumber: created?.confirmationNumber || created?.bookingId || '',
                 childName: data.childName,

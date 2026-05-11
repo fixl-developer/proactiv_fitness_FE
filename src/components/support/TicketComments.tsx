@@ -94,7 +94,7 @@ export const TicketComments: React.FC<TicketCommentsProps> = ({ ticketId, isStaf
                                     </p>
                                 </div>
                                 <p className="text-gray-700 mb-3">{comment.message}</p>
-                                {(isStaff || user?.id === comment.userId) && (
+                                {(isStaff || user?.userId === comment.userId) && (
                                     <button
                                         onClick={() => handleDeleteComment(comment.commentId)}
                                         className="text-sm text-red-600 hover:text-red-800"

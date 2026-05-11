@@ -7,8 +7,14 @@
 export const PATTERNS = {
   nameOnly: /^[A-Za-z\s'-]+$/,
   emailFormat: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/,
+  // Strict email: TLD 2-6 letters, no trailing chars after it
+  emailStrict: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,6}$/,
   phoneDigits: /^[0-9+\-() ]{7,20}$/,
   phoneOnlyDigits: /^[0-9]{7,15}$/,
+  // Strict 10-digit phone (no spaces, no separators, no alphabets)
+  phoneStrict10: /^[0-9]{10}$/,
+  // Hong Kong strict: optional +852 then exactly 8 digits, no separators
+  phoneHKStrict: /^(\+852)?[0-9]{8}$/,
   zipCode: /^[A-Za-z0-9\s-]{3,10}$/,
   url: /^https?:\/\/.+/,
   numbersOnly: /^[0-9]+$/,
@@ -18,6 +24,20 @@ export const PATTERNS = {
   cardNumber: /^[0-9]{13,19}$/,
   cvv: /^[0-9]{3,4}$/,
   cardExpiry: /^(0[1-9]|1[0-2])\/([0-9]{2})$/,
+}
+
+// Reject placeholder gibberish like "fff", "ab ab ab" — values that pass
+// regex shape checks but are obviously not a real word. Used by validators
+// that accept letters but want to filter out single-letter or single-char
+// repeats. Restored after an external edit removed it.
+export function looksMeaningful(value: string): boolean {
+  const trimmed = value.trim()
+  const lettersOnly = trimmed.replace(/[^A-Za-z]/g, '').toLowerCase()
+  if (lettersOnly.length < 2) return false
+  if (new Set(lettersOnly).size < 2) return false
+  const words = trimmed.split(/\s+/).filter(Boolean)
+  if (words.every((w) => w.length <= 1)) return false
+  return true
 }
 
 // ─── Password Strength ───────────────────────────────────────
@@ -42,8 +62,21 @@ export function validatePassword(value: string): string | null {
 // ─── Field Validators ────────────────────────────────────────
 export function validateName(value: string, fieldLabel = 'Name'): string | null {
   if (!value || !value.trim()) return `${fieldLabel} is required`
-  if (value.trim().length < 2) return `${fieldLabel} must be at least 2 characters`
-  if (!PATTERNS.nameOnly.test(value.trim())) return `${fieldLabel} can only contain letters, spaces, hyphens and apostrophes`
+  const trimmed = value.trim()
+  if (trimmed.length < 2) return `${fieldLabel} must be at least 2 characters`
+  // Reject leading/trailing/multiple consecutive spaces
+  if (/\s{2,}/.test(trimmed)) return `${fieldLabel} cannot contain consecutive spaces`
+  if (value !== value.trim()) return `${fieldLabel} cannot start or end with spaces`
+  // Reject digits and special characters
+  if (/\d/.test(trimmed)) return `${fieldLabel} cannot contain digits`
+  if (!PATTERNS.nameOnly.test(trimmed)) return `${fieldLabel} can only contain letters, spaces, hyphens and apostrophes`
+  // Reject "Joh n"-style: any word in the name with length 1 is suspicious unless
+  // the whole name is a single character (already blocked by length 2 above).
+  const words = trimmed.split(/\s+/).filter(Boolean)
+  if (words.length > 1 && words.some(w => w.replace(/['-]/g, '').length < 2)) {
+    return `${fieldLabel} contains invalid spacing (each word must be 2+ letters)`
+  }
+  if (!looksMeaningful(trimmed)) return `Please enter a valid ${fieldLabel.toLowerCase()}`
   return null
 }
 
@@ -77,15 +110,41 @@ export function validatePlaceName(value: string, fieldLabel = 'This field'): str
 
 export function validateEmail(value: string, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Email is required' : null
-  if (!PATTERNS.emailFormat.test(value.trim())) return 'Please enter a valid email address (e.g. user@example.com)'
+  const trimmed = value.trim()
+  // Reject spaces inside email
+  if (/\s/.test(value)) return 'Email cannot contain spaces'
+  // Strict format check
+  if (!PATTERNS.emailStrict.test(trimmed)) return 'Please enter a valid email address (e.g. user@example.com)'
+  // Reject leading/trailing dots near @
+  if (/\.@|@\./.test(trimmed)) return 'Please enter a valid email address'
+  // Reject consecutive special characters at end (e.g. ..com, .com.)
+  if (/[._-]{2,}/.test(trimmed.split('@')[0] || '')) return 'Please enter a valid email address'
   return null
 }
 
 export function validatePhone(value: string, required = true): string | null {
   if (!value || !value.trim()) return required ? 'Phone number is required' : null
+  // Reject spaces inside the phone (we accept country-code prefix as one piece)
+  if (/\s/.test(value.trim())) return 'Phone number cannot contain spaces'
+  // Reject alphabets
+  if (/[A-Za-z]/.test(value)) return 'Phone number cannot contain letters'
   const digits = value.replace(/\D/g, '')
   if (digits.length < 7 || digits.length > 15) return 'Phone number must be 7-15 digits'
-  if (!PATTERNS.phoneDigits.test(value.trim())) return 'Please enter a valid phone number (digits, +, -, spaces only)'
+  if (!/^\+?[0-9]+$/.test(value.trim())) return 'Phone number can only contain digits and an optional leading +'
+  return null
+}
+
+// Strict 10-digit phone: no spaces, no separators, no alphabets
+export function validatePhone10(value: string, required = true, fieldLabel = 'Phone number'): string | null {
+  if (!value || !value.trim()) return required ? `${fieldLabel} is required` : null
+  const v = value.trim()
+  if (/\s/.test(v)) return `${fieldLabel} cannot contain spaces`
+  if (/[A-Za-z]/.test(v)) return `${fieldLabel} cannot contain letters`
+  // Allow optional +country prefix in front of the 10 digits
+  const stripped = v.replace(/^\+\d{1,3}/, '')
+  if (!/^[0-9]+$/.test(stripped)) return `${fieldLabel} can only contain digits`
+  if (stripped.length < 10) return `${fieldLabel} must be exactly 10 digits (currently ${stripped.length})`
+  if (stripped.length > 10) return `${fieldLabel} cannot exceed 10 digits (currently ${stripped.length})`
   return null
 }
 
@@ -121,6 +180,7 @@ export function validateDateOfBirth(value: string, required = true): string | nu
   const date = new Date(value)
   if (isNaN(date.getTime())) return 'Please enter a valid date'
   const today = new Date()
+  today.setHours(23, 59, 59, 999)
   if (date > today) return 'Date of birth cannot be in the future'
   const age = today.getFullYear() - date.getFullYear()
   if (age > 120) return 'Please enter a valid date of birth'
@@ -128,9 +188,37 @@ export function validateDateOfBirth(value: string, required = true): string | nu
 }
 
 export function validateAge(value: string | number, min = 1, max = 100): string | null {
+  if (value === '' || value === null || value === undefined) return 'Age is required'
   const num = typeof value === 'string' ? parseInt(value, 10) : value
   if (isNaN(num)) return 'Please enter a valid age'
-  if (num < min || num > max) return `Age must be between ${min} and ${max}`
+  if (num < min) return `Age must be at least ${min}`
+  if (num > max) return `Age must be at most ${max}`
+  return null
+}
+
+// Cross-check Age vs DOB consistency. Allow ±1 year tolerance for birthday this year.
+export function validateAgeDOBConsistency(age: string | number, dob: string): string | null {
+  if (!dob || age === '' || age === null || age === undefined) return null
+  const dobDate = new Date(dob)
+  if (isNaN(dobDate.getTime())) return null
+  const today = new Date()
+  let computedAge = today.getFullYear() - dobDate.getFullYear()
+  const m = today.getMonth() - dobDate.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) computedAge--
+  const enteredAge = typeof age === 'string' ? parseInt(age, 10) : age
+  if (isNaN(enteredAge)) return null
+  if (Math.abs(computedAge - enteredAge) > 1) {
+    return `Age (${enteredAge}) does not match Date of Birth (calculated age: ${computedAge})`
+  }
+  return null
+}
+
+// Free-text notes/comments: must contain letters (reject "12323" style numeric-only input)
+export function validateNotes(value: string, fieldLabel = 'Notes', required = false, maxLength = 1000): string | null {
+  if (!value || !value.trim()) return required ? `${fieldLabel} is required` : null
+  const trimmed = value.trim()
+  if (trimmed.length > maxLength) return `${fieldLabel} cannot exceed ${maxLength} characters`
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters, not only numbers or symbols`
   return null
 }
 
@@ -194,6 +282,82 @@ export function validateNumber(value: string, fieldLabel = 'Value', min?: number
   if (min !== undefined && num < min) return `${fieldLabel} must be at least ${min}`
   if (max !== undefined && num > max) return `${fieldLabel} must be at most ${max}`
   return null
+}
+
+// Location/business code (e.g., "LOC-001"): uppercase letters/digits/hyphen
+// only — rejects symbol-only input like "@@@". Used by Regional Admin
+// Locations + Budget category + Approval location forms when only allowing
+// short alphanumeric identifiers.
+export function validateLocationCode(value: string, fieldLabel = 'Code'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim().toUpperCase()
+  if (trimmed.length < 2) return `${fieldLabel} must be at least 2 characters`
+  if (trimmed.length > 20) return `${fieldLabel} cannot exceed 20 characters`
+  if (!/^[A-Z0-9-]+$/.test(trimmed)) return `${fieldLabel} can only contain letters, digits, and hyphens`
+  if (!/[A-Z0-9]/.test(trimmed)) return `${fieldLabel} must contain at least one letter or digit`
+  return null
+}
+
+// Alphabetic / location-style text — must contain letters, no digit-or-symbol
+// only input. Used for free-text "Location" or "Category" fields where
+// "Boston@123" / "@@12" / "12@2jkn" should fail validation.
+export function validateAlphaText(value: string, fieldLabel = 'Field', maxLen = 100): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < 2) return `${fieldLabel} must be at least 2 characters`
+  if (trimmed.length > maxLen) return `${fieldLabel} cannot exceed ${maxLen} characters`
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters`
+  if (/\d/.test(trimmed)) return `${fieldLabel} cannot contain numbers`
+  if (!/^[A-Za-z\s.,'\-]+$/.test(trimmed)) return `${fieldLabel} can only contain letters, spaces, and basic punctuation`
+  return null
+}
+
+// Lenient plain-text validator used by partner pages. Allows letters/digits
+// + basic punctuation (so an integration name like "OAuth 2.0" passes), but
+// still rejects symbol-only / digit-only input and out-of-range lengths.
+// Signature matches existing call sites: (value, label, minLen?, maxLen?).
+export function validatePlainText(value: string, fieldLabel = 'Field', minLen = 1, maxLen = 200): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < minLen) return `${fieldLabel} must be at least ${minLen} characters`
+  if (trimmed.length > maxLen) return `${fieldLabel} cannot exceed ${maxLen} characters`
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters`
+  if (!/^[A-Za-z0-9\s.,'&()_\-/]+$/.test(trimmed)) return `${fieldLabel} contains invalid characters`
+  return null
+}
+
+// Title-style validator that allows letters + spaces + minimal punctuation
+// but rejects all-special-chars or starts-with-digit gibberish. Used for
+// Compliance title / Benchmark metric name / etc.
+export function validateTitle(value: string, fieldLabel = 'Title', maxLen = 200): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const trimmed = value.trim()
+  if (trimmed.length < 3) return `${fieldLabel} must be at least 3 characters`
+  if (trimmed.length > maxLen) return `${fieldLabel} cannot exceed ${maxLen} characters`
+  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters`
+  if (!/^[A-Za-z][A-Za-z0-9\s.,'&()\-/]*$/.test(trimmed)) return `${fieldLabel} must start with a letter and contain only safe characters`
+  const specials = (trimmed.match(/[^A-Za-z0-9\s]/g) || []).length
+  if (specials / trimmed.length > 0.3) return `${fieldLabel} contains too many special characters`
+  return null
+}
+
+// Reject past dates. Used for "Due Date" / "Deadline" fields that must be
+// today or in the future.
+export function validateFutureOrToday(value: string, fieldLabel = 'Date'): string | null {
+  if (!value || !value.trim()) return `${fieldLabel} is required`
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const picked = new Date(value)
+  if (isNaN(picked.getTime())) return `Invalid ${fieldLabel.toLowerCase()}`
+  if (picked < today) return `${fieldLabel} cannot be in the past`
+  return null
+}
+
+// Get today's date in YYYY-MM-DD (local) for HTML date input `min` attr.
+export function todayISODate(): string {
+  const d = new Date()
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 10)
 }
 
 export function validateCardNumber(value: string): string | null {

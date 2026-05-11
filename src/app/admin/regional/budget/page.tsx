@@ -14,7 +14,7 @@ import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip } from
 import { RegionalAdminService } from '@/services/regionalAdminService'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
-import { validateRequired, validateNumber, filterNumberInput } from '@/utils/validation'
+import { validateRequired, validateNumber, validateAlphaText, filterNumberInput } from '@/utils/validation'
 
 interface BudgetItem {
     id: string
@@ -116,7 +116,8 @@ export default function RegionalBudgetPage() {
 
     const validateForm = (): boolean => {
         const errs: Record<string, string> = {}
-        const catErr = validateRequired(form.category, 'Category'); if (catErr) errs.category = catErr
+        // Category — alphabetic only (rejects "@@12" style input from QA bugs).
+        const catErr = validateAlphaText(form.category, 'Category', 60); if (catErr) errs.category = catErr
         const allocErr = validateNumber(form.allocated, 'Allocated amount', 0, 100000000); if (allocErr) errs.allocated = allocErr
         if (form.spent) {
             const spentErr = validateNumber(form.spent, 'Spent amount', 0, 100000000); if (spentErr) errs.spent = spentErr
@@ -439,11 +440,15 @@ export default function RegionalBudgetPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                         <Input
                             value={form.category}
-                            onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
+                            onChange={(e) => {
+                                setForm(prev => ({ ...prev, category: e.target.value }))
+                                if (formErrors.category) setFormErrors(prev => { const n = { ...prev }; delete n.category; return n })
+                            }}
                             placeholder="e.g. Personnel, Operations, Marketing"
+                            maxLength={60}
                             className={formErrors.category ? 'border-red-500' : ''}
                         />
-                        <FormFieldHint hint="Budget category name" error={formErrors.category} />
+                        <FormFieldHint hint="Letters only (no digits or special characters)" error={formErrors.category} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Allocated Amount ($) *</label>
