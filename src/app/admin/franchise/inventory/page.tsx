@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
-import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateNumber, validatePlainText, validateAlphaText, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 interface InventoryItem {
@@ -138,8 +138,8 @@ export default function InventoryManagementPage() {
     const handleFormChange = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
-        if (field === 'name') error = validateRequired(value, 'Name')
-        else if (field === 'category') error = validateRequired(value, 'Category')
+        if (field === 'name') error = validatePlainText(value, 'Name', 2, 100)
+        else if (field === 'category') error = validateAlphaText(value, 'Category', 50)
         else if (field === 'quantity') error = validateNumber(value, 'Quantity', 0)
         else if (field === 'minStock') error = validateNumber(value, 'Min stock', 0)
         else if (field === 'maxStock') error = validateNumber(value, 'Max stock', 0)
@@ -149,8 +149,8 @@ export default function InventoryManagementPage() {
 
     const handleSave = async () => {
         const errs: Record<string, string> = {}
-        const nmErr = validateRequired(String(formData.name), 'Name'); if (nmErr) errs.name = nmErr
-        const ctErr = validateRequired(String(formData.category), 'Category'); if (ctErr) errs.category = ctErr
+        const nmErr = validatePlainText(String(formData.name), 'Name', 2, 100); if (nmErr) errs.name = nmErr
+        const ctErr = validateAlphaText(String(formData.category), 'Category', 50); if (ctErr) errs.category = ctErr
         const qtErr = validateNumber(String(formData.quantity), 'Quantity', 0); if (qtErr) errs.quantity = qtErr
         const ucErr = validateNumber(String(formData.unitCost), 'Unit cost', 0); if (ucErr) errs.unitCost = ucErr
         setFieldErrors(errs)

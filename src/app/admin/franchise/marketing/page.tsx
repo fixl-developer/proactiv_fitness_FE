@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
-import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateNumber, validatePlainText, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 type CampaignType = 'SEASONAL' | 'REFERRAL' | 'B2B' | 'SOCIAL'
@@ -77,13 +77,9 @@ export default function MarketingPromotionsPage() {
             setIsLoading(true)
             setError(null)
             const statusParam = filterStatus === 'all' ? undefined : filterStatus.toUpperCase()
-            const response = await FranchiseOwnerService.getCampaigns(1, 50, statusParam)
-            let items: Campaign[] = response.data || response || []
-            if (searchTerm) {
-                items = items.filter((c: Campaign) =>
-                    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-            }
+            const searchParam = searchTerm.trim() || undefined
+            const response = await FranchiseOwnerService.getCampaigns(1, 50, statusParam, searchParam)
+            const items: Campaign[] = response.data || response || []
             setCampaigns(items)
         } catch (err: any) {
             setError(err.message || 'Failed to fetch campaigns')
@@ -143,9 +139,20 @@ export default function MarketingPromotionsPage() {
     }
 
     const handleFormChange = (field: keyof CampaignFormData, value: string | number) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+        setFormData(prev => {
+            const next = { ...prev, [field]: value }
+            // Cross-field check: clear endDate error if new date now valid
+            if ((field === 'startDate' || field === 'endDate') && next.startDate && next.endDate) {
+                if (new Date(next.endDate) < new Date(next.startDate)) {
+                    setFieldErrors(fe => ({ ...fe, endDate: 'End date cannot be earlier than start date' }))
+                } else {
+                    setFieldErrors(fe => { const n = { ...fe }; delete n.endDate; return n })
+                }
+            }
+            return next
+        })
         let error: string | null = null
-        if (field === 'name') error = validateRequired(String(value), 'Campaign name')
+        if (field === 'name') error = validatePlainText(String(value), 'Campaign name', 3, 100)
         else if (field === 'discount') error = validateNumber(String(value), 'Discount', 0, 100)
         else if (field === 'budget') error = validateNumber(String(value), 'Budget', 0)
         setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
@@ -153,11 +160,14 @@ export default function MarketingPromotionsPage() {
 
     const handleSave = async () => {
         const errs: Record<string, string> = {}
-        const nmErr = validateRequired(formData.name, 'Campaign name'); if (nmErr) errs.name = nmErr
+        const nmErr = validatePlainText(formData.name, 'Campaign name', 3, 100); if (nmErr) errs.name = nmErr
         const dsErr = validateNumber(String(formData.discount), 'Discount', 0, 100); if (dsErr) errs.discount = dsErr
         const bgErr = validateNumber(String(formData.budget), 'Budget', 0); if (bgErr) errs.budget = bgErr
         if (!formData.startDate) errs.startDate = 'Start date is required'
         if (!formData.endDate) errs.endDate = 'End date is required'
+        if (formData.startDate && formData.endDate && new Date(formData.endDate) < new Date(formData.startDate)) {
+            errs.endDate = 'End date cannot be earlier than start date'
+        }
         setFieldErrors(errs)
         if (Object.keys(errs).length > 0) return
         try {
@@ -583,20 +593,25 @@ export default function MarketingPromotionsPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                             <Input
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => handleFormChange('startDate', e.target.value)}
+                                className={fieldErrors.startDate ? 'border-red-500' : ''}
                             />
+                            <FormFieldHint error={fieldErrors.startDate} />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
                             <Input
                                 type="date"
                                 value={formData.endDate}
+                                min={formData.startDate || undefined}
                                 onChange={(e) => handleFormChange('endDate', e.target.value)}
+                                className={fieldErrors.endDate ? 'border-red-500' : ''}
                             />
+                            <FormFieldHint error={fieldErrors.endDate} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">

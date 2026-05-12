@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
 import { smartSchedulerService, revenueIntelligenceService } from '@/services/advancedAIServices'
+import { toast } from 'sonner'
 
 export default function LocationWaitlistPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -65,9 +66,10 @@ export default function LocationWaitlistPage() {
     const handleOfferSpot = async (entryId: string) => {
         try {
             await LocationManagerService.offerWaitlistSpot(entryId)
+            toast.success('Spot offered to student')
             fetchWaitlistEntries()
         } catch (err: any) {
-            alert('Failed to offer spot: ' + err.message)
+            toast.error('Failed to offer spot: ' + (err?.message || 'Unknown error'))
         }
     }
 
@@ -75,9 +77,10 @@ export default function LocationWaitlistPage() {
         if (confirm('Are you sure you want to remove this entry from the waitlist?')) {
             try {
                 await LocationManagerService.removeFromWaitlist(entryId)
+                toast.success('Entry removed from waitlist')
                 fetchWaitlistEntries()
             } catch (err: any) {
-                alert('Failed to remove from waitlist: ' + err.message)
+                toast.error('Failed to remove from waitlist: ' + (err?.message || 'Unknown error'))
             }
         }
     }

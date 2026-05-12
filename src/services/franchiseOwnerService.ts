@@ -311,13 +311,15 @@ export class FranchiseOwnerService {
     static async getCampaigns(
         page: number = 1,
         pageSize: number = 10,
-        status?: string
+        status?: string,
+        search?: string
     ): Promise<PaginatedResponse<any>> {
         try {
             const params = new URLSearchParams()
             params.append('page', page.toString())
             params.append('pageSize', pageSize.toString())
             if (status) params.append('status', status)
+            if (search) params.append('search', search)
 
             const response: any = await apiClient.get(`/admin/franchise/marketing/campaigns?${params.toString()}`)
             return {
