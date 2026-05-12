@@ -12,10 +12,10 @@ import {
   validateNumber,
   validateCurrency,
   validateTextArea,
+  validateTitle,
+  validateNotes,
 } from '@/utils/validation'
 
-// Program name: letters, digits, spaces, hyphens, apostrophes, ampersand
-const PROGRAM_NAME_PATTERN = /^[A-Za-z0-9 '&\-]+$/
 // Age group: "5-10", "5 - 10", or just "5+" (we accept the dash form)
 const AGE_GROUP_PATTERN = /^\s*\d{1,2}\s*-\s*\d{1,2}\s*$/
 
@@ -378,14 +378,9 @@ export default function ProgramCatalogPage() {
   const validateFormData = () => {
     const e: Record<string, string> = {}
 
-    // 1. Program Name: Required, 3-80 chars, alphanumeric + spaces/hyphens/apostrophes
-    const nameErr = validateRequired(formData.name, 'Program name')
+    // 1. Program Name: must contain letters, no leading digit, ≤30% special chars (validateTitle)
+    const nameErr = validateTitle(formData.name, 'Program name', 100)
     if (nameErr) e.name = nameErr
-    else if (formData.name.trim().length < 3) e.name = 'Program name must be at least 3 characters'
-    else if (formData.name.length > 80) e.name = 'Program name must be less than 80 characters'
-    else if (!PROGRAM_NAME_PATTERN.test(formData.name.trim())) {
-      e.name = 'Letters, digits, spaces, hyphens, apostrophes and & only'
-    }
 
     // 2. Type: Required, must be valid type
     const typeErr = validateSelect(formData.type, 'Type')
@@ -511,22 +506,22 @@ export default function ProgramCatalogPage() {
       e.skillLevels = 'Select at least one skill level'
     }
 
-    // 22. Learning Objectives: Optional, each max 200 chars
+    // 22. Learning Objectives: Optional — each must contain letters, ≤200 chars (validateNotes)
     if (formData.learningObjectives && formData.learningObjectives.length > 0) {
       for (let i = 0; i < formData.learningObjectives.length; i++) {
-        if (formData.learningObjectives[i].length > 200) {
-          e.learningObjectives = `Learning objective ${i + 1} must be less than 200 characters`
-          break
+        const loErr = validateNotes(formData.learningObjectives[i], 'Learning objective', false, 200)
+        if (loErr) {
+          e[`learningObjectives_${i}`] = loErr
         }
       }
     }
 
-    // 23. Activities: Optional, each max 200 chars
+    // 23. Activities: Optional — each must contain letters, ≤200 chars (validateNotes)
     if (formData.activities && formData.activities.length > 0) {
       for (let i = 0; i < formData.activities.length; i++) {
-        if (formData.activities[i].length > 200) {
-          e.activities = `Activity ${i + 1} must be less than 200 characters`
-          break
+        const actErr = validateNotes(formData.activities[i], 'Activity', false, 200)
+        if (actErr) {
+          e[`activities_${i}`] = actErr
         }
       }
     }
@@ -838,20 +833,19 @@ export default function ProgramCatalogPage() {
                 <input id="input-text-admin-programs-catalog"
                   type="text"
                   value={formData.name}
-                  maxLength={80}
+                  maxLength={100}
                   onChange={(e) => {
                     const v = e.target.value
-                    if (v === '' || PROGRAM_NAME_PATTERN.test(v)) {
-                      setFormData({ ...formData, name: v })
-                      if (errors.name) setErrors({ ...errors, name: '' })
-                    }
+                    setFormData({ ...formData, name: v })
+                    const err = validateTitle(v, 'Program name', 100)
+                    setErrors({ ...errors, name: err || '' })
                   }}
                   placeholder="e.g. Tiny Tumblers"
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 />
                 {errors.name
                   ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                  : <p className="mt-1 text-xs text-gray-500">Letters, digits, spaces, hyphens, apostrophes and &amp; only</p>}
+                  : <p className="mt-1 text-xs text-gray-500">Must contain letters; no leading digit; max 100 characters</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">
@@ -1392,37 +1386,46 @@ export default function ProgramCatalogPage() {
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Learning Objectives (Optional)</label>
                 <div className="space-y-2">
-                  {formData.learningObjectives.map((obj, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={obj}
-                          onChange={(e) => {
-                            const updated = [...formData.learningObjectives]
-                            updated[idx] = e.target.value.slice(0, 200)
+                  {formData.learningObjectives.map((obj, idx) => {
+                    const rowErr = errors[`learningObjectives_${idx}`]
+                    return (
+                      <div key={idx} className="flex gap-2">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={obj}
+                            onChange={(e) => {
+                              const v = e.target.value.slice(0, 200)
+                              const updated = [...formData.learningObjectives]
+                              updated[idx] = v
+                              setFormData({ ...formData, learningObjectives: updated })
+                              const err = validateNotes(v, 'Learning objective', false, 200)
+                              setErrors({ ...errors, [`learningObjectives_${idx}`]: err || '' })
+                            }}
+                            placeholder="e.g., Improve balance and coordination"
+                            maxLength={200}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${rowErr ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                          />
+                          {rowErr
+                            ? <p className="mt-1 text-xs text-red-600">{rowErr}</p>
+                            : <p className="mt-1 text-xs text-gray-500">{obj.length}/200</p>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = formData.learningObjectives.filter((_, i) => i !== idx)
                             setFormData({ ...formData, learningObjectives: updated })
-                            if (errors.learningObjectives) setErrors({ ...errors, learningObjectives: '' })
+                            const next = { ...errors }
+                            delete next[`learningObjectives_${idx}`]
+                            setErrors(next)
                           }}
-                          placeholder="e.g., Improve balance and coordination"
-                          maxLength={200}
-                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.learningObjectives ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
-                        />
-                        <p className="mt-1 text-xs text-gray-500">{obj.length}/200</p>
+                          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = formData.learningObjectives.filter((_, i) => i !== idx)
-                          setFormData({ ...formData, learningObjectives: updated })
-                          if (errors.learningObjectives) setErrors({ ...errors, learningObjectives: '' })
-                        }}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, learningObjectives: [...formData.learningObjectives, ''] })}
@@ -1431,43 +1434,51 @@ export default function ProgramCatalogPage() {
                     + Add Objective
                   </button>
                 </div>
-                {errors.learningObjectives && <p className="mt-1 text-sm text-red-600">{errors.learningObjectives}</p>}
               </div>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Activities (Optional)</label>
                 <div className="space-y-2">
-                  {formData.activities.map((activity, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={activity}
-                          onChange={(e) => {
-                            const updated = [...formData.activities]
-                            updated[idx] = e.target.value.slice(0, 200)
+                  {formData.activities.map((activity, idx) => {
+                    const rowErr = errors[`activities_${idx}`]
+                    return (
+                      <div key={idx} className="flex gap-2">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={activity}
+                            onChange={(e) => {
+                              const v = e.target.value.slice(0, 200)
+                              const updated = [...formData.activities]
+                              updated[idx] = v
+                              setFormData({ ...formData, activities: updated })
+                              const err = validateNotes(v, 'Activity', false, 200)
+                              setErrors({ ...errors, [`activities_${idx}`]: err || '' })
+                            }}
+                            placeholder="e.g., Warm-up exercises"
+                            maxLength={200}
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${rowErr ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                          />
+                          {rowErr
+                            ? <p className="mt-1 text-xs text-red-600">{rowErr}</p>
+                            : <p className="mt-1 text-xs text-gray-500">{activity.length}/200</p>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = formData.activities.filter((_, i) => i !== idx)
                             setFormData({ ...formData, activities: updated })
-                            if (errors.activities) setErrors({ ...errors, activities: '' })
+                            const next = { ...errors }
+                            delete next[`activities_${idx}`]
+                            setErrors(next)
                           }}
-                          placeholder="e.g., Warm-up exercises"
-                          maxLength={200}
-                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.activities ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
-                        />
-                        <p className="mt-1 text-xs text-gray-500">{activity.length}/200</p>
+                          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = formData.activities.filter((_, i) => i !== idx)
-                          setFormData({ ...formData, activities: updated })
-                          if (errors.activities) setErrors({ ...errors, activities: '' })
-                        }}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50 rounded text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, activities: [...formData.activities, ''] })}
@@ -1476,7 +1487,6 @@ export default function ProgramCatalogPage() {
                     + Add Activity
                   </button>
                 </div>
-                {errors.activities && <p className="mt-1 text-sm text-red-600">{errors.activities}</p>}
               </div>
             </div>
 

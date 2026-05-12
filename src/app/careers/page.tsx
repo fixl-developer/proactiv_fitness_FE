@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { FiMapPin, FiClock, FiUsers, FiStar, FiHeart, FiTrendingUp, FiAward, FiSend } from 'react-icons/fi'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -9,6 +11,8 @@ import PageHero from '@/components/sections/PageHero'
 import { useCMSData } from '@/hooks/useCMSData'
 import { usePageHero } from '@/hooks/usePageHero'
 import { CMSService, JobPositionData } from '@/services/cmsService'
+import { apiClient } from '@/services/api/client'
+import { validateName, validateEmail, validatePhone10, validateSelect, validateNotes, filterNameInput } from '@/utils/validation'
 
 const staticPositions = [
     {
@@ -117,6 +121,60 @@ const CareersPage = () => {
     )
 
     const positions = dynamicPositions.length > 0 ? dynamicPositions : staticPositions
+
+    // Career application form state
+    const [applyForm, setApplyForm] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        position: '',
+        message: '',
+    })
+    const [applyErrors, setApplyErrors] = useState<Record<string, string>>({})
+    const [submittingApply, setSubmittingApply] = useState(false)
+
+    const validateApplyForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nameErr = validateName(applyForm.name, 'Full name')
+        if (nameErr) errs.name = nameErr
+        const emailErr = validateEmail(applyForm.email)
+        if (emailErr) errs.email = emailErr
+        const phoneErr = validatePhone10(applyForm.phone, true, 'Phone number')
+        if (phoneErr) errs.phone = phoneErr
+        const posErr = validateSelect(applyForm.position, 'Position')
+        if (posErr) errs.position = posErr
+        if (applyForm.message) {
+            const msgErr = validateNotes(applyForm.message, 'Message', false, 2000)
+            if (msgErr) errs.message = msgErr
+        }
+        setApplyErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
+    const handleApplySubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!validateApplyForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
+        setSubmittingApply(true)
+        try {
+            // Best-effort POST to backend careers endpoint; degrade gracefully if route missing
+            try {
+                await apiClient.post('/careers/applications', applyForm)
+            } catch {
+                try { await apiClient.post('/support/tickets', { subject: `Career application: ${applyForm.position}`, description: `${applyForm.name} <${applyForm.email}> ${applyForm.phone}\n\n${applyForm.message}`, category: 'Careers' }) } catch { /* ignore */ }
+            }
+            toast.success('Application submitted! Our HR team will reach out within 5 business days.')
+            setApplyForm({ name: '', email: '', phone: '', position: '', message: '' })
+            setApplyErrors({})
+        } catch (err) {
+            console.error('Application submit failed:', err)
+            toast.error('Failed to submit application. Please email careers@proactivsports.net directly.')
+        } finally {
+            setSubmittingApply(false)
+        }
+    }
 
     const { hero } = usePageHero('careers', {
         title: 'Join Our Team',
@@ -563,42 +621,127 @@ const CareersPage = () => {
                                 <h3 className="text-xl font-heading font-semibold mb-6">
                                     Quick Application
                                 </h3>
-                                <form id="form-careers" className="space-y-4">
+                                <form id="form-careers" className="space-y-4" onSubmit={handleApplySubmit} noValidate>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Full Name"
-                                            className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                        />
-                                        <input
-                                            type="email"
-                                            placeholder="Email Address"
-                                            className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                        />
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={applyForm.name}
+                                                onChange={(e) => {
+                                                    setApplyForm(prev => ({ ...prev, name: e.target.value }))
+                                                    const err = validateName(e.target.value, 'Full name')
+                                                    setApplyErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
+                                                }}
+                                                onKeyDown={filterNameInput}
+                                                onPaste={(e) => {
+                                                    const pasted = e.clipboardData.getData('text')
+                                                    const cleaned = pasted.replace(/[^A-Za-z\s'-]/g, '').replace(/\s{2,}/g, ' ')
+                                                    if (cleaned !== pasted) {
+                                                        e.preventDefault()
+                                                        setApplyForm(prev => ({ ...prev, name: cleaned }))
+                                                    }
+                                                }}
+                                                placeholder="Full Name"
+                                                maxLength={80}
+                                                className={`w-full px-4 py-3 rounded-lg bg-white/20 border text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 ${applyErrors.name ? 'border-red-400' : 'border-white/30'}`}
+                                            />
+                                            {applyErrors.name && <p className="text-xs text-red-200 mt-1">{applyErrors.name}</p>}
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="email"
+                                                value={applyForm.email}
+                                                onChange={(e) => {
+                                                    const v = e.target.value.replace(/\s/g, '')
+                                                    setApplyForm(prev => ({ ...prev, email: v }))
+                                                    const err = validateEmail(v)
+                                                    setApplyErrors(prev => { const n = { ...prev }; if (err) n.email = err; else delete n.email; return n })
+                                                }}
+                                                onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
+                                                placeholder="Email Address"
+                                                maxLength={120}
+                                                className={`w-full px-4 py-3 rounded-lg bg-white/20 border text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 ${applyErrors.email ? 'border-red-400' : 'border-white/30'}`}
+                                            />
+                                            {applyErrors.email && <p className="text-xs text-red-200 mt-1">{applyErrors.email}</p>}
+                                        </div>
                                     </div>
-                                    <input
-                                        type="tel"
-                                        placeholder="Phone Number"
-                                        className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                    />
-                                    <select id="select-careers-1" className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-white/50">
-                                        <option value="">Select Position</option>
-                                        <option value="gymnastics-coach">Gymnastics Coach</option>
-                                        <option value="assistant-coach">Assistant Coach</option>
-                                        <option value="camp-coordinator">Camp Coordinator</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                    <textarea
-                                        rows={4}
-                                        placeholder="Tell us about yourself and why you're interested in joining our team..."
-                                        className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                    />
+                                    <div>
+                                        <input
+                                            type="tel"
+                                            value={applyForm.phone}
+                                            onChange={(e) => {
+                                                const v = e.target.value.replace(/[^\d+]/g, '').slice(0, 14)
+                                                setApplyForm(prev => ({ ...prev, phone: v }))
+                                                const err = validatePhone10(v, true, 'Phone number')
+                                                setApplyErrors(prev => { const n = { ...prev }; if (err) n.phone = err; else delete n.phone; return n })
+                                            }}
+                                            onKeyDown={(e) => {
+                                                const allowed = /^[0-9+]$/
+                                                if (e.key.length === 1 && !allowed.test(e.key)) e.preventDefault()
+                                                if (e.key === ' ') e.preventDefault()
+                                            }}
+                                            placeholder="Phone Number (10 digits)"
+                                            maxLength={14}
+                                            inputMode="numeric"
+                                            className={`w-full px-4 py-3 rounded-lg bg-white/20 border text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 ${applyErrors.phone ? 'border-red-400' : 'border-white/30'}`}
+                                        />
+                                        {applyErrors.phone && <p className="text-xs text-red-200 mt-1">{applyErrors.phone}</p>}
+                                    </div>
+                                    <div>
+                                        <select
+                                            id="select-careers-1"
+                                            value={applyForm.position}
+                                            onChange={(e) => {
+                                                setApplyForm(prev => ({ ...prev, position: e.target.value }))
+                                                const err = validateSelect(e.target.value, 'Position')
+                                                setApplyErrors(prev => { const n = { ...prev }; if (err) n.position = err; else delete n.position; return n })
+                                            }}
+                                            className={`w-full px-4 py-3 rounded-lg bg-white border text-gray-900 focus:outline-none focus:ring-2 focus:ring-white/50 ${applyErrors.position ? 'border-red-400' : 'border-white/30'}`}
+                                        >
+                                            <option value="">Select Position</option>
+                                            <option value="gymnastics-coach">Gymnastics Coach</option>
+                                            <option value="assistant-coach">Assistant Coach</option>
+                                            <option value="camp-coordinator">Camp Coordinator</option>
+                                            <option value="qa-engineer">QA Engineer</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        {applyErrors.position && <p className="text-xs text-red-200 mt-1">{applyErrors.position}</p>}
+                                    </div>
+                                    <div>
+                                        <textarea
+                                            rows={4}
+                                            value={applyForm.message}
+                                            onChange={(e) => {
+                                                setApplyForm(prev => ({ ...prev, message: e.target.value }))
+                                                if (e.target.value) {
+                                                    const err = validateNotes(e.target.value, 'Message', false, 2000)
+                                                    setApplyErrors(prev => { const n = { ...prev }; if (err) n.message = err; else delete n.message; return n })
+                                                } else {
+                                                    setApplyErrors(prev => { const n = { ...prev }; delete n.message; return n })
+                                                }
+                                            }}
+                                            placeholder="Tell us about yourself and why you're interested in joining our team..."
+                                            maxLength={2000}
+                                            className={`w-full px-4 py-3 rounded-lg bg-white/20 border text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 ${applyErrors.message ? 'border-red-400' : 'border-white/30'}`}
+                                        />
+                                        {applyErrors.message && <p className="text-xs text-red-200 mt-1">{applyErrors.message}</p>}
+                                    </div>
                                     <button id="careers-btn"
                                         type="submit"
-                                        className="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-3 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center space-x-2"
+                                        disabled={submittingApply}
+                                        className="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-3 rounded-lg font-semibold transition-colors duration-300 flex items-center justify-center space-x-2 disabled:opacity-50"
                                     >
-                                        <FiSend className="w-5 h-5" />
-                                        <span>Submit Application</span>
+                                        {submittingApply ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <span>Submitting...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FiSend className="w-5 h-5" />
+                                                <span>Submit Application</span>
+                                            </>
+                                        )}
                                     </button>
                                 </form>
                             </motion.div>

@@ -144,8 +144,10 @@ export default function RegionalReportsPage() {
         name: s.role,
         utilization: s.utilization || 0,
         count: s.count || 0,
-        satisfaction: 4.3,
-        retention: 90,
+        // Real satisfaction + retention from the analytics payload when
+        // available — pre-fix these were hardcoded 4.3 / 90 placeholders.
+        satisfaction: s.satisfaction ?? 0,
+        retention: s.retention ?? 0,
     }))
 
     const totalRevenue = analyticsData?.totalRevenue || analyticsData?.revenue?.total || 0
@@ -244,10 +246,11 @@ export default function RegionalReportsPage() {
                         <div className="flex-1 relative">
                             <Filter className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                             <Input
-                                placeholder="Search..."
+                                placeholder={reportType === 'locations' ? 'Search by location name…' : 'Search filter (locations report only)'}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10"
+                                disabled={reportType !== 'locations'}
                             />
                         </div>
                     </div>
@@ -455,22 +458,34 @@ export default function RegionalReportsPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(analyticsData?.locations?.performance || []).map((loc: any, idx: number) => (
-                                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                                                <td className="py-3 px-4 font-medium text-gray-900">{loc.location}</td>
-                                                <td className="py-3 px-4 text-gray-600">{loc.enrollment ?? 0}</td>
-                                                <td className="py-3 px-4 text-gray-600">${((loc.revenue ?? 0) / 1000).toFixed(0)}K</td>
-                                                <td className="py-3 px-4 text-gray-600">{loc.occupancy ?? 0}%</td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant={(loc.occupancy ?? 0) >= 75 ? 'default' : 'secondary'}>
-                                                        {(loc.occupancy ?? 0) >= 75 ? 'Excellent' : 'Good'}
-                                                    </Badge>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {(analyticsData?.locations?.performance || []).length === 0 && (
-                                            <tr><td colSpan={5} className="py-8 text-center text-gray-500">No location data available</td></tr>
-                                        )}
+                                        {(() => {
+                                            // Filter the location performance table by the search box (BUG: was unused).
+                                            const all = (analyticsData?.locations?.performance || []) as any[]
+                                            const q = searchTerm.trim().toLowerCase()
+                                            const rows = q
+                                                ? all.filter(loc => String(loc.location || '').toLowerCase().includes(q))
+                                                : all
+                                            if (rows.length === 0) {
+                                                return (
+                                                    <tr><td colSpan={5} className="py-8 text-center text-gray-500">
+                                                        {q ? `No locations match "${searchTerm}"` : 'No location data available'}
+                                                    </td></tr>
+                                                )
+                                            }
+                                            return rows.map((loc: any, idx: number) => (
+                                                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                                    <td className="py-3 px-4 font-medium text-gray-900">{loc.location}</td>
+                                                    <td className="py-3 px-4 text-gray-600">{loc.enrollment ?? 0}</td>
+                                                    <td className="py-3 px-4 text-gray-600">${((loc.revenue ?? 0) / 1000).toFixed(0)}K</td>
+                                                    <td className="py-3 px-4 text-gray-600">{loc.occupancy ?? 0}%</td>
+                                                    <td className="py-3 px-4">
+                                                        <Badge variant={(loc.occupancy ?? 0) >= 75 ? 'default' : 'secondary'}>
+                                                            {(loc.occupancy ?? 0) >= 75 ? 'Excellent' : 'Good'}
+                                                        </Badge>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
@@ -496,8 +511,8 @@ export default function RegionalReportsPage() {
                                         </div>
                                         <div className="grid grid-cols-3 gap-4">
                                             <div><p className="text-xs text-gray-600 mb-1">Utilization</p><p className="text-lg font-bold text-gray-900">{staff.utilization}%</p></div>
-                                            <div><p className="text-xs text-gray-600 mb-1">Satisfaction</p><p className="text-lg font-bold text-gray-900">{staff.satisfaction}/5.0</p></div>
-                                            <div><p className="text-xs text-gray-600 mb-1">Retention</p><p className="text-lg font-bold text-gray-900">{staff.retention}%</p></div>
+                                            <div><p className="text-xs text-gray-600 mb-1">Satisfaction</p><p className="text-lg font-bold text-gray-900">{staff.satisfaction ? `${Number(staff.satisfaction).toFixed(1)}/5.0` : '—'}</p></div>
+                                            <div><p className="text-xs text-gray-600 mb-1">Retention</p><p className="text-lg font-bold text-gray-900">{staff.retention ? `${staff.retention}%` : '—'}</p></div>
                                         </div>
                                     </div>
                                 ))}

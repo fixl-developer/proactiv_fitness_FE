@@ -65,16 +65,21 @@ function BookAssessmentContent() {
                 childName: data.childName,
                 childAge: Number(data.childAge) || 0,
                 childGender: data.childGender || undefined,
+                childDOB: data.childDOB || undefined,
                 location: data.location,
                 date: data.date,
                 timeSlot: data.timeSlot,
                 parentName: data.parentName,
                 parentEmail: data.parentEmail,
                 parentPhone: data.parentPhone,
+                emergencyContact: data.emergencyContact || undefined,
             };
 
             const res: any = await apiClient.post('/bookings/assessment', payload);
             const created = res?.data ?? res;
+
+            // Clear persisted draft once booking succeeds
+            try { sessionStorage.removeItem('proactiv:bookAssessmentDraft'); } catch { /* ignore */ }
 
             // Merge real bookingId from backend into confirmation data
             setBookingData({

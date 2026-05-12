@@ -21,7 +21,7 @@ import {
 import { responsiveClasses } from '@/lib/responsiveClasses'
 import { useAuth } from '@/contexts/AuthContext'
 import { coachService } from '@/services/modules/coach.service'
-import { validateRequired, validateNumber, validateSelect, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateNumber, validateSelect, filterNumberInput, FORMAT_HINTS, looksMeaningful } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ────────────────────────────── types ──────────────────────────────
@@ -162,11 +162,47 @@ const emptyForm = (): ScheduleFormData => ({
     capacity: 0
 })
 
+// Class Name: must have letters, reject special-char-only / numeric-only,
+// reject gibberish like "@@@" or "1234". 3–80 chars.
+const validateClassName = (v: string): string | null => {
+    if (!v || !v.trim()) return 'Class Name is required'
+    const t = v.trim()
+    if (t.length < 3) return 'Class Name must be at least 3 characters'
+    if (t.length > 80) return 'Class Name cannot exceed 80 characters'
+    if (!/[A-Za-z]/.test(t)) return 'Class Name must contain letters, not only symbols/numbers'
+    if (!/^[A-Za-z0-9\s.,'&()-]+$/.test(t)) return 'Class Name has invalid characters (letters, numbers, spaces, .,\'&()- only)'
+    if (!looksMeaningful(t.replace(/[^A-Za-z\s]/g, ' '))) return 'Please enter a meaningful class name'
+    return null
+}
+
+// Location: alphabetic with optional digits/spaces/punctuation. Reject pure
+// digits or special-character-only strings.
+const validateLocation = (v: string): string | null => {
+    if (!v || !v.trim()) return 'Location is required'
+    const t = v.trim()
+    if (t.length < 2) return 'Location must be at least 2 characters'
+    if (t.length > 100) return 'Location cannot exceed 100 characters'
+    if (!/[A-Za-z]/.test(t)) return 'Location must contain letters'
+    if (!/^[A-Za-z0-9\s.,'#\/-]+$/.test(t)) return 'Location has invalid characters'
+    return null
+}
+
+// Reject past dates — class scheduled in the past makes no sense.
+const validateFutureOrTodayDate = (v: string, fieldLabel = 'Date'): string | null => {
+    if (!v || !v.trim()) return `${fieldLabel} is required`
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const picked = new Date(v)
+    if (isNaN(picked.getTime())) return `Invalid ${fieldLabel.toLowerCase()}`
+    if (picked < today) return `${fieldLabel} cannot be in the past`
+    return null
+}
+
 const validateScheduleForm = (data: ScheduleFormData): FormErrors => {
     const errors: FormErrors = {}
-    const cnErr = validateRequired(data.className, 'Class Name')
+    const cnErr = validateClassName(data.className)
     if (cnErr) errors.className = cnErr
-    const dtErr = validateRequired(data.date, 'Date')
+    const dtErr = validateFutureOrTodayDate(data.date)
     if (dtErr) errors.date = dtErr
     const stErr = validateRequired(data.startTime, 'Start Time')
     if (stErr) errors.startTime = stErr
@@ -175,13 +211,20 @@ const validateScheduleForm = (data: ScheduleFormData): FormErrors => {
     if (data.startTime && data.endTime && data.startTime >= data.endTime) {
         errors.endTime = 'End time must be after start time'
     }
-    const locErr = validateRequired(data.location, 'Location')
+    const locErr = validateLocation(data.location)
     if (locErr) errors.location = locErr
     const lvlErr = validateSelect(data.level, 'Level')
     if (lvlErr) errors.level = lvlErr
     const capErr = validateNumber(String(data.capacity || ''), 'Capacity', 1, 500)
     if (capErr) errors.capacity = capErr
     return errors
+}
+
+// Today's date in YYYY-MM-DD for the date input min attr.
+const todayISODate = () => {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().split('T')[0]
 }
 
 // ────────────────────────── main page ──────────────────────────────
@@ -231,12 +274,15 @@ const CoachSchedulePage = () => {
             const data = await coachService.getSchedules(coachId, { dateFrom, dateTo })
             setSchedules(Array.isArray(data) ? data : [])
         } catch (error) {
-            console.error('Error loading schedules, falling back to mock:', error)
-            setSchedules(MOCK_SCHEDULES)
+            // Don't fall back to mock data — mock ids cause delete/edit to
+            // 404 against the real backend. Show empty + error toast instead.
+            console.error('Error loading schedules:', error)
+            setSchedules([])
+            notify('error', 'Failed to load schedules. Please try again.')
         } finally {
             setIsLoading(false)
         }
-    }, [user?.id, currentDate])
+    }, [user?.id, currentDate, notify])
 
     useEffect(() => {
         if (!isAuthenticated && !localStorage.getItem('token')) return
@@ -397,23 +443,33 @@ const CoachSchedulePage = () => {
                     id="className"
                     placeholder="e.g. Morning Yoga"
                     value={formData.className}
-                    onChange={e => updateField('className', e.target.value)}
+                    onChange={e => {
+                        updateField('className', e.target.value)
+                        const err = validateClassName(e.target.value)
+                        setFormErrors(prev => ({ ...prev, className: err || undefined }))
+                    }}
+                    maxLength={80}
                     className={formErrors.className ? 'border-red-500' : ''}
                 />
-                <FormFieldHint hint="Enter the class name" error={formErrors.className} />
+                <FormFieldHint hint="Letters/numbers and basic punctuation only — no all-symbol input" error={formErrors.className} />
             </div>
 
-            {/* Date */}
+            {/* Date — min set to today so the picker disallows past dates. */}
             <div className="space-y-1.5">
                 <Label htmlFor="date">Date</Label>
                 <Input
                     id="date"
                     type="date"
+                    min={todayISODate()}
                     value={formData.date}
-                    onChange={e => updateField('date', e.target.value)}
+                    onChange={e => {
+                        updateField('date', e.target.value)
+                        const err = validateFutureOrTodayDate(e.target.value)
+                        setFormErrors(prev => ({ ...prev, date: err || undefined }))
+                    }}
                     className={formErrors.date ? 'border-red-500' : ''}
                 />
-                <FormFieldHint hint="Select a date for the class" error={formErrors.date} />
+                <FormFieldHint hint="Today or any future date" error={formErrors.date} />
             </div>
 
             {/* Start / End time */}
@@ -449,10 +505,15 @@ const CoachSchedulePage = () => {
                     id="location"
                     placeholder="e.g. Studio A"
                     value={formData.location}
-                    onChange={e => updateField('location', e.target.value)}
+                    onChange={e => {
+                        updateField('location', e.target.value)
+                        const err = validateLocation(e.target.value)
+                        setFormErrors(prev => ({ ...prev, location: err || undefined }))
+                    }}
+                    maxLength={100}
                     className={formErrors.location ? 'border-red-500' : ''}
                 />
-                <FormFieldHint hint="Enter the class location" error={formErrors.location} />
+                <FormFieldHint hint="Must contain letters — no symbol-only input" error={formErrors.location} />
             </div>
 
             {/* Level */}

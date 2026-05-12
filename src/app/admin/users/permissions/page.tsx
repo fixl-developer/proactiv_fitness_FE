@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Lock } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, AlertCircle, Lock, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { PermissionService } from '@/services/userService'
@@ -143,12 +143,21 @@ export default function PermissionsPage() {
                 toast.success('Permission updated successfully')
             } else {
                 await PermissionService.create(formData)
-                toast.success('Permission created successfully')
+                toast.success(
+                    'Permission created. Now attach it to a role under Roles & Permissions for it to take effect.',
+                    { duration: 7000 }
+                )
             }
 
             setShowForm(false)
             resetForm()
-            loadPermissions()
+            // Jump back to the first page so the newly created permission
+            // (sorted by createdAt desc on the backend) is visible immediately.
+            if (!editingId && currentPage !== 1) {
+                setCurrentPage(1)
+            } else {
+                loadPermissions()
+            }
         } catch (error) {
             console.error('Error saving permission:', error)
             toast.error(getErrorMessage(error))
@@ -223,6 +232,17 @@ export default function PermissionsPage() {
                         <h1 className="text-4xl font-bold text-slate-900">Permissions Management</h1>
                     </div>
                     <p className="text-slate-600">Define granular permissions for access control</p>
+                    <div className="mt-4 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <p>
+                            Creating a permission here only adds it to the catalogue. To take effect for users, attach
+                            it to a role on the{' '}
+                            <a href="/admin/users/roles" className="underline font-medium">
+                                Roles &amp; Permissions
+                            </a>{' '}
+                            page.
+                        </p>
+                    </div>
                 </motion.div>
 
                 {/* Controls */}

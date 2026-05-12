@@ -10,7 +10,8 @@ import { getErrorMessage } from '@/utils/apiErrorHandler'
 import {
     validateRequired,
     validateSelect,
-    validateTextArea,
+    validateTitle,
+    validateNotes,
 } from '@/utils/validation'
 
 // Backend `Notification` model accepts:
@@ -102,13 +103,12 @@ export default function NotificationsPage() {
         const categoryErr = validateSelect(formData.category, 'Category')
         if (categoryErr) e.category = categoryErr
 
-        const titleErr = validateRequired(formData.title, 'Title')
+        const titleErr = validateTitle(formData.title, 'Title', 120)
         if (titleErr) e.title = titleErr
-        else if (formData.title.trim().length < 5) e.title = 'Title must be at least 5 characters'
-        else if (formData.title.length > 120) e.title = 'Title must be less than 120 characters'
 
-        const messageErr = validateTextArea(formData.message, 'Message', 10, 2000)
+        const messageErr = validateNotes(formData.message, 'Message', true, 2000)
         if (messageErr) e.message = messageErr
+        else if (formData.message.trim().length < 10) e.message = 'Message must be at least 10 characters'
 
         const statusErr = validateSelect(formData.status, 'Status')
         if (statusErr) e.status = statusErr
@@ -347,7 +347,12 @@ export default function NotificationsPage() {
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Title <span className="text-red-500">*</span></label>
                             <input type="text" value={formData.title} maxLength={120}
-                                onChange={(e) => { setFormData({ ...formData, title: e.target.value }); if (errors.title) setErrors({ ...errors, title: '' }) }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, title: v })
+                                    const titleErr = validateTitle(v, 'Title', 120)
+                                    setErrors((prev) => ({ ...prev, title: titleErr || '' }))
+                                }}
                                 placeholder="Notification title"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.title ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
                             {errors.title
@@ -358,7 +363,13 @@ export default function NotificationsPage() {
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Message <span className="text-red-500">*</span></label>
                             <textarea value={formData.message} rows={4} maxLength={2000}
-                                onChange={(e) => { setFormData({ ...formData, message: e.target.value }); if (errors.message) setErrors({ ...errors, message: '' }) }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, message: v })
+                                    let msgErr = validateNotes(v, 'Message', true, 2000)
+                                    if (!msgErr && v.trim().length < 10) msgErr = 'Message must be at least 10 characters'
+                                    setErrors((prev) => ({ ...prev, message: msgErr || '' }))
+                                }}
                                 placeholder="Notification message body"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`} />
                             {errors.message

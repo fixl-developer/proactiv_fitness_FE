@@ -59,14 +59,18 @@ export default function Commissions() {
         try {
             setLoading(true)
             setError(null)
-            const [commissionsRes, statsRes, payoutsRes] = await Promise.all([
+            // Use Promise.allSettled so one failing endpoint does not break the page
+            const results = await Promise.allSettled([
                 CommissionService.getCommissions(partnerId, { limit: 20 }),
                 CommissionService.getCommissionStats(partnerId),
                 CommissionService.getPayoutHistory(partnerId, { limit: 10 }),
             ])
-            setCommissions(commissionsRes.commissions || [])
-            setStats(statsRes)
-            setPayoutHistory(payoutsRes.payouts || [])
+            const [commissionsRes, statsRes, payoutsRes] = results
+            setCommissions(commissionsRes.status === 'fulfilled' ? (commissionsRes.value?.commissions || []) : [])
+            setStats(statsRes.status === 'fulfilled' ? statsRes.value : null)
+            setPayoutHistory(payoutsRes.status === 'fulfilled' ? (payoutsRes.value?.payouts || []) : [])
+            const failed = results.filter(r => r.status === 'rejected').length
+            if (failed === results.length) setError('Failed to load commissions')
         } catch (err) {
             console.error('Error loading commissions:', err)
             setError('Failed to load commissions')
@@ -160,15 +164,18 @@ export default function Commissions() {
         setExporting(true)
         try {
             const headers = ['Period', 'Amount', 'Rate', 'Status', 'Date']
-            const rows = commissions.map(c => [
-                c.period || '',
-                `$${c.amount?.toLocaleString() || '0'}`,
-                `${c.rate || 0}%`,
-                c.status || '',
-                c.calculatedAt ? new Date(c.calculatedAt).toLocaleDateString() : ''
-            ])
-            const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const escapeCsv = (val: string) => `"${String(val).replace(/"/g, '""')}"`
+            const rows = commissions.length === 0
+                ? [['(no commissions)', '$0', '0%', 'N/A', new Date().toLocaleDateString()]]
+                : commissions.map(c => [
+                    c.period || '',
+                    `$${c.amount?.toLocaleString() || '0'}`,
+                    `${c.rate || 0}%`,
+                    c.status || '',
+                    c.calculatedAt ? new Date(c.calculatedAt).toLocaleDateString() : ''
+                ])
+            const csvContent = [headers, ...rows].map(r => r.map(escapeCsv).join(',')).join('\n')
+            const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
@@ -179,6 +186,7 @@ export default function Commissions() {
             URL.revokeObjectURL(url)
         } catch (err) {
             console.error('Export failed:', err)
+            setError('Export failed. Please try again.')
         } finally {
             setExporting(false)
         }
@@ -226,8 +234,9 @@ export default function Commissions() {
                         <button
                             id="partner-commissions-export-btn"
                             onClick={handleExportCommissions}
-                            disabled={exporting || commissions.length === 0}
+                            disabled={exporting}
                             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 flex items-center gap-2 disabled:opacity-50 transition-colors"
+                            title={commissions.length === 0 ? 'Export empty CSV (no commission data yet)' : 'Export commission data as CSV'}
                         >
                             <Download className="w-5 h-5" />
                             {exporting ? 'Exporting...' : 'Export CSV'}

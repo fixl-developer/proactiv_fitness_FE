@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
-import { validateRequired, validateNumber, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateNumber, validatePlainText, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function LocationFacilitiesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -69,29 +70,35 @@ export default function LocationFacilitiesPage() {
     const handleFacilityFormChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
-        if (field === 'name') error = validateRequired(String(value), 'Facility name')
-        else if (field === 'type') error = validateRequired(String(value), 'Type')
+        if (field === 'name') error = validatePlainText(String(value), 'Facility name', 2, 100)
+        else if (field === 'type' && String(value).trim()) error = validatePlainText(String(value), 'Type', 2, 50)
         else if (field === 'capacity') error = validateNumber(String(value), 'Capacity', 1, 10000)
         setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const handleSave = async () => {
         const errs: Record<string, string> = {}
-        const nmErr = validateRequired(formData.name, 'Facility name'); if (nmErr) errs.name = nmErr
+        const nmErr = validatePlainText(formData.name, 'Facility name', 2, 100); if (nmErr) errs.name = nmErr
+        if (formData.type) { const tErr = validatePlainText(formData.type, 'Type', 2, 50); if (tErr) errs.type = tErr }
         const cpErr = validateNumber(String(formData.capacity), 'Capacity', 1, 10000); if (cpErr) errs.capacity = cpErr
         setFieldErrors(errs)
-        if (Object.keys(errs).length > 0) return
+        if (Object.keys(errs).length > 0) {
+            toast.error('Please fix the highlighted errors before saving')
+            return
+        }
         try {
             setIsSaving(true)
             if (editingFacility) {
                 await LocationManagerService.updateFacility(editingFacility.id || editingFacility._id, formData)
+                toast.success('Facility updated successfully')
             } else {
                 await LocationManagerService.createFacility(formData)
+                toast.success('Facility created successfully')
             }
             setShowModal(false)
             fetchFacilities()
         } catch (err: any) {
-            alert('Failed to save facility: ' + err.message)
+            toast.error('Failed to save facility: ' + (err?.message || 'Unknown error'))
         } finally {
             setIsSaving(false)
         }
@@ -101,9 +108,10 @@ export default function LocationFacilitiesPage() {
         if (confirm('Are you sure you want to delete this facility?')) {
             try {
                 await LocationManagerService.deleteFacility(facilityId)
+                toast.success('Facility deleted successfully')
                 fetchFacilities()
             } catch (err: any) {
-                alert('Failed to delete facility: ' + err.message)
+                toast.error('Failed to delete facility: ' + (err?.message || 'Unknown error'))
             }
         }
     }

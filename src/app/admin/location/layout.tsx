@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import {
     LayoutDashboard, Building2, Users, Settings, BarChart3,
     Calendar, LogOut, Menu, UserCheck, Clock, Phone, User,
-    PanelLeftClose, PanelLeftOpen
+    PanelLeftClose, PanelLeftOpen, CalendarCheck, CreditCard,
+    MessageSquare, FileText,
 } from 'lucide-react'
 import LogoutModal from '@/components/ui/LogoutModal'
 import { useLogout } from '@/hooks/useLogout'
@@ -16,12 +17,16 @@ import NotificationBell from '@/components/shared/NotificationBell'
 const navigation = [
     { name: 'Dashboard', href: '/admin/location/dashboard', icon: LayoutDashboard },
     { name: 'Classes', href: '/admin/location/classes', icon: Calendar },
+    { name: 'Bookings', href: '/admin/location/bookings', icon: CalendarCheck },
     { name: 'Staff', href: '/admin/location/staff', icon: Users },
     { name: 'Attendance', href: '/admin/location/attendance', icon: UserCheck },
     { name: 'Waitlist', href: '/admin/location/waitlist', icon: Clock },
+    { name: 'Payments', href: '/admin/location/payments', icon: CreditCard },
     { name: 'Facilities', href: '/admin/location/facilities', icon: Building2 },
+    { name: 'Inquiries', href: '/admin/location/inquiries', icon: MessageSquare },
     { name: 'Emergency Contacts', href: '/admin/location/emergency-contacts', icon: Phone },
     { name: 'Analytics', href: '/admin/location/analytics', icon: BarChart3 },
+    { name: 'Reports', href: '/admin/location/reports', icon: FileText },
     { name: 'Settings', href: '/admin/location/settings', icon: Settings },
 ]
 

@@ -8,9 +8,10 @@ import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { TemplateService } from '@/services/communicationsService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import {
-    validateRequired,
     validateSelect,
-    validateTextArea,
+    validateTitle,
+    validateSubject,
+    validateNotes,
 } from '@/utils/validation'
 
 // Backend `NotificationTemplate` model strict enums:
@@ -18,7 +19,6 @@ import {
 //   status: 'published' | 'draft'
 const TYPES = ['EMAIL', 'SMS', 'PUSH', 'IN_APP']
 const STATUSES = ['draft', 'published']
-const TEMPLATE_NAME_PATTERN = /^[A-Za-z0-9_\- ]+$/
 const VARIABLE_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/
 
 interface Template {
@@ -83,33 +83,41 @@ export default function TemplatesPage() {
     const validateFormData = () => {
         const e: Record<string, string> = {}
 
-        const nameErr = validateRequired(formData.name, 'Template name')
+        const nameErr = validateTitle(formData.name, 'Template name', 100)
         if (nameErr) e.name = nameErr
-        else if (formData.name.trim().length < 3) e.name = 'Template name must be at least 3 characters'
-        else if (!TEMPLATE_NAME_PATTERN.test(formData.name.trim())) {
-            e.name = 'Letters, digits, spaces, hyphens and underscores only'
-        }
 
         const typeErr = validateSelect(formData.type, 'Type')
         if (typeErr) e.type = typeErr
 
         // Subject is mandatory only for EMAIL templates
         if (formData.type === 'EMAIL') {
-            const subjectErr = validateRequired(formData.subject, 'Subject')
+            const subjectErr = validateSubject(formData.subject, 'Subject')
             if (subjectErr) e.subject = subjectErr
-            else if (formData.subject.trim().length < 5) e.subject = 'Subject must be at least 5 characters'
+        } else if (formData.subject.trim()) {
+            // Optional but if provided must still pass the subject rules
+            const subjectErr = validateSubject(formData.subject, 'Subject')
+            if (subjectErr) e.subject = subjectErr
         }
 
-        const contentErr = validateTextArea(formData.content, 'Content', 20, 5000)
+        const contentErr = validateNotes(formData.content, 'Content', true, 5000)
         if (contentErr) e.content = contentErr
+        else if (formData.content.trim().length < 20) e.content = 'Content must be at least 20 characters'
 
         const statusErr = validateSelect(formData.status, 'Status')
         if (statusErr) e.status = statusErr
 
         if (formData.variables.trim()) {
-            const parts = formData.variables.split(',').map(s => s.trim()).filter(Boolean)
-            const bad = parts.find(p => !VARIABLE_NAME_PATTERN.test(p))
-            if (bad) e.variables = `"${bad}" is not a valid variable name (must start with a letter, then letters/digits/underscore)`
+            // Comma-split first, trim, then validate each identifier against the pattern.
+            // Block submit if ANY variable fails; show inline error listing the bad ones.
+            const parts = formData.variables.split(',').map(s => s.trim())
+            if (parts.some(p => p === '')) {
+                e.variables = 'Remove empty entries between commas'
+            } else {
+                const bad = parts.filter(p => !VARIABLE_NAME_PATTERN.test(p))
+                if (bad.length > 0) {
+                    e.variables = `Invalid variable name${bad.length > 1 ? 's' : ''}: ${bad.map(b => `"${b}"`).join(', ')} — each must start with a letter, then letters/digits/underscore`
+                }
+            }
         }
 
         setErrors(e)
@@ -299,19 +307,18 @@ export default function TemplatesPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Name <span className="text-red-500">*</span></label>
-                            <input type="text" value={formData.name} maxLength={80}
+                            <input type="text" value={formData.name} maxLength={100}
                                 onChange={(e) => {
                                     const v = e.target.value
-                                    if (v === '' || TEMPLATE_NAME_PATTERN.test(v)) {
-                                        setFormData({ ...formData, name: v })
-                                        if (errors.name) setErrors({ ...errors, name: '' })
-                                    }
+                                    setFormData({ ...formData, name: v })
+                                    const nameErr = validateTitle(v, 'Template name', 100)
+                                    setErrors((prev) => ({ ...prev, name: nameErr || '' }))
                                 }}
                                 placeholder="e.g. Welcome Email"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
                             {errors.name
                                 ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                                : <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces, hyphens and underscores only</p>}
+                                : <p className="mt-1 text-xs text-slate-500">Must start with a letter. Letters, digits, spaces and basic punctuation allowed.</p>}
                         </div>
 
                         <div>
@@ -331,7 +338,16 @@ export default function TemplatesPage() {
                                 {formData.type !== 'EMAIL' && <span className="text-slate-500 text-xs"> (Optional)</span>}
                             </label>
                             <input type="text" value={formData.subject} maxLength={200}
-                                onChange={(e) => { setFormData({ ...formData, subject: e.target.value }); if (errors.subject) setErrors({ ...errors, subject: '' }) }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, subject: v })
+                                    if (formData.type === 'EMAIL' || v.trim()) {
+                                        const subjErr = validateSubject(v, 'Subject')
+                                        setErrors((prev) => ({ ...prev, subject: subjErr || '' }))
+                                    } else {
+                                        setErrors((prev) => ({ ...prev, subject: '' }))
+                                    }
+                                }}
                                 placeholder="Email subject line or title"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
                             {errors.subject && <p className="mt-1 text-sm text-red-600">{errors.subject}</p>}
@@ -340,7 +356,13 @@ export default function TemplatesPage() {
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Content <span className="text-red-500">*</span></label>
                             <textarea value={formData.content} rows={6} maxLength={5000}
-                                onChange={(e) => { setFormData({ ...formData, content: e.target.value }); if (errors.content) setErrors({ ...errors, content: '' }) }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, content: v })
+                                    let contentErr = validateNotes(v, 'Content', true, 5000)
+                                    if (!contentErr && v.trim().length < 20) contentErr = 'Content must be at least 20 characters'
+                                    setErrors((prev) => ({ ...prev, content: contentErr || '' }))
+                                }}
                                 placeholder="Template body. Use {{variable}} for substitutions."
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.content ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
                             {errors.content
@@ -351,7 +373,26 @@ export default function TemplatesPage() {
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Variables (Optional)</label>
                             <input type="text" value={formData.variables}
-                                onChange={(e) => { setFormData({ ...formData, variables: e.target.value }); if (errors.variables) setErrors({ ...errors, variables: '' }) }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, variables: v })
+                                    if (!v.trim()) {
+                                        setErrors((prev) => ({ ...prev, variables: '' }))
+                                        return
+                                    }
+                                    // Comma-split first, trim, then validate each identifier.
+                                    const parts = v.split(',').map(s => s.trim())
+                                    if (parts.some(p => p === '')) {
+                                        setErrors((prev) => ({ ...prev, variables: 'Remove empty entries between commas' }))
+                                        return
+                                    }
+                                    const bad = parts.filter(p => !VARIABLE_NAME_PATTERN.test(p))
+                                    if (bad.length > 0) {
+                                        setErrors((prev) => ({ ...prev, variables: `Invalid variable name${bad.length > 1 ? 's' : ''}: ${bad.map(b => `"${b}"`).join(', ')} — each must start with a letter, then letters/digits/underscore` }))
+                                    } else {
+                                        setErrors((prev) => ({ ...prev, variables: '' }))
+                                    }
+                                }}
                                 placeholder="e.g. firstName, lastName, bookingId"
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${errors.variables ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-purple-500'}`} />
                             {errors.variables

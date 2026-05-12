@@ -13,6 +13,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { validatePlainText, validateUrl } from '@/utils/validation'
+import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 const ICON_MAP: Record<string, any> = {
     Calendar, Mail, Database, Globe, Smartphone, Zap, Code
@@ -35,6 +38,7 @@ export default function PartnerIntegrationsPage() {
         syncFrequency: 'Real-time',
     })
     const [addSubmitting, setAddSubmitting] = useState(false)
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -145,52 +149,54 @@ export default function PartnerIntegrationsPage() {
         }
     }, [integrations, router])
 
+    const validateAddIntegrationForm = (): boolean => {
+        const errs: Record<string, string> = {}
+        const nameErr = validatePlainText(addFormData.name, 'Integration Name', 2, 100)
+        if (nameErr) errs.name = nameErr
+        if (addFormData.webhookUrl) {
+            const urlErr = validateUrl(addFormData.webhookUrl, false)
+            if (urlErr) errs.webhookUrl = urlErr
+        }
+        setFormErrors(errs)
+        return Object.keys(errs).length === 0
+    }
+
     const handleAddIntegration = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!addFormData.name.trim()) return
+        if (!validateAddIntegrationForm()) {
+            toast.error('Please fix the highlighted errors before submitting.')
+            return
+        }
 
         setAddSubmitting(true)
         try {
             const partnerId = user?.id || 'partner-1'
-            const response = await apiClient.post(`/partner/${partnerId}/integrations`, addFormData)
+            const response = await apiClient.post(`/partner/${partnerId}/integrations`, { ...addFormData, status: 'PENDING' })
 
-            const newIntegration = response?.data || {
+            const created = response?.data || {
                 id: `new-${Date.now()}`,
                 ...addFormData,
                 status: 'PENDING',
-                icon: ICON_MAP[addFormData.category] || Zap,
-                color: 'text-gray-600',
-                bgColor: 'bg-gray-50',
                 lastSync: 'Never',
                 dataPoints: 0,
                 health: 0,
             }
 
-            if (!newIntegration.icon) {
-                newIntegration.icon = ICON_MAP[newIntegration.category] || Zap
-            }
-
-            setIntegrations(prev => [...prev, newIntegration])
-            setShowAddModal(false)
-            setAddFormData({ name: '', description: '', category: 'Scheduling', apiKey: '', webhookUrl: '', syncFrequency: 'Real-time' })
-        } catch (err) {
-            console.error('Error adding integration:', err)
-            // Add locally as fallback
             const newIntegration = {
-                id: `local-${Date.now()}`,
-                ...addFormData,
-                status: 'PENDING',
-                icon: ICON_MAP[addFormData.category] || Zap,
-                color: 'text-gray-600',
-                bgColor: 'bg-gray-50',
-                lastSync: 'Never',
-                syncFrequency: addFormData.syncFrequency,
-                dataPoints: 0,
-                health: 0,
+                ...created,
+                icon: ICON_MAP[created.iconName || created.category || addFormData.category] || Zap,
+                color: created.color || 'text-gray-600',
+                bgColor: created.bgColor || 'bg-gray-50',
             }
+
             setIntegrations(prev => [...prev, newIntegration])
             setShowAddModal(false)
+            setFormErrors({})
             setAddFormData({ name: '', description: '', category: 'Scheduling', apiKey: '', webhookUrl: '', syncFrequency: 'Real-time' })
+            toast.success('Integration added successfully!')
+        } catch (err: any) {
+            console.error('Error adding integration:', err)
+            toast.error(err?.response?.data?.error || 'Failed to add integration. Please try again.')
         } finally {
             setAddSubmitting(false)
         }
@@ -465,10 +471,15 @@ export default function PartnerIntegrationsPage() {
                                     type="text"
                                     required
                                     value={addFormData.name}
-                                    onChange={e => setAddFormData(prev => ({ ...prev, name: e.target.value }))}
+                                    onChange={e => {
+                                        setAddFormData(prev => ({ ...prev, name: e.target.value }))
+                                        const err = validatePlainText(e.target.value, 'Integration Name', 2, 100)
+                                        setFormErrors(prev => { const n = { ...prev }; if (err) n.name = err; else delete n.name; return n })
+                                    }}
                                     placeholder="e.g., Google Calendar, Slack, Stripe"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint="2-100 characters, letters/numbers/basic punctuation only" error={formErrors.name} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -528,10 +539,19 @@ export default function PartnerIntegrationsPage() {
                                 <input
                                     type="url"
                                     value={addFormData.webhookUrl}
-                                    onChange={e => setAddFormData(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                                    onChange={e => {
+                                        setAddFormData(prev => ({ ...prev, webhookUrl: e.target.value }))
+                                        if (e.target.value) {
+                                            const err = validateUrl(e.target.value, false)
+                                            setFormErrors(prev => { const n = { ...prev }; if (err) n.webhookUrl = err; else delete n.webhookUrl; return n })
+                                        } else {
+                                            setFormErrors(prev => { const n = { ...prev }; delete n.webhookUrl; return n })
+                                        }
+                                    }}
                                     placeholder="https://your-service.com/webhook"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${formErrors.webhookUrl ? 'border-red-500' : 'border-gray-300'}`}
                                 />
+                                <FormFieldHint hint="Optional. Must start with http:// or https://" error={formErrors.webhookUrl} />
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t">
                                 <button

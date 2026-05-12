@@ -23,6 +23,9 @@ export interface SupportTicket {
     comments?: any[];
     history?: any[];
     attachments?: any[];
+    resolvedAt?: Date | string;
+    closedAt?: Date | string;
+    escalatedAt?: Date | string;
     createdAt: Date;
     updatedAt: Date;
 }

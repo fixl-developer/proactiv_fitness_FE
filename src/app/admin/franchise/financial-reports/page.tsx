@@ -17,6 +17,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
 import { FranchiseOwnerService } from '@/services/franchiseOwnerService'
+import { validateNotes, validateAlphaText } from '@/utils/validation'
 
 interface MonthlyDataItem {
     month: string
@@ -209,15 +210,26 @@ export default function FinancialReportsPage() {
         if (!expenseForm.category) errs.category = 'Category is required'
         if (!expenseForm.amount || Number(expenseForm.amount) < 0) errs.amount = 'Amount must be 0 or greater'
         if (!expenseForm.date) errs.date = 'Date is required'
+        const descErr = validateNotes(String(expenseForm.description || ''), 'Description', false, 500)
+        if (descErr) errs.description = descErr
+        if (expenseForm.vendor) {
+            const vendErr = validateAlphaText(String(expenseForm.vendor), 'Vendor name', 100)
+            if (vendErr) errs.vendor = vendErr
+        }
         setExpenseFieldErrors(errs)
         return Object.keys(errs).length === 0
     }
 
     const handleExpenseFormChange = (field: string, value: any) => {
         setExpenseForm((prev: any) => ({ ...prev, [field]: value }))
+        let fieldErr: string | null = null
+        const v = String(value || '')
+        if (field === 'description') fieldErr = validateNotes(v, 'Description', false, 500)
+        else if (field === 'vendor' && v.trim()) fieldErr = validateAlphaText(v, 'Vendor name', 100)
         setExpenseFieldErrors((prev) => {
             const n = { ...prev }
-            delete n[field]
+            if (fieldErr) n[field] = fieldErr
+            else delete n[field]
             return n
         })
     }
@@ -786,7 +798,11 @@ export default function FinancialReportsPage() {
                             value={expenseForm.description}
                             onChange={(e) => handleExpenseFormChange('description', e.target.value)}
                             placeholder="e.g. April studio rent"
+                            className={expenseFieldErrors.description ? 'border-red-500' : ''}
                         />
+                        {expenseFieldErrors.description && (
+                            <p className="text-xs text-red-600 mt-1">{expenseFieldErrors.description}</p>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -796,7 +812,11 @@ export default function FinancialReportsPage() {
                                 value={expenseForm.vendor}
                                 onChange={(e) => handleExpenseFormChange('vendor', e.target.value)}
                                 placeholder="Vendor name"
+                                className={expenseFieldErrors.vendor ? 'border-red-500' : ''}
                             />
+                            {expenseFieldErrors.vendor && (
+                                <p className="text-xs text-red-600 mt-1">{expenseFieldErrors.vendor}</p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>

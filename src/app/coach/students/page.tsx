@@ -385,31 +385,27 @@ const CoachStudentsPage = () => {
                 setIsLoading(true)
             }
 
-            let fetchedStudents: any[] = []
-
-            // Try fetching from API
+            // Source of truth is `/coach/students`. Empty list = empty state
+            // (parent has no enrolled kids yet); we never fall back to fake
+            // students because that would mislead the coach.
             try {
                 const coachId = user?.id || ''
                 if (coachId) {
-                    fetchedStudents = await coachService.getMyStudents(coachId)
+                    const fetchedStudents = await coachService.getMyStudents(coachId)
+                    setStudents(Array.isArray(fetchedStudents) ? fetchedStudents : [])
+                } else {
+                    setStudents([])
                 }
+                setUsingMockData(false)
             } catch (apiError) {
-                console.error('API call failed, falling back to mock data:', apiError)
-            }
-
-            // Fallback to mock data if API returns empty or fails
-            if (!fetchedStudents || fetchedStudents.length === 0) {
-                fetchedStudents = mockStudents
-                setUsingMockData(true)
-            } else {
+                console.error('Failed to load students:', apiError)
+                setStudents([])
                 setUsingMockData(false)
             }
-
-            setStudents(fetchedStudents)
         } catch (error) {
             console.error('Error loading students:', error)
-            setStudents(mockStudents)
-            setUsingMockData(true)
+            setStudents([])
+            setUsingMockData(false)
         } finally {
             setIsLoading(false)
             setRefreshing(false)

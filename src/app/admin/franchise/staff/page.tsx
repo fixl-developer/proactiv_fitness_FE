@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { FranchiseOwnerService, FranchiseStaff } from '@/services/franchiseOwnerService'
-import { validateName, validateEmail, validatePhone, validatePassword, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateFirstName, validateLastName, validateEmail, validatePhone, validatePassword, filterFirstNameInput, filterLastNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
 // ------- Types -------
@@ -179,20 +179,20 @@ export default function FranchiseStaffPage() {
     const handleFormChange = (field: keyof StaffFormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
-        if (field === 'firstName') error = validateName(value, 'First name')
-        else if (field === 'lastName') error = validateName(value, 'Last name')
+        if (field === 'firstName') error = validateFirstName(value, 'First name')
+        else if (field === 'lastName') error = validateLastName(value, 'Last name')
         else if (field === 'email') error = validateEmail(value)
-        else if (field === 'phone') error = validatePhone(value, false)
+        else if (field === 'phone') error = validatePhone(value, true)
         else if (field === 'password' && (value || modalMode === 'add')) error = validatePassword(value)
         setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const validateForm = (): string | null => {
         const errs: Record<string, string> = {}
-        const fnErr = validateName(formData.firstName, 'First name'); if (fnErr) errs.firstName = fnErr
-        const lnErr = validateName(formData.lastName, 'Last name'); if (lnErr) errs.lastName = lnErr
+        const fnErr = validateFirstName(formData.firstName, 'First name'); if (fnErr) errs.firstName = fnErr
+        const lnErr = validateLastName(formData.lastName, 'Last name'); if (lnErr) errs.lastName = lnErr
         const emErr = validateEmail(formData.email); if (emErr) errs.email = emErr
-        const phErr = validatePhone(formData.phone, false); if (phErr) errs.phone = phErr
+        const phErr = validatePhone(formData.phone, true); if (phErr) errs.phone = phErr
         if (modalMode === 'add') { const pwErr = validatePassword(formData.password); if (pwErr) errs.password = pwErr }
         else if (formData.password) { const pwErr = validatePassword(formData.password); if (pwErr) errs.password = pwErr }
         setFieldErrors(errs)
@@ -668,7 +668,7 @@ export default function FranchiseStaffPage() {
                         </Button>
                         <Button
                             onClick={modalMode === 'add' ? handleCreate : handleUpdate}
-                            disabled={submitting || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()}
+                            disabled={submitting || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.phone.trim()}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -691,7 +691,7 @@ export default function FranchiseStaffPage() {
                                 placeholder="e.g. Jane"
                                 value={formData.firstName}
                                 onChange={(e) => handleFormChange('firstName', e.target.value)}
-                                onKeyDown={filterNameInput}
+                                onKeyDown={filterFirstNameInput}
                                 className={fieldErrors.firstName ? 'border-red-500' : ''}
                             />
                             <FormFieldHint hint={FORMAT_HINTS.firstName} error={fieldErrors.firstName} />
@@ -702,7 +702,7 @@ export default function FranchiseStaffPage() {
                                 placeholder="e.g. Doe"
                                 value={formData.lastName}
                                 onChange={(e) => handleFormChange('lastName', e.target.value)}
-                                onKeyDown={filterNameInput}
+                                onKeyDown={filterLastNameInput}
                                 className={fieldErrors.lastName ? 'border-red-500' : ''}
                             />
                             <FormFieldHint hint={FORMAT_HINTS.lastName} error={fieldErrors.lastName} />
@@ -720,10 +720,10 @@ export default function FranchiseStaffPage() {
                         <FormFieldHint hint={FORMAT_HINTS.email} error={fieldErrors.email} />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                         <Input
                             type="tel"
-                            placeholder="e.g. +1 (212) 555-0100"
+                            placeholder="e.g. +19876543210"
                             value={formData.phone}
                             onChange={(e) => handleFormChange('phone', e.target.value)}
                             onKeyDown={filterPhoneInput}

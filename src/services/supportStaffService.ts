@@ -27,6 +27,9 @@ export interface SupportTicket {
     category: string
     created: string
     updated: string
+    resolvedAt?: string
+    closedAt?: string
+    escalatedAt?: string
     assignedTo?: string
     description: string
     resolution?: string
@@ -447,6 +450,11 @@ class SupportStaffService {
     async deleteAutomationRule(ruleId: string): Promise<any> {
         const response = await apiClient.delete<{ success: boolean; data: any }>(`/staff/automation/rules/${ruleId}`)
         return response.data || response
+    }
+
+    async aiSuggestAutomationRule(description: string): Promise<{ rule: any; aiPowered: boolean }> {
+        const response = await apiClient.post<{ success: boolean; data: any }>('/staff/automation/rules/ai-suggest', { description })
+        return (response as any)?.data || response
     }
 
     // Quality Assurance Methods

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Calendar, Clock } from 'lucide-react';
 
 interface SelectDateTimeProps {
     selectedDate: string;
@@ -9,54 +9,64 @@ interface SelectDateTimeProps {
     onSelect: (date: string, timeSlot: string) => void;
 }
 
+const ALL_SLOTS = [
+    { id: '09:00', time: '9:00 AM', hour: 9 },
+    { id: '10:00', time: '10:00 AM', hour: 10 },
+    { id: '11:00', time: '11:00 AM', hour: 11 },
+    { id: '14:00', time: '2:00 PM', hour: 14 },
+    { id: '15:00', time: '3:00 PM', hour: 15 },
+    { id: '16:00', time: '4:00 PM', hour: 16 },
+    { id: '17:00', time: '5:00 PM', hour: 17 },
+    { id: '18:00', time: '6:00 PM', hour: 18 },
+];
+
 export default function SelectDateTime({ selectedDate, selectedTime, onSelect }: SelectDateTimeProps) {
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    // 14 days visible by default; clicking "Show more" reveals up to 60 days
+    const [visibleDays, setVisibleDays] = useState(14);
 
-    // Generate next 30 days
-    const generateDates = () => {
-        const dates = [];
+    const dates = useMemo(() => {
+        const list: Date[] = [];
         const today = new Date();
-
-        for (let i = 0; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + i);
-            dates.push(date);
+        for (let i = 0; i < 60; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            list.push(d);
         }
-        return dates;
-    };
+        return list;
+    }, []);
 
-    const timeSlots = [
-        { id: '09:00', time: '9:00 AM', available: true },
-        { id: '10:00', time: '10:00 AM', available: true },
-        { id: '11:00', time: '11:00 AM', available: false },
-        { id: '14:00', time: '2:00 PM', available: true },
-        { id: '15:00', time: '3:00 PM', available: true },
-        { id: '16:00', time: '4:00 PM', available: true },
-        { id: '17:00', time: '5:00 PM', available: false },
-        { id: '18:00', time: '6:00 PM', available: true }
-    ];
-
-    const dates = generateDates();
     const today = new Date();
-
     const formatDate = (date: Date) => {
-        return date.toISOString().split('T')[0];
+        const d = new Date(date);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        return d.toISOString().split('T')[0];
     };
-
-    const isToday = (date: Date) => {
-        return date.toDateString() === today.toDateString();
-    };
-
+    const isToday = (date: Date) => date.toDateString() === today.toDateString();
     const isTomorrow = (date: Date) => {
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        return date.toDateString() === tomorrow.toDateString();
+        const t = new Date(today); t.setDate(today.getDate() + 1);
+        return date.toDateString() === t.toDateString();
     };
-
     const getDateLabel = (date: Date) => {
         if (isToday(date)) return 'Today';
         if (isTomorrow(date)) return 'Tomorrow';
         return date.toLocaleDateString('en-US', { weekday: 'short' });
+    };
+
+    // A slot is unavailable when:
+    //   • the chosen date is today and the slot hour <= current hour, or
+    //   • we want to mark certain slots fully unavailable (e.g. fully-booked)
+    const isSlotAvailable = (slotHour: number): boolean => {
+        if (!selectedDate) return true;
+        const picked = new Date(selectedDate);
+        if (picked.toDateString() === today.toDateString()) {
+            // Disable any slot whose start hour has passed
+            return slotHour > today.getHours();
+        }
+        return true;
+    };
+
+    const handleShowMore = () => {
+        setVisibleDays((v) => Math.min(v + 14, 60));
     };
 
     return (
@@ -77,20 +87,24 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                     </h3>
 
                     <div className="grid grid-cols-7 gap-2">
-                        {dates.slice(0, 14).map((date, index) => {
+                        {dates.slice(0, visibleDays).map((date, index) => {
                             const dateStr = formatDate(date);
                             const isSelected = selectedDate === dateStr;
                             const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
                             return (
                                 <button id={`select-datetime-date-${index}-btn`}
+                                    type="button"
                                     key={dateStr}
-                                    onClick={() => onSelect(dateStr, selectedTime)}
+                                    onClick={() => {
+                                        // Reset time slot when changing date (avoid mismatched past-slot state)
+                                        onSelect(dateStr, '');
+                                    }}
                                     className={`p-3 rounded-xl text-center transition-all ${isSelected
-                                            ? 'bg-blue-600 text-white shadow-lg'
-                                            : isWeekend
-                                                ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : isWeekend
+                                            ? 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <div className="text-xs font-medium mb-1">
@@ -107,10 +121,17 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                         })}
                     </div>
 
-                    {/* Show more dates button */}
-                    <button id="select-datetime-show-more-btn" className="w-full mt-4 py-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                        Show more dates →
-                    </button>
+                    {/* Show more dates button — reveals 14 more days each click, up to 60 */}
+                    {visibleDays < 60 && (
+                        <button
+                            id="select-datetime-show-more-btn"
+                            type="button"
+                            onClick={handleShowMore}
+                            className="w-full mt-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-sm rounded-xl transition-colors"
+                        >
+                            Show more dates → ({60 - visibleDays} more days)
+                        </button>
+                    )}
                 </div>
 
                 {/* Time Selection */}
@@ -122,24 +143,27 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
 
                     {selectedDate ? (
                         <div className="grid grid-cols-2 gap-3">
-                            {timeSlots.map((slot) => {
+                            {ALL_SLOTS.map((slot) => {
                                 const isSelected = selectedTime === slot.id;
+                                const available = isSlotAvailable(slot.hour);
 
                                 return (
                                     <button id={`select-datetime-time-${slot.id}-btn`}
+                                        type="button"
                                         key={slot.id}
-                                        onClick={() => slot.available && onSelect(selectedDate, slot.id)}
-                                        disabled={!slot.available}
-                                        className={`p-4 rounded-xl font-medium transition-all ${!slot.available
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : isSelected
-                                                    ? 'bg-blue-600 text-white shadow-lg'
-                                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                                        onClick={() => available && onSelect(selectedDate, slot.id)}
+                                        disabled={!available}
+                                        title={!available ? 'This time has already passed for today' : undefined}
+                                        className={`p-4 rounded-xl font-medium transition-all ${!available
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through'
+                                            : isSelected
+                                                ? 'bg-blue-600 text-white shadow-lg'
+                                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                                             }`}
                                     >
                                         {slot.time}
-                                        {!slot.available && (
-                                            <div className="text-xs mt-1">Unavailable</div>
+                                        {!available && (
+                                            <div className="text-xs mt-1 not-italic no-underline">Past</div>
                                         )}
                                     </button>
                                 );
@@ -166,7 +190,7 @@ export default function SelectDateTime({ selectedDate, selectedTime, onSelect }:
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
-                        })} at {timeSlots.find(slot => slot.id === selectedTime)?.time}
+                        })} at {ALL_SLOTS.find(slot => slot.id === selectedTime)?.time}
                     </p>
                 </div>
             )}

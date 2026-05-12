@@ -613,4 +613,78 @@ export class LocationManagerService {
             throw new Error(error.response?.data?.message || 'Failed to change password')
         }
     }
+
+    // ==================== BOOKINGS (Phase 1) ====================
+    static async getBookings(params: { status?: string; search?: string; page?: number; pageSize?: number } = {}): Promise<any> {
+        const query = new URLSearchParams()
+        if (params.status) query.set('status', params.status)
+        if (params.search) query.set('search', params.search)
+        query.set('page', String(params.page || 1))
+        query.set('pageSize', String(params.pageSize || 20))
+        const res: any = await apiClient.get(`/admin/location/bookings?${query.toString()}`)
+        return res?.data || res
+    }
+    static async createBooking(payload: any): Promise<any> {
+        const res: any = await apiClient.post('/admin/location/bookings', payload)
+        return res?.data || res
+    }
+    static async updateBooking(id: string, payload: any): Promise<any> {
+        const res: any = await apiClient.put(`/admin/location/bookings/${id}`, payload)
+        return res?.data || res
+    }
+    static async cancelBooking(id: string): Promise<any> {
+        const res: any = await apiClient.delete(`/admin/location/bookings/${id}`)
+        return res?.data || res
+    }
+
+    // ==================== PAYMENTS (Phase 1) ====================
+    static async getPayments(params: { status?: string; search?: string; page?: number; pageSize?: number } = {}): Promise<any> {
+        const query = new URLSearchParams()
+        if (params.status) query.set('status', params.status)
+        if (params.search) query.set('search', params.search)
+        query.set('page', String(params.page || 1))
+        query.set('pageSize', String(params.pageSize || 20))
+        const res: any = await apiClient.get(`/admin/location/payments?${query.toString()}`)
+        return res?.data || res
+    }
+    static async recordPayment(bookingId: string, payload: { amount: number; method: string; notes?: string }): Promise<any> {
+        const res: any = await apiClient.post(`/admin/location/payments/${bookingId}/record`, payload)
+        return res?.data || res
+    }
+
+    // ==================== INQUIRIES (Phase 2) ====================
+    static async getInquiries(params: { status?: string; search?: string; page?: number; pageSize?: number } = {}): Promise<any> {
+        const query = new URLSearchParams()
+        if (params.status) query.set('status', params.status)
+        if (params.search) query.set('search', params.search)
+        query.set('page', String(params.page || 1))
+        query.set('pageSize', String(params.pageSize || 20))
+        const res: any = await apiClient.get(`/admin/location/inquiries?${query.toString()}`)
+        return res?.data || res
+    }
+    static async createInquiry(payload: any): Promise<any> {
+        const res: any = await apiClient.post('/admin/location/inquiries', payload)
+        return res?.data || res
+    }
+    static async respondToInquiry(id: string, payload: { message: string; isInternal?: boolean }): Promise<any> {
+        const res: any = await apiClient.post(`/admin/location/inquiries/${id}/respond`, payload)
+        return res?.data || res
+    }
+    static async updateInquiry(id: string, payload: any): Promise<any> {
+        const res: any = await apiClient.put(`/admin/location/inquiries/${id}`, payload)
+        return res?.data || res
+    }
+
+    // ==================== REPORTS (Phase 2) ====================
+    static async getReport(params: { type?: string; dateRange?: string } = {}): Promise<any> {
+        const query = new URLSearchParams()
+        if (params.type) query.set('type', params.type)
+        if (params.dateRange) query.set('dateRange', params.dateRange)
+        const res: any = await apiClient.get(`/admin/location/reports?${query.toString()}`)
+        return res?.data || res
+    }
+    static async exportReportCsv(dateRange = '30d'): Promise<Blob> {
+        const res: any = await apiClient.get(`/admin/location/reports/export?dateRange=${dateRange}&format=csv`, { responseType: 'blob' as any })
+        return res?.data || res
+    }
 }
