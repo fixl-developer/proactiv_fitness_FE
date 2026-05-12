@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { LocationManagerService, LocationClass } from '@/services/locationManagerService'
 import { smartSchedulerService } from '@/services/advancedAIServices'
-import { validateRequired, validateNumber, validateName, filterNameInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
+import { validateRequired, validateNumber, validateName, validatePlainText, filterNameInput, filterNumberInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function LocationClassesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -80,33 +81,52 @@ export default function LocationClassesPage() {
         setShowModal(true)
     }
 
+    const validateScheduleField = (value: string): string | null => {
+        if (!value || !value.trim()) return null // Optional
+        const trimmed = value.trim()
+        if (trimmed.length < 5) return 'Schedule must be at least 5 characters'
+        if (!/[A-Za-z]/.test(trimmed)) return 'Schedule must contain text (e.g., "Mon, Wed 9:00 AM")'
+        if (/^\d+$/.test(trimmed)) return 'Schedule cannot be only numbers — include day/time text'
+        return null
+    }
+
     const handleClassFormChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
-        if (field === 'name') error = validateRequired(String(value), 'Class name')
-        else if (field === 'coach') error = validateName(String(value), 'Coach')
+        if (field === 'name') error = validatePlainText(String(value), 'Class name', 2, 100)
+        else if (field === 'coach' && String(value).trim()) error = validateName(String(value), 'Coach')
+        else if (field === 'schedule') error = validateScheduleField(String(value))
         else if (field === 'capacity') error = validateNumber(String(value), 'Capacity', 1, 500)
+        else if (field === 'room' && String(value).trim()) {
+            if (!/^[A-Za-z0-9\s\-]+$/.test(String(value).trim())) error = 'Room can only contain letters, numbers, spaces and hyphens'
+        }
         setFieldErrors(prev => { const n = { ...prev }; if (error) n[field] = error; else delete n[field]; return n })
     }
 
     const handleSave = async () => {
         const errs: Record<string, string> = {}
-        const nmErr = validateRequired(formData.name, 'Class name'); if (nmErr) errs.name = nmErr
+        const nmErr = validatePlainText(formData.name, 'Class name', 2, 100); if (nmErr) errs.name = nmErr
         if (formData.coach) { const cErr = validateName(formData.coach, 'Coach'); if (cErr) errs.coach = cErr }
+        const schErr = validateScheduleField(formData.schedule); if (schErr) errs.schedule = schErr
         const cpErr = validateNumber(String(formData.capacity), 'Capacity', 1, 500); if (cpErr) errs.capacity = cpErr
         setFieldErrors(errs)
-        if (Object.keys(errs).length > 0) return
+        if (Object.keys(errs).length > 0) {
+            toast.error('Please fix the highlighted errors before saving')
+            return
+        }
         try {
             setIsSaving(true)
             if (editingClass) {
                 await LocationManagerService.updateClass(editingClass.id || editingClass._id, formData)
+                toast.success('Class updated successfully')
             } else {
                 await LocationManagerService.createClass(formData)
+                toast.success('Class created successfully')
             }
             setShowModal(false)
             fetchClasses()
         } catch (err: any) {
-            alert('Failed to save class: ' + err.message)
+            toast.error('Failed to save class: ' + (err?.message || 'Unknown error'))
         } finally {
             setIsSaving(false)
         }
@@ -116,9 +136,10 @@ export default function LocationClassesPage() {
         if (confirm('Are you sure you want to delete this class?')) {
             try {
                 await LocationManagerService.deleteClass(classId)
+                toast.success('Class deleted successfully')
                 fetchClasses()
             } catch (err: any) {
-                alert('Failed to delete class: ' + err.message)
+                toast.error('Failed to delete class: ' + (err?.message || 'Unknown error'))
             }
         }
     }
@@ -379,7 +400,13 @@ export default function LocationClassesPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
-                                <Input value={formData.schedule} onChange={(e) => setFormData({ ...formData, schedule: e.target.value })} placeholder="e.g., Mon, Wed, Fri - 9:00 AM" />
+                                <Input
+                                    value={formData.schedule}
+                                    onChange={(e) => handleClassFormChange('schedule', e.target.value)}
+                                    placeholder="e.g., Mon, Wed, Fri - 9:00 AM"
+                                    className={fieldErrors.schedule ? 'border-red-500' : ''}
+                                />
+                                <FormFieldHint hint="Must include day/time text (e.g., Mon-Wed 9:00 AM), not just numbers" error={fieldErrors.schedule} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Capacity *</label>

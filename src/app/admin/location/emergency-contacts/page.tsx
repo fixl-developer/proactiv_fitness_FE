@@ -12,6 +12,21 @@ import { Input } from '@/components/ui/input'
 import { LocationManagerService } from '@/services/locationManagerService'
 import { validateName, validateEmail, validatePhone, validateAddress, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
+
+// Relationship validator: alphabets only (Father, Mother, Guardian, Grandparent, etc.)
+// Rejects "@@@", "123", "Father123", "Father@@".
+function validateRelationship(value: string): string | null {
+    if (!value || !value.trim()) return 'Relationship is required'
+    const trimmed = value.trim()
+    if (trimmed.length < 2) return 'Relationship must be at least 2 characters'
+    if (trimmed.length > 50) return 'Relationship cannot exceed 50 characters'
+    if (/\d/.test(trimmed)) return 'Relationship cannot contain digits'
+    if (!/^[A-Za-z][A-Za-z\s'-]*[A-Za-z]$|^[A-Za-z]$/.test(trimmed)) {
+        return 'Relationship can only contain letters, spaces, hyphens and apostrophes'
+    }
+    return null
+}
 
 export default function LocationEmergencyContactsPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -76,6 +91,7 @@ export default function LocationEmergencyContactsPage() {
         setFormData(prev => ({ ...prev, [field]: value }))
         let error: string | null = null
         if (field === 'contactName') error = validateName(String(value), 'Contact name')
+        else if (field === 'relationship') error = validateRelationship(String(value))
         else if (field === 'primaryPhone') error = validatePhone(String(value))
         else if (field === 'alternatePhone' && value) error = validatePhone(String(value), false)
         else if (field === 'email' && value) error = validateEmail(String(value))
@@ -86,23 +102,29 @@ export default function LocationEmergencyContactsPage() {
     const handleSave = async () => {
         const errs: Record<string, string> = {}
         const cnErr = validateName(formData.contactName, 'Contact name'); if (cnErr) errs.contactName = cnErr
+        const relErr = validateRelationship(formData.relationship); if (relErr) errs.relationship = relErr
         const ppErr = validatePhone(formData.primaryPhone); if (ppErr) errs.primaryPhone = ppErr
         if (formData.alternatePhone) { const e = validatePhone(formData.alternatePhone, false); if (e) errs.alternatePhone = e }
         if (formData.email) { const e = validateEmail(formData.email); if (e) errs.email = e }
         if (formData.address) { const e = validateAddress(formData.address); if (e) errs.address = e }
         setFieldErrors(errs)
-        if (Object.keys(errs).length > 0) return
+        if (Object.keys(errs).length > 0) {
+            toast.error('Please fix the highlighted errors before saving')
+            return
+        }
         try {
             setIsSaving(true)
             if (editingContact) {
                 await LocationManagerService.updateEmergencyContact(editingContact.id || editingContact._id, formData)
+                toast.success('Emergency contact updated successfully')
             } else {
                 await LocationManagerService.createEmergencyContact(formData)
+                toast.success('Emergency contact created successfully')
             }
             setShowModal(false)
             fetchEmergencyContacts()
         } catch (err: any) {
-            alert('Failed to save contact: ' + err.message)
+            toast.error('Failed to save contact: ' + (err?.message || 'Unknown error'))
         } finally {
             setIsSaving(false)
         }
@@ -111,9 +133,10 @@ export default function LocationEmergencyContactsPage() {
     const handleVerifyContact = async (contactId: string) => {
         try {
             await LocationManagerService.verifyEmergencyContact(contactId)
+            toast.success('Contact verified')
             fetchEmergencyContacts()
         } catch (err: any) {
-            alert('Failed to verify contact: ' + err.message)
+            toast.error('Failed to verify contact: ' + (err?.message || 'Unknown error'))
         }
     }
 
@@ -121,9 +144,10 @@ export default function LocationEmergencyContactsPage() {
         if (confirm('Are you sure you want to delete this emergency contact?')) {
             try {
                 await LocationManagerService.deleteEmergencyContact(contactId)
+                toast.success('Emergency contact deleted')
                 fetchEmergencyContacts()
             } catch (err: any) {
-                alert('Failed to delete contact: ' + err.message)
+                toast.error('Failed to delete contact: ' + (err?.message || 'Unknown error'))
             }
         }
     }
@@ -334,9 +358,18 @@ export default function LocationEmergencyContactsPage() {
                                 <FormFieldHint hint={FORMAT_HINTS.name} error={fieldErrors.contactName} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                                <Input value={formData.relationship} onChange={(e) => setFormData({ ...formData, relationship: e.target.value })} placeholder="e.g., Father, Mother, Guardian" />
-                                <FormFieldHint hint={FORMAT_HINTS.relationship} />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                                <Input
+                                    value={formData.relationship}
+                                    onChange={(e) => handleContactFormChange('relationship', e.target.value)}
+                                    onKeyDown={(e) => {
+                                        const allowed = /^[A-Za-z\s'-]$/
+                                        if (e.key.length === 1 && !allowed.test(e.key)) e.preventDefault()
+                                    }}
+                                    placeholder="e.g., Father, Mother, Guardian"
+                                    className={fieldErrors.relationship ? 'border-red-500' : ''}
+                                />
+                                <FormFieldHint hint="Letters and spaces only (e.g., Father, Mother, Guardian)" error={fieldErrors.relationship} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Primary Phone *</label>
