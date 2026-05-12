@@ -28,7 +28,13 @@ export const authApi = {
     },
 
     resetPassword: async (token: string, password: string) => {
-        const response = await apiClient.post('/auth/reset-password', { token, password });
+        // Backend expects newPassword + confirmPassword (mirrors change-password
+        // schema). Frontend already validates equality before this call.
+        const response = await apiClient.post('/auth/reset-password', {
+            token,
+            newPassword: password,
+            confirmPassword: password,
+        });
         return response.data;
     },
 

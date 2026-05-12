@@ -15,6 +15,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/services/api/client'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 interface AnalyticsData {
     revenue: {
@@ -39,8 +41,24 @@ interface AnalyticsData {
     }
 }
 
+interface LocationPerf {
+    name: string
+    revenue: number
+    students: number
+    utilization: number
+}
+
+interface ProgramPerf {
+    name: string
+    students: number
+    revenue: number
+    satisfaction: number
+}
+
 const AnalyticsPage = () => {
     const [data, setData] = useState<AnalyticsData | null>(null)
+    const [locationPerformance, setLocationPerformance] = useState<LocationPerf[]>([])
+    const [programPerformance, setProgramPerformance] = useState<ProgramPerf[]>([])
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
     const [isLoading, setIsLoading] = useState(true)
 
@@ -48,38 +66,90 @@ const AnalyticsPage = () => {
         const loadAnalytics = async () => {
             setIsLoading(true)
             try {
+                // Core analytics
                 const response = await apiClient.get<any>('/system/analytics')
                 const d = response?.data || response
                 setData({
                     revenue: {
                         current: d?.revenue || 0,
                         previous: Math.round((d?.revenue || 0) * 0.9),
-                        growth: 11.6
+                        growth: d?.revenueGrowth ?? 0
                     },
                     students: {
                         current: d?.totalUsers || 0,
                         previous: Math.round((d?.totalUsers || 0) * 0.9),
-                        growth: 9.9
+                        growth: d?.studentGrowth ?? 0
                     },
                     bookings: {
                         current: d?.totalBookings || 0,
                         previous: Math.round((d?.totalBookings || 0) * 0.85),
-                        growth: 14.8
+                        growth: d?.bookingGrowth ?? 0
                     },
                     satisfaction: {
-                        current: 4.8,
-                        previous: 4.6,
-                        growth: 4.3
+                        current: d?.customerSatisfaction || 0,
+                        previous: d?.previousSatisfaction || 0,
+                        growth: d?.satisfactionGrowth ?? 0
                     }
                 })
+
+                // Derive Location performance from real Locations endpoint
+                try {
+                    const locRes: any = await apiClient.get('/locations')
+                    const locList = Array.isArray(locRes?.data) ? locRes.data
+                        : Array.isArray(locRes?.data?.locations) ? locRes.data.locations
+                        : Array.isArray(locRes?.data?.data) ? locRes.data.data
+                        : Array.isArray(locRes) ? locRes : []
+                    const mappedLoc: LocationPerf[] = (locList || []).slice(0, 10).map((l: any) => {
+                        const capacity = Number(l.capacity) || Number(l.maxCapacity) || 0
+                        const students = Number(l.studentCount) || Number(l.totalStudents) || Number(l.activeStudents) || 0
+                        const utilization = capacity > 0
+                            ? Math.min(100, Math.round((students / capacity) * 100))
+                            : Number(l.utilization) || Number(l.utilizationRate) || 0
+                        return {
+                            name: l.name || l.locationName || l.title || 'Unnamed',
+                            revenue: Number(l.revenue) || Number(l.totalRevenue) || Number(l.monthlyRevenue) || 0,
+                            students,
+                            utilization,
+                        }
+                    })
+                    setLocationPerformance(mappedLoc)
+                } catch {
+                    setLocationPerformance([])
+                }
+
+                // Derive Program performance from real Programs endpoint
+                try {
+                    const progRes: any = await apiClient.get('/programs')
+                    const progList = Array.isArray(progRes?.data) ? progRes.data
+                        : Array.isArray(progRes?.data?.programs) ? progRes.data.programs
+                        : Array.isArray(progRes?.data?.data) ? progRes.data.data
+                        : Array.isArray(progRes) ? progRes : []
+                    const mappedProg: ProgramPerf[] = (progList || []).slice(0, 6).map((p: any) => {
+                        const students = Number(p.enrolledCount) || Number(p.studentCount) || Number(p.totalStudents) || Number(p.activeStudents) || 0
+                        const basePrice = Number(p.pricing?.basePrice) || Number(p.basePrice) || Number(p.price) || 0
+                        const revenue = Number(p.revenue) || Number(p.totalRevenue) || students * basePrice
+                        return {
+                            name: p.name || p.title || 'Unnamed Program',
+                            students,
+                            revenue,
+                            satisfaction: Number(p.averageRating) || Number(p.satisfaction) || 0,
+                        }
+                    })
+                    setProgramPerformance(mappedProg)
+                } catch {
+                    setProgramPerformance([])
+                }
             } catch (error) {
                 console.error('Failed to load analytics:', error)
+                toast.error(`Failed to load analytics: ${getErrorMessage(error)}`)
                 setData({
                     revenue: { current: 0, previous: 0, growth: 0 },
                     students: { current: 0, previous: 0, growth: 0 },
                     bookings: { current: 0, previous: 0, growth: 0 },
                     satisfaction: { current: 0, previous: 0, growth: 0 }
                 })
+                setLocationPerformance([])
+                setProgramPerformance([])
             } finally {
                 setIsLoading(false)
             }
@@ -269,10 +339,11 @@ const AnalyticsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {[
-                                { name: 'Cyberport', revenue: 72000, students: 89, utilization: 85 },
-                                { name: 'Wan Chai', revenue: 53000, students: 67, utilization: 78 }
-                            ].map((location) => (
+                            {locationPerformance.length === 0 ? (
+                                <div className="text-center py-8 text-gray-400 text-sm">
+                                    No data available
+                                </div>
+                            ) : locationPerformance.map((location) => (
                                 <div key={location.name} className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-2">
@@ -310,31 +381,33 @@ const AnalyticsPage = () => {
                     <CardTitle>Program Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[
-                            { name: 'Beginner Gymnastics', students: 45, revenue: 31500, satisfaction: 4.9 },
-                            { name: 'Intermediate Gymnastics', students: 38, revenue: 41800, satisfaction: 4.8 },
-                            { name: 'Advanced Gymnastics', students: 22, revenue: 35200, satisfaction: 4.7 },
-                        ].map((program) => (
-                            <div key={program.name} className="p-4 bg-gray-50 rounded-lg">
-                                <h4 className="font-medium mb-3">{program.name}</h4>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Students:</span>
-                                        <span className="font-medium">{program.students}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Revenue:</span>
-                                        <span className="font-medium">{formatCurrency(program.revenue)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Rating:</span>
-                                        <span className="font-medium">{program.satisfaction}/5.0</span>
+                    {programPerformance.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-sm">
+                            No data available
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {programPerformance.map((program) => (
+                                <div key={program.name} className="p-4 bg-gray-50 rounded-lg">
+                                    <h4 className="font-medium mb-3">{program.name}</h4>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Students:</span>
+                                            <span className="font-medium">{program.students}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Revenue:</span>
+                                            <span className="font-medium">{formatCurrency(program.revenue)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Rating:</span>
+                                            <span className="font-medium">{program.satisfaction ? `${program.satisfaction.toFixed(1)}/5.0` : '—'}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

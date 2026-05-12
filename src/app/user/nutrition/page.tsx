@@ -19,6 +19,7 @@ import {
     validateSelect,
     validateNumber,
     validateTextArea,
+    validatePlainText,
     filterNumberInput,
 } from '@/utils/validation'
 
@@ -198,14 +199,8 @@ export default function NutritionPage() {
         const mtErr = validateSelect(form.mealType, 'Meal Type')
         if (mtErr) next.mealType = mtErr
 
-        const nameReq = validateRequired(form.mealName, 'Meal name')
-        if (nameReq) {
-            next.mealName = nameReq
-        } else {
-            const trimmed = form.mealName.trim()
-            if (trimmed.length < 2) next.mealName = 'Meal name must be at least 2 characters'
-            else if (trimmed.length > 80) next.mealName = 'Meal name must be at most 80 characters'
-        }
+        const nameErr = validatePlainText(form.mealName, 'Meal name', 2, 80)
+        if (nameErr) next.mealName = nameErr
 
         const calErr = validateNumber(form.calories, 'Calories', 0.0001)
         if (calErr) next.calories = calErr

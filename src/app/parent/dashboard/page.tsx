@@ -30,6 +30,9 @@ const ParentDashboard = () => {
     const [aiAnswerLoading, setAiAnswerLoading] = useState(false)
     const [selectedChildIdForAi, setSelectedChildIdForAi] = useState<string | null>(null)
     const [aiError, setAiError] = useState<string | null>(null)
+    const [downloadingReport, setDownloadingReport] = useState(false)
+    // Filter Upcoming Classes section by a specific child (BUG_006)
+    const [filterChildId, setFilterChildId] = useState<string | null>(null)
     const { user, isAuthenticated } = useAuth()
     const router = useRouter()
 
@@ -41,15 +44,18 @@ const ParentDashboard = () => {
             return
         }
         loadDashboardData()
-        // Re-fetch when date-range filter changes so the view actually updates
-    }, [isAuthenticated, router, selectedTimeRange])
+        // Re-fetch when date-range filter or per-child filter changes so the
+        // view actually updates (BUG_007: ranges; BUG_006: child filter).
+    }, [isAuthenticated, router, selectedTimeRange, filterChildId])
 
     const loadDashboardData = async () => {
         try {
             setIsLoading(true)
             setError(null)
 
-            const response = await apiClient.get<any>(`/parent/dashboard?timeRange=${selectedTimeRange}`)
+            const params = new URLSearchParams({ timeRange: selectedTimeRange })
+            if (filterChildId) params.set('childId', filterChildId)
+            const response = await apiClient.get<any>(`/parent/dashboard?${params.toString()}`)
             const data = response?.data || response
             setDashboardData(data)
         } catch (err) {
@@ -73,15 +79,55 @@ const ParentDashboard = () => {
             setAiLoading(true)
             setAiError(null)
             setSelectedChildIdForAi(childId)
-            const response = await apiClient.post<any>(`/parent-ai-assistant/generate-report/${childId}`)
+            const response = await apiClient.post<any>(`/parent-ai-assistant/generate-report/${childId}`, { period: 'weekly' })
             const data = response?.data || response
-            setAiReport(data)
+            // Backend returns aiPowered:false with a placeholder summary when
+            // the underlying provider failed. Surface it as an error banner
+            // instead of pretending the report succeeded (BUG_005).
+            if (data && data.aiPowered === false) {
+                setAiError(data.summary || 'AI insights are not available right now. Please try again later.')
+                setAiReport(null)
+            } else {
+                setAiReport(data)
+            }
         } catch (err) {
             console.error('Error generating AI report:', err)
             setAiError('AI insights are not available right now. Please try again later.')
             setAiReport(null)
         } finally {
             setAiLoading(false)
+        }
+    }
+
+    const handleDownloadReport = () => {
+        // Build a downloadable JSON snapshot of the parent dashboard so
+        // "Download Report" actually delivers a file (BUG_004). JSON keeps
+        // the implementation dependency-free.
+        try {
+            setDownloadingReport(true)
+            const snapshot = {
+                generatedAt: new Date().toISOString(),
+                parent: parentName,
+                timeRange: selectedTimeRange,
+                stats: dashboardData?.stats || {},
+                children: dashboardData?.children || [],
+                upcomingClasses: dashboardData?.upcomingClasses || [],
+                recentPayments: dashboardData?.recentPayments || [],
+                alerts: dashboardData?.alerts || [],
+            }
+            const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `parent-dashboard-report-${new Date().toISOString().slice(0, 10)}.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        } catch (err) {
+            console.error('Download report failed', err)
+        } finally {
+            setDownloadingReport(false)
         }
     }
 
@@ -111,6 +157,25 @@ const ParentDashboard = () => {
     const upcomingClasses = dashboardData?.upcomingClasses || []
     const recentPayments = dashboardData?.recentPayments || []
     const alerts: any[] = Array.isArray(dashboardData?.alerts) ? dashboardData.alerts : []
+
+    // Date-filter aware metrics (BUG_007). Backend returns range-scoped fields
+    // (rangeSpent, rangeBookings) for any timeRange; show those for non-empty
+    // ranges and fall back to lifetime totals only when nothing matches.
+    const isRanged = selectedTimeRange === 'today' || selectedTimeRange === '7d' || selectedTimeRange === '30d'
+    const displayedTotalSpent = isRanged
+        ? (stats.rangeSpent ?? stats.totalSpent ?? 0)
+        : (stats.totalSpent ?? 0)
+    const totalSpentLabel = selectedTimeRange === 'today'
+        ? 'Today'
+        : selectedTimeRange === '7d'
+            ? 'Last 7 days'
+            : selectedTimeRange === '30d'
+                ? 'Last 30 days'
+                : 'This year'
+
+    const filteredChildName = filterChildId
+        ? (myChildren.find((c: any) => c.id === filterChildId)?.name || 'Selected child')
+        : null
 
     const formatAlertTime = (iso: string) => {
         if (!iso) return ''
@@ -269,10 +334,10 @@ const ParentDashboard = () => {
                                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 rounded-lg shadow-md">
                                     <CreditCard className="w-5 h-5 text-white" />
                                 </div>
-                                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">This year</span>
+                                <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">{totalSpentLabel}</span>
                             </div>
                             <p className="text-xs text-gray-600 font-medium mb-1">Total Spent</p>
-                            <p className="text-2xl font-bold text-gray-900">HK${(stats.totalSpent ?? 0).toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">HK${Number(displayedTotalSpent || 0).toLocaleString()}</p>
                         </CardContent>
                     </Card>
                 </motion.div>
@@ -369,7 +434,7 @@ const ParentDashboard = () => {
                                             id={`parent-dashboard-child-${child.id}-details-btn`}
                                             className="w-full"
                                             variant="outline"
-                                            onClick={() => router.push('/parent/children')}
+                                            onClick={() => router.push(`/parent/children?childId=${encodeURIComponent(child.id)}`)}
                                         >
                                             View Details
                                         </Button>
@@ -384,13 +449,31 @@ const ParentDashboard = () => {
             {/* Upcoming Classes */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <Calendar className="w-5 h-5 text-blue-600" />
                             <CardTitle>Upcoming Classes</CardTitle>
                             <Badge>{upcomingClasses.length} classes</Badge>
+                            {filteredChildName && (
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                    {filteredChildName}
+                                </Badge>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {myChildren.length > 0 && (
+                                <select
+                                    id="parent-dashboard-upcoming-child-filter"
+                                    value={filterChildId || ''}
+                                    onChange={(e) => setFilterChildId(e.target.value || null)}
+                                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">All children</option>
+                                    {myChildren.map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            )}
                             <Button
                                 id="parent-dashboard-view-all-bookings-btn"
                                 variant="outline"
@@ -593,7 +676,7 @@ const ParentDashboard = () => {
                             id="parent-dashboard-quick-contact-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Contact Coach feature coming soon!')}
+                            onClick={() => router.push('/parent/support')}
                         >
                             <MessageSquare className="w-6 h-6" />
                             <span>Contact Coach</span>
@@ -602,9 +685,14 @@ const ParentDashboard = () => {
                             id="parent-dashboard-quick-download-btn"
                             className="h-20 flex-col gap-2"
                             variant="outline"
-                            onClick={() => alert('Download Report feature coming soon!')}
+                            onClick={handleDownloadReport}
+                            disabled={downloadingReport || !dashboardData}
                         >
-                            <Download className="w-6 h-6" />
+                            {downloadingReport ? (
+                                <Loader2 className="w-6 h-6 animate-spin" />
+                            ) : (
+                                <Download className="w-6 h-6" />
+                            )}
                             <span>Download Report</span>
                         </Button>
                     </div>

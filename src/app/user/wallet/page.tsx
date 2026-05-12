@@ -75,7 +75,16 @@ export default function WalletPage() {
             ])
 
             if (balanceRes?.success) {
-                setBalance(balanceRes.data?.balance || 0)
+                // Backend returns { totalBalance, creditBuckets, ... }; older code read `balance`
+                // and showed 0 forever (BUG_017).
+                const data: any = balanceRes.data || {}
+                setBalance(
+                    typeof data.totalBalance === 'number'
+                        ? data.totalBalance
+                        : typeof data.balance === 'number'
+                            ? data.balance
+                            : 0
+                )
             }
             if (transactionsRes?.success) {
                 setTransactions(Array.isArray(transactionsRes.data) ? transactionsRes.data : [])

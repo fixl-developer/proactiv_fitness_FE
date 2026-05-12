@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CMSAdminService } from '@/services/cmsService'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 
 // Header navigation pages — names match exactly what admins see in the public site header
 // so there's no confusion when locating a page to edit.
@@ -192,9 +193,10 @@ export default function AdminCMSPage() {
             const result = await CMSAdminService.seedDefaultData()
             setSeedResult(result)
             toast.success('Default data seeded successfully')
-        } catch (error) {
+        } catch (error: any) {
             console.error('Seed failed:', error)
-            toast.error('Failed to seed data. Please check if the backend is running.')
+            const message = getErrorMessage(error)
+            toast.error(`Failed to seed data: ${message}`)
         } finally {
             setSeeding(false)
         }

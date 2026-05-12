@@ -9,8 +9,7 @@ import { LocationService, BusinessUnitService, CountryService } from '@/services
 import RoomsTab from '@/components/admin/business-config/RoomsTab'
 import PhoneCountryInput from '@/components/admin/business-config/PhoneCountryInput'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
-import { validateEmail, validatePhone, validatePhoneWithCountry, validateName, validateAddress, validateZipCode, validateNumber, filterNameInput, filterPhoneInput } from '@/utils/validation'
-import { getCountriesByCode } from '@/utils/countryPhoneCodes'
+import { validateEmail, validateName, validateAddress, validateZipCode, validateNumber, filterNameInput, validateAlphaText, validatePhone10 } from '@/utils/validation'
 
 interface Location {
   id: string
@@ -110,9 +109,9 @@ export default function LocationsPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name || !formData.name.trim()) newErrors.name = 'Location name is required'
-    else if (formData.name.trim().length < 2) newErrors.name = 'Location name must be at least 2 characters'
-    else if (formData.name.trim().length > 100) newErrors.name = 'Location name must be 100 characters or fewer'
+    // BUG_003: tighten Location Name — letters only, no digits
+    const nameErr = validateAlphaText(formData.name, 'Location name', 100)
+    if (nameErr) newErrors.name = nameErr
 
     const addressErr = validateAddress(formData.address, 'Address')
     if (addressErr) newErrors.address = addressErr
@@ -138,27 +137,13 @@ export default function LocationsPage() {
     if (!formData.businessUnitId) newErrors.businessUnitId = 'Business unit is required'
     if (!formData.countryId) newErrors.countryId = 'Country (ref) is required'
 
-    // Phone + email are optional at the schema level — only validate format if
-    // the admin actually filled them in. Internal/warehouse-only locations can
-    // be saved without contact details.
+    // Email optional
     const emailErr = validateEmail(formData.email, false)
     if (emailErr) newErrors.email = emailErr
 
-    // Validate phone with country code if provided
-    if (formData.phone && formData.phone.trim()) {
-      // Extract country code from phone (e.g., "+91" from "+91 9876543210")
-      const match = formData.phone.match(/^(\+\d{1,3})/)
-      if (match) {
-        const code = match[1]
-        const countries = getCountriesByCode(code)
-        const requiredDigits = countries[0]?.digits || 10
-        const phoneErr = validatePhoneWithCountry(formData.phone, requiredDigits, false)
-        if (phoneErr) newErrors.phone = phoneErr
-      } else {
-        const phoneErr = validatePhone(formData.phone, false)
-        if (phoneErr) newErrors.phone = phoneErr
-      }
-    }
+    // BUG_006: Phone is required and must be exactly 10 digits
+    const phoneErr = validatePhone10(formData.phone, true, 'Phone')
+    if (phoneErr) newErrors.phone = phoneErr
 
     if (formData.code && formData.code.trim() && !/^[A-Z0-9-]{2,20}$/.test(formData.code.trim())) {
       newErrors.code = 'Code must be 2-20 chars: uppercase letters, digits and hyphens only'
@@ -430,12 +415,14 @@ export default function LocationsPage() {
                   type="text"
                   value={formData.name}
                   onKeyDown={(e) => {
-                    // Allow letters, digits, spaces, common punctuation in venue names
-                    if (e.key.length === 1 && !/^[A-Za-z0-9\s'&().,-]$/.test(e.key)) e.preventDefault()
+                    // BUG_003: only allow letters, spaces and basic punctuation — no digits
+                    if (e.key.length === 1 && !/^[A-Za-z\s'.\-&]$/.test(e.key)) e.preventDefault()
                   }}
                   onChange={(e) => {
-                    setFormData({ ...formData, name: e.target.value })
-                    if (errors.name) setErrors({ ...errors, name: '' })
+                    const v = e.target.value
+                    setFormData({ ...formData, name: v })
+                    const err = validateAlphaText(v, 'Location name', 100)
+                    setErrors((prev) => ({ ...prev, name: err || '' }))
                   }}
                   placeholder="e.g., Dubai Marina Center"
                   maxLength={100}
@@ -443,7 +430,7 @@ export default function LocationsPage() {
                     }`}
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-                {!errors.name && <p className="mt-1 text-xs text-slate-500">Letters, digits, spaces and basic punctuation (max 100 chars)</p>}
+                {!errors.name && <p className="mt-1 text-xs text-slate-500">Letters, spaces and basic punctuation only (max 100 chars)</p>}
               </div>
 
               <div>
@@ -555,24 +542,17 @@ export default function LocationsPage() {
                     value={formData.phone}
                     onChange={(value) => {
                       setFormData({ ...formData, phone: value })
-                      if (errors.phone) setErrors({ ...errors, phone: '' })
+                      // BUG_006: live-validate strict 10 digits
+                      const err = validatePhone10(value, true, 'Phone')
+                      setErrors((prev) => ({ ...prev, phone: err || '' }))
                     }}
                     error={errors.phone}
                     label="Phone"
-                    required={false}
-                    placeholder="+1 555 123 4567"
+                    required={true}
+                    placeholder="+1 5551234567"
                     onBlur={() => {
-                      // Validate on blur
-                      if (formData.phone && formData.phone.trim()) {
-                        const match = formData.phone.match(/^(\+\d{1,3})/)
-                        if (match) {
-                          const code = match[1]
-                          const countries = getCountriesByCode(code)
-                          const requiredDigits = countries[0]?.digits || 10
-                          const phoneErr = validatePhoneWithCountry(formData.phone, requiredDigits, false)
-                          if (phoneErr) setErrors(prev => ({ ...prev, phone: phoneErr }))
-                        }
-                      }
+                      const phoneErr = validatePhone10(formData.phone, true, 'Phone')
+                      if (phoneErr) setErrors((prev) => ({ ...prev, phone: phoneErr }))
                     }}
                   />
                 </div>

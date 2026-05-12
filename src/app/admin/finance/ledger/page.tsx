@@ -11,7 +11,7 @@ import {
   validateRequired,
   validateCurrency,
   validateSelect,
-  validateTextArea,
+  validateNotes,
   PATTERNS,
 } from '@/utils/validation'
 
@@ -97,7 +97,7 @@ export default function LedgerPage() {
     const currencyErr = validateSelect(formData.currency, 'Currency')
     if (currencyErr) newErrors.currency = currencyErr
 
-    const descErr = validateTextArea(formData.description, 'Description', 10, 1000)
+    const descErr = validateNotes(formData.description, 'Description', true, 1000)
     if (descErr) newErrors.description = descErr
 
     const statusErr = validateSelect(formData.status, 'Status')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus } from 'lucide-react';
+import { ArrowLeft, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { rbacManager } from '@/services/auth/rbac';
@@ -21,6 +21,53 @@ import type { RegisterStep4Data } from '@/lib/validations/auth';
 import type { RegisterStep5Data } from '@/lib/validations/auth';
 import type { RegisterStep6Data } from '@/lib/validations/auth';
 
+const REGISTRATION_STORAGE_KEY = 'proactiv:parent-registration:v1';
+
+const initialFormData = {
+    // Step 1: Account
+    email: '',
+    password: '',
+    confirmPassword: '',
+    // Step 2: Personal
+    firstName: '',
+    lastName: '',
+    phone: '',
+    dateOfBirth: '',
+    gender: '' as 'male' | 'female' | 'other' | '',
+    // Step 3: Address
+    address: {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: ''
+    },
+    // Step 4: Students
+    students: [] as Array<{
+        firstName: string;
+        lastName: string;
+        dateOfBirth: string;
+        gender: 'male' | 'female' | 'other';
+        school?: string;
+        medicalConditions?: string;
+    }>,
+    // Step 5: Guardians
+    guardians: [] as Array<{
+        firstName: string;
+        lastName: string;
+        relationship: string;
+        phone: string;
+        email: string;
+        isEmergencyContact: boolean;
+    }>,
+    // Step 6: Terms
+    acceptTerms: false,
+    acceptPrivacy: false,
+    marketingConsent: false,
+};
+
+type RegistrationFormState = typeof initialFormData;
+
 export default function RegisterPage() {
     const router = useRouter();
     const { isAuthenticated, error, clearError } = useAuth();
@@ -28,49 +75,50 @@ export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [hydrated, setHydrated] = useState(false);
 
-    const [formData, setFormData] = useState({
-        // Step 1: Account
-        email: '',
-        password: '',
-        confirmPassword: '',
-        // Step 2: Personal
-        firstName: '',
-        lastName: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '' as 'male' | 'female' | 'other' | '',
-        // Step 3: Address
-        address: {
-            street: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            country: ''
-        },
-        // Step 4: Students
-        students: [] as Array<{
-            firstName: string;
-            lastName: string;
-            dateOfBirth: string;
-            gender: 'male' | 'female' | 'other';
-            school?: string;
-            medicalConditions?: string;
-        }>,
-        // Step 5: Guardians
-        guardians: [] as Array<{
-            firstName: string;
-            lastName: string;
-            relationship: string;
-            phone: string;
-            email: string;
-            isEmergencyContact: boolean;
-        }>,
-        // Step 6: Terms
-        acceptTerms: false,
-        acceptPrivacy: false,
-        marketingConsent: false,
-    });
+    const [formData, setFormData] = useState<RegistrationFormState>(initialFormData);
+
+    // Restore in-progress registration from localStorage on mount (BUG_001)
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const raw = window.localStorage.getItem(REGISTRATION_STORAGE_KEY);
+            if (raw) {
+                const saved = JSON.parse(raw);
+                if (saved && typeof saved === 'object') {
+                    if (saved.formData) {
+                        setFormData((prev) => ({ ...prev, ...saved.formData }));
+                    }
+                    if (typeof saved.currentStep === 'number' && saved.currentStep >= 1 && saved.currentStep <= 6) {
+                        // Password is never persisted; if user was past step 1, send them
+                        // back to step 1 so they can re-enter it.
+                        const restoredStep = saved.currentStep > 1 ? 1 : saved.currentStep;
+                        setCurrentStep(restoredStep);
+                    }
+                }
+            }
+        } catch {
+            // corrupt storage — ignore
+        }
+        setHydrated(true);
+    }, []);
+
+    // Persist on every change (skip the first render to avoid clobbering with defaults)
+    useEffect(() => {
+        if (!hydrated || typeof window === 'undefined') return;
+        try {
+            window.localStorage.setItem(
+                REGISTRATION_STORAGE_KEY,
+                JSON.stringify({
+                    formData: { ...formData, password: '', confirmPassword: '' }, // never persist passwords
+                    currentStep,
+                })
+            );
+        } catch {
+            // storage full / disabled — ignore
+        }
+    }, [formData, currentStep, hydrated]);
 
     // Redirect if already authenticated
     useEffect(() => {
@@ -200,6 +248,11 @@ export default function RegisterPage() {
 
             setRegistrationSuccess(true);
 
+            // Clear persisted draft on successful submission
+            if (typeof window !== 'undefined') {
+                try { window.localStorage.removeItem(REGISTRATION_STORAGE_KEY); } catch { /* noop */ }
+            }
+
             // Redirect to login after 2 seconds
             setTimeout(() => {
                 router.push('/login');
@@ -276,22 +329,33 @@ export default function RegisterPage() {
                 />
             </div>
 
-            <div className="relative flex items-center justify-center min-h-screen p-4 py-8">
-                <div className="w-full max-w-2xl">
+            <div className="relative flex items-center justify-center min-h-screen p-3 py-4">
+                <div className="w-full max-w-xl">
+                    {/* Back to Login */}
+                    <button
+                        id="auth-register-btn-back-login"
+                        type="button"
+                        onClick={() => router.push('/login')}
+                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-900 mb-2 transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Login
+                    </button>
+
                     {/* Header */}
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
-                        className="text-center mb-8"
+                        className="text-center mb-3"
                     >
-                        <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-3 shadow-lg">
-                            <UserPlus className="w-7 h-7 text-white" />
+                        <div className="inline-flex items-center justify-center w-11 h-11 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl mb-2 shadow-lg">
+                            <UserPlus className="w-5 h-5 text-white" />
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                        <h1 className="text-xl font-bold text-gray-900 mb-0.5">
                             Create Your Account
                         </h1>
-                        <p className="text-gray-600 text-base">
+                        <p className="text-gray-600 text-xs">
                             Join us and start your journey today
                         </p>
                     </motion.div>
@@ -301,7 +365,7 @@ export default function RegisterPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
-                        className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20 relative"
+                        className="bg-white/80 backdrop-blur-xl rounded-xl shadow-2xl p-5 border border-white/20 relative"
                     >
                         {/* Decorative top bar */}
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-t-2xl"></div>
@@ -365,6 +429,7 @@ export default function RegisterPage() {
                                 <RegisterStep4
                                     onComplete={handleStep4Complete}
                                     onBack={handleBack}
+                                    parentDateOfBirth={formData.dateOfBirth}
                                     initialData={{
                                         students: formData.students.length > 0 ? formData.students : undefined
                                     }}

@@ -102,9 +102,12 @@ export default function BookingsPage() {
     }
 
     const handleCancelBooking = async (bookingId: string) => {
+        if (!window.confirm('Are you sure you want to cancel this booking?')) return
         try {
             setCancellingId(bookingId)
-            await apiClient.patch(`/bookings/${bookingId}/cancel`, { reason: 'user_request' })
+            // Backend CancellationReason enum requires one of: customer_request, illness, emergency,
+            // schedule_conflict, dissatisfaction, financial, relocation, other.
+            await apiClient.patch(`/bookings/${bookingId}/cancel`, { reason: 'customer_request' })
             toast.success('Booking cancelled successfully')
             await loadBookings()
         } catch (err: any) {

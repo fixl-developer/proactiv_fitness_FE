@@ -186,9 +186,11 @@ class AuthService {
 
     async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
         try {
+            // Backend expects token + newPassword + confirmPassword. Caller has
+            // already validated equality, so we mirror newPassword into confirm.
             const response = await apiClient.post<{ success: boolean; message: string }>(
                 '/auth/reset-password',
-                { token, newPassword }
+                { token, newPassword, confirmPassword: newPassword }
             )
 
             return response

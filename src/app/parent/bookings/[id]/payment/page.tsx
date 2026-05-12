@@ -210,22 +210,10 @@ const PaymentPage = () => {
                                     )}
                                 </div>
 
-                                <div className="border-t border-gray-200 pt-4 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Subtotal:</span>
-                                        <span className="font-medium text-gray-900">
-                                            ${(booking.payment.amount * 0.95).toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Processing Fee:</span>
-                                        <span className="font-medium text-gray-900">
-                                            ${(booking.payment.amount * 0.05).toFixed(2)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
+                                <div className="border-t border-gray-200 pt-4">
+                                    <div className="flex justify-between text-lg font-bold">
                                         <span>Total:</span>
-                                        <span className="text-blue-600">${booking.payment.amount.toFixed(2)}</span>
+                                        <span className="text-blue-600">{booking.payment.currency || '$'}{booking.payment.amount.toFixed(2)}</span>
                                     </div>
                                 </div>
 

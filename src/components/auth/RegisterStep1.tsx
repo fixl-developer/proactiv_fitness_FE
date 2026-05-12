@@ -80,9 +80,9 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
     };
 
     return (
-        <form id="form-components-auth-RegisterStep1" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Account Details</h2>
+        <form id="form-components-auth-RegisterStep1" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3">
+            <div className="text-center mb-3">
+                <h2 className="text-lg font-bold text-gray-900">Account Details</h2>
                 <p className="text-gray-600 mt-2">
                     Create your login credentials
                 </p>
@@ -100,7 +100,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         {...register('email', {
                             onChange: (e) => validateField('email', e.target.value),
                         })}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                             errors.email || fieldErrors.email ? 'border-red-500' : 'border-gray-300'
                         }`}
                         placeholder="your.email@example.com"
@@ -124,7 +124,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         {...register('password', {
                             onChange: (e) => validateField('password', e.target.value),
                         })}
-                        className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                        className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                             errors.password || fieldErrors.password ? 'border-red-500' : 'border-gray-300'
                         }`}
                         placeholder="••••••••"
@@ -159,7 +159,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
                         {...register('confirmPassword', {
                             onChange: (e) => validateField('confirmPassword', e.target.value),
                         })}
-                        className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                        className={`w-full pl-10 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
                             errors.confirmPassword || fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                         }`}
                         placeholder="••••••••"
@@ -187,7 +187,7 @@ export function RegisterStep1({ onComplete, initialData }: RegisterStep1Props) {
             {/* Submit Button */}
             <button id="auth-register-step1-btn-continue"
                 type="submit"
-                className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                className="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors"
             >
                 Continue
             </button>

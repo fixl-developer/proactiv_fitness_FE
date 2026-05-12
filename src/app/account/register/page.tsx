@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Mail, Lock, User, Calendar, UserPlus } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, Calendar, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/modules/auth.service';
@@ -19,6 +19,10 @@ import {
 } from '@/utils/validation';
 import { FormFieldHint } from '@/components/ui/FormFieldHint';
 import { PhoneInput } from '@/components/ui/PhoneInput';
+
+// Self-registering users are individual adults, not parent-managed minors.
+const USER_MIN_AGE = 18;
+const USER_MAX_AGE = 40;
 
 export default function UserRegisterPage() {
     return (
@@ -46,6 +50,20 @@ function UserRegisterContent() {
         confirmPassword: ''
     });
 
+    // Bound the native date picker to the allowed age window so users can't even
+    // pick an out-of-range date.
+    const dobBounds = useMemo(() => {
+        const today = new Date();
+        const max = new Date(today);
+        max.setFullYear(today.getFullYear() - USER_MIN_AGE);
+        const min = new Date(today);
+        min.setFullYear(today.getFullYear() - USER_MAX_AGE);
+        return {
+            min: min.toISOString().split('T')[0],
+            max: max.toISOString().split('T')[0],
+        };
+    }, []);
+
     // Real-time field validation helper
     const handleFieldChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -64,7 +82,7 @@ function UserRegisterContent() {
                 error = validateEmail(value);
                 break;
             case 'dateOfBirth':
-                error = validateDateOfBirth(value, false);
+                error = validateDateOfBirth(value, true, USER_MIN_AGE, USER_MAX_AGE);
                 break;
             case 'password':
                 error = validatePassword(value);
@@ -130,10 +148,12 @@ function UserRegisterContent() {
         if (lastNameErr) submitErrors.lastName = lastNameErr;
         const emailErr = validateEmail(formData.email);
         if (emailErr) submitErrors.email = emailErr;
-        if (formData.phone && !phoneValid) {
+        if (!formData.phone || !formData.phone.trim()) {
+            submitErrors.phone = 'Phone number is required';
+        } else if (!phoneValid) {
             submitErrors.phone = 'Please enter a valid phone number for the selected country';
         }
-        const dobErr = validateDateOfBirth(formData.dateOfBirth, false);
+        const dobErr = validateDateOfBirth(formData.dateOfBirth, true, USER_MIN_AGE, USER_MAX_AGE);
         if (dobErr) submitErrors.dateOfBirth = dobErr;
         const passwordErr = validatePassword(formData.password);
         if (passwordErr) submitErrors.password = passwordErr;
@@ -198,6 +218,17 @@ function UserRegisterContent() {
 
             <div className="relative flex items-center justify-center min-h-screen p-4 py-5">
                 <div className="w-full max-w-2xl">
+                    {/* Back to Login */}
+                    <button
+                        id="account-register-btn-back-login"
+                        type="button"
+                        onClick={() => router.push('/login')}
+                        className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-900 mb-3 transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Login
+                    </button>
+
                     {/* Header */}
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
@@ -299,11 +330,13 @@ function UserRegisterContent() {
                                         <input id="input-date-account-register"
                                             type="date"
                                             value={formData.dateOfBirth}
+                                            min={dobBounds.min}
+                                            max={dobBounds.max}
                                             onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
                                             className={`w-full pl-10 pr-4 py-2 border-2 rounded-lg focus:ring-2 transition-all ${errors.dateOfBirth ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-200'}`}
                                         />
                                     </div>
-                                    <FormFieldHint hint={FORMAT_HINTS.dateOfBirth} error={errors.dateOfBirth} />
+                                    <FormFieldHint hint={`Must be between ${USER_MIN_AGE} and ${USER_MAX_AGE} years old`} error={errors.dateOfBirth} />
                                 </div>
                             </div>
 

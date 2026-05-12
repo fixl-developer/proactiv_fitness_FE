@@ -8,6 +8,7 @@ import { apiClient } from '@/services/api/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Loader, Calendar, Clock, MapPin, User, DollarSign, CheckCircle, XCircle, ArrowLeft, CreditCard, Users } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface BookingDetails {
     id: string
@@ -91,10 +92,10 @@ const BookingDetailsPage = () => {
         setIsCancelling(true)
         try {
             await apiClient.put(`/parent/bookings/${id}/cancel`)
-            alert('Booking cancelled successfully.')
+            toast.success('Booking cancelled successfully.')
             router.push('/parent/bookings')
         } catch (err: any) {
-            alert(err?.response?.data?.message || err.message || 'Failed to cancel booking')
+            toast.error(err?.response?.data?.message || err.message || 'Failed to cancel booking')
         } finally {
             setIsCancelling(false)
             setShowCancelDialog(false)

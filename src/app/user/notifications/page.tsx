@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Bell, Trash2, Settings, Check, AlertCircle, Info, CheckCircle2, CheckCheck } from 'lucide-react'
+import { Bell, Trash2, Settings, Check, AlertCircle, Info, CheckCircle2, CheckCheck, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
@@ -53,6 +53,7 @@ export default function NotificationsPage() {
     const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES)
     const [savingPrefs, setSavingPrefs] = useState(false)
     const [prefsErrors, setPrefsErrors] = useState<Record<string, string>>({})
+    const [detailNotif, setDetailNotif] = useState<Notification | null>(null)
 
     useEffect(() => {
         fetchNotifications()
@@ -297,6 +298,16 @@ export default function NotificationsPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => {
+                                                    setDetailNotif(notif)
+                                                    if (!notif.read) handleMarkAsRead(notif._id)
+                                                }}
+                                                className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                                title="View details"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
                                             {!notif.read && (
                                                 <button
                                                     onClick={() => handleMarkAsRead(notif._id)}
@@ -432,6 +443,62 @@ export default function NotificationsPage() {
                         </div>
                     </div>
                 </div>
+            </SlideInDrawer>
+
+            {/* Notification Details Drawer */}
+            <SlideInDrawer
+                isOpen={!!detailNotif}
+                onClose={() => setDetailNotif(null)}
+                title={detailNotif?.title || 'Notification'}
+                description={
+                    detailNotif?.createdAt
+                        ? new Date(detailNotif.createdAt).toLocaleString()
+                        : detailNotif?.time
+                }
+                size="md"
+                footer={
+                    <div className="flex gap-3 justify-end">
+                        <Button variant="outline" onClick={() => setDetailNotif(null)}>
+                            Close
+                        </Button>
+                        {detailNotif && (
+                            <Button
+                                onClick={() => {
+                                    handleDelete(detailNotif._id)
+                                    setDetailNotif(null)
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                            </Button>
+                        )}
+                    </div>
+                }
+            >
+                {detailNotif && (
+                    <div className="space-y-4 text-sm">
+                        <div className="flex items-center gap-2">
+                            {getNotificationIcon(detailNotif.type)}
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 capitalize">
+                                {detailNotif.type}
+                            </span>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${detailNotif.read ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-700'}`}>
+                                {detailNotif.read ? 'Read' : 'Unread'}
+                            </span>
+                        </div>
+                        <div>
+                            <p className="text-xs text-gray-500 mb-1">Message</p>
+                            <p className="text-gray-900 whitespace-pre-line">{detailNotif.message}</p>
+                        </div>
+                        {detailNotif.createdAt && (
+                            <div>
+                                <p className="text-xs text-gray-500 mb-1">Received</p>
+                                <p className="text-gray-700">{new Date(detailNotif.createdAt).toLocaleString()}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </SlideInDrawer>
         </div>
     )

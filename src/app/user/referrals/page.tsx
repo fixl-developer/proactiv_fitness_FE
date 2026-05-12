@@ -216,8 +216,14 @@ export default function ReferralsPage() {
         const em = validateEmail(form.friendEmail)
         if (em) errors.friendEmail = em
         if (form.friendPhone) {
-            const ph = validatePhone(form.friendPhone, false)
-            if (ph) errors.friendPhone = ph
+            // Bug report requires rejecting phone numbers shorter than 10 digits
+            const digits = form.friendPhone.replace(/\D/g, '')
+            if (digits.length < 10 || digits.length > 15) {
+                errors.friendPhone = 'Phone number must be 10-15 digits'
+            } else {
+                const ph = validatePhone(form.friendPhone, false)
+                if (ph) errors.friendPhone = ph
+            }
         }
         if (form.personalMessage) {
             const msgErr = validateTextArea(form.personalMessage, 'Personal message', 0, 500)
