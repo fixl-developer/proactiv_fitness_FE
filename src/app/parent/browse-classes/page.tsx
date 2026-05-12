@@ -359,7 +359,9 @@ export default function ParentBrowseClassesPage() {
                             />
                         </div>
 
-                        {/* Level Filter */}
+                        {/* Level Filter — derived from the classes the API
+                            actually returned so we never offer an option that
+                            has no matching session. */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Level</label>
                             <select
@@ -368,13 +370,13 @@ export default function ParentBrowseClassesPage() {
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">All Levels</option>
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
+                                {Array.from(new Set(classes.map(c => c.level).filter(Boolean) as string[])).sort().map(lvl => (
+                                    <option key={lvl} value={lvl}>{lvl}</option>
+                                ))}
                             </select>
                         </div>
 
-                        {/* Age Group Filter */}
+                        {/* Age Group Filter — same dynamic source. */}
                         <div>
                             <label className="block text-sm font-medium text-slate-900 mb-2">Age Group</label>
                             <select
@@ -383,10 +385,9 @@ export default function ParentBrowseClassesPage() {
                                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">All Ages</option>
-                                <option value="Kids (3-6)">Kids (3-6)</option>
-                                <option value="Kids (6-12)">Kids (6-12)</option>
-                                <option value="Teens (12-18)">Teens (12-18)</option>
-                                <option value="All Ages">All Ages</option>
+                                {Array.from(new Set(classes.map(c => c.ageGroup).filter(Boolean) as string[])).sort().map(ag => (
+                                    <option key={ag} value={ag}>{ag}</option>
+                                ))}
                             </select>
                         </div>
                     </motion.div>

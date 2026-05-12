@@ -69,10 +69,10 @@ export function RegisterStep6({
     };
 
     return (
-        <form id="form-components-auth-RegisterStep6" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-            <div className="text-center mb-6">
+        <form id="form-components-auth-RegisterStep6" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3">
+            <div className="text-center mb-3">
                 <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900">Almost Done!</h2>
+                <h2 className="text-lg font-bold text-gray-900">Almost Done!</h2>
                 <p className="text-gray-600 mt-2">
                     Review and accept our terms to complete registration
                 </p>
@@ -231,14 +231,14 @@ export function RegisterStep6({
                     type="button"
                     onClick={onBack}
                     disabled={isLoading}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Back
                 </button>
                 <button id="auth-register-step6-btn"
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 bg-primary text-white py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                     {isLoading ? (
                         <>

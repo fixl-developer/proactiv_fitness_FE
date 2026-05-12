@@ -27,10 +27,10 @@ export function RegistrationProgress({
     totalSteps,
 }: RegistrationProgressProps) {
     return (
-        <div className="w-full py-8">
+        <div className="w-full py-3">
             {/* Progress Bar */}
-            <div className="relative mb-8">
-                <div className="absolute top-5 left-0 w-full h-1 bg-gray-200">
+            <div className="relative mb-3">
+                <div className="absolute top-4 left-0 w-full h-1 bg-gray-200">
                     <div
                         className="h-full bg-primary transition-all duration-300"
                         style={{
@@ -51,8 +51,8 @@ export function RegistrationProgress({
                                 {/* Step Circle */}
                                 <div
                                     className={`
-                    w-10 h-10 rounded-full flex items-center justify-center
-                    font-semibold text-sm transition-all duration-300
+                    w-8 h-8 rounded-full flex items-center justify-center
+                    font-semibold text-xs transition-all duration-300
                     ${isCompleted
                                             ? 'bg-primary text-white'
                                             : isCurrent
@@ -62,17 +62,17 @@ export function RegistrationProgress({
                   `}
                                 >
                                     {isCompleted ? (
-                                        <Check className="w-5 h-5" />
+                                        <Check className="w-4 h-4" />
                                     ) : (
                                         step.number
                                     )}
                                 </div>
 
                                 {/* Step Info */}
-                                <div className="mt-2 text-center">
+                                <div className="mt-1 text-center">
                                     <p
                                         className={`
-                      text-sm font-medium
+                      text-xs font-medium
                       ${isCurrent
                                                 ? 'text-primary'
                                                 : isCompleted
@@ -83,7 +83,7 @@ export function RegistrationProgress({
                                     >
                                         {step.title}
                                     </p>
-                                    <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                                    <p className="text-[10px] text-gray-500 mt-0.5 hidden md:block">
                                         {step.description}
                                     </p>
                                 </div>
@@ -95,7 +95,7 @@ export function RegistrationProgress({
 
             {/* Current Step Info */}
             <div className="text-center">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs text-gray-600">
                     Step {currentStep} of {totalSteps}
                 </p>
             </div>

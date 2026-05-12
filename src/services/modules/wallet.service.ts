@@ -41,7 +41,8 @@ export const walletService = {
 
     async requestRefund(amount?: number) {
         try {
-            const response = await apiClient.post('/wallet/refund-request', { amount })
+            // Backend route is /wallet/refund (not /refund-request); the older URL 404'd silently.
+            const response = await apiClient.post('/wallet/refund', { amount: amount || 0, reason: 'User requested refund' })
             return response
         } catch (error: any) {
             return {

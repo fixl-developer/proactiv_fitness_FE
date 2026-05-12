@@ -21,7 +21,8 @@ import feedbackService from '@/services/modules/feedback.service'
 import {
     validateRequired,
     validateSelect,
-    validateTextArea
+    validateTextArea,
+    validatePlainText
 } from '@/utils/validation'
 
 interface Feedback {
@@ -98,7 +99,7 @@ export default function FeedbackPage() {
         const categoryErr = validateSelect(newFeedback.category, 'Category')
         if (categoryErr) errors.category = categoryErr
 
-        const subjectErr = validateRequired(newFeedback.subject, 'Subject')
+        const subjectErr = validatePlainText(newFeedback.subject, 'Subject', 5, 120)
         if (subjectErr) errors.subject = subjectErr
 
         const messageErr = validateTextArea(newFeedback.message, 'Message', 10, 2000)
