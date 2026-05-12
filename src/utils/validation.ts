@@ -451,29 +451,6 @@ export function validateTextArea(value: string, fieldLabel = 'This field', minLe
   return null
 }
 
-// Free-text title/subject/name field that must contain real letters (not just symbols).
-// Allows letters, digits, spaces, and a small set of safe punctuation; rejects strings
-// like "@@@###" that pass length checks but are obviously not valid input.
-export function validatePlainText(
-  value: string,
-  fieldLabel = 'This field',
-  minLength = 2,
-  maxLength = 200
-): string | null {
-  if (!value || !value.trim()) return `${fieldLabel} is required`
-  const trimmed = value.trim()
-  if (trimmed.length < minLength) return `${fieldLabel} must be at least ${minLength} characters`
-  if (trimmed.length > maxLength) return `${fieldLabel} must be less than ${maxLength} characters`
-  // Reject if no letters at all
-  if (!/[A-Za-z]/.test(trimmed)) return `${fieldLabel} must contain letters`
-  // Allowed: letters, digits, spaces, .,'-_:&%/() — reject other special characters like @ # $ * etc.
-  if (!/^[A-Za-z0-9\s.,'\-_:&%/()]+$/.test(trimmed))
-    return `${fieldLabel} contains invalid special characters`
-  // Heuristic: require at least 2 letters in a row somewhere (so "a@b@c" still fails)
-  if (!/[A-Za-z]{2,}/.test(trimmed)) return `Please enter a valid ${fieldLabel.toLowerCase()}`
-  return null
-}
-
 // ─── Input Filters (for onKeyDown / onChange prevention) ─────
 export function filterNameInput(e: React.KeyboardEvent<HTMLInputElement>) {
   const allowed = /^[A-Za-z\s'-]$/
