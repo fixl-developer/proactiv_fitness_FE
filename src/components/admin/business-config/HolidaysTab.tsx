@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { HolidayCalendarService, CountryService, type HolidayCalendarItem, type Country } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateTitle, validateFutureOrToday, todayISODate } from '@/utils/validation'
 
 const HOLIDAY_TYPES = [
     { value: 'PUBLIC', label: 'Public Holiday' },
@@ -80,19 +81,36 @@ export default function HolidaysTab() {
 
     const validateFormData = () => {
         const next: Record<string, string> = {}
-        if (!formData.name?.trim()) next.name = 'Calendar name is required'
+        // BUG_016: tighten Calendar Name validation
+        const nameErr = validateTitle(formData.name, 'Calendar name', 60)
+        if (nameErr) next.name = nameErr
         if (!formData.countryId) next.countryId = 'Country is required'
-        if (!formData.year || formData.year < 1900 || formData.year > 3000) next.year = 'Year must be between 1900 and 3000'
+        // BUG_020: year must be >= current year (and within bounds)
+        const currentYear = new Date().getFullYear()
+        if (!formData.year || formData.year < currentYear) next.year = `Year must be ${currentYear} or later`
+        else if (formData.year > 3000) next.year = 'Year must be between current year and 3000'
         if (!formData.holidays.length) next.holidays = 'At least one holiday is required'
         else {
             formData.holidays.forEach((h, i) => {
-                if (!h.name?.trim()) next[`holiday_${i}_name`] = 'Holiday name required'
+                // BUG_018: tighten Holiday Name validation
+                const hNameErr = validateTitle(h.name, 'Holiday name', 60)
+                if (hNameErr) next[`holiday_${i}_name`] = hNameErr
+                // BUG_019: Holiday date must be today or future
                 if (!h.date) next[`holiday_${i}_date`] = 'Date required'
+                else {
+                    const dateErr = validateFutureOrToday(h.date, 'Holiday date')
+                    if (dateErr) next[`holiday_${i}_date`] = dateErr
+                }
             })
         }
         setErrors(next)
         return Object.keys(next).length === 0
     }
+
+    // BUG_014: client-side filter on calendar name
+    const filteredCalendars = searchTerm.trim()
+        ? calendars.filter((c) => c.name.toLowerCase().includes(searchTerm.trim().toLowerCase()))
+        : calendars
 
     const resetForm = () => {
         setFormData({
@@ -228,6 +246,12 @@ export default function HolidaysTab() {
                         <p className="text-slate-600">No holiday calendars found</p>
                         <p className="text-sm text-slate-500 mt-1">Click "Add Calendar" to create one</p>
                     </div>
+                ) : filteredCalendars.length === 0 && searchTerm ? (
+                    // BUG_015: surface "no results" when client-side filter yields nothing
+                    <div className="p-8 text-center">
+                        <CalendarDays className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <p className="text-slate-600">No results found for &quot;{searchTerm}&quot;</p>
+                    </div>
                 ) : (
                     <>
                         <div className="overflow-x-auto">
@@ -242,7 +266,7 @@ export default function HolidaysTab() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
-                                    {calendars.map((cal) => (
+                                    {filteredCalendars.map((cal) => (
                                         <tr key={cal.id} className="hover:bg-slate-50 transition">
                                             <td className="px-6 py-4 text-sm font-medium text-slate-900">{cal.name}</td>
                                             <td className="px-6 py-4 text-sm text-slate-600">{countryName(cal.countryId)}</td>
@@ -281,9 +305,19 @@ export default function HolidaysTab() {
                             <input
                                 type="text"
                                 value={formData.name}
-                                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: '' }) }}
+                                onKeyDown={(e) => {
+                                    // BUG_016: reject pure-symbol input like "@@@" by filtering at keystroke level
+                                    if (e.key.length === 1 && !/^[A-Za-z0-9\s'.,&()\-/]$/.test(e.key)) e.preventDefault()
+                                }}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setFormData({ ...formData, name: v })
+                                    // BUG_016: live-validate Calendar Name
+                                    const err = validateTitle(v, 'Calendar name', 60)
+                                    setErrors((prev) => ({ ...prev, name: err || '' }))
+                                }}
                                 placeholder="e.g., HK Public Holidays 2026"
-                                maxLength={100}
+                                maxLength={60}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
                             />
                             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -292,10 +326,18 @@ export default function HolidaysTab() {
                             <label className="block text-sm font-medium text-slate-900 mb-2">Year <span className="text-red-500">*</span></label>
                             <input
                                 type="number"
-                                min={1900}
+                                min={new Date().getFullYear()}
                                 max={3000}
                                 value={formData.year}
-                                onChange={(e) => { setFormData({ ...formData, year: Number(e.target.value) }); if (errors.year) setErrors({ ...errors, year: '' }) }}
+                                onChange={(e) => {
+                                    const v = Number(e.target.value)
+                                    setFormData({ ...formData, year: v })
+                                    // BUG_020: year >= current year
+                                    const currentYear = new Date().getFullYear()
+                                    if (!v || v < currentYear) setErrors((prev) => ({ ...prev, year: `Year must be ${currentYear} or later` }))
+                                    else if (v > 3000) setErrors((prev) => ({ ...prev, year: 'Year must be between current year and 3000' }))
+                                    else setErrors((prev) => ({ ...prev, year: '' }))
+                                }}
                                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.year ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
                             />
                             {errors.year && <p className="mt-1 text-sm text-red-600">{errors.year}</p>}
@@ -345,7 +387,18 @@ export default function HolidaysTab() {
                                             <input
                                                 type="text"
                                                 value={h.name}
-                                                onChange={(e) => updateHoliday(idx, { name: e.target.value })}
+                                                maxLength={60}
+                                                onKeyDown={(e) => {
+                                                    // BUG_018: reject pure-symbol/digit-only at keystroke level
+                                                    if (e.key.length === 1 && !/^[A-Za-z0-9\s'.,&()\-/]$/.test(e.key)) e.preventDefault()
+                                                }}
+                                                onChange={(e) => {
+                                                    const v = e.target.value
+                                                    updateHoliday(idx, { name: v })
+                                                    // BUG_018: live-validate Holiday Name
+                                                    const err = validateTitle(v, 'Holiday name', 60)
+                                                    setErrors((prev) => ({ ...prev, [`holiday_${idx}_name`]: err || '' }))
+                                                }}
                                                 placeholder="e.g., New Year's Day"
                                                 className={`w-full px-3 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 ${errors[`holiday_${idx}_name`] ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
                                             />
@@ -356,7 +409,14 @@ export default function HolidaysTab() {
                                             <input
                                                 type="date"
                                                 value={h.date}
-                                                onChange={(e) => updateHoliday(idx, { date: e.target.value })}
+                                                min={todayISODate()}
+                                                onChange={(e) => {
+                                                    const v = e.target.value
+                                                    updateHoliday(idx, { date: v })
+                                                    // BUG_019: live-validate future/today
+                                                    const err = validateFutureOrToday(v, 'Holiday date')
+                                                    setErrors((prev) => ({ ...prev, [`holiday_${idx}_date`]: err || '' }))
+                                                }}
                                                 className={`w-full px-3 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 ${errors[`holiday_${idx}_date`] ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
                                             />
                                             {errors[`holiday_${idx}_date`] && <p className="mt-1 text-xs text-red-600">{errors[`holiday_${idx}_date`]}</p>}

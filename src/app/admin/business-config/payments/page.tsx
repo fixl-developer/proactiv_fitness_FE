@@ -55,6 +55,12 @@ export default function PaymentGatewaysPage() {
     { value: 'square', label: 'Square' },
   ]
 
+  // BUG_025: restrict supported currency entry to a known ISO 4217 dropdown
+  const COMMON_CURRENCIES = [
+    'USD', 'EUR', 'GBP', 'AED', 'INR', 'HKD', 'AUD', 'CAD', 'JPY', 'SGD',
+    'CNY', 'CHF', 'NZD', 'SEK', 'NOK', 'DKK', 'ZAR', 'MXN', 'BRL', 'KRW',
+    'THB', 'MYR', 'IDR', 'PHP', 'TRY', 'RUB', 'SAR', 'QAR', 'KWD', 'BHD',
+  ]
   // ISO 4217 currency code: exactly 3 uppercase letters
   const CURRENCY_PATTERN = /^[A-Z]{3}$/
   // Gateway name: 3-60 chars, letters, numbers, spaces, hyphens, apostrophes, periods
@@ -84,6 +90,14 @@ export default function PaymentGatewaysPage() {
     loadGateways()
   }, [currentPage, searchTerm])
 
+  // BUG_021: client-side filter by name + provider (case-insensitive)
+  const filteredGateways = searchTerm.trim()
+    ? gateways.filter((g) => {
+        const q = searchTerm.trim().toLowerCase()
+        return (g.name || '').toLowerCase().includes(q) || (g.provider || '').toLowerCase().includes(q)
+      })
+    : gateways
+
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
@@ -106,36 +120,28 @@ export default function PaymentGatewaysPage() {
       newErrors.provider = 'Please select a valid provider'
     }
 
-    // API Key (required for new gateway, optional on edit to keep existing)
+    // BUG_026: API Key required on BOTH add and edit (min 10 chars, no spaces)
     const apiKey = formData.apiKey.trim()
-    if (!editingId) {
-      if (!apiKey) {
-        newErrors.apiKey = 'API key is required'
-      } else if (apiKey.length < 10) {
-        newErrors.apiKey = 'API key must be at least 10 characters'
-      } else if (apiKey.length > 200) {
-        newErrors.apiKey = 'API key must be at most 200 characters'
-      } else if (!KEY_PATTERN.test(apiKey)) {
-        newErrors.apiKey = 'API key contains invalid characters (no spaces allowed)'
-      }
-    } else if (apiKey && (apiKey.length < 10 || !KEY_PATTERN.test(apiKey))) {
-      newErrors.apiKey = 'API key must be at least 10 characters with no spaces'
+    if (!apiKey) {
+      newErrors.apiKey = 'API key is required'
+    } else if (apiKey.length < 10) {
+      newErrors.apiKey = 'API key must be at least 10 characters'
+    } else if (apiKey.length > 200) {
+      newErrors.apiKey = 'API key must be at most 200 characters'
+    } else if (!KEY_PATTERN.test(apiKey)) {
+      newErrors.apiKey = 'API key contains invalid characters (no spaces allowed)'
     }
 
-    // Secret Key (same rules as API key)
+    // BUG_026: Secret Key required on BOTH add and edit (same rules)
     const secretKey = formData.secretKey.trim()
-    if (!editingId) {
-      if (!secretKey) {
-        newErrors.secretKey = 'Secret key is required'
-      } else if (secretKey.length < 10) {
-        newErrors.secretKey = 'Secret key must be at least 10 characters'
-      } else if (secretKey.length > 200) {
-        newErrors.secretKey = 'Secret key must be at most 200 characters'
-      } else if (!KEY_PATTERN.test(secretKey)) {
-        newErrors.secretKey = 'Secret key contains invalid characters (no spaces allowed)'
-      }
-    } else if (secretKey && (secretKey.length < 10 || !KEY_PATTERN.test(secretKey))) {
-      newErrors.secretKey = 'Secret key must be at least 10 characters with no spaces'
+    if (!secretKey) {
+      newErrors.secretKey = 'Secret key is required'
+    } else if (secretKey.length < 10) {
+      newErrors.secretKey = 'Secret key must be at least 10 characters'
+    } else if (secretKey.length > 200) {
+      newErrors.secretKey = 'Secret key must be at most 200 characters'
+    } else if (!KEY_PATTERN.test(secretKey)) {
+      newErrors.secretKey = 'Secret key contains invalid characters (no spaces allowed)'
     }
 
     // Webhook URL (optional, but must be valid if provided)
@@ -160,11 +166,6 @@ export default function PaymentGatewaysPage() {
       setSubmitting(true)
 
       const payload = { ...formData }
-      // Don't send empty keys on edit
-      if (editingId) {
-        if (!payload.apiKey) delete (payload as any).apiKey
-        if (!payload.secretKey) delete (payload as any).secretKey
-      }
 
       if (editingId) {
         await PaymentGatewayService.update(editingId, payload)
@@ -251,11 +252,12 @@ export default function PaymentGatewaysPage() {
   const addCurrency = () => {
     const code = newCurrency.trim().toUpperCase()
     if (!code) {
-      setCurrencyError('Enter a currency code')
+      setCurrencyError('Pick a currency from the list')
       return
     }
-    if (!CURRENCY_PATTERN.test(code)) {
-      setCurrencyError('Must be a 3-letter code (e.g., USD, EUR, GBP)')
+    // BUG_025: must be a known ISO 4217 code from the dropdown
+    if (!CURRENCY_PATTERN.test(code) || !COMMON_CURRENCIES.includes(code)) {
+      setCurrencyError('Pick a valid 3-letter ISO 4217 code (e.g., USD, EUR, GBP)')
       return
     }
     if (formData.supportedCurrencies.includes(code)) {
@@ -345,6 +347,12 @@ export default function PaymentGatewaysPage() {
               <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-600">No payment gateways found</p>
             </div>
+          ) : filteredGateways.length === 0 && searchTerm ? (
+            // BUG_022: surface "no results" when client-side filter yields nothing
+            <div className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No results found for &quot;{searchTerm}&quot;</p>
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -360,7 +368,7 @@ export default function PaymentGatewaysPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {gateways.map((gateway) => (
+                    {filteredGateways.map((gateway) => (
                       <tr key={gateway.id} className="hover:bg-slate-50 transition">
                         <td className="px-6 py-4 text-sm font-medium text-slate-900">{gateway.name}</td>
                         <td className="px-6 py-4 text-sm">
@@ -490,7 +498,6 @@ export default function PaymentGatewaysPage() {
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 API Key <span className="text-red-500">*</span>
-                {editingId && <span className="text-slate-500 font-normal text-xs ml-2">(leave empty to keep existing)</span>}
               </label>
               <div className="relative">
                 <input
@@ -526,7 +533,6 @@ export default function PaymentGatewaysPage() {
             <div>
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Secret Key <span className="text-red-500">*</span>
-                {editingId && <span className="text-slate-500 font-normal text-xs ml-2">(leave empty to keep existing)</span>}
               </label>
               <div className="relative">
                 <input
@@ -589,25 +595,24 @@ export default function PaymentGatewaysPage() {
               <label className="block text-sm font-medium text-slate-900 mb-2">
                 Supported Currencies <span className="text-slate-500 font-normal text-xs">(Optional)</span>
               </label>
+              {/* BUG_025: restrict currency entry to a known ISO 4217 dropdown — rejects "US", "EURO", etc. */}
               <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
+                <select
                   value={newCurrency}
-                  onKeyDown={(e) => {
-                    if (e.key.length === 1 && !/^[A-Za-z]$/.test(e.key)) {
-                      e.preventDefault()
-                    }
-                  }}
                   onChange={(e) => {
-                    setNewCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))
+                    setNewCurrency(e.target.value)
                     if (currencyError) setCurrencyError('')
                   }}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCurrency())}
-                  placeholder="e.g., USD, EUR, GBP"
-                  maxLength={3}
                   className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${currencyError ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                     }`}
-                />
+                >
+                  <option value="">Select currency</option>
+                  {COMMON_CURRENCIES.filter((c) => !formData.supportedCurrencies.includes(c)).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
                 <button type="button" onClick={addCurrency} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                   Add
                 </button>
@@ -615,7 +620,7 @@ export default function PaymentGatewaysPage() {
               {currencyError ? (
                 <p className="mb-2 text-sm text-red-600">{currencyError}</p>
               ) : (
-                <p className="mb-2 text-xs text-slate-500">3-letter ISO 4217 code (e.g., USD, EUR, GBP)</p>
+                <p className="mb-2 text-xs text-slate-500">Pick a 3-letter ISO 4217 code (e.g., USD, EUR, GBP, AED)</p>
               )}
               <div className="flex flex-wrap gap-2">
                 {formData.supportedCurrencies.map((currency, index) => (

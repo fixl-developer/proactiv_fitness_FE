@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { apiClient } from '@/services/api/client'
 import { extractList } from '@/utils/apiResponse'
 import { toast } from 'sonner'
+import { validateTitle } from '@/utils/validation'
 import {
   Calendar, CheckCircle, Clock, AlertTriangle, X, Plus, Loader2,
   RotateCcw, Trash2, Send, MapPin, User, BookOpen,
@@ -311,14 +312,9 @@ export default function ProgramSchedulePage() {
     const e: Record<string, string> = {}
 
     // SECTION 1 - Basic Information
-    // 1. Schedule Name: Required, 3-100 chars
-    if (!form.scheduleName.trim()) {
-      e.scheduleName = 'Schedule name is required'
-    } else if (form.scheduleName.trim().length < 3) {
-      e.scheduleName = 'Schedule name must be at least 3 characters'
-    } else if (form.scheduleName.length > 100) {
-      e.scheduleName = 'Schedule name must be less than 100 characters'
-    }
+    // 1. Schedule Name: must contain letters, no leading digit, ≤30% special chars (validateTitle)
+    const scheduleNameErr = validateTitle(form.scheduleName, 'Schedule name', 100)
+    if (scheduleNameErr) e.scheduleName = scheduleNameErr
 
     // 2. Description: Optional, max 500 chars
     if (form.description && form.description.length > 500) {
@@ -1068,14 +1064,16 @@ export default function ProgramSchedulePage() {
                       maxLength={100}
                       placeholder="e.g., Spring 2026 Karate Schedule"
                       onChange={(e) => {
-                        setForm({ ...form, scheduleName: e.target.value })
-                        if (formErrors.scheduleName) setFormErrors({ ...formErrors, scheduleName: '' })
+                        const v = e.target.value
+                        setForm({ ...form, scheduleName: v })
+                        const err = validateTitle(v, 'Schedule name', 100)
+                        setFormErrors({ ...formErrors, scheduleName: err || '' })
                       }}
                       className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${formErrors.scheduleName ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                     />
                     {formErrors.scheduleName
                       ? <p className="mt-1 text-xs text-red-600">{formErrors.scheduleName}</p>
-                      : <p className="mt-1 text-xs text-gray-400">3-100 characters. Helps you identify this schedule later.</p>}
+                      : <p className="mt-1 text-xs text-gray-400">Must contain letters; no leading digit; max 100 characters.</p>}
                   </div>
 
                   {/* Description (Optional, max 500) */}

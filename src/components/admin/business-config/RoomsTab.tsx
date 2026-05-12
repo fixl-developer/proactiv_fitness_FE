@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { RoomService, LocationService, type Room, type Location } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { validateTitle } from '@/utils/validation'
 
 const ROOM_TYPES = [
     { value: 'GYM_FLOOR', label: 'Gym Floor' },
@@ -70,8 +71,9 @@ export default function RoomsTab() {
 
     const validateFormData = () => {
         const next: Record<string, string> = {}
-        if (!formData.name?.trim()) next.name = 'Room name is required'
-        else if (formData.name.length < 2) next.name = 'Room name must be at least 2 characters'
+        // BUG_007/BUG_008: tighten Room Name (rejects "@@@@" and "roo 12" patterns)
+        const nameErr = validateTitle(formData.name, 'Room name', 50)
+        if (nameErr) next.name = nameErr
         if (!formData.code?.trim()) next.code = 'Room code is required'
         else if (!/^[A-Z0-9-]{2,15}$/.test(formData.code)) next.code = '2-15 uppercase letters/digits/hyphens'
         if (!formData.locationId) next.locationId = 'Location is required'
@@ -250,12 +252,23 @@ export default function RoomsTab() {
                         <input
                             type="text"
                             value={formData.name}
-                            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: '' }) }}
+                            onKeyDown={(e) => {
+                                // BUG_007/BUG_008: filter at keystroke level — letters/digits/spaces/basic punct only
+                                if (e.key.length === 1 && !/^[A-Za-z0-9\s'.,&()\-/]$/.test(e.key)) e.preventDefault()
+                            }}
+                            onChange={(e) => {
+                                const v = e.target.value
+                                setFormData({ ...formData, name: v })
+                                // BUG_007/BUG_008: live-validate Room name (must start with letter, ≤30% specials)
+                                const err = validateTitle(v, 'Room name', 50)
+                                setErrors((prev) => ({ ...prev, name: err || '' }))
+                            }}
                             placeholder="e.g., Studio A"
-                            maxLength={80}
+                            maxLength={50}
                             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'}`}
                         />
                         {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                        {!errors.name && <p className="mt-1 text-xs text-slate-500">Must start with a letter; 3-50 chars; letters, digits, spaces and basic punctuation</p>}
                     </div>
 
                     <div>

@@ -8,6 +8,7 @@ import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { TermService, LocationService, BusinessUnitService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import HolidaysTab from '@/components/admin/business-config/HolidaysTab'
+import { validateTitle } from '@/utils/validation'
 
 interface Term {
   id: string
@@ -106,9 +107,9 @@ export default function TermsPage() {
   const validateFormData = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name || !formData.name.trim()) newErrors.name = 'Term name is required'
-    else if (formData.name.trim().length < 2) newErrors.name = 'Term name must be at least 2 characters'
-    else if (formData.name.trim().length > 80) newErrors.name = 'Term name must be 80 characters or fewer'
+    // BUG_013: tighten Term name validation
+    const nameErr = validateTitle(formData.name, 'Term name', 80)
+    if (nameErr) newErrors.name = nameErr
 
     if (formData.code && formData.code.trim() && !/^[A-Z0-9-]{2,20}$/.test(formData.code.trim())) {
       newErrors.code = 'Code must be 2-20 chars: uppercase letters, digits and hyphens only'
@@ -458,8 +459,11 @@ export default function TermsPage() {
                   if (e.key.length === 1 && !/^[A-Za-z0-9\s'&().,-]$/.test(e.key)) e.preventDefault()
                 }}
                 onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value })
-                  if (errors.name) setErrors({ ...errors, name: '' })
+                  const v = e.target.value
+                  setFormData({ ...formData, name: v })
+                  // BUG_013: live validate
+                  const err = validateTitle(v, 'Term name', 80)
+                  setErrors((prev) => ({ ...prev, name: err || '' }))
                 }}
                 placeholder="e.g., Spring Term 2025"
                 maxLength={80}
@@ -467,7 +471,7 @@ export default function TermsPage() {
                   }`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-              {!errors.name && <p className="mt-1 text-xs text-slate-500">2-80 chars; letters, digits, spaces and basic punctuation</p>}
+              {!errors.name && <p className="mt-1 text-xs text-slate-500">3-80 chars; must start with a letter</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
