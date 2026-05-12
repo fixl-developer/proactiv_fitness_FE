@@ -12,6 +12,7 @@ import { LocationManagerService } from '@/services/locationManagerService'
 import { useTrackUnsavedChanges } from '@/hooks/useTrackUnsavedChanges'
 import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword, validateAddress, validateZipCode, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
+import { toast } from 'sonner'
 
 export default function LocationSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
@@ -133,9 +134,10 @@ export default function LocationSettingsPage() {
             await LocationManagerService.updateSettings(settings)
             originalSettingsRef.current = JSON.stringify(settings)
             setSaveSuccess(true)
+            toast.success('Settings saved')
             setTimeout(() => setSaveSuccess(false), 3000)
         } catch (err: any) {
-            alert('Failed to save settings: ' + err.message)
+            toast.error('Failed to save settings: ' + (err?.message || 'Unknown error'))
         } finally {
             setIsSaving(false)
         }
