@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/utils/apiErrorHandler'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +33,13 @@ const AIManagementPage = () => {
             const insights = insightsRes.status === 'fulfilled' ? insightsRes.value?.data : null
             const predictions = predictionsRes.status === 'fulfilled' ? predictionsRes.value?.data : null
 
+            // Surface error details when both fetches failed; keep '---' fallback in UI
+            if (insightsRes.status === 'rejected' && predictionsRes.status === 'rejected') {
+                const reason = (insightsRes as PromiseRejectedResult).reason || (predictionsRes as PromiseRejectedResult).reason
+                console.error('AI insights fetch failed:', reason)
+                toast.error(`Failed to load AI insights: ${getErrorMessage(reason)}`)
+            }
+
             setAiData({
                 metrics: {
                     chatbotInteractions: insights?.totalInteractions || predictions?.predictions?.revenueProjection ? Math.round((predictions?.predictions?.revenueProjection || 0) / 10) : null,
@@ -50,7 +58,8 @@ const AIManagementPage = () => {
             })
         } catch (err) {
             console.error('Failed to load AI insights:', err)
-            toast.error('Failed to load AI insights')
+            const message = getErrorMessage(err)
+            toast.error(`Failed to load AI insights: ${message}`)
         } finally {
             setAiLoading(false)
         }

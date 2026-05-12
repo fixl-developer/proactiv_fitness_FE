@@ -82,6 +82,14 @@ export default function RegionsPage() {
     ? [formData.currency, ...ALL_CURRENCIES]
     : ALL_CURRENCIES
 
+  // BUG_009: filter datalist options by the typed country name (case-insensitive)
+  const filteredCountries = formData.name.trim()
+    ? COUNTRIES.filter((c) =>
+        c.name.toLowerCase().includes(formData.name.trim().toLowerCase()) ||
+        c.code.toLowerCase().includes(formData.name.trim().toLowerCase())
+      )
+    : COUNTRIES
+
   // Load countries
   const loadCountries = async () => {
     try {
@@ -413,13 +421,18 @@ export default function RegionsPage() {
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
+              {/* BUG_009: filter datalist by query (case-insensitive substring) */}
               <datalist id="country-options">
-                {COUNTRIES.map((c) => (
+                {filteredCountries.map((c) => (
                   <option key={c.code} value={c.name}>{`${c.code} · ${c.currency}`}</option>
                 ))}
               </datalist>
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-              {!errors.name && <p className="mt-1 text-xs text-slate-500">Pick a country to autofill code, currency and timezone</p>}
+              {/* BUG_010: surface "no results" when the typed value matches nothing */}
+              {!errors.name && formData.name && filteredCountries.length === 0 && (
+                <p className="mt-1 text-sm text-amber-600">No results found for &quot;{formData.name}&quot;</p>
+              )}
+              {!errors.name && filteredCountries.length > 0 && <p className="mt-1 text-xs text-slate-500">Pick a country to autofill code, currency and timezone</p>}
             </div>
 
             {/* Country Code */}

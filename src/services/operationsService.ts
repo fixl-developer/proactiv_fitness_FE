@@ -142,6 +142,22 @@ export const StaffService = {
                 Instructor: 'instructor', Assistant: 'receptionist',
             }
             const empId = `EMP-${Date.now()}`
+            // Map flat string[] certifications from the admin form into the nested
+            // ICertification shape the Staff sub-doc schema demands (certificationId,
+            // name, issuingOrganization, issueDate, expiryDate, certificateNumber, status).
+            const todayISO = new Date().toISOString().slice(0, 10)
+            const oneYearFromNow = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+            const certifications = Array.isArray(data.certifications)
+                ? data.certifications.filter(Boolean).map((name, idx) => ({
+                    certificationId: `${empId}-CERT-${idx + 1}`,
+                    name: String(name),
+                    issuingOrganization: 'N/A',
+                    issueDate: todayISO,
+                    expiryDate: oneYearFromNow,
+                    certificateNumber: `${empId}-CERT-${idx + 1}`,
+                    status: 'valid',
+                }))
+                : []
             const payload: any = {
                 personalInfo: {
                     firstName: data.firstName || '',
@@ -164,11 +180,15 @@ export const StaffService = {
                     },
                 },
                 staffType: staffTypeMap[data.role || ''] || (data.role || '').toLowerCase() || 'coach',
+                status: data.status === 'inactive' ? 'inactive' : 'active',
+                // hireDate is required by the Staff model — fall back to today if not supplied
+                hireDate: data.hireDate || todayISO,
                 locationIds: data.locationId ? [data.locationId] : [],
                 primaryLocationId: data.locationId,
                 businessUnitId: data.businessUnitId,
                 specializations: [],
                 skills: [],
+                certifications,
                 experienceYears: 0,
                 maxHoursPerWeek: 40,
                 payrollInfo: {

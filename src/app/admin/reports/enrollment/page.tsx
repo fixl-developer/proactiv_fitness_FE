@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/services/api/client';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/utils/apiErrorHandler';
 import {
   LineChart,
   Line,
@@ -161,7 +162,9 @@ export default function EnrollmentReportsPage() {
       }
     } catch (err: any) {
       console.error('Enrollment fetch error:', err);
-      setError('Failed to load enrollment data. Please ensure the backend server is running.');
+      const message = getErrorMessage(err);
+      setError(message || 'Failed to load enrollment data. Please ensure the backend server is running.');
+      toast.error(message || 'Failed to load enrollment data');
       setEnrollmentTrend([]);
       setProgramByAge([]);
       setProgramTable([]);

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { apiClient } from '@/services/api/client';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/utils/apiErrorHandler';
 import {
   LineChart,
   Line,
@@ -106,6 +107,7 @@ export default function PerformanceAnalyticsPage() {
     setLoading(true);
     setError(null);
     let gotData = false;
+    let firstError: any = null;
 
     // Try dedicated performance endpoint first
     try {
@@ -158,8 +160,9 @@ export default function PerformanceAnalyticsPage() {
           })));
         }
       }
-    } catch {
+    } catch (err) {
       // Fall through to dashboard endpoint
+      firstError = err;
     }
 
     // Fallback to analytics/dashboard for KPI data
@@ -194,8 +197,9 @@ export default function PerformanceAnalyticsPage() {
             { category: 'Growth', score: Math.min(100, Math.max(0, 75 + (payload.enrollmentTrend || 0))), target: 75, color: '#ef4444' },
           ]);
         }
-      } catch {
+      } catch (err) {
         // Continue
+        if (!firstError) firstError = err;
       }
     }
 
@@ -226,7 +230,9 @@ export default function PerformanceAnalyticsPage() {
     } catch { /* optional enrichment */ }
 
     if (!gotData) {
-      setError('Failed to load performance data. Please ensure the backend server is running.');
+      const message = firstError ? getErrorMessage(firstError) : 'Failed to load performance data. Please ensure the backend server is running.';
+      setError(message);
+      toast.error(message);
     }
     setLoading(false);
   }, []);

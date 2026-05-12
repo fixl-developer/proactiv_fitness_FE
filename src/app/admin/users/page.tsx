@@ -20,6 +20,7 @@ import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { UserService, RoleService } from '@/services/userService'
 import { apiClient } from '@/services/api/client'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
+import { useAuth } from '@/hooks/useAuth'
 import {
   validateName,
   validateEmail,
@@ -89,6 +90,9 @@ interface RolePermissions {
 }
 
 export default function UsersPage() {
+  const { user: currentUser } = useAuth()
+  const currentUserId = (currentUser as any)?.userId || (currentUser as any)?.id || ''
+  const currentUserEmail = (currentUser as any)?.email || ''
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -227,11 +231,21 @@ export default function UsersPage() {
       setSubmitting(true)
 
       if (editingId) {
-        const updateData = {
+        // Only include `role` in the update payload when the admin actually
+        // changed it. Sending an unchanged role still passes backend hierarchy
+        // checks, but omitting it short-circuits the role-change branch in
+        // canUpdateUser() and avoids edge-case 403s when the target user has
+        // a self-register role (PARENT/STUDENT/USER) that is in the create-
+        // hierarchy view but not the assign-hierarchy view.
+        const originalUser = users.find((u) => u.id === editingId)
+        const originalRole = (originalUser?.role || '').toUpperCase()
+        const updateData: Record<string, any> = {
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
-          role: formData.role,
+        }
+        if (formData.role && formData.role !== originalRole) {
+          updateData.role = formData.role
         }
         await UserService.update(editingId, updateData)
         toast.success('User updated successfully')
@@ -264,6 +278,17 @@ export default function UsersPage() {
   }
 
   const handleEdit = (user: User) => {
+    // Self-edit through this page is not supported — the backend protects
+    // admins from self-demotion (which would surface as a misleading 403),
+    // so block it here and steer the admin to Profile settings.
+    const isSelf =
+      !!currentUserId &&
+      (user.id === currentUserId ||
+        (!!currentUserEmail && user.email?.toLowerCase() === currentUserEmail.toLowerCase()))
+    if (isSelf) {
+      toast.error('You cannot edit your own account here. Use Profile settings instead.')
+      return
+    }
     setFormData({
       email: user.email,
       password: '',
@@ -435,6 +460,10 @@ export default function UsersPage() {
                     {users.map((user) => {
                       const roleMeta = getRoleMeta(user.role)
                       const isActive = (user.status || '').toUpperCase() === 'ACTIVE'
+                      const isSelf =
+                        !!currentUserId &&
+                        (user.id === currentUserId ||
+                          (!!currentUserEmail && user.email?.toLowerCase() === currentUserEmail.toLowerCase()))
                       return (
                         <tr key={user.id} className="hover:bg-slate-50 transition">
                           <td className="px-6 py-4 text-sm text-slate-900">
@@ -463,19 +492,20 @@ export default function UsersPage() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleEdit(user)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                                title="Edit"
+                                disabled={isSelf}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isSelf ? 'You cannot edit your own account here. Use Profile settings instead.' : 'Edit'}
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleToggleStatus(user)}
-                                disabled={statusActionId === user.id}
+                                disabled={statusActionId === user.id || isSelf}
                                 className={`p-2 rounded transition ${isActive
                                     ? 'text-orange-600 hover:bg-orange-50'
                                     : 'text-green-600 hover:bg-green-50'
-                                  } disabled:opacity-50`}
-                                title={isActive ? 'Deactivate' : 'Activate'}
+                                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                title={isSelf ? 'You cannot change your own status' : isActive ? 'Deactivate' : 'Activate'}
                               >
                                 {statusActionId === user.id ? (
                                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -487,8 +517,9 @@ export default function UsersPage() {
                               </button>
                               <button
                                 onClick={() => setDeleteConfirm(user.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded transition"
-                                title="Delete"
+                                disabled={isSelf}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isSelf ? 'You cannot delete your own account' : 'Delete'}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>

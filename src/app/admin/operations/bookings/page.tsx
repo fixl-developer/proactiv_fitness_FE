@@ -13,6 +13,8 @@ import {
   validateRequired,
   validateSelect,
   validateTextArea,
+  validateFutureOrToday,
+  todayISODate,
 } from '@/utils/validation'
 
 // Backend session IDs are 24-char hex Mongo ObjectIds — only validated when supplied
@@ -160,7 +162,12 @@ export default function BookingManagementPage() {
     if (dateErr) e.date = dateErr
     else {
       const d = new Date(formData.date)
-      if (isNaN(d.getTime())) e.date = 'Please enter a valid date'
+      if (isNaN(d.getTime())) {
+        e.date = 'Please enter a valid date'
+      } else {
+        const futureErr = validateFutureOrToday(formData.date, 'Booking date')
+        if (futureErr) e.date = futureErr
+      }
     }
 
     const statusErr = validateSelect(formData.status, 'Status')
@@ -213,18 +220,21 @@ export default function BookingManagementPage() {
     }
   }
 
-  // Handle edit
+  // Handle edit — gracefully default missing fields and DO NOT run validation immediately.
+  // Validation runs only when the user edits a field or hits submit, so opening Edit
+  // never flashes red errors on legacy bookings with incomplete data.
   const handleEdit = (booking: Booking) => {
     setFormData({
-      customerId: booking.customerId,
-      programId: booking.programId,
+      customerId: booking.customerId || '',
+      programId: booking.programId || '',
       sessionId: booking.sessionId || '',
       date: booking.date ? new Date(booking.date).toISOString().slice(0, 10) : '',
       bookingType: (booking as any).bookingType || 'drop_in',
-      status: booking.status,
-      paymentStatus: booking.paymentStatus,
+      status: booking.status || 'pending',
+      paymentStatus: booking.paymentStatus || 'pending',
       notes: booking.notes || '',
     })
+    setErrors({})
     setEditingId(booking.id)
     setShowForm(true)
   }
@@ -375,7 +385,13 @@ export default function BookingManagementPage() {
           ) : bookings.length === 0 ? (
             <div className="p-8 text-center">
               <AlertCircle className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600">No bookings found</p>
+              {searchTerm ? (
+                <p className="text-slate-600">
+                  No results found for &quot;<span className="font-medium text-slate-900">{searchTerm}</span>&quot;
+                </p>
+              ) : (
+                <p className="text-slate-600">No bookings found</p>
+              )}
             </div>
           ) : (
             <>
@@ -580,14 +596,20 @@ export default function BookingManagementPage() {
               <input
                 type="date"
                 value={formData.date}
+                min={todayISODate()}
                 onChange={(e) => {
-                  setFormData({ ...formData, date: e.target.value })
-                  if (errors.date) setErrors({ ...errors, date: '' })
+                  const v = e.target.value
+                  setFormData({ ...formData, date: v })
+                  // Re-validate inline so past dates show an error immediately
+                  // instead of waiting until the user clicks "Create Booking".
+                  const err = v ? validateFutureOrToday(v, 'Booking date') : null
+                  setErrors({ ...errors, date: err || '' })
                 }}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+              {!errors.date && <p className="mt-1 text-xs text-slate-500">Today or a future date only</p>}
             </div>
 
             {/* Status */}

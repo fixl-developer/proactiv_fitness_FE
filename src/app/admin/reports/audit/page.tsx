@@ -141,10 +141,18 @@ export default function AuditLogsPage() {
   }, [isLive, fetchData]);
 
   const filteredLogs = auditLogs.filter((log) => {
+    const term = searchTerm.trim().toLowerCase();
     const matchesSearch =
-      log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.resource.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase());
+      !term ||
+      log.user.toLowerCase().includes(term) ||
+      log.userRole.toLowerCase().includes(term) ||
+      log.action.toLowerCase().includes(term) ||
+      log.resource.toLowerCase().includes(term) ||
+      log.details.toLowerCase().includes(term) ||
+      log.ipAddress.toLowerCase().includes(term) ||
+      log.status.toLowerCase().includes(term) ||
+      // Fallback: match against every visible string field on the row
+      JSON.stringify(log).toLowerCase().includes(term);
     const matchesAction = actionFilter === 'All' || log.action === actionFilter;
     const matchesStatus = statusFilter === 'All' || log.status === statusFilter;
     const logDate = log.timestamp.slice(0, 10);

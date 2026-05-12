@@ -11,7 +11,7 @@ import {
   validateRequired,
   validateCurrency,
   validateSelect,
-  validateTextArea,
+  validateNotes,
   filterAlphanumericInput,
   PATTERNS,
 } from '@/utils/validation'
@@ -50,6 +50,7 @@ export default function PaymentsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [refundingId, setRefundingId] = useState<string | null>(null)
+  const [refundConfirm, setRefundConfirm] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     transactionId: '',
@@ -118,10 +119,8 @@ export default function PaymentsPage() {
       newErrors.customerId = 'Letters, digits, hyphens and underscores only'
     }
 
-    if (formData.description) {
-      const descErr = validateTextArea(formData.description, 'Description', 0, 500)
-      if (descErr) newErrors.description = descErr
-    }
+    const descErr = validateNotes(formData.description, 'Description', false, 500)
+    if (descErr) newErrors.description = descErr
 
     if (formData.metadata.trim()) {
       try { JSON.parse(formData.metadata) } catch {
@@ -208,11 +207,12 @@ export default function PaymentsPage() {
       setRefundingId(transactionId)
       await PaymentService.refund(transactionId, {})
       toast.success('Refund processed successfully')
-      setRefundingId(null)
+      setRefundConfirm(null)
       loadPayments()
     } catch (error) {
       console.error('Error processing refund:', error)
       toast.error(getErrorMessage(error))
+    } finally {
       setRefundingId(null)
     }
   }
@@ -330,7 +330,7 @@ export default function PaymentsPage() {
                           <div className="flex gap-2">
                             {payment.status === 'completed' && (
                               <button
-                                onClick={() => handleRefund(payment.transactionId)}
+                                onClick={() => setRefundConfirm(payment.transactionId)}
                                 disabled={refundingId === payment.transactionId}
                                 className="p-2 text-orange-600 hover:bg-orange-50 rounded transition disabled:opacity-50"
                                 title="Refund Payment"
@@ -580,6 +580,28 @@ export default function PaymentsPage() {
                 <button onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                   Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {refundConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-lg p-6 max-w-sm">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Refund Payment?</h3>
+              <p className="text-slate-600 mb-6">
+                The transaction <span className="font-mono font-semibold">{refundConfirm}</span> will be marked as refunded. This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setRefundConfirm(null)} disabled={refundingId === refundConfirm}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-900 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition">
+                  Cancel
+                </button>
+                <button onClick={() => refundConfirm && handleRefund(refundConfirm)}
+                  disabled={refundingId === refundConfirm}
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition">
+                  {refundingId === refundConfirm ? 'Processing...' : 'Confirm Refund'}
                 </button>
               </div>
             </motion.div>

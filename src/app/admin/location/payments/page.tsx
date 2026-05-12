@@ -140,10 +140,10 @@ export default function LocationPaymentsPage() {
     }
 
     const kpis = [
-        { label: 'Total Transactions', value: stats.total, icon: Receipt, bg: 'bg-blue-50', text: 'text-blue-600' },
-        { label: 'Collected (HKD)', value: stats.totalCollected.toLocaleString(), icon: DollarSign, bg: 'bg-emerald-50', text: 'text-emerald-600' },
-        { label: 'Pending (HKD)', value: stats.totalPending.toLocaleString(), icon: Wallet, bg: 'bg-amber-50', text: 'text-amber-600' },
-        { label: 'Paid Count', value: stats.paidCount, icon: CheckCircle, bg: 'bg-green-50', text: 'text-green-600' },
+        { label: 'Total Transactions', value: stats.total, icon: Receipt, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+        { label: 'Collected (HKD)', value: stats.totalCollected.toLocaleString(), icon: DollarSign, cardBg: 'bg-gradient-to-br from-emerald-50 to-emerald-100', iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600', titleColor: 'text-emerald-700', valueColor: 'text-emerald-900' },
+        { label: 'Pending (HKD)', value: stats.totalPending.toLocaleString(), icon: Wallet, cardBg: 'bg-gradient-to-br from-amber-50 to-amber-100', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600', titleColor: 'text-amber-700', valueColor: 'text-amber-900' },
+        { label: 'Paid Count', value: stats.paidCount, icon: CheckCircle, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
     ]
 
     return (
@@ -170,16 +170,15 @@ export default function LocationPaymentsPage() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="bg-white p-5 shadow-sm border border-gray-200"
-                        style={{ borderRadius: 0 }}
+                        className={`${k.cardBg} border-0 rounded-xl shadow-sm hover:shadow-lg transition-shadow p-5`}
                     >
                         <div className="flex items-center justify-between mb-3">
-                            <div className={`p-2.5 ${k.bg}`} style={{ borderRadius: 0 }}>
-                                <k.icon className={`w-5 h-5 ${k.text}`} />
+                            <div className={`${k.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                <k.icon className="w-5 h-5 text-white" />
                             </div>
                         </div>
-                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">{k.label}</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{k.value}</p>
+                        <p className={`text-xs font-medium ${k.titleColor} uppercase tracking-wide`}>{k.label}</p>
+                        <p className={`text-2xl font-bold ${k.valueColor} mt-1`}>{k.value}</p>
                     </motion.div>
                 ))}
             </div>

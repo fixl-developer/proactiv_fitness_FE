@@ -218,10 +218,10 @@ export default function LocationBookingsPage() {
     }
 
     const kpis = [
-        { label: 'Total Bookings', value: stats.total, icon: CalendarCheck, bg: 'bg-blue-50', text: 'text-blue-600' },
-        { label: 'Confirmed', value: stats.confirmed, icon: CheckCircle, bg: 'bg-green-50', text: 'text-green-600' },
-        { label: 'Pending', value: stats.pending, icon: Clock, bg: 'bg-amber-50', text: 'text-amber-600' },
-        { label: 'Cancelled', value: stats.cancelled, icon: XCircle, bg: 'bg-red-50', text: 'text-red-600' },
+        { label: 'Total Bookings', value: stats.total, icon: CalendarCheck, cardBg: 'bg-gradient-to-br from-blue-50 to-blue-100', iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600', titleColor: 'text-blue-700', valueColor: 'text-blue-900' },
+        { label: 'Confirmed', value: stats.confirmed, icon: CheckCircle, cardBg: 'bg-gradient-to-br from-green-50 to-green-100', iconBg: 'bg-gradient-to-br from-green-500 to-green-600', titleColor: 'text-green-700', valueColor: 'text-green-900' },
+        { label: 'Pending', value: stats.pending, icon: Clock, cardBg: 'bg-gradient-to-br from-amber-50 to-amber-100', iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600', titleColor: 'text-amber-700', valueColor: 'text-amber-900' },
+        { label: 'Cancelled', value: stats.cancelled, icon: XCircle, cardBg: 'bg-gradient-to-br from-red-50 to-red-100', iconBg: 'bg-gradient-to-br from-red-500 to-red-600', titleColor: 'text-red-700', valueColor: 'text-red-900' },
     ]
 
     return (
@@ -251,7 +251,7 @@ export default function LocationBookingsPage() {
                 </div>
             </div>
 
-            {/* KPI cards — border-radius: 0 per design requirement */}
+            {/* Colorful KPI cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {kpis.map((k, i) => (
                     <motion.div
@@ -259,16 +259,15 @@ export default function LocationBookingsPage() {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="bg-white p-5 shadow-sm border border-gray-200"
-                        style={{ borderRadius: 0 }}
+                        className={`${k.cardBg} border-0 rounded-xl shadow-sm hover:shadow-lg transition-shadow p-5`}
                     >
                         <div className="flex items-center justify-between mb-3">
-                            <div className={`p-2.5 ${k.bg}`} style={{ borderRadius: 0 }}>
-                                <k.icon className={`w-5 h-5 ${k.text}`} />
+                            <div className={`${k.iconBg} p-2.5 rounded-lg shadow-md`}>
+                                <k.icon className="w-5 h-5 text-white" />
                             </div>
                         </div>
-                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">{k.label}</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{k.value}</p>
+                        <p className={`text-xs font-medium ${k.titleColor} uppercase tracking-wide`}>{k.label}</p>
+                        <p className={`text-2xl font-bold ${k.valueColor} mt-1`}>{k.value}</p>
                     </motion.div>
                 ))}
             </div>

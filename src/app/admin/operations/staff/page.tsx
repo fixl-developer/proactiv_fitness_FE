@@ -8,7 +8,15 @@ import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { StaffService } from '@/services/operationsService'
 import { BusinessUnitService, LocationService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
-import { validateName, validateEmail, validatePhone, filterNameInput, filterPhoneInput } from '@/utils/validation'
+import {
+  validateName,
+  validateEmail,
+  validatePhone10,
+  filterNameInput,
+  filterPhoneInput,
+  todayISODate,
+  validateAlphaText,
+} from '@/utils/validation'
 
 interface StaffMember {
   id: string
@@ -50,6 +58,7 @@ export default function StaffManagementPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newCertification, setNewCertification] = useState('')
+  const [certError, setCertError] = useState('')
   const [businessUnits, setBusinessUnits] = useState<any[]>([])
   const [locations, setLocations] = useState<any[]>([])
 
@@ -117,14 +126,31 @@ export default function StaffManagementPage() {
     const emailErr = validateEmail(formData.email)
     if (emailErr) newErrors.email = emailErr
 
-    if (formData.phone) {
-      const phoneErr = validatePhone(formData.phone, false)
-      if (phoneErr) newErrors.phone = phoneErr
-    }
+    const phoneErr = validatePhone10(formData.phone, true, 'Phone number')
+    if (phoneErr) newErrors.phone = phoneErr
 
     if (!formData.role) newErrors.role = 'Role is required'
     if (!formData.businessUnitId) newErrors.businessUnitId = 'Business unit is required'
     if (!formData.locationId) newErrors.locationId = 'Location is required'
+
+    // Hire date is required by the backend (Staff.hireDate is a required field).
+    // Hire date represents when the staff member was hired — it CAN be in the past
+    // (the common case) but MUST NOT be in the future. Validate as a real date
+    // that is on or before today.
+    if (!formData.hireDate) {
+      newErrors.hireDate = 'Hire date is required'
+    } else {
+      const picked = new Date(formData.hireDate)
+      if (isNaN(picked.getTime())) {
+        newErrors.hireDate = 'Please enter a valid hire date'
+      } else {
+        const today = new Date()
+        today.setHours(23, 59, 59, 999)
+        if (picked > today) {
+          newErrors.hireDate = 'Hire date cannot be in the future'
+        }
+      }
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -153,9 +179,17 @@ export default function StaffManagementPage() {
       setShowForm(false)
       resetForm()
       loadStaff()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving staff member:', error)
-      toast.error(getErrorMessage(error))
+      // Surface backend validation messages (400/422) clearly so the admin knows
+      // *which* field the server rejected instead of a vague "request failed".
+      const status = error?.response?.status || error?.status
+      const backendMsg = error?.response?.data?.message || error?.data?.message
+      if ((status === 400 || status === 422) && backendMsg) {
+        toast.error(`Cannot save staff: ${backendMsg}`)
+      } else {
+        toast.error(getErrorMessage(error))
+      }
     } finally {
       setSubmitting(false)
     }
@@ -209,6 +243,7 @@ export default function StaffManagementPage() {
     setErrors({})
     setEditingId(null)
     setNewCertification('')
+    setCertError('')
   }
 
   // Handle close drawer
@@ -217,15 +252,28 @@ export default function StaffManagementPage() {
     resetForm()
   }
 
-  // Add certification
+  // Add certification — validate the entered text first to block junk like "@@" or "123"
   const addCertification = () => {
-    if (newCertification.trim() && !formData.certifications.includes(newCertification.trim())) {
-      setFormData({
-        ...formData,
-        certifications: [...formData.certifications, newCertification.trim()],
-      })
-      setNewCertification('')
+    const value = newCertification.trim()
+    if (!value) {
+      setCertError('Enter a certification name')
+      return
     }
+    const err = validateAlphaText(value, 'Certification', 100)
+    if (err) {
+      setCertError(err)
+      return
+    }
+    if (formData.certifications.includes(value)) {
+      setCertError('Certification already added')
+      return
+    }
+    setFormData({
+      ...formData,
+      certifications: [...formData.certifications, value],
+    })
+    setNewCertification('')
+    setCertError('')
   }
 
   // Remove certification
@@ -474,7 +522,9 @@ export default function StaffManagementPage() {
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Phone <span className="text-red-500">*</span>
+              </label>
               <input
                 type="tel"
                 value={formData.phone}
@@ -483,13 +533,13 @@ export default function StaffManagementPage() {
                   setFormData({ ...formData, phone: e.target.value })
                   if (errors.phone) setErrors({ ...errors, phone: '' })
                 }}
-                placeholder="e.g., +1 234 567 8900"
-                maxLength={20}
+                placeholder="e.g., 9876543210 or +919876543210"
+                maxLength={15}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
                   }`}
               />
               {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
-              {!errors.phone && <p className="mt-1 text-xs text-slate-500">Digits, +, -, spaces only (7-15 digits)</p>}
+              {!errors.phone && <p className="mt-1 text-xs text-slate-500">10-digit phone number, optional country code (e.g., +91)</p>}
             </div>
 
             {/* Role */}
@@ -576,13 +626,35 @@ export default function StaffManagementPage() {
 
             {/* Hire Date */}
             <div>
-              <label className="block text-sm font-medium text-slate-900 mb-2">Hire Date</label>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Hire Date <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 value={formData.hireDate}
-                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                max={todayISODate()}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setFormData({ ...formData, hireDate: v })
+                  // Inline check: must be a valid date and not in the future
+                  let err = ''
+                  if (v) {
+                    const picked = new Date(v)
+                    if (isNaN(picked.getTime())) {
+                      err = 'Please enter a valid hire date'
+                    } else {
+                      const today = new Date()
+                      today.setHours(23, 59, 59, 999)
+                      if (picked > today) err = 'Hire date cannot be in the future'
+                    }
+                  }
+                  setErrors({ ...errors, hireDate: err })
+                }}
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.hireDate ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                  }`}
               />
+              {errors.hireDate && <p className="mt-1 text-sm text-red-600">{errors.hireDate}</p>}
+              {!errors.hireDate && <p className="mt-1 text-xs text-slate-500">Today or a past date (when the staff member was hired)</p>}
             </div>
 
             {/* Certifications */}
@@ -592,15 +664,20 @@ export default function StaffManagementPage() {
                 <input
                   type="text"
                   value={newCertification}
-                  onChange={(e) => setNewCertification(e.target.value)}
+                  maxLength={100}
+                  onChange={(e) => {
+                    setNewCertification(e.target.value)
+                    if (certError) setCertError('')
+                  }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
                       addCertification()
                     }
                   }}
-                  placeholder="Add certification"
-                  className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., First Aid Certified"
+                  className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${certError ? 'border-red-500 focus:ring-red-500' : 'border-slate-300 focus:ring-blue-500'
+                    }`}
                 />
                 <button
                   type="button"
@@ -610,6 +687,8 @@ export default function StaffManagementPage() {
                   Add
                 </button>
               </div>
+              {certError && <p className="mb-2 text-sm text-red-600">{certError}</p>}
+              {!certError && <p className="mb-2 text-xs text-slate-500">Letters only (no digits or symbols)</p>}
               {formData.certifications.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.certifications.map((cert) => (

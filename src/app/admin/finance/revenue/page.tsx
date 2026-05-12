@@ -45,6 +45,7 @@ export default function RevenueReportsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [sourceFilter, setSourceFilter] = useState('')
+  const [summary, setSummary] = useState<{ totalAmount: number; totalEntries: number }>({ totalAmount: 0, totalEntries: 0 })
 
   const [formData, setFormData] = useState({
     date: '',
@@ -71,6 +72,11 @@ export default function RevenueReportsPage() {
       })
       setRevenues(response.data || [])
       setTotalPages(response.pagination?.totalPages || 1)
+      const total = response.pagination?.total ?? (response.data?.length || 0)
+      setSummary({
+        totalAmount: Number(response.summary?.totalAmount || 0),
+        totalEntries: Number(response.summary?.totalEntries ?? total),
+      })
     } catch (error) {
       console.error('Error loading revenues:', error)
       toast.error('Failed to load revenue reports')
@@ -208,7 +214,9 @@ export default function RevenueReportsPage() {
       : category === 'one-time' ? 'bg-blue-100 text-blue-800'
         : 'bg-slate-100 text-slate-800'
 
-  const totalRevenueNumber = revenues.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+  const totalRevenueNumber = summary.totalAmount
+  const totalEntries = summary.totalEntries
+  const averageEntry = totalEntries > 0 ? totalRevenueNumber / totalEntries : 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
@@ -225,16 +233,15 @@ export default function RevenueReportsPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-slate-600 text-sm">Total Revenue</p>
             <p className="text-3xl font-bold text-slate-900 mt-2">${totalRevenueNumber.toFixed(2)}</p>
+            <p className="text-xs text-slate-500 mt-1">Across all matching filters</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-slate-600 text-sm">Total Entries</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">{revenues.length}</p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">{totalEntries}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-slate-600 text-sm">Average Entry</p>
-            <p className="text-3xl font-bold text-slate-900 mt-2">
-              ${revenues.length > 0 ? (totalRevenueNumber / revenues.length).toFixed(2) : '0.00'}
-            </p>
+            <p className="text-3xl font-bold text-slate-900 mt-2">${averageEntry.toFixed(2)}</p>
           </div>
         </motion.div>
 

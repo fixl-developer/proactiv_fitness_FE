@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { apiClient } from '@/services/api/client'
 import { toast } from 'sonner'
 import {
-  validateRequired,
   validateSelect,
   validateNumber,
-  validateTextArea,
+  validateTitle,
+  validateNotes,
 } from '@/utils/validation'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -64,8 +64,6 @@ const OPERATORS: { value: RuleCondition['operator']; label: string }[] = [
   { value: 'in', label: 'In list' },
 ]
 
-// Rule name: letters, digits, spaces, hyphens, underscores, ampersand
-const RULE_NAME_PATTERN = /^[A-Za-z0-9 _&\-]+$/
 // Condition field path: dot-separated identifiers (e.g. student.age, program.enrolledCount)
 const FIELD_PATH_PATTERN = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$/
 
@@ -117,13 +115,9 @@ export default function ProgramRulesPage() {
   const validateFormData = () => {
     const e: Record<string, string> = {}
 
-    const nameErr = validateRequired(formData.name, 'Rule name')
+    // Rule name: must contain letters, no leading digit, ≤30% special chars (validateTitle)
+    const nameErr = validateTitle(formData.name, 'Rule name', 80)
     if (nameErr) e.name = nameErr
-    else if (formData.name.trim().length < 3) e.name = 'Rule name must be at least 3 characters'
-    else if (formData.name.length > 100) e.name = 'Rule name must be less than 100 characters'
-    else if (!RULE_NAME_PATTERN.test(formData.name.trim())) {
-      e.name = 'Letters, digits, spaces, hyphens, underscores and & only'
-    }
 
     const categoryErr = validateSelect(formData.category, 'Category')
     if (categoryErr) e.category = categoryErr
@@ -135,7 +129,7 @@ export default function ProgramRulesPage() {
     if (statusErr) e.status = statusErr
 
     if (formData.description) {
-      const descErr = validateTextArea(formData.description, 'Description', 0, 500)
+      const descErr = validateNotes(formData.description, 'Description', false, 500)
       if (descErr) e.description = descErr
     }
 
@@ -399,20 +393,19 @@ export default function ProgramRulesPage() {
                 <input
                   type="text"
                   value={formData.name}
-                  maxLength={100}
+                  maxLength={80}
                   onChange={(e) => {
                     const v = e.target.value
-                    if (v === '' || RULE_NAME_PATTERN.test(v)) {
-                      setFormData({ ...formData, name: v })
-                      if (errors.name) setErrors({ ...errors, name: '' })
-                    }
+                    setFormData({ ...formData, name: v })
+                    const err = validateTitle(v, 'Rule name', 80)
+                    setErrors({ ...errors, name: err || '' })
                   }}
                   className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                   placeholder="e.g., Minimum Age Check"
                 />
                 {errors.name
                   ? <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                  : <p className="mt-1 text-xs text-gray-500">Letters, digits, spaces, hyphens, underscores and &amp; only</p>}
+                  : <p className="mt-1 text-xs text-gray-500">Must contain letters; no leading digit; max 80 characters</p>}
               </div>
 
               <div>
@@ -476,7 +469,12 @@ export default function ProgramRulesPage() {
               <label className="block text-sm font-medium mb-2">Description (Optional)</label>
               <textarea
                 value={formData.description}
-                onChange={(e) => { setFormData({ ...formData, description: e.target.value }); if (errors.description) setErrors({ ...errors, description: '' }) }}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setFormData({ ...formData, description: v })
+                  const err = v ? validateNotes(v, 'Description', false, 500) : null
+                  setErrors({ ...errors, description: err || '' })
+                }}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                 rows={2}
                 maxLength={500}
