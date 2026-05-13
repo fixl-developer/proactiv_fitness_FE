@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { coachAdminService, CoachListItem, CreateCoachPayload, CoachStats } from '@/services/modules/coach-admin.service'
 import { apiClient } from '@/services/api/client'
+import { LocationService } from '@/services/businessConfigService'
 import { toast } from 'sonner'
 
 // ==================== FALLBACK DATA ====================
@@ -116,7 +117,7 @@ export default function CoachesPage() {
         const fetchLocations = async () => {
             if (!currentUser) return
             try {
-                const params: Record<string, string> = {}
+                const params: { page: number; limit: number; businessUnitId?: string } = { page: 1, limit: 200 }
 
                 if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.organizationId) {
                     params.businessUnitId = currentUser.organizationId
@@ -124,9 +125,8 @@ export default function CoachesPage() {
                     params.businessUnitId = currentUser.organizationId
                 }
 
-                const data = await apiClient.get<any>('/admin/business-config/locations', { params })
-                const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
-                setLocations(list)
+                const response = await LocationService.getAll(params)
+                setLocations((response.data || []) as any)
 
                 // LOCATION_MANAGER: auto-assign their location
                 if (currentUser.role === 'LOCATION_MANAGER' && currentUser.locationId) {
@@ -136,7 +136,8 @@ export default function CoachesPage() {
                         organizationId: currentUser.organizationId || ''
                     }))
                 }
-            } catch {
+            } catch (err) {
+                console.error('Failed to load locations for Coaches page:', err)
                 setLocations([])
             }
         }

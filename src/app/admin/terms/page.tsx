@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Loader, Plus, Edit2, Trash2, Calendar, RefreshCw } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
+import { extractList } from '@/utils/apiResponse'
 import { toast } from 'sonner'
 
 interface Term {
@@ -48,9 +49,11 @@ const TermsPage = () => {
         try {
             setIsLoading(true)
             setError('')
-            const response = await apiClient.get<any>('/admin/business-config/terms')
-            const list = response?.terms || response?.data || (Array.isArray(response) ? response : [])
-            setTerms(list)
+            // Backend mounts term CRUD at /terms (not /admin/business-config/terms,
+            // which does not exist). extractList handles the {success, data:[...]}
+            // shape that termRoutes returns.
+            const response = await apiClient.get<any>('/terms', { params: { page: 1, limit: 200 } })
+            setTerms(extractList<Term>(response))
         } catch (err: any) {
             console.error('Failed to load terms:', err)
             if (err?.response?.status !== 404) {

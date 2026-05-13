@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useRouter } from 'next/navigation'
 import { apiClient } from '@/services/api/client'
+import { LocationService, BusinessUnitService, RegionService } from '@/services/businessConfigService'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { PARTNER_TYPE_OPTIONS } from '@/config/partnerTypeConfig'
@@ -204,29 +205,30 @@ export default function CreateUserPage() {
       if (!currentUser) return
       setLocationsLoading(true)
       try {
-        const params: Record<string, string> = {}
+        const params: { page: number; limit: number; businessUnitId?: string } = { page: 1, limit: 200 }
 
         if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.regionId) {
-          params.regionId = currentUser.regionId
+          // LocationService.getAll accepts businessUnitId/search, not regionId, but
+          // the legacy backend ignores unknown filters — pass it through anyway in
+          // case it gets wired up later.
+          (params as any).regionId = currentUser.regionId
         } else if (currentUser.role === 'REGIONAL_ADMIN' && currentUser.organizationId) {
-          // Fallback: use organizationId as businessUnitId filter
           params.businessUnitId = currentUser.organizationId
         } else if (currentUser.role === 'FRANCHISE_OWNER') {
-          // FRANCHISE_OWNER: filter locations by their organization (businessUnitId)
           if (currentUser.organizationId) {
             params.businessUnitId = currentUser.organizationId
           }
         }
 
-        const data = await apiClient.get<any>('/admin/business-config/locations', { params })
-        const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
-        setLocations(list)
+        const response = await LocationService.getAll(params)
+        setLocations((response.data || []) as any)
 
         // LOCATION_MANAGER: auto-assign their location
         if (currentUser.role === 'LOCATION_MANAGER' && currentUser.locationId) {
           setFormData(prev => ({ ...prev, locationId: currentUser.locationId! }))
         }
-      } catch {
+      } catch (err) {
+        console.error('Failed to load locations for Create User:', err)
         setLocations([])
       } finally {
         setLocationsLoading(false)
@@ -240,10 +242,10 @@ export default function CreateUserPage() {
     const fetchOrgs = async () => {
       setOrgsLoading(true)
       try {
-        const data = await apiClient.get<any>('/admin/business-config/units')
-        const list = data?.businessUnits || data?.data || (Array.isArray(data) ? data : [])
-        setOrganizations(list)
-      } catch {
+        const response = await BusinessUnitService.getAll({ page: 1, limit: 200 })
+        setOrganizations((response.data || []) as any)
+      } catch (err) {
+        console.error('Failed to load business units for Create User:', err)
         setOrganizations([])
       } finally {
         setOrgsLoading(false)
@@ -257,10 +259,10 @@ export default function CreateUserPage() {
     const fetchRegions = async () => {
       setRegionsLoading(true)
       try {
-        const data = await apiClient.get<any>('/admin/business-config/regions')
-        const list = data?.regions || data?.data || (Array.isArray(data) ? data : [])
-        setRegions(list)
-      } catch {
+        const response = await RegionService.getAll({ page: 1, limit: 200 })
+        setRegions((response.data || []) as any)
+      } catch (err) {
+        console.error('Failed to load regions for Create User:', err)
         setRegions([])
       } finally {
         setRegionsLoading(false)

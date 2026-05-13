@@ -18,7 +18,7 @@ import {
 import { toast } from 'sonner'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 import { UserService, RoleService } from '@/services/userService'
-import { apiClient } from '@/services/api/client'
+import { LocationService } from '@/services/businessConfigService'
 import { getErrorMessage } from '@/utils/apiErrorHandler'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -151,14 +151,15 @@ export default function UsersPage() {
     let cancelled = false
       ; (async () => {
         try {
-          const data: any = await apiClient.get('/admin/business-config/locations')
+          const response = await LocationService.getAll({ page: 1, limit: 200 })
           if (cancelled) return
-          const list = data?.locations || data?.data || (Array.isArray(data) ? data : [])
           setLocations(
-            list.map((l: any) => ({ id: String(l.id || l._id), name: l.name }))
+            (response.data || [])
+              .map((l: any) => ({ id: String(l.id || l._id), name: l.name }))
               .filter((l: any) => l.id && l.name)
           )
-        } catch {
+        } catch (err) {
+          console.error('Failed to load locations for user form:', err)
           if (!cancelled) setLocations([])
         }
       })()
