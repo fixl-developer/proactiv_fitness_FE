@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Plus, Edit, Trash2, RefreshCw, MapPin, Building2, Users, X, Save } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
+import { extractList } from '@/utils/apiResponse'
 import { toast } from 'sonner'
 
 interface Location {
@@ -46,12 +47,14 @@ export default function LocationsPage() {
     const loadLocations = useCallback(async () => {
         try {
             setLoading(true)
-            const params: Record<string, string> = {}
+            const params: Record<string, string> = { page: '1', limit: '200' }
             if (searchTerm) params.search = searchTerm
 
-            const response = await apiClient.get<any>('/admin/business-config/locations', { params })
-            const list = response?.locations || response?.data || (Array.isArray(response) ? response : [])
-            setLocations(list)
+            // Backend mounts location CRUD at /locations (the /admin/business-config/*
+            // alias namespace was never wired up). extractList tolerates the
+            // {success, data:[...]} shape Location routes return.
+            const response = await apiClient.get<any>('/locations', { params })
+            setLocations(extractList<Location>(response))
         } catch (error: any) {
             console.error('Failed to load locations:', error)
             if (error?.response?.status !== 404) {
