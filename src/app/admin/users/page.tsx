@@ -29,22 +29,21 @@ import {
   filterPhoneInput,
 } from '@/utils/validation'
 
-// Admin-creatable roles only. Self-register roles (PARENT, USER, STUDENT)
-// are handled via the public /register flow and are not creatable from here,
-// but they remain visible in the *list* + filter so admins can audit them.
+// Admin-creatable roles only. Self-register roles (PARENT, USER) are handled
+// via the public /register flow and are not creatable from here, but they
+// remain visible in the *list* + filter so admins can audit them.
+// 9 effective roles. MANAGER, SUPER_ADMIN, STAFF and STUDENT have been retired.
+// SUPPORT_STAFF (helpdesk) lives at /staff/dashboard.
 const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Admin', color: 'bg-red-100 text-red-800', dashboard: '/admin/dashboard', loginUrl: '/login/staff' },
   { value: 'REGIONAL_ADMIN', label: 'Regional Admin', color: 'bg-purple-100 text-purple-800', dashboard: '/admin/regional/dashboard', loginUrl: '/login/staff' },
   { value: 'FRANCHISE_OWNER', label: 'Franchise Owner', color: 'bg-blue-100 text-blue-800', dashboard: '/admin/franchise/dashboard', loginUrl: '/login/staff' },
   { value: 'LOCATION_MANAGER', label: 'Location Manager', color: 'bg-green-100 text-green-800', dashboard: '/admin/location/dashboard', loginUrl: '/login/staff' },
-  { value: 'MANAGER', label: 'Manager', color: 'bg-emerald-100 text-emerald-800', dashboard: '/manager/dashboard', loginUrl: '/login/staff' },
   { value: 'COACH', label: 'Coach', color: 'bg-yellow-100 text-yellow-800', dashboard: '/coach/dashboard', loginUrl: '/login/staff' },
-  { value: 'STAFF', label: 'Staff', color: 'bg-orange-100 text-orange-800', dashboard: '/staff/dashboard', loginUrl: '/login/staff' },
   { value: 'SUPPORT_STAFF', label: 'Support Staff', color: 'bg-orange-100 text-orange-800', dashboard: '/staff/dashboard', loginUrl: '/login/staff' },
   { value: 'PARTNER_ADMIN', label: 'Partner Admin', color: 'bg-pink-100 text-pink-800', dashboard: '/partner/dashboard', loginUrl: '/login/staff' },
   // Read-only entries below — for filtering / display only.
   { value: 'PARENT', label: 'Parent (self-register)', color: 'bg-indigo-100 text-indigo-800', dashboard: '/parent/dashboard', loginUrl: '/login', selfRegister: true },
-  { value: 'STUDENT', label: 'Student (self-register)', color: 'bg-teal-100 text-teal-800', dashboard: '/user/dashboard', loginUrl: '/login', selfRegister: true },
   { value: 'USER', label: 'User (self-register)', color: 'bg-gray-100 text-gray-800', dashboard: '/user/dashboard', loginUrl: '/login', selfRegister: true },
 ] as const
 
@@ -52,7 +51,7 @@ const ROLE_OPTIONS = [
 const CREATABLE_ROLES = ROLE_OPTIONS.filter((r) => !(r as any).selfRegister)
 
 // Roles that need a location assignment
-const ROLES_NEEDING_LOCATION = ['LOCATION_MANAGER', 'MANAGER', 'COACH', 'STAFF', 'SUPPORT_STAFF']
+const ROLES_NEEDING_LOCATION = ['LOCATION_MANAGER', 'COACH', 'SUPPORT_STAFF']
 
 function getRoleMeta(role: string) {
   return ROLE_OPTIONS.find((r) => r.value === role?.toUpperCase()) || ROLE_OPTIONS[ROLE_OPTIONS.length - 1]
@@ -355,18 +354,18 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6 md:mb-8"
         >
           <div className="flex items-center gap-3 mb-2">
-            <UsersIcon className="w-8 h-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-slate-900">Users Management</h1>
+            <UsersIcon className="w-6 h-6 md:w-8 md:h-8 text-blue-600 flex-shrink-0" />
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900">Users Management</h1>
           </div>
-          <p className="text-slate-600">Manage system users, roles, and permissions</p>
+          <p className="text-sm md:text-base text-slate-600">Manage system users, roles, and permissions</p>
         </motion.div>
 
         <motion.div
@@ -374,7 +373,7 @@ export default function UsersPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex gap-3 items-center flex-wrap"
         >
-          <div className="flex-1 min-w-[260px] relative">
+          <div className="w-full sm:flex-1 sm:min-w-[260px] relative">
             <Search className="absolute left-3 top-3 text-slate-400 w-5 h-5" />
             <input
               type="text"

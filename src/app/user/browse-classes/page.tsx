@@ -129,15 +129,15 @@ export default function BrowseClassesPage() {
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-end mb-4"
+                className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-4"
             >
                 <div>
-                    <h1 className="text-4xl font-bold text-slate-900 mb-2">Browse Classes</h1>
-                    <p className="text-slate-600">Find and book classes for yourself</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-2">Browse Classes</h1>
+                    <p className="text-sm md:text-base text-slate-600">Find and book classes for yourself</p>
                 </div>
                 <button
                     onClick={loadClasses}
-                    className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700"
+                    className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700 self-start sm:self-auto"
                 >
                     <RefreshCw className="w-4 h-4" />
                     Refresh

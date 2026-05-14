@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { rbacManager } from '@/services/auth/rbac'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import LogoutModal from '@/components/ui/LogoutModal'
@@ -95,7 +95,6 @@ const colors = {
 
 const SIDEBAR_EXPANDED = 280
 const SIDEBAR_COLLAPSED = 72
-const HEADER_HEIGHT = 120
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
@@ -103,6 +102,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const { isAuthenticated, isLoading, user, role } = useAuth()
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const [expandedSections, setExpandedSections] = useState<string[]>([
         'Dashboard',
@@ -117,6 +117,24 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     const profileMenuRef = useRef<HTMLDivElement>(null)
 
     const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
+
+    // useLayoutEffect runs synchronously before the browser paints, so
+    // marginLeft/header-left land at the correct mobile value (0) on the
+    // first frame instead of flashing the desktop layout. SSR is unaffected
+    // because useLayoutEffect is a no-op on the server.
+    const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+    useIsoLayoutEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth < 1024
+            setIsMobile(mobile)
+            if (mobile) setMobileMenuOpen(false)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    useEffect(() => { setMobileMenuOpen(false) }, [pathname])
 
     useEffect(() => {
         if (isLoading) return
@@ -170,16 +188,18 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/50">
             {/* Mobile overlay */}
-            {mobileMenuOpen && (
+            {isMobile && mobileMenuOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 z-40 lg:hidden"
                     onClick={() => setMobileMenuOpen(false)}
                 />
             )}
 
-            {/* Sidebar - Fixed on desktop, slide-over on mobile */}
+            {/* Sidebar - Fixed on desktop, slide-over on mobile.
+                Use Tailwind responsive classes so SSR + first paint hide it on
+                mobile without waiting for a useEffect to update isMobile. */}
             <div
-                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
                 style={{ width: `${sidebarWidth}px`, display: 'flex', flexDirection: 'column' }}
             >
                 {/* Sidebar Header */}
@@ -331,7 +351,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             <div
                 className="transition-all duration-300 ease-in-out"
                 style={{
-                    marginLeft: `${sidebarWidth}px`,
+                    marginLeft: isMobile ? 0 : `${sidebarWidth}px`,
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: '100vh'
@@ -343,37 +363,26 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                     animate={{ opacity: 1, y: 0 }}
                     className="fixed top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm transition-all duration-300 ease-in-out right-0"
                     style={{
-                        left: `${sidebarWidth}px`,
+                        left: isMobile ? 0 : `${sidebarWidth}px`,
                         right: 0,
-                        width: `calc(100% - ${sidebarWidth}px)`
                     }}
                 >
-                    <div className="flex items-center justify-between px-4 md:px-6 py-4">
-                        <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
+                        <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
                             <button
-                                onClick={() => {
-                                    setMobileMenuOpen(!mobileMenuOpen)
-                                    setSidebarCollapsed(!sidebarCollapsed)
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors lg:hidden"
-                                title="Toggle menu"
+                                onClick={() => isMobile ? setMobileMenuOpen(!mobileMenuOpen) : setSidebarCollapsed(!sidebarCollapsed)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                                title={isMobile ? 'Toggle menu' : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')}
                             >
                                 <Menu className="w-5 h-5 text-gray-600" />
                             </button>
-                            <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors hidden lg:block"
-                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                            >
-                                <Menu className="w-5 h-5 text-gray-600" />
-                            </button>
-                            <div>
-                                <h1 className="text-xl font-semibold text-gray-900">User Dashboard</h1>
-                                <p className="text-sm text-gray-500">Welcome back, {displayName.split(' ')[0]}!</p>
+                            <div className="min-w-0">
+                                <h1 className="text-lg md:text-xl font-semibold text-gray-900 truncate">User Dashboard</h1>
+                                <p className="text-xs md:text-sm text-gray-500 hidden sm:block truncate">Welcome back, {displayName.split(' ')[0]}!</p>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
                             <NotificationBell />
                             <div className="relative" ref={profileMenuRef}>
                                 <button
@@ -431,10 +440,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 </motion.header>
 
                 {/* Main Content */}
-                <main
-                    className="flex-1 p-4 md:p-6 overflow-y-auto"
-                    style={{ paddingTop: `${HEADER_HEIGHT}px` }}
-                >
+                <main className="flex-1 pt-16 md:pt-20 p-3 md:p-6 overflow-y-auto">
                     <motion.div
                         key={pathname}
                         initial={{ opacity: 0, y: 20 }}

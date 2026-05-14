@@ -37,10 +37,15 @@ const BookingHeader = () => {
         if (!user) return '/parent/dashboard'
 
         const dashboards: Record<string, string> = {
-            PARENT: '/parent/dashboard',
-            COACH: '/coach/dashboard',
             ADMIN: '/admin/dashboard',
-            MANAGER: '/manager/dashboard'
+            REGIONAL_ADMIN: '/admin/regional/dashboard',
+            FRANCHISE_OWNER: '/admin/franchise/dashboard',
+            LOCATION_MANAGER: '/admin/location/dashboard',
+            COACH: '/coach/dashboard',
+            SUPPORT_STAFF: '/staff/dashboard',
+            PARTNER_ADMIN: '/partner/dashboard',
+            PARENT: '/parent/dashboard',
+            USER: '/user/dashboard',
         }
 
         const roleKey = typeof user.role === 'string' ? user.role : user.role?.name

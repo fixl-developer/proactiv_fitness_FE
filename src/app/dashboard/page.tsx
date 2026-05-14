@@ -16,22 +16,38 @@ export default function DashboardRedirect() {
                 return;
             }
 
-            // Redirect based on user role
+            // Redirect based on user role. Mirrors the 9 active roles.
             switch (user.role) {
                 case 'ADMIN':
                     router.push('/admin/dashboard');
                     break;
-                case 'MANAGER':
-                    router.push('/manager/dashboard');
+                case 'REGIONAL_ADMIN':
+                    router.push('/admin/regional/dashboard');
+                    break;
+                case 'FRANCHISE_OWNER':
+                    router.push('/admin/franchise/dashboard');
+                    break;
+                case 'LOCATION_MANAGER':
+                    router.push('/admin/location/dashboard');
                     break;
                 case 'COACH':
                     router.push('/coach/dashboard');
                     break;
+                case 'SUPPORT_STAFF':
+                    router.push('/staff/dashboard');
+                    break;
+                case 'PARTNER_ADMIN':
+                    router.push('/partner/dashboard');
+                    break;
                 case 'PARENT':
                     router.push('/parent/dashboard');
                     break;
+                case 'USER':
+                case 'STUDENT': // legacy alias
+                    router.push('/user/dashboard');
+                    break;
                 default:
-                    router.push('/login');
+                    router.push('/unauthorized');
             }
         }
     }, [user, isLoading, router]);

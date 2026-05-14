@@ -22,14 +22,15 @@ interface StaffFormData {
     lastName: string
     email: string
     phone: string
-    role: 'COACH' | 'LOCATION_MANAGER'
+    role: 'COACH' | 'LOCATION_MANAGER' | 'SUPPORT_STAFF'
     location: string
     password: string
 }
 
 type ModalMode = 'add' | 'edit' | 'view' | 'delete' | null
 
-const ROLES = ['COACH', 'LOCATION_MANAGER'] as const
+// Mirrors backend ROLE_HIERARCHY['FRANCHISE_OWNER']
+const ROLES = ['COACH', 'SUPPORT_STAFF', 'LOCATION_MANAGER'] as const
 const PAGE_SIZE = 10
 
 const defaultForm: StaffFormData = {
@@ -742,7 +743,7 @@ export default function FranchiseStaffPage() {
                                 <option key={role} value={role}>{roleLabel(role)}</option>
                             ))}
                         </select>
-                        <p className="text-xs text-gray-400 mt-1">Franchise Owners can create Location Manager and Coach roles</p>
+                        <p className="text-xs text-gray-400 mt-1">Franchise Owners can create Location Manager, Coach and Support Staff roles</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>

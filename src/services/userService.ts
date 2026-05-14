@@ -83,10 +83,15 @@ export interface ListResponse<T> {
 
 function normalizeItem<T extends { id?: string; _id?: string }>(item: any): T {
     if (!item || typeof item !== 'object') return item
-    if (!item.id && item._id) {
-        return { ...item, id: String(item._id) } as T
+    const out: any = { ...item }
+    if (!out.id && out._id) out.id = String(out._id)
+    // iam-rbac collections use `isSystem`; the Permission/Role UI consumes
+    // `isSystemPermission` / `isSystem`. Map the perm flag so the "System"
+    // badge renders correctly on seeded rows.
+    if (out.isSystem !== undefined && out.isSystemPermission === undefined && 'module' in out && 'action' in out) {
+        out.isSystemPermission = !!out.isSystem
     }
-    return item as T
+    return out as T
 }
 
 function normalizeList<T extends { id?: string; _id?: string }>(items: any): T[] {
@@ -194,7 +199,11 @@ export const UserService = {
 }
 
 // =============================================
-// ROLE MANAGEMENT (Updated for Priority 1 Fields)
+// ROLE MANAGEMENT
+// Backed by the iam-rbac collection (`/iam/roles`) which is auto-seeded with
+// the 10 system roles (ADMIN, REGIONAL_ADMIN, COACH, ...). The legacy
+// `/roles` collection is empty on a fresh deploy, so the page would render
+// "No roles found" even though authorization-relevant roles exist.
 // =============================================
 
 export const RoleService = {
@@ -209,14 +218,12 @@ export const RoleService = {
         if (params?.page) cleaned.page = params.page
         if (params?.limit) cleaned.limit = params.limit
         if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
-        if (params?.status) cleaned.status = params.status
-        if (params?.roleType) cleaned.roleType = params.roleType
-        const body = await apiClient.get('/roles', { params: cleaned })
+        const body = await apiClient.get('/iam/roles', { params: cleaned })
         return unwrapListResponse<Role>(body, params)
     },
 
     getById: async (id: string): Promise<Role> => {
-        const body = await apiClient.get(`/roles/${id}`)
+        const body = await apiClient.get(`/iam/roles/${id}`)
         return unwrapItemResponse<Role>(body)
     },
 
@@ -229,7 +236,11 @@ export const RoleService = {
         assignedLocations?: string[];
         assignedBusinessUnits?: string[];
     }): Promise<Role> => {
-        const body = await apiClient.post('/roles', data)
+        const body = await apiClient.post('/iam/roles', {
+            name: data.name,
+            description: data.description,
+            permissions: data.permissions,
+        })
         return unwrapItemResponse<Role>(body)
     },
 
@@ -242,17 +253,24 @@ export const RoleService = {
         assignedLocations?: string[];
         assignedBusinessUnits?: string[];
     }): Promise<Role> => {
-        const body = await apiClient.put(`/roles/${id}`, data)
+        const body = await apiClient.put(`/iam/roles/${id}`, {
+            name: data.name,
+            description: data.description,
+            permissions: data.permissions,
+        })
         return unwrapItemResponse<Role>(body)
     },
 
     delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/roles/${id}`)
+        await apiClient.delete(`/iam/roles/${id}`)
     },
 }
 
 // =============================================
-// PERMISSION MANAGEMENT (Updated for Priority 1 Fields)
+// PERMISSION MANAGEMENT
+// Backed by the iam-rbac collection (`/iam/permissions`) which is auto-seeded
+// with 19 default permissions (users.view, bookings.manage, ...). See
+// project_dual_perm_role_endpoint_trap memory for the why.
 // =============================================
 
 export const PermissionService = {
@@ -269,14 +287,12 @@ export const PermissionService = {
         if (params?.limit) cleaned.limit = params.limit
         if (params?.search && params.search.trim().length >= 1) cleaned.search = params.search.trim()
         if (params?.module) cleaned.module = params.module
-        if (params?.status) cleaned.status = params.status
-        if (params?.resourceType) cleaned.resourceType = params.resourceType
-        const body = await apiClient.get('/permissions', { params: cleaned })
+        const body = await apiClient.get('/iam/permissions', { params: cleaned })
         return unwrapListResponse<Permission>(body, params)
     },
 
     getById: async (id: string): Promise<Permission> => {
-        const body = await apiClient.get(`/permissions/${id}`)
+        const body = await apiClient.get(`/iam/permissions/${id}`)
         return unwrapItemResponse<Permission>(body)
     },
 
@@ -289,7 +305,12 @@ export const PermissionService = {
         status?: string;
         isSystemPermission?: boolean;
     }): Promise<Permission> => {
-        const body = await apiClient.post('/permissions', data)
+        const body = await apiClient.post('/iam/permissions', {
+            name: data.name,
+            description: data.description,
+            module: data.module,
+            action: data.action,
+        })
         return unwrapItemResponse<Permission>(body)
     },
 
@@ -298,12 +319,14 @@ export const PermissionService = {
         resourceType?: string;
         status?: string;
     }): Promise<Permission> => {
-        const body = await apiClient.put(`/permissions/${id}`, data)
+        const body = await apiClient.put(`/iam/permissions/${id}`, {
+            description: data.description,
+        })
         return unwrapItemResponse<Permission>(body)
     },
 
     delete: async (id: string): Promise<void> => {
-        await apiClient.delete(`/permissions/${id}`)
+        await apiClient.delete(`/iam/permissions/${id}`)
     },
 }
 

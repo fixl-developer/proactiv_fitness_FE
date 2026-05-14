@@ -11,11 +11,12 @@ import { validateName, validateEmail, validatePhone, validatePassword, validateS
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 import { SlideInDrawer } from '@/components/ui/SlideInDrawer'
 
-const ROLES = ['COACH', 'LOCATION_MANAGER', 'SUPPORT_STAFF', 'FRANCHISE_OWNER'] as const
+// Mirrors backend ROLE_HIERARCHY['REGIONAL_ADMIN']
+const ROLES = ['COACH', 'SUPPORT_STAFF', 'LOCATION_MANAGER', 'FRANCHISE_OWNER'] as const
 const ROLE_LABELS: Record<string, string> = {
     COACH: 'Coach',
-    LOCATION_MANAGER: 'Location Manager',
     SUPPORT_STAFF: 'Support Staff',
+    LOCATION_MANAGER: 'Location Manager',
     FRANCHISE_OWNER: 'Franchise Owner',
 }
 const PAGE_SIZE = 10
