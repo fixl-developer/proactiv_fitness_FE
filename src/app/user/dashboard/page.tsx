@@ -789,20 +789,20 @@ export default function UserDashboardPage() {
                         <div className="space-y-3">
                             {upcomingClasses.map((cls, index) => (
                                 <motion.div key={cls.id || index} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
                                             {cls.schedule?.date?.split('-')[2] || cls.date?.split('-')[2] || '?'}
                                         </div>
-                                        <div>
-                                            <h4 className="font-semibold text-gray-900">{cls.className}</h4>
-                                            <p className="text-sm text-gray-500">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-semibold text-gray-900 truncate">{cls.className}</h4>
+                                            <p className="text-sm text-gray-500 break-words">
                                                 {cls.coach} {cls.schedule?.time || cls.time ? `\u2022 ${cls.schedule?.time || cls.time}` : ''} {cls.location ? `\u2022 ${cls.location}` : ''}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 flex-shrink-0 sm:flex-none">
                                         <Badge className={(cls.status === 'confirmed' || cls.status === 'upcoming') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
                                             {cls.status}
                                         </Badge>

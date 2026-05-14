@@ -252,18 +252,18 @@ const ParentDashboard = () => {
         <div className="space-y-6">
             {/* Header with Parent Info */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
+                <div className="min-w-0">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Children's Progress</h1>
-                    <div className="flex items-center gap-2 mt-2">
-                        <User className="w-5 h-5 text-blue-600" />
-                        <p className="text-gray-600">{parentName}</p>
-                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg ml-4">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <User className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        <p className="text-gray-600 truncate">{parentName}</p>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg">
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                             <span className="text-sm font-medium text-blue-700">Live</span>
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                     <Button id="parent-dashboard-refresh-btn"
                         variant="outline"
                         size="sm"
@@ -278,7 +278,7 @@ const ParentDashboard = () => {
                             <button id={`parent-dashboard-range-${range}-btn`}
                                 key={range}
                                 onClick={() => setSelectedTimeRange(range as any)}
-                                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${selectedTimeRange === range
+                                className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md transition-colors ${selectedTimeRange === range
                                     ? 'bg-white text-gray-900 shadow-sm'
                                     : 'text-gray-600 hover:text-gray-900'
                                     }`}
@@ -516,19 +516,19 @@ const ParentDashboard = () => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all"
+                                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all"
                                 >
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                                             {(session.date || '').split('-')[2] || '--'}
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-900">{session.program || session.className || 'Class'}</h4>
-                                            <p className="text-sm text-gray-600">{session.child || session.childName} {session.coach ? `\u2022 ${session.coach}` : ''}</p>
-                                            <p className="text-xs text-gray-500">{session.date} at {session.time} {session.location ? `\u2022 ${session.location}` : ''}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-gray-900 truncate">{session.program || session.className || 'Class'}</h4>
+                                            <p className="text-sm text-gray-600 break-words">{session.child || session.childName} {session.coach ? `\u2022 ${session.coach}` : ''}</p>
+                                            <p className="text-xs text-gray-500 break-words">{session.date} at {session.time} {session.location ? `\u2022 ${session.location}` : ''}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                                         <Badge className={getStatusColor(session.status || 'confirmed')} variant="outline">
                                             {session.status || 'confirmed'}
                                         </Badge>
@@ -581,18 +581,18 @@ const ParentDashboard = () => {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-green-50/30 rounded-lg hover:shadow-md transition-all"
+                                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gradient-to-r from-gray-50 to-green-50/30 rounded-lg hover:shadow-md transition-all"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
                                             <CreditCard className="w-6 h-6" />
                                         </div>
-                                        <div>
-                                            <h4 className="font-semibold text-gray-900">{payment.program || payment.description || 'Payment'}</h4>
-                                            <p className="text-sm text-gray-600">{payment.child || payment.childName} {payment.date ? `\u2022 ${payment.date}` : ''}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="font-semibold text-gray-900 truncate">{payment.program || payment.description || 'Payment'}</h4>
+                                            <p className="text-sm text-gray-600 break-words">{payment.child || payment.childName} {payment.date ? `\u2022 ${payment.date}` : ''}</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
+                                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 flex-shrink-0">
                                         <p className="text-lg font-bold text-green-600">HK${(payment.amount ?? 0).toLocaleString()}</p>
                                         <Badge className={getStatusColor(payment.status || 'completed')} variant="outline">
                                             {payment.status || 'completed'}
@@ -716,10 +716,10 @@ const ParentDashboard = () => {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* Child Selector + Generate Report */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <select
                                 id="parent-dashboard-ai-child-select"
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
                                 value={selectedChildIdForAi || ''}
                                 onChange={(e) => {
                                     setSelectedChildIdForAi(e.target.value || null)
@@ -739,7 +739,7 @@ const ParentDashboard = () => {
                                 id="parent-dashboard-generate-ai-report-btn"
                                 onClick={() => selectedChildIdForAi && handleGenerateAiReport(selectedChildIdForAi)}
                                 disabled={!selectedChildIdForAi || aiLoading}
-                                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white w-full sm:w-auto"
                             >
                                 {aiLoading ? (
                                     <>
@@ -822,12 +822,12 @@ const ParentDashboard = () => {
                                 <MessageSquare className="w-4 h-4 text-indigo-600" />
                                 Ask AI About Your Child
                             </h4>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                     id="parent-dashboard-ai-question-input"
                                     type="text"
                                     placeholder={selectedChildIdForAi ? "e.g., How is my child progressing in swimming?" : "Select a child first..."}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-0"
                                     value={aiQuestion}
                                     onChange={(e) => setAiQuestion(e.target.value)}
                                     onKeyDown={(e) => {
@@ -841,7 +841,7 @@ const ParentDashboard = () => {
                                     id="parent-dashboard-ask-ai-btn"
                                     onClick={handleAskAi}
                                     disabled={!selectedChildIdForAi || !aiQuestion.trim() || aiAnswerLoading}
-                                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+                                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white w-full sm:w-auto"
                                 >
                                     {aiAnswerLoading ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />

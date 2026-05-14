@@ -72,10 +72,14 @@ const Header = ({ hideBookAssessment = false }: { hideBookAssessment?: boolean }
         const role = String(userObj?.role || '').toLowerCase()
         switch (role) {
             case 'admin': return '/admin/dashboard'
-            case 'parent': return '/parent/dashboard'
+            case 'regional_admin': return '/admin/regional/dashboard'
+            case 'franchise_owner': return '/admin/franchise/dashboard'
+            case 'location_manager': return '/admin/location/dashboard'
             case 'coach': return '/coach/dashboard'
-            case 'manager': return '/manager/dashboard'
-            case 'staff': return '/staff/dashboard'
+            case 'support_staff':
+            case 'staff': return '/staff/dashboard' // 'staff' legacy fallback
+            case 'partner_admin': return '/partner/dashboard'
+            case 'parent': return '/parent/dashboard'
             default: return '/user/dashboard'
         }
     }

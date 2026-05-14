@@ -115,16 +115,16 @@ export default function LocationManagerDashboard() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Location Dashboard</h1>
-                    <p className="text-gray-600 mt-1">{dashboardData?.locationName} - Daily Operations</p>
+                <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Location Dashboard</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-1 truncate">{dashboardData?.locationName} - Daily Operations</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {['7d', '30d', '90d'].map((range) => (
                         <button id="admin-location-dashboard-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
+                            className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${timeRange === range
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
@@ -302,19 +302,18 @@ export default function LocationManagerDashboard() {
                     <CardContent>
                         <div className="space-y-3">
                             {todayClassSchedule.map((cls: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
+                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                                             <span className="font-bold text-gray-900">{cls.time || cls.timeSlot || 'N/A'}</span>
-                                            <span className="font-medium text-gray-900">{cls.name || cls.sessionName || 'N/A'}</span>
+                                            <span className="font-medium text-gray-900 truncate">{cls.name || cls.sessionName || 'N/A'}</span>
                                         </div>
-                                        <p className="text-xs text-gray-600">
+                                        <p className="text-xs text-gray-600 break-words">
                                             Coach: {cls.coach || 'N/A'} {cls.room ? `• Room: ${cls.room}` : ''}
                                         </p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold text-gray-900">{cls.students ?? cls.enrolled ?? 0}</p>
-                                        <p className="text-xs text-gray-600">students</p>
+                                    <div className="text-left sm:text-right flex-shrink-0">
+                                        <p className="text-sm font-bold text-gray-900">{cls.students ?? cls.enrolled ?? 0} <span className="text-xs font-normal text-gray-600">students</span></p>
                                     </div>
                                 </div>
                             ))}
