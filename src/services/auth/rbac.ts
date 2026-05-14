@@ -1,16 +1,20 @@
+// 9 active roles. MANAGER, SUPER_ADMIN, STAFF and STUDENT are retired.
+// LOCATION_ADMIN and FRANCHISE_MANAGER are legacy aliases kept only so
+// pre-existing tokens decoded into ROLE_CONFIG without throwing.
 export enum UserRole {
     ADMIN = 'ADMIN',
     REGIONAL_ADMIN = 'REGIONAL_ADMIN',
-    LOCATION_ADMIN = 'LOCATION_ADMIN',
-    FRANCHISE_MANAGER = 'FRANCHISE_MANAGER',
     FRANCHISE_OWNER = 'FRANCHISE_OWNER',
     LOCATION_MANAGER = 'LOCATION_MANAGER',
     COACH = 'COACH',
-    MANAGER = 'MANAGER',
     SUPPORT_STAFF = 'SUPPORT_STAFF',
     PARTNER_ADMIN = 'PARTNER_ADMIN',
     PARENT = 'PARENT',
-    USER = 'USER'
+    USER = 'USER',
+    // ---- Legacy / retired roles below — kept so old JWTs don't 500 ----
+    LOCATION_ADMIN = 'LOCATION_ADMIN',
+    FRANCHISE_MANAGER = 'FRANCHISE_MANAGER',
+    MANAGER = 'MANAGER',
 }
 
 export interface RoleConfig {
@@ -40,21 +44,11 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
             'view_analytics'
         ]
     },
+    // Retired — redirects to /unauthorized so legacy tokens land somewhere safe.
     [UserRole.LOCATION_ADMIN]: {
-        dashboard: '/admin/location/dashboard',
-        modules: [
-            'facility-management',
-            'attendance',
-            'scheduling',
-            'staff',
-            'reporting'
-        ],
-        permissions: [
-            'view_dashboard',
-            'manage_location',
-            'manage_attendance',
-            'manage_schedule'
-        ]
+        dashboard: '/unauthorized',
+        modules: [],
+        permissions: []
     },
     [UserRole.FRANCHISE_OWNER]: {
         dashboard: '/admin/franchise/dashboard',
@@ -66,21 +60,11 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
         modules: ['staff', 'scheduling', 'reporting', 'attendance'],
         permissions: ['view_dashboard', 'manage_staff', 'view_schedule', 'view_reports']
     },
+    // Retired — redirects to /unauthorized so legacy tokens land somewhere safe.
     [UserRole.FRANCHISE_MANAGER]: {
-        dashboard: '/admin/franchise/dashboard',
-        modules: [
-            'franchise',
-            'programs',
-            'reporting',
-            'staff',
-            'booking'
-        ],
-        permissions: [
-            'view_dashboard',
-            'manage_franchise',
-            'manage_programs',
-            'view_reports'
-        ]
+        dashboard: '/unauthorized',
+        modules: [],
+        permissions: []
     },
     [UserRole.COACH]: {
         dashboard: '/coach/dashboard',
@@ -97,20 +81,11 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
             'view_students'
         ]
     },
+    // Retired — redirects to /unauthorized so legacy tokens land somewhere safe.
     [UserRole.MANAGER]: {
-        dashboard: '/manager/dashboard',
-        modules: [
-            'staff',
-            'scheduling',
-            'reporting',
-            'attendance'
-        ],
-        permissions: [
-            'view_dashboard',
-            'manage_staff',
-            'view_schedule',
-            'view_reports'
-        ]
+        dashboard: '/unauthorized',
+        modules: [],
+        permissions: []
     },
     [UserRole.SUPPORT_STAFF]: {
         dashboard: '/staff/dashboard',
@@ -260,9 +235,8 @@ class RBACManager {
         return [
             UserRole.ADMIN,
             UserRole.REGIONAL_ADMIN,
-            UserRole.LOCATION_ADMIN,
             UserRole.FRANCHISE_OWNER,
-            UserRole.FRANCHISE_MANAGER
+            UserRole.LOCATION_MANAGER
         ].includes(this.currentRole!)
     }
 

@@ -666,3 +666,64 @@ img {
         font-size: 16px !important; /* Prevents iOS zoom on focus */
     }
 }
+
+/* ============================================= */
+/* MOBILE SAFETY NETS — catches hardcoded values  */
+/* page authors may have forgotten to make        */
+/* responsive. Applied only below 1024px to       */
+/* preserve desktop intent.                       */
+/* ============================================= */
+
+@media (max-width: 1023px) {
+    /* Stack any fixed multi-column grids on mobile.
+       Pages should opt-in to responsive grids; this is a
+       fallback for grid-cols-2/3/4/5/6 that lacks a 'grid-cols-1' base. */
+    .grid.grid-cols-2:not([class*="sm:grid-cols-"]):not([class*="md:grid-cols-"]):not([class*="lg:grid-cols-"]):not([class*="xl:grid-cols-"]) {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Constrain wide fixed-width SlideInDrawers / modals so they fit narrow viewports. */
+    aside[role="dialog"],
+    div[role="dialog"] {
+        max-width: 100vw !important;
+    }
+
+    /* Long URLs / emails / IDs should wrap rather than overflow. */
+    td, th, .truncate-mobile {
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 640px) {
+    /* On phones, KPI/stat card grids collapse to a single column so values
+       remain readable. Pages opt out by using sm:grid-cols-2 explicitly. */
+    .grid.grid-cols-3:not([class*="sm:grid-cols-"]):not([class*="md:grid-cols-"]):not([class*="lg:grid-cols-"]),
+    .grid.grid-cols-4:not([class*="sm:grid-cols-"]):not([class*="md:grid-cols-"]):not([class*="lg:grid-cols-"]) {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Drawers and dialogs span the full screen on phones. */
+    aside[role="dialog"] {
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+
+    /* Card padding shrinks on phones so content gets more room. */
+    .card-tight-mobile {
+        padding: 0.75rem !important;
+    }
+
+    /* Reduce horizontal scroll on the outermost main container. */
+    main {
+        overflow-x: hidden;
+    }
+}
+
+/* Disable the desktop 0.9 zoom hack on touch devices — it interferes with
+   viewport calculations and the mobile drawer breakpoint. */
+@media (max-width: 1023px) {
+    body {
+        zoom: 1 !important;
+        -moz-transform: none !important;
+    }
+}

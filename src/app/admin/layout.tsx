@@ -309,10 +309,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 />
             )}
 
-            {/* Sidebar - Fixed Position / Mobile Drawer */}
+            {/* Sidebar - Fixed Position / Mobile Drawer.
+                CSS handles the breakpoint so SSR/first-paint doesn't flash. */}
             <div
-                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-all duration-300 ease-in-out ${
-                    isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : ''
+                className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-200/50 z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+                    mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
                 style={{ width: isMobile ? '280px' : `${sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED}px`, display: 'flex', flexDirection: 'column' }}
             >

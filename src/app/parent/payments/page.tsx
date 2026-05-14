@@ -321,29 +321,31 @@ const ParentPaymentsPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all border border-gray-200"
+                                className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-4 bg-gradient-to-r from-gray-50 to-blue-50/30 rounded-lg hover:shadow-md transition-all border border-gray-200 gap-3"
                             >
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white flex-shrink-0">
                                         <CreditCard className="w-6 h-6" />
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-semibold text-gray-900">{payment.program}</h4>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h4 className="font-semibold text-gray-900 truncate">{payment.program}</h4>
                                             <Badge className={getStatusColor(payment.status)}>
                                                 {payment.status?.toUpperCase()}
                                             </Badge>
                                         </div>
-                                        <p className="text-sm text-gray-600">{payment.child} • {payment.description}</p>
-                                        <p className="text-xs text-gray-500">{payment.method} • Invoice: {payment.invoice}</p>
+                                        <p className="text-sm text-gray-600 break-words">{payment.child} • {payment.description}</p>
+                                        <p className="text-xs text-gray-500 break-words">{payment.method} • Invoice: {payment.invoice}</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-bold text-blue-600">${payment.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                    <p className="text-sm text-gray-600">{payment.date}</p>
-                                    <p className="text-xs text-gray-500">ID: {payment.id}</p>
+                                <div className="flex items-center justify-between lg:block lg:text-right">
+                                    <div>
+                                        <p className="text-lg font-bold text-blue-600">${payment.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-sm text-gray-600">{payment.date}</p>
+                                        <p className="text-xs text-gray-500">ID: {payment.id}</p>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 ml-4">
+                                <div className="flex items-center gap-2 lg:ml-4 flex-shrink-0">
                                     {getStatusIcon(payment.status)}
                                     <Button
                                         id={`parent-payments-view-${payment.id}-btn`}

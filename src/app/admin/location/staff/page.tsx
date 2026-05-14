@@ -12,9 +12,11 @@ import { apiClient } from '@/services/api/client'
 import { validateName, validateEmail, validatePhone, validatePassword, filterNameInput, filterPhoneInput, FORMAT_HINTS } from '@/utils/validation'
 import { FormFieldHint } from '@/components/ui/FormFieldHint'
 
-const ALLOWED_ROLES = ['COACH'] as const
+// Mirrors backend ROLE_HIERARCHY['LOCATION_MANAGER']
+const ALLOWED_ROLES = ['COACH', 'SUPPORT_STAFF'] as const
 const ROLE_LABELS: Record<string, string> = {
     COACH: 'Coach',
+    SUPPORT_STAFF: 'Support Staff',
 }
 
 interface StaffFormData {
@@ -219,7 +221,7 @@ function StaffFormModal({
                                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                             ))}
                         </select>
-                        <p className="text-xs text-gray-400 mt-1">Location Managers can only create Coach roles</p>
+                        <p className="text-xs text-gray-400 mt-1">Location Managers can create Coach and Support Staff roles</p>
                     </div>
 
                     <div>

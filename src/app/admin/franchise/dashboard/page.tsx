@@ -173,16 +173,16 @@ export default function FranchiseOwnerDashboard() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Franchise Dashboard</h1>
-                    <p className="text-gray-600 mt-1">{dashboardData?.franchiseName} - Operations Overview</p>
+                <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Franchise Dashboard</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-1 truncate">{dashboardData?.franchiseName} - Operations Overview</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {['7d', '30d', '90d'].map((range) => (
                         <button id="admin-franchise-dashboard-btn"
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
+                            className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${timeRange === range
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
@@ -419,14 +419,14 @@ export default function FranchiseOwnerDashboard() {
                     {(dashboardData?.locationPerformance ?? []).length > 0 ? (
                         <div className="space-y-3">
                             {dashboardData.locationPerformance.map((location: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{location.name}</p>
-                                        <p className="text-xs text-gray-600">
+                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">{location.name}</p>
+                                        <p className="text-xs text-gray-600 break-words">
                                             {location.students} students &bull; {location.revenue > 0 ? `$${(location.revenue / 1000).toFixed(0)}K revenue` : 'No revenue yet'}
                                         </p>
                                     </div>
-                                    <Badge variant={location.status === 'excellent' ? 'default' : 'secondary'}>
+                                    <Badge variant={location.status === 'excellent' ? 'default' : 'secondary'} className="self-start sm:self-auto">
                                         {location.status}
                                     </Badge>
                                 </div>
@@ -452,13 +452,13 @@ export default function FranchiseOwnerDashboard() {
                     {(dashboardData?.pendingActions ?? []).length > 0 ? (
                         <div className="space-y-3">
                             {dashboardData.pendingActions.map((item: any, idx: number) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{item.type}</p>
-                                        <p className="text-sm text-gray-600">{item.name}</p>
+                                <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">{item.type}</p>
+                                        <p className="text-sm text-gray-600 break-words">{item.name}</p>
                                         <p className="text-xs text-gray-500">{item.date}</p>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-shrink-0">
                                         <Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>
                                             {item.priority}
                                         </Badge>

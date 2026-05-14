@@ -449,16 +449,16 @@ export default function PaymentsPage() {
                             transition={{ delay: index * 0.03 }}
                         >
                             <Card className="hover:shadow-md transition-shadow">
-                                <CardContent className="p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                                <CardContent className="p-4 md:p-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                                                 <CreditCard className="w-6 h-6 text-white" />
                                             </div>
-                                            <div>
-                                                <h3 className="font-semibold text-gray-900">{payment.description || 'Payment'}</h3>
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="font-semibold text-gray-900 truncate">{payment.description || 'Payment'}</h3>
                                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                    <Calendar className="w-4 h-4 text-gray-500" />
+                                                    <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                                     <span className="text-sm text-gray-600">
                                                         {formatDate(payment.paidDate || payment.dueDate || payment.createdAt)}
                                                     </span>
@@ -477,7 +477,7 @@ export default function PaymentsPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right flex flex-col items-end gap-2">
+                                        <div className="text-right flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 flex-shrink-0">
                                             <div className="text-xl font-bold text-gray-900">
                                                 {formatCurrency(payment.amount)}
                                             </div>

@@ -354,16 +354,16 @@ export default function AdminDashboard() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Business Overview & Key Metrics</p>
+                <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <p className="text-sm md:text-base text-gray-600 mt-1">Business Overview & Key Metrics</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {['7d', '30d', '90d'].map((range) => (
                         <button id={`admin-dashboard-timerange-${range}-btn`}
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${timeRange === range
+                            className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${timeRange === range
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
